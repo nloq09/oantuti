@@ -7,6 +7,33 @@ let pending = false;
 let socket = null;
 const labels = { ROCK: "R", PAPER: "P", SCISSORS: "S" };
 
+function canAct() {
+  return socket?.readyState === WebSocket.OPEN && !pending && state?.phase === "PLAYING"
+    && state.currentPlayer === player && state.legalActions.length > 0;
+}
+
+function sendAction(action) {
+  if (!canAct() || !action) return;
+  socket.send(JSON.stringify({ type: "ACTION", matchId: state.matchId, playerId: player,
+    sequence: state.sequence, payload: action }));
+  pending = true;
+  selectedPiece = null;
+  $("status").textContent = "Đang chờ server xử lý…";
+  render();
+}
+
+function clickCell(piece, row, col) {
+  if (!canAct()) return;
+  const move = state.legalActions.find(action => action.type === "MOVE" && action.pieceId === selectedPiece
+    && action.to.row === row && action.to.col === col);
+  if (move) { sendAction(move); return; }
+  selectedPiece = piece?.owner === player ? piece.id : null;
+  render();
+}
+
+$("pass").addEventListener("click", () => sendAction(state?.legalActions.find(action => action.type === "PASS")));
+$("surrender").addEventListener("click", () => sendAction(state?.legalActions.find(action => action.type === "SURRENDER")));
+
 function log(text) {
   const row = document.createElement("li");
   row.textContent = text;
@@ -19,6 +46,8 @@ function render() {
   $("current").textContent = state.currentPlayer;
   $("turn").textContent = state.turn;
   $("sequence").textContent = state.sequence;
+  $("pass").disabled = !canAct() || !state.legalActions.some(action => action.type === "PASS");
+  $("surrender").disabled = !canAct() || !state.legalActions.some(action => action.type === "SURRENDER");
   $("board").replaceChildren();
   for (let row = 0; row < state.boardHeight; row++) {
     for (let col = 0; col < state.boardWidth; col++) {
@@ -27,7 +56,11 @@ function render() {
       const cell = document.createElement("button");
       cell.type = "button";
       cell.className = "cell";
-      cell.disabled = true;
+      cell.disabled = !canAct();
+      if (piece?.id === selectedPiece) cell.classList.add("selected");
+      if (canAct() && state.legalActions.some(action => action.type === "MOVE" && action.pieceId === selectedPiece
+          && action.to.row === row && action.to.col === col)) cell.classList.add("legal");
+      cell.addEventListener("click", () => clickCell(piece, row, col));
       cell.dataset.row = row;
       cell.dataset.col = col;
       cell.setAttribute("aria-label", `${coordinate}${piece ? ` ${piece.owner} ${piece.type}` : " trống"}`);
