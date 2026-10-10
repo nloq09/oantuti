@@ -49,6 +49,10 @@ tasks.named('run', JavaExec) {
     standardInput = System.in
 }
 
+tasks.named('processResources') {
+    from('../client') { into 'static' }
+}
+
 test {
     useJUnitPlatform()
     testLogging {
