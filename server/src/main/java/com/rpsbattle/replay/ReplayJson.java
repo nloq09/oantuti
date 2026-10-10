@@ -39,7 +39,11 @@ final class ReplayJson {
     }
 
     GameState state(JsonNode json) {
+        if (json == null || !json.isObject()) throw new IllegalArgumentException("Missing initialState object");
         StateData s = mapper.convertValue(json, StateData.class);
+        if (s.matchId() == null || s.pieces() == null || s.players() == null || s.currentPlayer() == null || s.phase() == null) {
+            throw new IllegalArgumentException("Missing snapshot fields");
+        }
         if (s.turnNumber() < 0 || s.sequence() < 0) throw new IllegalArgumentException("Invalid snapshot counters");
         Board board = new Board(s.rows(), s.cols());
         Set<String> ids = new HashSet<>();
@@ -48,6 +52,13 @@ final class ReplayJson {
             board.placePiece(p.piece());
         }
         var players = s.players().stream().map(p -> new Player(PlayerId.of(p.id()), p.name(), p.pieceIds())).toList();
+        if (players.stream().map(Player::id).distinct().count() != players.size()
+                || players.stream().noneMatch(p -> p.id().value().equals(s.currentPlayer()))) {
+            throw new IllegalArgumentException("Invalid snapshot players");
+        }
+        for (Piece p : board.allPieces()) {
+            if (players.stream().noneMatch(player -> player.id().equals(p.ownerId()))) throw new IllegalArgumentException("Unknown piece owner");
+        }
         GameState result = GameState.initial(s.matchId(), board, players).withCurrentPlayer(PlayerId.of(s.currentPlayer()))
                 .withPhase(s.phase()).withTurnNumber(s.turnNumber());
         // Public GameState withers keep domain serialization-independent.
@@ -56,7 +67,10 @@ final class ReplayJson {
     }
 
     JsonNode result(GameResult result) { return mapper.valueToTree(new ResultData(result)); }
-    GameResult result(JsonNode json) { return mapper.convertValue(json, ResultData.class).result(); }
+    GameResult result(JsonNode json) {
+        if (json == null || !json.isObject()) throw new IllegalArgumentException("Missing result object");
+        return mapper.convertValue(json, ResultData.class).result();
+    }
     private Piece piece(JsonNode json) { return mapper.convertValue(json, PieceData.class).piece(); }
     private Position position(JsonNode json) { return mapper.convertValue(json, Position.class); }
     private PlayerId player(JsonNode json, String name) { return PlayerId.of(text(json, name)); }

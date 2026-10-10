@@ -26,7 +26,7 @@ class BotCommandsTest {
     @Test
     void rejectsInvalidCommandFiles() throws Exception {
         Path file = directory.resolve("bad.json");
-        for (String json : new String[]{"[]", "{}", "[1]", "[\"\"]", "not-json"}) {
+        for (String json : new String[]{"[]", "{}", "[1]", "[\"\"]", "not-json", "[\"bot\"] {}"}) {
             Files.writeString(file, json);
             assertThatThrownBy(() -> BotCommands.resolve(file.toString())).isInstanceOf(IllegalArgumentException.class);
         }

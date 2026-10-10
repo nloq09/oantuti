@@ -32,6 +32,41 @@ class BoardTest {
         return Piece.alive(id, owner, PieceType.ROCK, new Position(row, col));
     }
 
+    @Test
+    void samePieceIdCannotOccupyTwoCells() {
+        Piece original = rock("a", P1, 4, 4);
+        board.placePiece(original);
+        assertThatThrownBy(() -> board.placePiece(original.withPosition(new Position(4, 5))))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(board.allPieces()).hasSize(1);
+        assertThat(board.findById("a").orElseThrow().position()).isEqualTo(new Position(4, 4));
+    }
+
+    @Test
+    void rejectedUpdateKeepsBothIndexesIntact() {
+        Piece original = rock("a", P1, 4, 4), other = rock("b", P2, 4, 5);
+        board.placePiece(original); board.placePiece(other);
+        assertThatThrownBy(() -> board.updatePiece(original.withPosition(other.position()))).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> board.updatePiece(original.withPosition(new Position(9, 4)))).isInstanceOf(IllegalArgumentException.class);
+        assertThat(board.findById("a").orElseThrow().position()).isEqualTo(original.position());
+        assertThat(board.findById("b").orElseThrow().position()).isEqualTo(other.position());
+        assertThat(board.getPiece(original.position())).contains(original);
+        assertThat(board.getPiece(other.position())).contains(other);
+    }
+
+    @Test
+    void successfulUpdateMovesIndexAndPieceSnapshotIsIndependent() {
+        Piece original = rock("a", P1, 4, 4);
+        board.placePiece(original);
+        var snapshot = board.allPieces();
+        board.updatePiece(original.withPosition(new Position(3, 4)));
+        assertThat(board.getPiece(original.position())).isEmpty();
+        assertThat(board.findById("a").orElseThrow().position()).isEqualTo(new Position(3, 4));
+        assertThat(snapshot.iterator().next().position()).isEqualTo(original.position());
+        board.removePiece(new Position(3, 4));
+        assertThat(snapshot).hasSize(1);
+    }
+
     // ========================================================
     // isInside
     // ========================================================

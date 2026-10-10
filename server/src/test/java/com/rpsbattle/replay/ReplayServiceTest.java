@@ -144,4 +144,13 @@ class ReplayServiceTest {
         Match match = new Match(ClassicGameSetup.create("M1", P1, P2), new ClassicRuleSet(P1, P2), (v,a)->a.get(0), (v,a)->a.get(0));
         assertThatThrownBy(() -> service.write(directory.resolve("not-finished.json"), match)).isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void cliRejectsMissingSnapshotWithoutUnhandledException() throws Exception {
+        Path file = directory.resolve("bad.json");
+        Files.writeString(file, "{\"matchId\":\"M1\",\"ruleSet\":\"Classic\",\"seed\":null,\"events\":[],\"result\":{\"outcome\":\"DRAW\",\"winner\":null}}");
+        StringWriter output = new StringWriter();
+        assertThat(LocalGameApplication.execute(new String[]{"replay", file.toString()}, new StringReader(""), output)).isEqualTo(1);
+        assertThat(output.toString()).contains("Game stopped:", "initialState");
+    }
 }

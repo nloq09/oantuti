@@ -77,7 +77,7 @@ public final class Board {
      * Returns an unmodifiable snapshot of all pieces currently on the board.
      */
     public Collection<Piece> allPieces() {
-        return Collections.unmodifiableCollection(grid.values());
+        return List.copyOf(grid.values());
     }
 
     /**
@@ -101,6 +101,10 @@ public final class Board {
 
         if (!isInside(pos)) {
             throw new IllegalArgumentException("Position " + pos + " is outside the board");
+        }
+        Piece sameId = pieceById.get(piece.id());
+        if (sameId != null && !sameId.position().equals(pos)) {
+            throw new IllegalStateException("Piece id already placed at " + sameId.position());
         }
         if (grid.containsKey(pos)) {
             Piece existing = grid.get(pos);
@@ -167,11 +171,13 @@ public final class Board {
      */
     public void updatePiece(Piece piece) {
         Objects.requireNonNull(piece, "piece");
-        // Remove any previous entry for this piece
-        pieceById.computeIfPresent(piece.id(), (id, old) -> {
-            grid.remove(old.position());
-            return null;
-        });
+        if (!isInside(piece.position())) throw new IllegalArgumentException("Position is outside board");
+        Piece occupant = grid.get(piece.position());
+        if (occupant != null && !occupant.id().equals(piece.id())) {
+            throw new IllegalStateException("Position is already occupied by " + occupant.id());
+        }
+        Piece previous = pieceById.get(piece.id());
+        if (previous != null) grid.remove(previous.position());
         grid.put(piece.position(), piece);
         pieceById.put(piece.id(), piece);
     }

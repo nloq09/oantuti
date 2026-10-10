@@ -27,9 +27,10 @@ server/
     │   │   └── engine/    # GameEngine, GameTransition, GameEvent
     │   ├── rule/          # Interfaces: MovementRule, CombatRule...
     │   ├── rules/classic/ # ClassicRuleSet implementation
-    │   ├── match/         # Match, MatchManager
+    │   ├── match/         # Match, MatchStatus
     │   ├── agent/         # PlayerAgent interface, PlayerView
     │   ├── bot/           # BotAgent, BotProcess, protocol
+    │   ├── replay/        # MatchLog, ReplayService, ReplayJson
     │   └── app/           # LocalGameApplication
     └── test/java/com/rpsbattle/
 ```
@@ -46,7 +47,7 @@ server/
 - [x] Bước 8 — Bot Protocol
 - [x] Bước 9 — Bot vs Bot
 - [x] Bước 10 — Event Log & Replay
-- [ ] Bước 11 — Cleanup & Kiểm tra kiến trúc
+- [x] Bước 11 — Cleanup & Kiểm tra kiến trúc
 
 ## Trạng thái sau Bước 3
 
@@ -358,4 +359,15 @@ log action sai, log thiếu/sai sequence, metadata result và CLI human export/r
 CLI bot export/replay cũng chạy thành công: lượt 200, WIN(P1), còn quân 15–13.
 Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
 `build-step3-verification-step10-b`; chưa kiểm tra runtime trực tiếp JDK 21.
-Bước 11 — Cleanup và kiểm tra kiến trúc chưa triển khai.
+## Bước 11 — Cleanup và kiểm tra kiến trúc
+
+Chặng 1 hoàn thành. **249 tests pass, 0 failures, 0 errors, 0 skipped**.
+Sửa invariant/index của Board, bảo đảm allPieces trả snapshot độc lập,
+báo lỗi replay thiếu snapshot rõ ràng và từ chối command JSON có dữ liệu thừa.
+Thêm 6 kiểm tra kiến trúc để giữ core độc lập với adapter/infrastructure,
+engine độc lập luật Classic, bot không gọi engine và randomness có seed/injection.
+
+[Báo cáo cuối Chặng 1](docs/CHANG-1-REVIEW.md) ghi cây thư mục đầy đủ,
+dependency giữa các package, circular dependency và kết quả từng nhóm test.
+Kiểm tra CLI human, bot và replay thành công trên JDK 25 với `--release 21`;
+chưa kiểm tra runtime trực tiếp trên JDK 21.

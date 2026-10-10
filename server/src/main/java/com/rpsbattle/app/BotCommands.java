@@ -19,7 +19,8 @@ public final class BotCommands {
         }
         if (spec.endsWith(".json")) {
             try {
-                var json = new ObjectMapper().readTree(Path.of(spec).toFile());
+                var json = new ObjectMapper().enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                        .readTree(Path.of(spec).toFile());
                 if (json == null || !json.isArray() || json.isEmpty()) throw new IllegalArgumentException("Bot command file must be a nonempty JSON array");
                 List<String> command = new ArrayList<>();
                 for (var argument : json) {

@@ -44,6 +44,9 @@ public final class ReplayService {
             return new MatchLog(node.get("matchId").asText(), node.get("ruleSet").asText(),
                     seed.isNull() ? null : seed.longValue(), json.state(node.get("initialState")), events, json.result(node.get("result")));
         } catch (IOException e) { throw new UncheckedIOException("Cannot read replay: " + path, e); }
+        catch (NullPointerException | java.util.NoSuchElementException e) {
+            throw new IllegalArgumentException("Missing replay payload fields", e);
+        }
     }
 
     public GameState replay(Path path) { return replay(read(path)); }
