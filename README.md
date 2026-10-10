@@ -43,7 +43,7 @@ server/
 - [x] Bước 5 — Legal Action Generator
 - [x] Bước 6 — Match Engine
 - [x] Bước 7 — Human vs Human local
-- [ ] Bước 8 — Bot Protocol
+- [x] Bước 8 — Bot Protocol
 - [ ] Bước 9 — Bot vs Bot
 - [ ] Bước 10 — Event Log & Replay
 - [ ] Bước 11 — Cleanup & Kiểm tra kiến trúc
@@ -209,4 +209,65 @@ trận hòa sau 200 lượt và EOF. Đã chạy thử Gradle CLI với `human-v
 stdin `surrender`, nhận `Result: WIN(P2)` và BUILD SUCCESSFUL.
 Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
 `build-step3-verification-step7-a`; chưa kiểm tra runtime trực tiếp JDK 21.
-Bước 8 — Bot Protocol Local chưa triển khai.
+Bot Protocol Local được bổ sung ở Bước 8 bên dưới.
+
+## Bước 8 — Bot Protocol Local
+
+```text
+bot/
+├── BotAgent.java
+├── BotProcess.java
+├── LocalProcessRunner.java
+├── BotProtocol.java
+├── BotProtocolMessage.java
+├── BotTurnRequest.java
+├── BotActionResponse.java
+└── BotProtocolException.java
+```
+
+BotAgent implement PlayerAgent và AutoCloseable, nhận BotProcess và Duration
+timeout. LocalProcessRunner nhận danh sách executable/arguments (không chạy
+qua shell), khởi động một process dùng lại qua nhiều lượt. Ví dụ cấu hình:
+
+```java
+try (BotAgent bot = new BotAgent(
+        new LocalProcessRunner(List.of("python", "bot.py")), Duration.ofSeconds(2))) {
+    // Truyền bot vào Match như mọi PlayerAgent khác.
+}
+```
+
+Runner giao tiếp UTF-8 stdin/stdout theo JSON Lines: ghi request rồi flush,
+đọc đến newline. Timeout bao gồm ghi và đọc; response tối đa 65.536 ký tự.
+EOF giữa dòng, process thoát, lỗi I/O hoặc timeout báo BotProtocolException và
+dừng process. Stderr được discard riêng để log không lẫn JSON hoặc chặn stdout.
+`close()` dừng process và các descendant hiện có, đóng pipe, dừng executor;
+caller sở hữu vòng đời agent và nên dùng try-with-resources. Chưa có sandbox.
+
+Request chứa `type=YOUR_TURN`, matchId, turn, sequence, player (`P1`/`P2`),
+state và legalActions. State gồm phase, currentPlayer, players và board
+(rows, cols, pieces); mỗi piece có id, ownerId, type, position, status.
+legalActions có type, pieceId, from, to cho MOVE hoặc type=PASS khi hết nước đi.
+Tọa độ JSON là 0-indexed, khác tọa độ hiển thị console.
+
+Bot phải flush một response trên một dòng, ví dụ:
+
+```json
+{"type":"ACTION","sequence":36,"action":{"type":"MOVE","pieceId":"P1-1","from":{"row":6,"col":0},"to":{"row":5,"col":0}}}
+```
+
+BotProtocol dùng Jackson, xác nhận type/sequence, trường bắt buộc và số nguyên
+tọa độ, hỗ trợ MOVE/PASS/SURRENDER. Server gán playerId từ PlayerView; playerId
+khác nếu được gửi trong action sẽ bị reject. JSON lỗi hoặc sequence cũ đóng bot.
+Action đúng định dạng vẫn được Match đưa qua GameEngine kiểm tra luật.
+Game Core không import Jackson; BotAgent không gọi GameEngine.
+
+BotProcess là interface transport; sau này có thể thay LocalProcessRunner bằng
+DockerSandboxRunner mà không đổi BotAgent. Bước 9 CLI Bot vs Bot chưa triển khai.
+
+Dependency: Jackson databind 2.18.6 ([release notes chính thức](https://github.com/FasterXML/jackson/wiki/Jackson-Release-2.18.6)).
+
+Kết quả Bước 8: **220 tests pass, 0 failures, 0 errors**, gồm 25 test protocol/process.
+Các test dùng JVM bot riêng để kiểm tra nhiều lượt, stderr lớn, timeout/terminate,
+EOF giữa dòng, response quá dài, JSON lỗi, sequence sai và nước đi sai luật được
+GameEngine reject. Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
+`build-step3-verification-step8-b`; chưa kiểm tra runtime trực tiếp trên JDK 21.
