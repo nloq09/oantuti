@@ -33,7 +33,8 @@ Server không tự pull image. Khi chưa có runner, upload vẫn lưu được 
 Mỗi bot có container riêng, duy trì qua các lượt: không mạng, root filesystem chỉ đọc,
 user 65534, bỏ capabilities, no-new-privileges, CPU 0.5, RAM/swap tối đa 384 MB,
 64 process và 64 file descriptor. Chỉ mount file bot đọc được; không mount repo hay Docker socket.
-Compiler ghi vào tmpfs `/tmp` 64 MB. Container bị dừng/xóa khi bot lỗi, trận kết thúc hoặc server shutdown.
+Compiler ghi vào tmpfs `/tmp` 64 MB. C++ cho phép thực thi binary trong tmpfs này;
+Python/Java/JAR dùng tmpfs noexec. Container bị dừng/xóa khi bot lỗi, trận kết thúc hoặc server shutdown.
 Các tùy chọn theo [Docker run reference](https://docs.docker.com/reference/cli/docker/container/run/).
 Đây là runner cho demo trên máy chủ có Docker; triển khai công khai với người dùng không tin cậy cần vận hành sandbox trên worker riêng và thêm tài khoản, quota/rate limit, quản trị upload. Docker chia sẻ kernel nên không thay thế một môi trường cách ly máy ảo chuyên dụng.
 
@@ -97,4 +98,15 @@ python tools/verify-bot-examples.py
 Lệnh Python chỉ biên dịch/chạy **mẫu tin cậy trong repository** bằng toolchain local, không chạy upload của người chơi. Cần g++, JDK 21+ (JAVA_HOME) và Python.
 JUnit kiểm tra storage/token/quota, multipart API, runner thiếu không chiếm ghế, tự xếp quân,
 xử thua, phản hồi đến muộn, cách ly I/O giữa phòng và bot đấu bot qua WebSocket.
-`DockerBotIntegrationTest` chạy thật các mẫu C++/Python/Java trong container khi Docker/image sẵn sàng; nếu chưa có sẽ **SKIPPED**, không tính là kiểm chứng sandbox thực tế.
+`DockerBotIntegrationTest` chạy thật các mẫu C++/Python/Java/JAR trong container khi Docker/image sẵn sàng; nếu chưa có sẽ **SKIPPED**, không tính là kiểm chứng sandbox thực tế.
+
+Để kiểm tra luồng người chơi thực tế, mở server kiểm thử riêng tại 8081 rồi chạy:
+
+```powershell
+node tools/verify-uploaded-bots.mjs
+```
+
+Script tải các source mẫu tin cậy trong repo lên server, tạo phòng đấu bot chiến thuật,
+kiểm tra tự xếp quân, nước đi thật trong container và chủ bot rời trận qua WebSocket.
+Nó tạo ba bot trong kho của server được kiểm thử, nên dùng thư mục `rps.bots.directory`
+riêng cho kiểm thử. Nếu server ở URL khác, đặt biến môi trường `RPS_TEST_URL`.

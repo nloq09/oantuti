@@ -12,17 +12,19 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import java.nio.file.*;
 import java.time.Duration;
+import java.util.jar.*;
+import javax.tools.ToolProvider;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** Runs real containers when Docker Linux and the corresponding image are provisioned. */
 class DockerBotIntegrationTest {
     @TempDir Path root;
-    @ParameterizedTest @EnumSource(value=BotLanguage.class,names={"PYTHON","CPP","JAVA"})
+    @ParameterizedTest @EnumSource(BotLanguage.class)
     void sampleRunsMultipleTurnsInRestrictedContainer(BotLanguage language)throws Exception{
         var uploads=new BotUploadService(new ObjectMapper(),root.toString(),true);
         assumeTrue(uploads.available(language),"Docker Linux/image not provisioned for "+language);
-        Path source=Path.of("../client/assets/bot-examples").resolve(language.filename).toAbsolutePath().normalize();
+        Path source=language==BotLanguage.JAR?sampleJar():Path.of("../client/assets/bot-examples").resolve(language.filename).toAbsolutePath().normalize();
         var p1=PlayerId.of("P1");var p2=PlayerId.of("P2");
         var state=ClassicGameSetup.create("DOCKER",p1,p2).withPhase(GamePhase.PLAYING);
         var actions=new LegalActionGenerator(new ClassicRuleSet(p1,p2)).getLegalActions(state,p1);
@@ -34,5 +36,16 @@ class DockerBotIntegrationTest {
                 assertEquals(actions.getFirst(),protocol.decodeResponse(response,turn.sequence(),p1));
             }
         }
+    }
+    private Path sampleJar()throws Exception{
+        Path source=Path.of("../client/assets/bot-examples/Main.java").toAbsolutePath().normalize();
+        assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,"--release","21","-d",root.toString(),source.toString()));
+        var manifest=new Manifest();manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION,"1.0");
+        manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS,"Main");
+        Path jar=root.resolve("bot.jar");
+        try(var output=new JarOutputStream(Files.newOutputStream(jar),manifest)){
+            output.putNextEntry(new JarEntry("Main.class"));Files.copy(root.resolve("Main.class"),output);output.closeEntry();
+        }
+        return jar;
     }
 }

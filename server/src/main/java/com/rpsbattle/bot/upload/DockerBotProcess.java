@@ -16,7 +16,7 @@ public final class DockerBotProcess implements BotProcess {
         var command=new ArrayList<>(List.of("docker","run","--rm","--pull=never","-i","--name",name,
                 "--network=none","--read-only","--cap-drop=ALL","--security-opt=no-new-privileges:true",
                 "--user=65534:65534","--pids-limit=64","--memory=384m","--memory-swap=384m","--cpus=0.5",
-                "--ulimit=nofile=64:64","--tmpfs=/tmp:rw,nosuid,nodev,size=64m,mode=1777",
+                "--ulimit=nofile=64:64","--tmpfs=/tmp:rw,nosuid,nodev,"+(language==BotLanguage.CPP?"exec":"noexec")+",size=64m,mode=1777",
                 "--log-driver=none","--mount","type=bind,source="+artifact.toAbsolutePath()+",target=/bot/"+language.filename+",readonly",
                 "--workdir=/tmp","--entrypoint=/bin/sh",language.image,"-c",language.command));
         return List.copyOf(command);
