@@ -8,7 +8,7 @@ import java.util.Optional;
 
 /**
  * Checks whether the game has ended and, if so, what the result is.
- *
+ * <p>
  * Called after every action to detect win/draw conditions.
  */
 public interface VictoryRule {
@@ -18,11 +18,13 @@ public interface VictoryRule {
      *
      * @param state the current game state
      * @return an Optional containing the result if the game has ended,
-     *         or empty if the game is still ongoing
+     * or empty if the game is still ongoing
      */
     Optional<GameResult> checkResult(GameState state);
 
-    /** Allows variants to resolve action-dependent outcomes such as surrender. */
+    /**
+     * Allows variants to resolve action-dependent outcomes such as surrender.
+     */
     default Optional<GameResult> checkResult(GameState state, Action action) {
         return checkResult(state);
     }

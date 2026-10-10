@@ -6,6 +6,7 @@ import com.rpsbattle.game.action.SurrenderAction;
 import com.rpsbattle.game.action.MoveAction;
 import com.rpsbattle.game.board.Position;
 import com.rpsbattle.game.engine.InvalidActionException;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -15,7 +16,9 @@ import java.io.Writer;
 import java.util.List;
 import java.util.Objects;
 
-/** Minimal local adapter: choose a listed action by number, pass or surrender. */
+/**
+ * Minimal local adapter: choose a listed action by number, pass or surrender.
+ */
 public final class ConsoleHumanAgent implements PlayerAgent {
     private final BufferedReader input;
     private final PrintWriter output;

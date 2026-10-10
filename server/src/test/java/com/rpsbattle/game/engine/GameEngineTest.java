@@ -37,7 +37,9 @@ class GameEngineTest {
                 .withPhase(GamePhase.PLAYING);
     }
 
-    private MoveAction move() { return MoveAction.of(P1, "a", FROM, TO); }
+    private MoveAction move() {
+        return MoveAction.of(P1, "a", FROM, TO);
+    }
 
     @Test
     void movesIntoEmptyCellAndEmitsOrderedEvents() {
@@ -234,16 +236,39 @@ class GameEngineTest {
     void alternativeRulesControlMovementCombatVictoryAndTurnOrder() {
         RuleSet classic = new ClassicRuleSet(P1, P2);
         RuleSet variant = new RuleSet() {
-            public String name() { return "Variant"; }
-            public int maxTurns() { return 999; }
-            public MovementRule movementRule() { return (piece, from, to, board) -> true; }
-            public CombatRule combatRule() { return (attacker, defender) -> CombatResult.DRAW; }
-            public PlacementRule placementRule() { return classic.placementRule(); }
-            public VictoryRule victoryRule() { return state -> Optional.empty(); }
+            public String name() {
+                return "Variant";
+            }
+
+            public int maxTurns() {
+                return 999;
+            }
+
+            public MovementRule movementRule() {
+                return (piece, from, to, board) -> true;
+            }
+
+            public CombatRule combatRule() {
+                return (attacker, defender) -> CombatResult.DRAW;
+            }
+
+            public PlacementRule placementRule() {
+                return classic.placementRule();
+            }
+
+            public VictoryRule victoryRule() {
+                return state -> Optional.empty();
+            }
+
             public TurnRule turnRule() {
                 return new TurnRule() {
-                    public boolean canAct(GameState state, PlayerId player, Action action) { return true; }
-                    public PlayerId nextPlayer(GameState state) { return state.currentPlayerId(); }
+                    public boolean canAct(GameState state, PlayerId player, Action action) {
+                        return true;
+                    }
+
+                    public PlayerId nextPlayer(GameState state) {
+                        return state.currentPlayerId();
+                    }
                 };
             }
         };

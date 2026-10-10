@@ -14,6 +14,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.HashMap;
@@ -42,7 +43,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         try {
             var envelope = json.readTree(text.getPayload());
             if (envelope != null && (!envelope.path("matchId").asText().equals(DemoMatchService.MATCH_ID))) {
-                online.handle(session, text.getPayload()); return;
+                online.handle(session, text.getPayload());
+                return;
             }
             ClientMessage message = json.readValue(text.getPayload(), ClientMessage.class);
             if (message == null || message.type() == null) throw new IllegalArgumentException();
@@ -111,10 +113,13 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     private void send(WebSocketSession session, String type, Map<String, Object> payload) {
         try {
-            if (session.isOpen()) session.sendMessage(new TextMessage(json.writeValueAsString(new ServerMessage(type, payload))));
+            if (session.isOpen())
+                session.sendMessage(new TextMessage(json.writeValueAsString(new ServerMessage(type, payload))));
         } catch (IOException failure) {
             release(session);
-            try { session.close(CloseStatus.SERVER_ERROR); } catch (IOException ignored) { /* Already disconnected. */ }
+            try {
+                session.close(CloseStatus.SERVER_ERROR);
+            } catch (IOException ignored) { /* Already disconnected. */ }
         }
     }
 
@@ -124,7 +129,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public synchronized void afterConnectionClosed(WebSocketSession session, CloseStatus status) { release(session); online.closed(session); }
+    public synchronized void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        release(session);
+        online.closed(session);
+    }
 
     @Override
     public synchronized void handleTransportError(WebSocketSession session, Throwable error) throws IOException {

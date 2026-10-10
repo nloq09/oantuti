@@ -31,7 +31,7 @@ class ClassicVictoryRuleTest {
 
     @BeforeEach
     void setUp() {
-        rule  = new ClassicVictoryRule(MAX_TURNS);
+        rule = new ClassicVictoryRule(MAX_TURNS);
         board = Board.defaultBoard();
     }
 
@@ -61,7 +61,8 @@ class ClassicVictoryRuleTest {
     @DisplayName("Game still ongoing")
     class StillOngoing {
 
-        @Test @DisplayName("returns empty when both players have pieces and turns remain")
+        @Test
+        @DisplayName("returns empty when both players have pieces and turns remain")
         void noResultYet() {
             place(P1, PieceType.ROCK, 7, 0);
             place(P2, PieceType.SCISSORS, 1, 0);
@@ -74,7 +75,8 @@ class ClassicVictoryRuleTest {
     @DisplayName("Elimination victories")
     class Elimination {
 
-        @Test @DisplayName("P2 has no pieces → P1 wins")
+        @Test
+        @DisplayName("P2 has no pieces → P1 wins")
         void p1WinsElimination() {
             place(P1, PieceType.ROCK, 7, 0);
             Optional<GameResult> result = rule.checkResult(stateWithTurn(3));
@@ -82,7 +84,8 @@ class ClassicVictoryRuleTest {
             assertThat(result.get().winner()).contains(P1);
         }
 
-        @Test @DisplayName("P1 has no pieces → P2 wins")
+        @Test
+        @DisplayName("P1 has no pieces → P2 wins")
         void p2WinsElimination() {
             place(P2, PieceType.SCISSORS, 1, 0);
             var result = rule.checkResult(stateWithTurn(3));
@@ -90,7 +93,8 @@ class ClassicVictoryRuleTest {
             assertThat(result.get().winner()).contains(P2);
         }
 
-        @Test @DisplayName("both players have no pieces → DRAW")
+        @Test
+        @DisplayName("both players have no pieces → DRAW")
         void bothEliminatedIsDraw() {
             var result = rule.checkResult(stateWithTurn(3));
             assertThat(result).isPresent();
@@ -103,38 +107,42 @@ class ClassicVictoryRuleTest {
     @DisplayName("Turn limit")
     class TurnLimit {
 
-        @Test @DisplayName("P1 has more pieces at turn limit → P1 wins")
+        @Test
+        @DisplayName("P1 has more pieces at turn limit → P1 wins")
         void p1WinsByCount() {
-            place(P1, PieceType.ROCK,     7, 0);
-            place(P1, PieceType.PAPER,    7, 1);
+            place(P1, PieceType.ROCK, 7, 0);
+            place(P1, PieceType.PAPER, 7, 1);
             place(P2, PieceType.SCISSORS, 1, 0);
             var result = rule.checkResult(stateWithTurn(MAX_TURNS));
             assertThat(result).isPresent();
             assertThat(result.get().winner()).contains(P1);
         }
 
-        @Test @DisplayName("P2 has more pieces at turn limit → P2 wins")
+        @Test
+        @DisplayName("P2 has more pieces at turn limit → P2 wins")
         void p2WinsByCount() {
-            place(P1, PieceType.ROCK,     7, 0);
+            place(P1, PieceType.ROCK, 7, 0);
             place(P2, PieceType.SCISSORS, 1, 0);
-            place(P2, PieceType.PAPER,    1, 1);
+            place(P2, PieceType.PAPER, 1, 1);
             var result = rule.checkResult(stateWithTurn(MAX_TURNS));
             assertThat(result).isPresent();
             assertThat(result.get().winner()).contains(P2);
         }
 
-        @Test @DisplayName("equal pieces at turn limit → DRAW")
+        @Test
+        @DisplayName("equal pieces at turn limit → DRAW")
         void drawAtTurnLimit() {
-            place(P1, PieceType.ROCK,     7, 0);
+            place(P1, PieceType.ROCK, 7, 0);
             place(P2, PieceType.SCISSORS, 1, 0);
             var result = rule.checkResult(stateWithTurn(MAX_TURNS));
             assertThat(result).isPresent();
             assertThat(result.get().isDraw()).isTrue();
         }
 
-        @Test @DisplayName("one turn before limit with pieces → no result yet")
+        @Test
+        @DisplayName("one turn before limit with pieces → no result yet")
         void beforeTurnLimit() {
-            place(P1, PieceType.ROCK,     7, 0);
+            place(P1, PieceType.ROCK, 7, 0);
             place(P2, PieceType.SCISSORS, 1, 0);
             assertThat(rule.checkResult(stateWithTurn(MAX_TURNS - 1))).isEmpty();
         }

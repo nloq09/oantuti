@@ -9,11 +9,15 @@ import com.rpsbattle.game.player.Player;
 import com.rpsbattle.game.player.PlayerId;
 import com.rpsbattle.game.state.GamePhase;
 import com.rpsbattle.game.state.GameState;
+
 import java.util.List;
 
-/** Deterministic default deployment, validated by the same engine as gameplay. */
+/**
+ * Deterministic default deployment, validated by the same engine as gameplay.
+ */
 public final class ClassicGameSetup {
-    private ClassicGameSetup() {}
+    private ClassicGameSetup() {
+    }
 
     public static GameState create(String matchId, PlayerId p1, PlayerId p2) {
         if (p1.equals(p2)) throw new IllegalArgumentException("Players must be distinct");

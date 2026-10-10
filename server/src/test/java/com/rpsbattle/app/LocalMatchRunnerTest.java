@@ -6,11 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rpsbattle.bot.*;
 import com.rpsbattle.game.state.GameState;
 import org.junit.jupiter.api.Test;
+
 import java.io.*;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import static org.assertj.core.api.Assertions.*;
 
 class LocalMatchRunnerTest {
@@ -19,8 +21,11 @@ class LocalMatchRunnerTest {
     private List<String> demo(long seed) {
         String classpath = List.of(DemoBotApplication.class, ObjectMapper.class, JsonFactory.class, JsonProperty.class)
                 .stream().map(type -> {
-                    try { return Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toString(); }
-                    catch (Exception e) { throw new IllegalStateException(e); }
+                    try {
+                        return Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
                 }).distinct().collect(Collectors.joining(File.pathSeparator));
         return List.of(Path.of(System.getProperty("java.home"), "bin", "java").toString(), "-cp", classpath,
                 DemoBotApplication.class.getName(), Long.toString(seed));
@@ -52,23 +57,6 @@ class LocalMatchRunnerTest {
         assertThat(positionsA).isEqualTo(positionsB);
     }
 
-    private static final class Transport implements BotProcess {
-        boolean closed, started, failStart, failResponse;
-        public void start() {
-            started = true;
-            if (failStart) throw new BotProtocolException("start failure");
-        }
-        public String exchange(String request, Duration timeout) {
-            if (failResponse) return "invalid JSON";
-            try {
-                long sequence = new ObjectMapper().readTree(request).get("sequence").asLong();
-                return "{\"type\":\"ACTION\",\"sequence\":" + sequence + ",\"action\":{\"type\":\"PASS\"}}";
-            } catch (IOException e) { throw new IllegalStateException(e); }
-        }
-        public boolean isAlive() { return started && !closed; }
-        public void close() { closed = true; }
-    }
-
     @Test
     void secondStartupFailureClosesBothTransportsAndPrintsNoWinner() {
         Transport a = new Transport(), b = new Transport();
@@ -96,5 +84,32 @@ class LocalMatchRunnerTest {
         assertThat(LocalGameApplication.execute(new String[]{"bot-vs-bot", "demo:1", "demo:2", "--timeout-ms", "0"},
                 new StringReader(""), output)).isEqualTo(1);
         assertThat(output.toString()).contains("Usage:", "Timeout must be positive");
+    }
+
+    private static final class Transport implements BotProcess {
+        boolean closed, started, failStart, failResponse;
+
+        public void start() {
+            started = true;
+            if (failStart) throw new BotProtocolException("start failure");
+        }
+
+        public String exchange(String request, Duration timeout) {
+            if (failResponse) return "invalid JSON";
+            try {
+                long sequence = new ObjectMapper().readTree(request).get("sequence").asLong();
+                return "{\"type\":\"ACTION\",\"sequence\":" + sequence + ",\"action\":{\"type\":\"PASS\"}}";
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        public boolean isAlive() {
+            return started && !closed;
+        }
+
+        public void close() {
+            closed = true;
+        }
     }
 }

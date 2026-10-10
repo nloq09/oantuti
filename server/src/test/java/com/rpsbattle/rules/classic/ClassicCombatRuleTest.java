@@ -54,55 +54,64 @@ class ClassicCombatRuleTest {
     }
 
     // Named individual tests for readability
-    @Test @DisplayName("ROCK beats SCISSORS → ATTACKER_WIN")
+    @Test
+    @DisplayName("ROCK beats SCISSORS → ATTACKER_WIN")
     void rockBeatsScissors() {
         assertThat(rule.resolve(piece(PieceType.ROCK, P1), piece(PieceType.SCISSORS, P2)))
                 .isEqualTo(CombatResult.ATTACKER_WIN);
     }
 
-    @Test @DisplayName("SCISSORS beats PAPER → ATTACKER_WIN")
+    @Test
+    @DisplayName("SCISSORS beats PAPER → ATTACKER_WIN")
     void scissorsBeatsPaper() {
         assertThat(rule.resolve(piece(PieceType.SCISSORS, P1), piece(PieceType.PAPER, P2)))
                 .isEqualTo(CombatResult.ATTACKER_WIN);
     }
 
-    @Test @DisplayName("PAPER beats ROCK → ATTACKER_WIN")
+    @Test
+    @DisplayName("PAPER beats ROCK → ATTACKER_WIN")
     void paperBeatsRock() {
         assertThat(rule.resolve(piece(PieceType.PAPER, P1), piece(PieceType.ROCK, P2)))
                 .isEqualTo(CombatResult.ATTACKER_WIN);
     }
 
-    @Test @DisplayName("ROCK vs PAPER → DEFENDER_WIN")
+    @Test
+    @DisplayName("ROCK vs PAPER → DEFENDER_WIN")
     void rockLosesToPaper() {
         assertThat(rule.resolve(piece(PieceType.ROCK, P1), piece(PieceType.PAPER, P2)))
                 .isEqualTo(CombatResult.DEFENDER_WIN);
     }
 
-    @Test @DisplayName("PAPER vs SCISSORS → DEFENDER_WIN")
+    @Test
+    @DisplayName("PAPER vs SCISSORS → DEFENDER_WIN")
     void paperLosesToScissors() {
         assertThat(rule.resolve(piece(PieceType.PAPER, P1), piece(PieceType.SCISSORS, P2)))
                 .isEqualTo(CombatResult.DEFENDER_WIN);
     }
 
-    @Test @DisplayName("SCISSORS vs ROCK → DEFENDER_WIN")
+    @Test
+    @DisplayName("SCISSORS vs ROCK → DEFENDER_WIN")
     void scissorsLosesToRock() {
         assertThat(rule.resolve(piece(PieceType.SCISSORS, P1), piece(PieceType.ROCK, P2)))
                 .isEqualTo(CombatResult.DEFENDER_WIN);
     }
 
-    @Test @DisplayName("ROCK vs ROCK → BOTH_DIE")
+    @Test
+    @DisplayName("ROCK vs ROCK → BOTH_DIE")
     void rockVsRock() {
         assertThat(rule.resolve(piece(PieceType.ROCK, P1), piece(PieceType.ROCK, P2)))
                 .isEqualTo(CombatResult.BOTH_DIE);
     }
 
-    @Test @DisplayName("PAPER vs PAPER → BOTH_DIE")
+    @Test
+    @DisplayName("PAPER vs PAPER → BOTH_DIE")
     void paperVsPaper() {
         assertThat(rule.resolve(piece(PieceType.PAPER, P1), piece(PieceType.PAPER, P2)))
                 .isEqualTo(CombatResult.BOTH_DIE);
     }
 
-    @Test @DisplayName("SCISSORS vs SCISSORS → BOTH_DIE")
+    @Test
+    @DisplayName("SCISSORS vs SCISSORS → BOTH_DIE")
     void scissorsVsScissors() {
         assertThat(rule.resolve(piece(PieceType.SCISSORS, P1), piece(PieceType.SCISSORS, P2)))
                 .isEqualTo(CombatResult.BOTH_DIE);

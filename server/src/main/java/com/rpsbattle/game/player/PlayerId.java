@@ -13,7 +13,9 @@ public record PlayerId(String value) {
         if (value.isBlank()) throw new IllegalArgumentException("PlayerId value must not be blank");
     }
 
-    /** Convenience factory. */
+    /**
+     * Convenience factory.
+     */
     public static PlayerId of(String value) {
         return new PlayerId(value);
     }

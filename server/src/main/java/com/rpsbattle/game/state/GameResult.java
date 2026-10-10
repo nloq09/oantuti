@@ -7,7 +7,7 @@ import java.util.Optional;
 
 /**
  * Immutable result of a finished game.
- *
+ * <p>
  * If outcome is WIN, winner is present.
  * If outcome is DRAW, winner is empty.
  */
@@ -29,13 +29,21 @@ public final class GameResult {
         return new GameResult(GameOutcome.DRAW, null);
     }
 
-    public GameOutcome outcome() { return outcome; }
+    public GameOutcome outcome() {
+        return outcome;
+    }
 
-    public Optional<PlayerId> winner() { return Optional.ofNullable(winner); }
+    public Optional<PlayerId> winner() {
+        return Optional.ofNullable(winner);
+    }
 
-    public boolean isDraw() { return outcome == GameOutcome.DRAW; }
+    public boolean isDraw() {
+        return outcome == GameOutcome.DRAW;
+    }
 
-    public boolean isWin() { return outcome == GameOutcome.WIN; }
+    public boolean isWin() {
+        return outcome == GameOutcome.WIN;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -45,7 +53,9 @@ public final class GameResult {
     }
 
     @Override
-    public int hashCode() { return Objects.hash(outcome, winner); }
+    public int hashCode() {
+        return Objects.hash(outcome, winner);
+    }
 
     @Override
     public String toString() {

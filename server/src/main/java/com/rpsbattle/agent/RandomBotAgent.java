@@ -1,12 +1,15 @@
 package com.rpsbattle.agent;
 
 import com.rpsbattle.game.action.Action;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.random.RandomGenerator;
 
-/** Randomness belongs to this agent and is supplied once, never per turn. */
+/**
+ * Randomness belongs to this agent and is supplied once, never per turn.
+ */
 public final class RandomBotAgent implements PlayerAgent {
     private final RandomGenerator random;
 

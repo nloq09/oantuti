@@ -11,11 +11,13 @@ import com.rpsbattle.rules.classic.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import static org.assertj.core.api.Assertions.*;
 
 class BotProcessTest {
@@ -27,8 +29,11 @@ class BotProcessTest {
     private LocalProcessRunner runner(String mode) {
         String classpath = List.of(TestBotProcessMain.class, ObjectMapper.class, JsonFactory.class, JsonProperty.class)
                 .stream().map(type -> {
-                    try { return Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toString(); }
-                    catch (Exception e) { throw new IllegalStateException(e); }
+                    try {
+                        return Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
                 }).distinct().collect(Collectors.joining(File.pathSeparator));
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
         return new LocalProcessRunner(List.of(java, "-cp", classpath, TestBotProcessMain.class.getName(), mode));

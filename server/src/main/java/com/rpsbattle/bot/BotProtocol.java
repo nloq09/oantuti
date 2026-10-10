@@ -7,11 +7,14 @@ import com.rpsbattle.game.action.*;
 import com.rpsbattle.game.board.Position;
 import com.rpsbattle.game.piece.Piece;
 import com.rpsbattle.game.player.PlayerId;
+
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 
-/** JSON adaptation stays outside game core; explicit schema avoids domain annotations. */
+/**
+ * JSON adaptation stays outside game core; explicit schema avoids domain annotations.
+ */
 public final class BotProtocol {
     private final ObjectMapper mapper = new ObjectMapper().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
@@ -42,8 +45,11 @@ public final class BotProtocol {
         });
         BotTurnRequest request = new BotTurnRequest("YOUR_TURN", game.matchId(), game.turnNumber(),
                 game.sequence(), view.playerId().value(), state, actions.stream().map(this::encodeAction).toList());
-        try { return mapper.writeValueAsString(request); }
-        catch (IOException e) { throw new BotProtocolException("Cannot encode turn request", e); }
+        try {
+            return mapper.writeValueAsString(request);
+        } catch (IOException e) {
+            throw new BotProtocolException("Cannot encode turn request", e);
+        }
     }
 
     private JsonNode encodeAction(Action action) {
@@ -57,7 +63,8 @@ public final class BotProtocol {
             }
             case PassAction ignored -> json.put("type", "PASS");
             case SurrenderAction ignored -> json.put("type", "SURRENDER");
-            case PlaceAction ignored -> throw new BotProtocolException("Bot protocol currently supports playing actions only");
+            case PlaceAction ignored ->
+                    throw new BotProtocolException("Bot protocol currently supports playing actions only");
         }
         return json;
     }
@@ -71,7 +78,8 @@ public final class BotProtocol {
             if (sequence == null || !sequence.isIntegralNumber() || !sequence.canConvertToLong()) {
                 throw new BotProtocolException("Missing or invalid sequence");
             }
-            if (sequence.longValue() != expectedSequence) throw new BotProtocolException("Stale or mismatched sequence");
+            if (sequence.longValue() != expectedSequence)
+                throw new BotProtocolException("Stale or mismatched sequence");
             BotActionResponse response = new BotActionResponse("ACTION", sequence.longValue(), json.get("action"));
             JsonNode action = response.action();
             if (action == null || !action.isObject()) throw new BotProtocolException("Missing action object");
@@ -79,7 +87,8 @@ public final class BotProtocol {
                 throw new BotProtocolException("Action playerId does not match assigned player");
             }
             return switch (text(action, "type")) {
-                case "MOVE" -> MoveAction.of(player, text(action, "pieceId"), position(action.get("from")), position(action.get("to")));
+                case "MOVE" ->
+                        MoveAction.of(player, text(action, "pieceId"), position(action.get("from")), position(action.get("to")));
                 case "PASS" -> PassAction.of(player);
                 case "SURRENDER" -> SurrenderAction.of(player);
                 default -> throw new BotProtocolException("Unknown action type");

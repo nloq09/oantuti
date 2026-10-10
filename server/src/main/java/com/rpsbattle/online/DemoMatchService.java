@@ -25,7 +25,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
-/** One in-memory demo. All mutable match access is serialized by this service. */
+/**
+ * One in-memory demo. All mutable match access is serialized by this service.
+ */
 @Service
 public class DemoMatchService {
     public static final String MATCH_ID = "demo-match";
@@ -42,9 +44,9 @@ public class DemoMatchService {
         match.start();
     }
 
-    public synchronized GameState state() { return match.state(); }
-
-    /** Sparse pre-deployed scenario for quick movement/combat, not a placement phase. */
+    /**
+     * Sparse pre-deployed scenario for quick movement/combat, not a placement phase.
+     */
     private static GameState demoLayout() {
         Board board = Board.defaultBoard();
         board.placePiece(Piece.alive("P1-R1", P1, PieceType.ROCK, new Position(6, 2)));
@@ -56,6 +58,10 @@ public class DemoMatchService {
         return GameState.initial(MATCH_ID, board, players).withPhase(GamePhase.READY);
     }
 
+    public synchronized GameState state() {
+        return match.state();
+    }
+
     public synchronized List<Action> legalActions(PlayerId player) {
         var state = match.state();
         List<Action> actions = new ArrayList<>(generator.getLegalActions(state, player));
@@ -65,7 +71,9 @@ public class DemoMatchService {
         return List.copyOf(actions);
     }
 
-    public boolean hasPlayer(PlayerId player) { return P1.equals(player) || P2.equals(player); }
+    public boolean hasPlayer(PlayerId player) {
+        return P1.equals(player) || P2.equals(player);
+    }
 
     public synchronized GameTransition submitAction(PlayerId player, long sequence, Action action) {
         if (!hasPlayer(player)) throw new DemoRequestException("PLAYER_NOT_FOUND");
@@ -84,9 +92,12 @@ public class DemoMatchService {
         }
     }
 
-    /** Bridges one submitted action into the existing Match orchestration. */
+    /**
+     * Bridges one submitted action into the existing Match orchestration.
+     */
     private static final class SubmittedActionAgent implements PlayerAgent {
         private Action pending;
+
         @Override
         public Action chooseAction(PlayerView view, List<Action> legalActions) {
             if (pending == null) throw new IllegalStateException("No submitted action");

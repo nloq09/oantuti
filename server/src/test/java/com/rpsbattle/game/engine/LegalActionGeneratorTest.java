@@ -177,21 +177,40 @@ class LegalActionGeneratorTest {
     @Test
     void alternativeMovementAndTurnRulesControlGeneratedActions() {
         RuleSet variant = new RuleSet() {
-            public String name() { return "Diagonal"; }
-            public int maxTurns() { return rules.maxTurns(); }
+            public String name() {
+                return "Diagonal";
+            }
+
+            public int maxTurns() {
+                return rules.maxTurns();
+            }
+
             public MovementRule movementRule() {
                 return (piece, from, to, board) -> Math.abs(to.row() - from.row()) == 2
                         && Math.abs(to.col() - from.col()) == 2;
             }
-            public CombatRule combatRule() { return rules.combatRule(); }
-            public PlacementRule placementRule() { return rules.placementRule(); }
-            public VictoryRule victoryRule() { return rules.victoryRule(); }
+
+            public CombatRule combatRule() {
+                return rules.combatRule();
+            }
+
+            public PlacementRule placementRule() {
+                return rules.placementRule();
+            }
+
+            public VictoryRule victoryRule() {
+                return rules.victoryRule();
+            }
+
             public TurnRule turnRule() {
                 return new TurnRule() {
                     public boolean canAct(GameState state, PlayerId player, Action action) {
                         return action instanceof MoveAction move && move.to().row() < move.from().row();
                     }
-                    public PlayerId nextPlayer(GameState state) { return P1; }
+
+                    public PlayerId nextPlayer(GameState state) {
+                        return P1;
+                    }
                 };
             }
         };

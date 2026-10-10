@@ -7,11 +7,11 @@ import com.rpsbattle.rule.MovementRule;
 
 /**
  * Classic movement rule:
- *  - Exactly 1 step orthogonally (UP / DOWN / LEFT / RIGHT).
- *  - Cannot move diagonally.
- *  - Cannot leave the board.
- *  - Cannot move into a cell occupied by a friendly piece.
- *  - Can move into a cell occupied by an enemy (triggers combat).
+ * - Exactly 1 step orthogonally (UP / DOWN / LEFT / RIGHT).
+ * - Cannot move diagonally.
+ * - Cannot leave the board.
+ * - Cannot move into a cell occupied by a friendly piece.
+ * - Can move into a cell occupied by an enemy (triggers combat).
  */
 public final class ClassicMovementRule implements MovementRule {
 

@@ -7,7 +7,7 @@ import java.util.Objects;
 
 /**
  * Represents a player in the game.
- *
+ * <p>
  * A Player holds identity and a list of piece IDs.
  * The Player does NOT contain business logic.
  */
@@ -15,7 +15,9 @@ public final class Player {
 
     private final PlayerId id;
     private final String name;
-    /** IDs of pieces belonging to this player (alive and dead). */
+    /**
+     * IDs of pieces belonging to this player (alive and dead).
+     */
     private final List<String> pieceIds;
 
     public Player(PlayerId id, String name, List<String> pieceIds) {
@@ -24,28 +26,42 @@ public final class Player {
         this.pieceIds = List.copyOf(Objects.requireNonNull(pieceIds, "pieceIds"));
     }
 
-    /** Factory with empty piece list. */
+    /**
+     * Factory with empty piece list.
+     */
     public static Player of(PlayerId id, String name) {
         return new Player(id, name, List.of());
     }
 
-    /** Returns a new Player with an additional piece id. */
+    /**
+     * Returns a new Player with an additional piece id.
+     */
     public Player withAddedPiece(String pieceId) {
         List<String> updated = new ArrayList<>(pieceIds);
         updated.add(pieceId);
         return new Player(id, name, updated);
     }
 
-    /** Returns a new Player without the given piece id. */
+    /**
+     * Returns a new Player without the given piece id.
+     */
     public Player withRemovedPiece(String pieceId) {
         List<String> updated = new ArrayList<>(pieceIds);
         updated.remove(pieceId);
         return new Player(id, name, updated);
     }
 
-    public PlayerId id() { return id; }
-    public String name() { return name; }
-    public List<String> pieceIds() { return pieceIds; }
+    public PlayerId id() {
+        return id;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public List<String> pieceIds() {
+        return pieceIds;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -55,7 +71,9 @@ public final class Player {
     }
 
     @Override
-    public int hashCode() { return id.hashCode(); }
+    public int hashCode() {
+        return id.hashCode();
+    }
 
     @Override
     public String toString() {

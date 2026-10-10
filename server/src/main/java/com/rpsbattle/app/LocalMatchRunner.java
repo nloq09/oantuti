@@ -5,14 +5,18 @@ import com.rpsbattle.game.player.PlayerId;
 import com.rpsbattle.game.state.GameState;
 import com.rpsbattle.match.Match;
 import com.rpsbattle.rules.classic.*;
+
 import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.nio.file.Path;
+
 import com.rpsbattle.replay.ReplayService;
 
-/** Owns both process lifetimes; gameplay is delegated to the existing Match. */
+/**
+ * Owns both process lifetimes; gameplay is delegated to the existing Match.
+ */
 public final class LocalMatchRunner {
     public GameState run(List<String> commandA, List<String> commandB, Duration timeout, PrintWriter output) {
         return run(commandA, commandB, timeout, output, null);

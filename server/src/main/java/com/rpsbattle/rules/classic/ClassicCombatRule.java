@@ -7,12 +7,12 @@ import com.rpsbattle.rule.CombatRule;
 
 /**
  * Classic RPS combat rule:
- *
- *   ROCK     beats SCISSORS
- *   SCISSORS beats PAPER
- *   PAPER    beats ROCK
- *   same type → BOTH_DIE
- *
+ * <p>
+ * ROCK     beats SCISSORS
+ * SCISSORS beats PAPER
+ * PAPER    beats ROCK
+ * same type → BOTH_DIE
+ * <p>
  * The rule is encoded as a data table — no long if/else chain.
  */
 public final class ClassicCombatRule implements CombatRule {
@@ -23,9 +23,9 @@ public final class ClassicCombatRule implements CombatRule {
      */
     private static PieceType defeats(PieceType type) {
         return switch (type) {
-            case ROCK     -> PieceType.SCISSORS;
+            case ROCK -> PieceType.SCISSORS;
             case SCISSORS -> PieceType.PAPER;
-            case PAPER    -> PieceType.ROCK;
+            case PAPER -> PieceType.ROCK;
         };
     }
 
@@ -34,8 +34,8 @@ public final class ClassicCombatRule implements CombatRule {
         PieceType a = attacker.type();
         PieceType d = defender.type();
 
-        if (a == d)               return CombatResult.BOTH_DIE;
-        if (defeats(a) == d)      return CombatResult.ATTACKER_WIN;
-        return                           CombatResult.DEFENDER_WIN;
+        if (a == d) return CombatResult.BOTH_DIE;
+        if (defeats(a) == d) return CombatResult.ATTACKER_WIN;
+        return CombatResult.DEFENDER_WIN;
     }
 }

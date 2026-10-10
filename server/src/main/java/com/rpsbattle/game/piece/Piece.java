@@ -7,7 +7,7 @@ import java.util.Objects;
 
 /**
  * Immutable representation of a game piece.
- *
+ * <p>
  * A Piece cannot mutate itself — any state change produces a new Piece instance.
  */
 public final class Piece {
@@ -26,7 +26,9 @@ public final class Piece {
         this.status = Objects.requireNonNull(status, "status");
     }
 
-    /** Convenience factory — creates an ALIVE piece. */
+    /**
+     * Convenience factory — creates an ALIVE piece.
+     */
     public static Piece alive(String id, PlayerId ownerId, PieceType type, Position position) {
         return new Piece(id, ownerId, type, position, PieceStatus.ALIVE);
     }
@@ -43,14 +45,33 @@ public final class Piece {
 
     // ---- Accessors ----
 
-    public String id() { return id; }
-    public PlayerId ownerId() { return ownerId; }
-    public PieceType type() { return type; }
-    public Position position() { return position; }
-    public PieceStatus status() { return status; }
+    public String id() {
+        return id;
+    }
 
-    public boolean isAlive() { return status == PieceStatus.ALIVE; }
-    public boolean isDead()  { return status == PieceStatus.DEAD; }
+    public PlayerId ownerId() {
+        return ownerId;
+    }
+
+    public PieceType type() {
+        return type;
+    }
+
+    public Position position() {
+        return position;
+    }
+
+    public PieceStatus status() {
+        return status;
+    }
+
+    public boolean isAlive() {
+        return status == PieceStatus.ALIVE;
+    }
+
+    public boolean isDead() {
+        return status == PieceStatus.DEAD;
+    }
 
     public boolean ownedBy(PlayerId player) {
         return ownerId.equals(player);
@@ -66,7 +87,9 @@ public final class Piece {
     }
 
     @Override
-    public int hashCode() { return id.hashCode(); }
+    public int hashCode() {
+        return id.hashCode();
+    }
 
     @Override
     public String toString() {

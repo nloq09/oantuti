@@ -5,29 +5,41 @@ import com.rpsbattle.game.piece.Piece;
 import com.rpsbattle.game.state.*;
 import com.rpsbattle.match.Match;
 import com.rpsbattle.match.MatchStatus;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Applies recorded facts, without agents, randomness or re-running combat rules. */
+/**
+ * Applies recorded facts, without agents, randomness or re-running combat rules.
+ */
 public final class ReplayService {
     private final ReplayJson json = new ReplayJson();
+
+    private static void invalid(String message) {
+        throw new IllegalArgumentException(message);
+    }
 
     public void write(Path path, Match match) {
         if (match.status() != MatchStatus.FINISHED) throw new IllegalStateException("Export requires a finished match");
         MatchLog log = new MatchLog(match.matchId(), match.ruleSet().name(), match.seed(), match.initialState(),
                 match.events(), match.state().result().orElseThrow());
         var node = json.mapper.createObjectNode();
-        node.put("matchId", log.matchId()); node.put("ruleSet", log.ruleSet());
-        if (log.seed() == null) node.putNull("seed"); else node.put("seed", log.seed());
+        node.put("matchId", log.matchId());
+        node.put("ruleSet", log.ruleSet());
+        if (log.seed() == null) node.putNull("seed");
+        else node.put("seed", log.seed());
         node.set("initialState", json.state(log.initialState()));
         var events = node.putArray("events");
         log.events().forEach(e -> events.add(json.event(e)));
         node.set("result", json.result(log.result()));
-        try { json.mapper.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), node); }
-        catch (IOException e) { throw new UncheckedIOException("Cannot export replay: " + path, e); }
+        try {
+            json.mapper.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), node);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Cannot export replay: " + path, e);
+        }
     }
 
     public MatchLog read(Path path) {
@@ -38,22 +50,27 @@ public final class ReplayService {
                 throw new IllegalArgumentException("Invalid match log schema");
             }
             var seed = node.get("seed");
-            if (!seed.isNull() && (!seed.isIntegralNumber() || !seed.canConvertToLong())) throw new IllegalArgumentException("Invalid seed");
+            if (!seed.isNull() && (!seed.isIntegralNumber() || !seed.canConvertToLong()))
+                throw new IllegalArgumentException("Invalid seed");
             List<GameEvent> events = new ArrayList<>();
             node.get("events").forEach(e -> events.add(json.event(e)));
             return new MatchLog(node.get("matchId").asText(), node.get("ruleSet").asText(),
                     seed.isNull() ? null : seed.longValue(), json.state(node.get("initialState")), events, json.result(node.get("result")));
-        } catch (IOException e) { throw new UncheckedIOException("Cannot read replay: " + path, e); }
-        catch (NullPointerException | java.util.NoSuchElementException e) {
+        } catch (IOException e) {
+            throw new UncheckedIOException("Cannot read replay: " + path, e);
+        } catch (NullPointerException | java.util.NoSuchElementException e) {
             throw new IllegalArgumentException("Missing replay payload fields", e);
         }
     }
 
-    public GameState replay(Path path) { return replay(read(path)); }
+    public GameState replay(Path path) {
+        return replay(read(path));
+    }
 
     public GameState replay(MatchLog log) {
         GameState state = replay(log.initialState(), log.events());
-        if (!state.result().orElseThrow().equals(log.result())) throw new IllegalArgumentException("Replay result does not match log result");
+        if (!state.result().orElseThrow().equals(log.result()))
+            throw new IllegalArgumentException("Replay result does not match log result");
         return state;
     }
 
@@ -73,13 +90,16 @@ public final class ReplayService {
             if (event instanceof GameEvent.TurnStarted turn) {
                 if (active || state.isFinished() || turn.sequence() != Math.addExact(state.sequence(), 1)
                         || !turn.player().equals(state.currentPlayerId())) invalid("Invalid TURN_STARTED");
-                active = true; hadTurn = true; pending = turn.sequence();
+                active = true;
+                hadTurn = true;
+                pending = turn.sequence();
                 continue;
             }
             if (event instanceof GameEvent.MatchFinished end) {
                 if (active || end.sequence() != state.sequence()) invalid("Invalid MATCH_FINISHED");
                 if (hadTurn && state.result().isEmpty()) invalid("Missing GAME_FINISHED");
-                if (state.result().isPresent() && !state.result().get().equals(end.result())) invalid("Conflicting final result");
+                if (state.result().isPresent() && !state.result().get().equals(end.result()))
+                    invalid("Conflicting final result");
                 state = state.withResult(end.result()).withPhase(GamePhase.FINISHED);
                 finished = true;
                 continue;
@@ -96,11 +116,13 @@ public final class ReplayService {
                 }
                 case GameEvent.PieceRemoved e -> {
                     checkPiece(board.getPiece(e.piece().position()).orElseThrow(), e.piece());
-                    board.removePiece(e.piece().position()); state = state.withBoard(board);
+                    board.removePiece(e.piece().position());
+                    state = state.withBoard(board);
                 }
                 case GameEvent.PiecePlaced e -> {
                     if (board.findById(e.piece().id()).isPresent()) invalid("Duplicate placed piece");
-                    board.placePiece(e.piece()); state = state.withBoard(board);
+                    board.placePiece(e.piece());
+                    state = state.withBoard(board);
                     var player = state.findPlayer(e.piece().ownerId()).orElseThrow();
                     state = state.withUpdatedPlayer(player.withAddedPiece(e.piece().id()));
                 }
@@ -118,8 +140,10 @@ public final class ReplayService {
                     state = state.withResult(e.result()).withPhase(GamePhase.FINISHED).withTurnNumber(e.turnNumber());
                 }
                 case GameEvent.TurnEnded e -> {
-                    if (!state.currentPlayerId().equals(e.currentPlayer()) || e.turnNumber() != state.turnNumber()) invalid("Invalid TURN_ENDED");
-                    state = state.withSequence(e.sequence()); active = false;
+                    if (!state.currentPlayerId().equals(e.currentPlayer()) || e.turnNumber() != state.turnNumber())
+                        invalid("Invalid TURN_ENDED");
+                    state = state.withSequence(e.sequence());
+                    active = false;
                 }
                 default -> invalid("Unexpected lifecycle event");
             }
@@ -133,5 +157,4 @@ public final class ReplayService {
                 || actual.type() != expected.type() || !actual.position().equals(expected.position())
                 || actual.status() != expected.status()) invalid("Piece payload mismatch");
     }
-    private static void invalid(String message) { throw new IllegalArgumentException(message); }
 }

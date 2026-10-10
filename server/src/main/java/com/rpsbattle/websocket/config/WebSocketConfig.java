@@ -11,7 +11,9 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
     private final GameWebSocketHandler handler;
 
-    public WebSocketConfig(GameWebSocketHandler handler) { this.handler = handler; }
+    public WebSocketConfig(GameWebSocketHandler handler) {
+        this.handler = handler;
+    }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {

@@ -6,7 +6,7 @@ import java.util.Objects;
 
 /**
  * A player chooses to pass their turn without moving.
- *
+ * <p>
  * Whether passing is allowed is decided by TurnRule, not here.
  */
 public record PassAction(PlayerId playerId) implements Action {

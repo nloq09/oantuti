@@ -8,10 +8,10 @@ import com.rpsbattle.rule.PlacementRule;
 
 /**
  * Classic placement rule:
- *
- *   Player 1 (index 0) → rows 6, 7, 8
- *   Player 2 (index 1) → rows 0, 1, 2
- *
+ * <p>
+ * Player 1 (index 0) → rows 6, 7, 8
+ * Player 2 (index 1) → rows 0, 1, 2
+ * <p>
  * The rule is configured at construction time so it can be adapted
  * to other board sizes without subclassing.
  */
@@ -20,11 +20,15 @@ public final class ClassicPlacementRule implements PlacementRule {
     private final PlayerId player1Id;
     private final PlayerId player2Id;
 
-    /** Inclusive row range for player 1 placement. */
+    /**
+     * Inclusive row range for player 1 placement.
+     */
     private final int p1RowMin;
     private final int p1RowMax;
 
-    /** Inclusive row range for player 2 placement. */
+    /**
+     * Inclusive row range for player 2 placement.
+     */
     private final int p2RowMin;
     private final int p2RowMax;
 
@@ -44,10 +48,10 @@ public final class ClassicPlacementRule implements PlacementRule {
             int p2RowMin, int p2RowMax) {
         this.player1Id = player1Id;
         this.player2Id = player2Id;
-        this.p1RowMin  = p1RowMin;
-        this.p1RowMax  = p1RowMax;
-        this.p2RowMin  = p2RowMin;
-        this.p2RowMax  = p2RowMax;
+        this.p1RowMin = p1RowMin;
+        this.p1RowMax = p1RowMax;
+        this.p2RowMin = p2RowMin;
+        this.p2RowMax = p2RowMax;
     }
 
     @Override
@@ -55,7 +59,7 @@ public final class ClassicPlacementRule implements PlacementRule {
                             Position position, Board board) {
         // Cell must be inside the board and currently empty
         if (!board.isInside(position)) return false;
-        if (!board.isEmpty(position))  return false;
+        if (!board.isEmpty(position)) return false;
 
         int row = position.row();
 

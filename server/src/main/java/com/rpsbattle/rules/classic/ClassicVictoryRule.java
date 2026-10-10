@@ -12,12 +12,12 @@ import java.util.Optional;
 
 /**
  * Classic victory rule:
- *
- *  1. If a player has 0 alive pieces → opponent wins.
- *  2. If turn >= maxTurns:
- *       - more pieces → winner
- *       - equal pieces → DRAW
- *
+ * <p>
+ * 1. If a player has 0 alive pieces → opponent wins.
+ * 2. If turn >= maxTurns:
+ * - more pieces → winner
+ * - equal pieces → DRAW
+ * <p>
  * This rule reads only from GameState; it does not mutate anything.
  */
 public final class ClassicVictoryRule implements VictoryRule {
@@ -46,8 +46,8 @@ public final class ClassicVictoryRule implements VictoryRule {
 
         // Elimination
         if (count1 == 0 && count2 == 0) return Optional.of(GameResult.draw());
-        if (count1 == 0)                 return Optional.of(GameResult.win(p2));
-        if (count2 == 0)                 return Optional.of(GameResult.win(p1));
+        if (count1 == 0) return Optional.of(GameResult.win(p2));
+        if (count2 == 0) return Optional.of(GameResult.win(p1));
 
         // Turn limit
         if (state.turnNumber() >= maxTurns) {

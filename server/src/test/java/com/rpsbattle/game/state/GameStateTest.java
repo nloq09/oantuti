@@ -21,13 +21,13 @@ class GameStateTest {
     private static final PlayerId P1 = PlayerId.of("P1");
     private static final PlayerId P2 = PlayerId.of("P2");
 
-    private Board  board;
+    private Board board;
     private Player player1;
     private Player player2;
 
     @BeforeEach
     void setUp() {
-        board   = Board.defaultBoard();
+        board = Board.defaultBoard();
         player1 = Player.of(P1, "Alice");
         player2 = Player.of(P2, "Bob");
     }
@@ -271,7 +271,7 @@ class GameStateTest {
         @DisplayName("wither methods return new instances, not mutating original")
         void witherReturnsNewInstance() {
             GameState original = initialState();
-            GameState updated  = original.withPhase(GamePhase.PLAYING);
+            GameState updated = original.withPhase(GamePhase.PLAYING);
 
             assertThat(original.phase()).isEqualTo(GamePhase.CREATED);
             assertThat(updated.phase()).isEqualTo(GamePhase.PLAYING);

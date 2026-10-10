@@ -5,9 +5,12 @@ import com.rpsbattle.game.board.Board;
 import com.rpsbattle.game.piece.Piece;
 import com.rpsbattle.game.player.PlayerId;
 import com.rpsbattle.rule.*;
+
 import java.util.*;
 
-/** Scores supplied legal moves using public information and injected variant rules. */
+/**
+ * Scores supplied legal moves using public information and injected variant rules.
+ */
 public final class TacticalBotAgent implements PlayerAgent {
     private final RuleSet rules;
     private final Random random;
@@ -32,7 +35,10 @@ public final class TacticalBotAgent implements PlayerAgent {
                 String fingerprint = fingerprint(next);
                 score -= 45 * recentBoards.stream().filter(fingerprint::equals).count();
             } else if (action instanceof PassAction) score = evaluate(current, view.playerId()) - 100;
-            if (score > best) { best = score; candidates.clear(); }
+            if (score > best) {
+                best = score;
+                candidates.clear();
+            }
             if (score == best) candidates.add(action);
         }
         candidates.sort(Comparator.comparing(action -> action instanceof MoveAction move
@@ -51,10 +57,17 @@ public final class TacticalBotAgent implements PlayerAgent {
         var target = next.getPiece(move.to());
         if (target.isEmpty()) next.movePiece(move.from(), move.to());
         else switch (rules.combatRule().resolve(attacker, target.get())) {
-            case ATTACKER_WIN -> { next.removePiece(move.to()); next.movePiece(move.from(), move.to()); }
+            case ATTACKER_WIN -> {
+                next.removePiece(move.to());
+                next.movePiece(move.from(), move.to());
+            }
             case DEFENDER_WIN -> next.removePiece(move.from());
-            case BOTH_DIE -> { next.removePiece(move.from()); next.removePiece(move.to()); }
-            case DRAW -> { }
+            case BOTH_DIE -> {
+                next.removePiece(move.from());
+                next.removePiece(move.to());
+            }
+            case DRAW -> {
+            }
         }
         return next;
     }

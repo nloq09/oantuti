@@ -1,18 +1,23 @@
 package com.rpsbattle.architecture;
 
 import org.junit.jupiter.api.Test;
+
 import java.nio.file.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
+
 import static org.assertj.core.api.Assertions.*;
 
-/** Source-level boundaries are checked without introducing a framework dependency. */
+/**
+ * Source-level boundaries are checked without introducing a framework dependency.
+ */
 class ArchitectureTest {
     private String source(String folder) throws IOException {
         try (var files = Files.walk(Path.of("src/main/java/com/rpsbattle", folder))) {
             StringBuilder result = new StringBuilder();
-            for (Path file : files.filter(p -> p.toString().endsWith(".java")).toList()) result.append(Files.readString(file));
+            for (Path file : files.filter(p -> p.toString().endsWith(".java")).toList())
+                result.append(Files.readString(file));
             return result.toString();
         }
     }

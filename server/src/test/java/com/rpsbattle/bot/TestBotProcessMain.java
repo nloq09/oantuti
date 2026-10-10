@@ -1,10 +1,13 @@
 package com.rpsbattle.bot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
-/** Separate JVM fixture: stdout is used only for JSON Lines. */
+/**
+ * Separate JVM fixture: stdout is used only for JSON Lines.
+ */
 public final class TestBotProcessMain {
     public static void main(String[] args) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
@@ -13,12 +16,30 @@ public final class TestBotProcessMain {
         String line;
         while ((line = input.readLine()) != null) {
             switch (args[0]) {
-                case "hang" -> { Thread.sleep(30_000); return; }
-                case "exit" -> { return; }
-                case "partial" -> { output.print("{\"type\":"); output.flush(); return; }
-                case "oversize" -> { output.println("x".repeat(70_000)); continue; }
-                case "bad-json" -> { output.println("not JSON"); continue; }
-                case "stderr" -> { System.err.print("log".repeat(100_000)); System.err.flush(); }
+                case "hang" -> {
+                    Thread.sleep(30_000);
+                    return;
+                }
+                case "exit" -> {
+                    return;
+                }
+                case "partial" -> {
+                    output.print("{\"type\":");
+                    output.flush();
+                    return;
+                }
+                case "oversize" -> {
+                    output.println("x".repeat(70_000));
+                    continue;
+                }
+                case "bad-json" -> {
+                    output.println("not JSON");
+                    continue;
+                }
+                case "stderr" -> {
+                    System.err.print("log".repeat(100_000));
+                    System.err.flush();
+                }
             }
             var request = mapper.readTree(line);
             var response = mapper.createObjectNode();

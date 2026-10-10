@@ -3,6 +3,7 @@ package com.rpsbattle.app;
 import com.rpsbattle.game.board.Board;
 import com.rpsbattle.game.board.Position;
 import com.rpsbattle.game.state.GameState;
+
 import java.io.PrintWriter;
 
 public final class ConsoleBoardRenderer {

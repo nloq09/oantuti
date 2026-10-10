@@ -14,7 +14,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-/** Enumerates playable moves without changing the input snapshot. */
+/**
+ * Enumerates playable moves without changing the input snapshot.
+ */
 public final class LegalActionGenerator {
     private final RuleSet rules;
 

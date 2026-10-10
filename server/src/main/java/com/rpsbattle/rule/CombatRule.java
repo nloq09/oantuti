@@ -4,7 +4,7 @@ import com.rpsbattle.game.piece.Piece;
 
 /**
  * Resolves the outcome when two pieces occupy the same cell (combat).
- *
+ * <p>
  * This interface knows nothing about the board or positions —
  * it only cares about piece types.
  */

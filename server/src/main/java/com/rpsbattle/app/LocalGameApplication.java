@@ -8,10 +8,12 @@ import com.rpsbattle.match.Match;
 import com.rpsbattle.match.MatchStatus;
 import com.rpsbattle.rules.classic.ClassicGameSetup;
 import com.rpsbattle.rules.classic.ClassicRuleSet;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.nio.file.Path;
+
 import com.rpsbattle.replay.ReplayService;
 
 public final class LocalGameApplication {
@@ -38,7 +40,8 @@ public final class LocalGameApplication {
                 boolean timeoutSeen = false;
                 for (int i = 3; i < args.length; i += 2) {
                     if (args[i].equals("--timeout-ms") && !timeoutSeen) {
-                        timeoutMs = Long.parseLong(args[i + 1]); timeoutSeen = true;
+                        timeoutMs = Long.parseLong(args[i + 1]);
+                        timeoutSeen = true;
                     } else if (args[i].equals("--export") && export == null) {
                         export = Path.of(args[i + 1]);
                     } else throw new IllegalArgumentException("Unknown or duplicate option: " + args[i]);

@@ -3,11 +3,14 @@ package com.rpsbattle.bot;
 import com.rpsbattle.agent.PlayerAgent;
 import com.rpsbattle.agent.PlayerView;
 import com.rpsbattle.game.action.Action;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
-/** Does not call GameEngine: the owning Match validates the returned action. */
+/**
+ * Does not call GameEngine: the owning Match validates the returned action.
+ */
 public final class BotAgent implements PlayerAgent, AutoCloseable {
     private final BotProcess process;
     private final Duration timeout;
@@ -19,7 +22,8 @@ public final class BotAgent implements PlayerAgent, AutoCloseable {
         if (timeout.isZero() || timeout.isNegative()) throw new IllegalArgumentException("Timeout must be positive");
     }
 
-    @Override public Action chooseAction(PlayerView view, List<Action> legalActions) {
+    @Override
+    public Action chooseAction(PlayerView view, List<Action> legalActions) {
         String request = protocol.encodeTurn(view, legalActions);
         try {
             return protocol.decodeResponse(process.exchange(request, timeout), view.state().sequence(), view.playerId());
@@ -29,5 +33,8 @@ public final class BotAgent implements PlayerAgent, AutoCloseable {
         }
     }
 
-    @Override public void close() { process.close(); }
+    @Override
+    public void close() {
+        process.close();
+    }
 }

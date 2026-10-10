@@ -2,14 +2,18 @@ package com.rpsbattle.app;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rpsbattle.bot.DemoBotApplication;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/** A bot spec is an executable, a JSON command file, or demo:<seed>. */
+/**
+ * A bot spec is an executable, a JSON command file, or demo:<seed>.
+ */
 public final class BotCommands {
-    private BotCommands() {}
+    private BotCommands() {
+    }
 
     public static List<String> resolve(String spec) {
         if (spec.startsWith("demo:")) {
@@ -21,10 +25,12 @@ public final class BotCommands {
             try {
                 var json = new ObjectMapper().enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                         .readTree(Path.of(spec).toFile());
-                if (json == null || !json.isArray() || json.isEmpty()) throw new IllegalArgumentException("Bot command file must be a nonempty JSON array");
+                if (json == null || !json.isArray() || json.isEmpty())
+                    throw new IllegalArgumentException("Bot command file must be a nonempty JSON array");
                 List<String> command = new ArrayList<>();
                 for (var argument : json) {
-                    if (!argument.isTextual() || argument.asText().isBlank()) throw new IllegalArgumentException("Bot command arguments must be nonblank strings");
+                    if (!argument.isTextual() || argument.asText().isBlank())
+                        throw new IllegalArgumentException("Bot command arguments must be nonblank strings");
                     command.add(argument.asText());
                 }
                 return List.copyOf(command);

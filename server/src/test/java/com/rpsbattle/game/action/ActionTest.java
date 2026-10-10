@@ -26,7 +26,7 @@ class ActionTest {
         @DisplayName("creates valid MoveAction with all fields")
         void createsMoveAction() {
             Position from = new Position(5, 4);
-            Position to   = new Position(4, 4);
+            Position to = new Position(4, 4);
             MoveAction action = MoveAction.of(P1, "R1", from, to);
 
             assertThat(action.playerId()).isEqualTo(P1);
@@ -165,9 +165,9 @@ class ActionTest {
             for (Action action : actions) {
                 // Java 21 pattern matching switch — must be exhaustive
                 String type = switch (action) {
-                    case MoveAction     m -> "MOVE";
-                    case PlaceAction    p -> "PLACE";
-                    case PassAction     p -> "PASS";
+                    case MoveAction m -> "MOVE";
+                    case PlaceAction p -> "PLACE";
+                    case PassAction p -> "PASS";
                     case SurrenderAction s -> "SURRENDER";
                 };
                 assertThat(type).isNotBlank();

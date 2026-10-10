@@ -15,16 +15,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
+
 import static org.assertj.core.api.Assertions.*;
 
 class ReplayServiceTest {
     private static final PlayerId P1 = PlayerId.of("P1"), P2 = PlayerId.of("P2");
-    @TempDir Path directory;
     private final ReplayService service = new ReplayService();
     private final ReplayJson json = new ReplayJson();
+    @TempDir
+    Path directory;
 
     private Match seeded() {
         Match match = new Match(ClassicGameSetup.create("M1", P1, P2), new ClassicRuleSet(P1, P2, 50),
@@ -90,7 +93,7 @@ class ReplayServiceTest {
         var initial = ClassicGameSetup.create("M1", P1, P2);
         Board board = initial.board();
         initial.alivePiecesOf(P2).forEach(p -> board.removePiece(p.position()));
-        Match match = new Match(initial.withBoard(board), new ClassicRuleSet(P1, P2), (v,a) -> a.get(0), (v,a) -> a.get(0));
+        Match match = new Match(initial.withBoard(board), new ClassicRuleSet(P1, P2), (v, a) -> a.get(0), (v, a) -> a.get(0));
         match.runToCompletion();
         assertThat(match.events()).hasSize(2);
         sameState(match.state(), service.replay(match.initialState(), match.events()));
@@ -99,7 +102,7 @@ class ReplayServiceTest {
     @Test
     void rejectedActionDoesNotAddEventsAndListIsImmutable() {
         Match match = new Match(ClassicGameSetup.create("M1", P1, P2), new ClassicRuleSet(P1, P2),
-                (v,a) -> PassAction.of(P2), (v,a) -> a.get(0));
+                (v, a) -> PassAction.of(P2), (v, a) -> a.get(0));
         match.start();
         var before = match.events();
         assertThatThrownBy(match::playTurn).isInstanceOf(InvalidActionException.class);
@@ -113,10 +116,13 @@ class ReplayServiceTest {
         var events = new ArrayList<>(match.events());
         events.remove(events.size() - 1);
         assertThatThrownBy(() -> service.replay(match.initialState(), events)).isInstanceOf(IllegalArgumentException.class);
-        events.clear(); events.addAll(match.events());
+        events.clear();
+        events.addAll(match.events());
         events.set(1, new GameEvent.TurnStarted(match.initialState().sequence() + 3, P1));
         assertThatThrownBy(() -> service.replay(match.initialState(), events)).isInstanceOf(IllegalArgumentException.class);
-        events.clear(); events.addAll(match.events()); events.add(events.get(0));
+        events.clear();
+        events.addAll(match.events());
+        events.add(events.get(0));
         assertThatThrownBy(() -> service.replay(match.initialState(), events)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -141,7 +147,7 @@ class ReplayServiceTest {
 
     @Test
     void refusesExportBeforeFinish() {
-        Match match = new Match(ClassicGameSetup.create("M1", P1, P2), new ClassicRuleSet(P1, P2), (v,a)->a.get(0), (v,a)->a.get(0));
+        Match match = new Match(ClassicGameSetup.create("M1", P1, P2), new ClassicRuleSet(P1, P2), (v, a) -> a.get(0), (v, a) -> a.get(0));
         assertThatThrownBy(() -> service.write(directory.resolve("not-finished.json"), match)).isInstanceOf(IllegalStateException.class);
     }
 

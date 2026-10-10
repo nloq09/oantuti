@@ -13,14 +13,16 @@ import com.rpsbattle.game.player.PlayerId;
 import com.rpsbattle.game.state.GamePhase;
 import com.rpsbattle.game.state.GameState;
 import com.rpsbattle.rule.RuleSet;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ArrayList;
 
-/** Single-threaded local match; initial placement is provided by the caller. */
+/**
+ * Single-threaded local match; initial placement is provided by the caller.
+ */
 public final class Match {
-    private GameState state;
     private final GameState initialState;
     private final Long seed;
     private final List<GameEvent> events = new ArrayList<>();
@@ -28,9 +30,12 @@ public final class Match {
     private final Map<PlayerId, PlayerAgent> agents;
     private final GameEngine engine;
     private final LegalActionGenerator generator;
+    private GameState state;
     private MatchStatus status = MatchStatus.CREATED;
 
-    /** Agents correspond to players[0] and players[1] in the supplied state. */
+    /**
+     * Agents correspond to players[0] and players[1] in the supplied state.
+     */
     public Match(GameState initialState, RuleSet ruleSet, PlayerAgent player1, PlayerAgent player2) {
         this(initialState, ruleSet, player1, player2, null);
     }
@@ -55,13 +60,33 @@ public final class Match {
         generator = new LegalActionGenerator(ruleSet);
     }
 
-    public String matchId() { return state.matchId(); }
-    public GameState state() { return state; }
-    public RuleSet ruleSet() { return ruleSet; }
-    public MatchStatus status() { return status; }
-    public GameState initialState() { return initialState; }
-    public Long seed() { return seed; }
-    public List<GameEvent> events() { return List.copyOf(events); }
+    public String matchId() {
+        return state.matchId();
+    }
+
+    public GameState state() {
+        return state;
+    }
+
+    public RuleSet ruleSet() {
+        return ruleSet;
+    }
+
+    public MatchStatus status() {
+        return status;
+    }
+
+    public GameState initialState() {
+        return initialState;
+    }
+
+    public Long seed() {
+        return seed;
+    }
+
+    public List<GameEvent> events() {
+        return List.copyOf(events);
+    }
 
     public void start() {
         if (status != MatchStatus.CREATED) throw new IllegalStateException("Match has already started");
@@ -78,7 +103,9 @@ public final class Match {
         }
     }
 
-    /** Invalid agent actions propagate without changing the match; caller may retry. */
+    /**
+     * Invalid agent actions propagate without changing the match; caller may retry.
+     */
     public GameTransition playTurn() {
         if (status != MatchStatus.RUNNING) throw new IllegalStateException("Match is not running");
         PlayerId player = state.currentPlayerId();
@@ -95,7 +122,9 @@ public final class Match {
         return submitAction(player, action);
     }
 
-    /** Explicit actions use the same engine and event log as agent-selected turns. */
+    /**
+     * Explicit actions use the same engine and event log as agent-selected turns.
+     */
     public GameTransition submitAction(PlayerId player, Action action) {
         if (status != MatchStatus.RUNNING) throw new IllegalStateException("Match is not running");
         GameTransition transition = engine.applyAction(state, player, action);

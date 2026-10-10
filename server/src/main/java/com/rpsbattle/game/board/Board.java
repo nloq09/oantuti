@@ -6,11 +6,11 @@ import java.util.*;
 
 /**
  * Represents the 2-D game board.
- *
+ * <p>
  * Board is mutable (it tracks current positions of pieces), but it
  * does NOT contain movement rules, combat rules, or any RPS logic.
  * Board only manages the spatial state of pieces.
- *
+ * <p>
  * Coordinates are 0-indexed: row ∈ [0, rows), col ∈ [0, cols).
  */
 public final class Board {
@@ -18,10 +18,14 @@ public final class Board {
     private final int rows;
     private final int cols;
 
-    /** Maps position → piece currently occupying that cell. */
+    /**
+     * Maps position → piece currently occupying that cell.
+     */
     private final Map<Position, Piece> grid;
 
-    /** Maps pieceId → piece, for O(1) lookup by id. */
+    /**
+     * Maps pieceId → piece, for O(1) lookup by id.
+     */
     private final Map<String, Piece> pieceById;
 
     public Board(int rows, int cols) {
@@ -33,12 +37,16 @@ public final class Board {
         this.pieceById = new HashMap<>();
     }
 
-    /** Creates a default 9×9 board. */
+    /**
+     * Creates a default 9×9 board.
+     */
     public static Board defaultBoard() {
         return new Board(9, 9);
     }
 
-    /** Pieces are immutable, so copying the indexes isolates all board mutations. */
+    /**
+     * Pieces are immutable, so copying the indexes isolates all board mutations.
+     */
     public Board copy() {
         Board copy = new Board(rows, cols);
         copy.grid.putAll(grid);
@@ -48,15 +56,20 @@ public final class Board {
 
     // ---- Query ----
 
-    public int rows() { return rows; }
-    public int cols() { return cols; }
+    public int rows() {
+        return rows;
+    }
+
+    public int cols() {
+        return cols;
+    }
 
     /**
      * Returns true if the position is within board boundaries.
      */
     public boolean isInside(Position pos) {
         return pos.row() >= 0 && pos.row() < rows
-            && pos.col() >= 0 && pos.col() < cols;
+                && pos.col() >= 0 && pos.col() < cols;
     }
 
     /**
@@ -110,7 +123,7 @@ public final class Board {
             Piece existing = grid.get(pos);
             if (!existing.id().equals(piece.id())) {
                 throw new IllegalStateException(
-                    "Position " + pos + " is already occupied by piece " + existing.id());
+                        "Position " + pos + " is already occupied by piece " + existing.id());
             }
         }
         grid.put(pos, piece);
@@ -135,7 +148,7 @@ public final class Board {
 
     /**
      * Moves the piece at {@code from} to {@code to}.
-     *
+     * <p>
      * Board does NOT validate movement legality — that is the Rule Engine's job.
      *
      * @throws IllegalStateException    if no piece is at {@code from}.
@@ -147,7 +160,7 @@ public final class Board {
         Objects.requireNonNull(to, "to");
 
         if (!isInside(from)) throw new IllegalArgumentException("from " + from + " is outside board");
-        if (!isInside(to))   throw new IllegalArgumentException("to " + to + " is outside board");
+        if (!isInside(to)) throw new IllegalArgumentException("to " + to + " is outside board");
 
         Piece piece = grid.remove(from);
         if (piece == null) {

@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rpsbattle.api.dto.*;
 import com.rpsbattle.online.DemoMatchService;
 import org.junit.jupiter.api.Test;
+
 import java.util.List;
+
 import static org.assertj.core.api.Assertions.*;
 
 class GameStateMapperTest {
@@ -26,7 +28,7 @@ class GameStateMapperTest {
 
     @Test
     void moveDtoRoundTripsAndRejectsUnsupportedCommands() {
-        var dto = new ActionDto("MOVE", "P1-R1", new PositionDto(6,2), new PositionDto(5,2));
+        var dto = new ActionDto("MOVE", "P1-R1", new PositionDto(6, 2), new PositionDto(5, 2));
         assertThat(ActionDto.from(dto.toDomain(DemoMatchService.P1))).isEqualTo(dto);
         assertThatThrownBy(() -> new ActionDto("PLACE", null, null, null).toDomain(DemoMatchService.P1))
                 .isInstanceOf(IllegalArgumentException.class);

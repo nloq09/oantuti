@@ -45,7 +45,8 @@ class BoardTest {
     @Test
     void rejectedUpdateKeepsBothIndexesIntact() {
         Piece original = rock("a", P1, 4, 4), other = rock("b", P2, 4, 5);
-        board.placePiece(original); board.placePiece(other);
+        board.placePiece(original);
+        board.placePiece(other);
         assertThatThrownBy(() -> board.updatePiece(original.withPosition(other.position()))).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> board.updatePiece(original.withPosition(new Position(9, 4)))).isInstanceOf(IllegalArgumentException.class);
         assertThat(board.findById("a").orElseThrow().position()).isEqualTo(original.position());
@@ -124,7 +125,7 @@ class BoardTest {
         void placeOutsideBoardThrows() {
             Piece r = rock("R1", P1, 9, 0); // position 9,0 is outside
             assertThatThrownBy(() -> board.placePiece(r))
-                .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
@@ -135,7 +136,7 @@ class BoardTest {
             board.placePiece(r1);
 
             assertThatThrownBy(() -> board.placePiece(r2))
-                .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalStateException.class);
         }
 
         @Test
@@ -180,7 +181,7 @@ class BoardTest {
         @DisplayName("removing from empty cell throws IllegalStateException")
         void removeFromEmptyCellThrows() {
             assertThatThrownBy(() -> board.removePiece(new Position(5, 5)))
-                .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 
@@ -195,7 +196,7 @@ class BoardTest {
         @DisplayName("piece moves from source to destination")
         void movesPieceToDestination() {
             Position from = new Position(4, 4);
-            Position to   = new Position(4, 5);
+            Position to = new Position(4, 5);
             Piece r = rock("R1", P1, 4, 4);
             board.placePiece(r);
 
@@ -218,7 +219,7 @@ class BoardTest {
         @DisplayName("moving from empty cell throws IllegalStateException")
         void moveFromEmptyCellThrows() {
             assertThatThrownBy(() -> board.movePiece(new Position(0, 0), new Position(0, 1)))
-                .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalStateException.class);
         }
 
         @Test
@@ -228,7 +229,7 @@ class BoardTest {
             board.placePiece(rock("R2", P2, 4, 5));
 
             assertThatThrownBy(() -> board.movePiece(new Position(4, 4), new Position(4, 5)))
-                .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalStateException.class);
         }
 
         @Test
@@ -237,7 +238,7 @@ class BoardTest {
             board.placePiece(rock("R1", P1, 0, 0));
             // Position(0, -1) would fail at construction; test moving to boundary+1
             assertThatThrownBy(() -> board.movePiece(new Position(0, 0), new Position(0, 9)))
-                .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -285,14 +286,14 @@ class BoardTest {
         @DisplayName("Position with negative row throws at construction")
         void negativeRowThrows() {
             assertThatThrownBy(() -> new Position(-1, 0))
-                .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("Position with negative col throws at construction")
         void negativeColThrows() {
             assertThatThrownBy(() -> new Position(0, -1))
-                .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test

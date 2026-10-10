@@ -5,11 +5,13 @@ import com.rpsbattle.game.board.*;
 import com.rpsbattle.game.player.*;
 import com.rpsbattle.game.state.GameState;
 import org.junit.jupiter.api.Test;
+
 import java.io.StringReader;
 import java.io.BufferedReader;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Random;
+
 import static org.assertj.core.api.Assertions.*;
 
 class PlayerAgentTest {

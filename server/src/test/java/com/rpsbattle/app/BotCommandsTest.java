@@ -2,12 +2,15 @@ package com.rpsbattle.app;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
+
 import static org.assertj.core.api.Assertions.*;
 
 class BotCommandsTest {
-    @TempDir Path directory;
+    @TempDir
+    Path directory;
 
     @Test
     void resolvesExecutableOrSeededDemoWithoutShellParsing() {

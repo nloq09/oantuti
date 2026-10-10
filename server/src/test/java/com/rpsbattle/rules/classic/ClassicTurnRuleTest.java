@@ -27,7 +27,7 @@ class ClassicTurnRuleTest {
 
     @BeforeEach
     void setUp() {
-        rule  = new ClassicTurnRule();
+        rule = new ClassicTurnRule();
         Board board = Board.defaultBoard();
         state = GameState.initial("M1", board, List.of(
                 Player.of(P1, "Alice"),

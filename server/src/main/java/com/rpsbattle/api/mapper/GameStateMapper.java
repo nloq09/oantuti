@@ -36,9 +36,11 @@ public class GameStateMapper {
                     "defender", piece(combat.defender()), "result", combat.result().name());
             case GameEvent.PieceRemoved removed -> Map.of("piece", piece(removed.piece()));
             case GameEvent.PiecePlaced placed -> Map.of("piece", piece(placed.piece()));
-            case GameEvent.TurnChanged turn -> Map.of("currentPlayer", turn.currentPlayer().value(), "turn", turn.turnNumber());
+            case GameEvent.TurnChanged turn ->
+                    Map.of("currentPlayer", turn.currentPlayer().value(), "turn", turn.turnNumber());
             case GameEvent.TurnStarted turn -> Map.of("player", turn.player().value());
-            case GameEvent.TurnEnded turn -> Map.of("currentPlayer", turn.currentPlayer().value(), "turn", turn.turnNumber());
+            case GameEvent.TurnEnded turn ->
+                    Map.of("currentPlayer", turn.currentPlayer().value(), "turn", turn.turnNumber());
             case GameEvent.GameFinished finished -> Map.of("outcome", finished.result().outcome().name(),
                     "winner", finished.result().winner().map(player -> player.value()).orElse("DRAW"));
             case GameEvent.MatchFinished finished -> Map.of("outcome", finished.result().outcome().name(),

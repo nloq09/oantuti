@@ -12,9 +12,9 @@ import java.util.List;
 
 /**
  * Classic turn rule:
- *  - Alternating turns: P1 → P2 → P1 → …
- *  - A player may only act on their own turn.
- *  - Next player is the one who did NOT just act.
+ * - Alternating turns: P1 → P2 → P1 → …
+ * - A player may only act on their own turn.
+ * - Next player is the one who did NOT just act.
  */
 public final class ClassicTurnRule implements TurnRule {
 
@@ -23,8 +23,8 @@ public final class ClassicTurnRule implements TurnRule {
         boolean phaseAllows = action instanceof PlaceAction
                 ? state.phase() == GamePhase.PLACEMENT
                 : action instanceof SurrenderAction
-                    ? state.phase() == GamePhase.PLACEMENT || state.isPlaying()
-                    : state.isPlaying();
+                ? state.phase() == GamePhase.PLACEMENT || state.isPlaying()
+                : state.isPlaying();
         // Only the current player may act and the action must belong to that player
         return phaseAllows && state.findPlayer(player).isPresent() && !state.isFinished()
                 && state.currentPlayerId().equals(player) && action.playerId().equals(player);

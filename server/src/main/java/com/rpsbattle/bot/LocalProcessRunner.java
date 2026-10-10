@@ -7,15 +7,17 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.*;
 
-/** One persistent process per bot, UTF-8 JSON Lines; stderr is separate from protocol. */
+/**
+ * One persistent process per bot, UTF-8 JSON Lines; stderr is separate from protocol.
+ */
 public final class LocalProcessRunner implements BotProcess {
+    private static final int MAX_LINE = 65_536;
     private final List<String> command;
     private final ExecutorService io = Executors.newVirtualThreadPerTaskExecutor();
     private Process process;
     private Writer stdin;
     private Reader stdout;
     private boolean closed;
-    private static final int MAX_LINE = 65_536;
 
     public LocalProcessRunner(List<String> command) {
         this.command = List.copyOf(command);
@@ -24,7 +26,8 @@ public final class LocalProcessRunner implements BotProcess {
         }
     }
 
-    @Override public synchronized void start() {
+    @Override
+    public synchronized void start() {
         if (closed) throw new BotProtocolException("Bot process is closed");
         if (process != null) {
             if (!process.isAlive()) throw new BotProtocolException("Bot process has exited");
@@ -40,11 +43,13 @@ public final class LocalProcessRunner implements BotProcess {
         }
     }
 
-    @Override public synchronized String exchange(String request, Duration timeout) {
+    @Override
+    public synchronized String exchange(String request, Duration timeout) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(timeout, "timeout");
         if (timeout.isNegative() || timeout.isZero()) throw new IllegalArgumentException("Timeout must be positive");
-        if (request.contains("\n") || request.contains("\r")) throw new IllegalArgumentException("Request must be one JSON line");
+        if (request.contains("\n") || request.contains("\r"))
+            throw new IllegalArgumentException("Request must be one JSON line");
         start();
         Future<String> response = io.submit(() -> {
             stdin.write(request);
@@ -76,19 +81,35 @@ public final class LocalProcessRunner implements BotProcess {
         }
     }
 
-    @Override public synchronized boolean isAlive() { return process != null && process.isAlive(); }
+    @Override
+    public synchronized boolean isAlive() {
+        return process != null && process.isAlive();
+    }
 
-    @Override public synchronized void close() {
+    @Override
+    public synchronized void close() {
         if (closed) return;
         closed = true;
         if (process != null) {
             process.descendants().forEach(ProcessHandle::destroyForcibly);
             process.destroyForcibly();
-            try { process.waitFor(2, TimeUnit.SECONDS); }
-            catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-            try { process.getOutputStream().close(); } catch (IOException ignored) {}
-            try { process.getInputStream().close(); } catch (IOException ignored) {}
-            try { process.getErrorStream().close(); } catch (IOException ignored) {}
+            try {
+                process.waitFor(2, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            try {
+                process.getOutputStream().close();
+            } catch (IOException ignored) {
+            }
+            try {
+                process.getInputStream().close();
+            } catch (IOException ignored) {
+            }
+            try {
+                process.getErrorStream().close();
+            } catch (IOException ignored) {
+            }
         }
         io.shutdownNow();
     }

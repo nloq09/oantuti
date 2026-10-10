@@ -9,34 +9,38 @@ import java.util.*;
 
 /**
  * Immutable snapshot of the entire game state at a point in time.
- *
+ * <p>
  * GameState knows nothing about WebSocket, HTTP, database, or console.
  * It does NOT contain rule logic — that belongs to RuleSet.
- *
+ * <p>
  * Design note: Board is intentionally mutable internally, but GameState
  * controls all mutations via its wither-style factory methods, returning
  * new snapshots rather than exposing setters.
- *
+ * <p>
  * For the current stage we keep Board as a mutable field that is
  * defensively copied (deep copy) when producing new GameState instances,
  * ensuring each snapshot is independent.
  */
 public final class GameState {
 
-    private final String       matchId;
-    private final Board        board;
-    /** Ordered list of players — index 0 goes first. */
+    private final String matchId;
+    private final Board board;
+    /**
+     * Ordered list of players — index 0 goes first.
+     */
     private final List<Player> players;
-    private final PlayerId     currentPlayerId;
-    private final GamePhase    phase;
-    private final int          turnNumber;
+    private final PlayerId currentPlayerId;
+    private final GamePhase phase;
+    private final int turnNumber;
     /**
      * Monotonically increasing counter: incremented after every action
      * that successfully changes the game, including passing the turn.
      */
-    private final long         sequence;
-    /** Non-null only when phase == FINISHED. */
-    private final GameResult   result;
+    private final long sequence;
+    /**
+     * Non-null only when phase == FINISHED.
+     */
+    private final GameResult result;
 
     // ---------------------------------------------------------------
     // Constructor (private — use factory or wither methods)
@@ -52,14 +56,14 @@ public final class GameState {
             long sequence,
             GameResult result) {
 
-        this.matchId         = Objects.requireNonNull(matchId,  "matchId");
-        this.board           = Objects.requireNonNull(board,    "board").copy();
-        this.players         = List.copyOf(Objects.requireNonNull(players, "players"));
+        this.matchId = Objects.requireNonNull(matchId, "matchId");
+        this.board = Objects.requireNonNull(board, "board").copy();
+        this.players = List.copyOf(Objects.requireNonNull(players, "players"));
         this.currentPlayerId = Objects.requireNonNull(currentPlayerId, "currentPlayerId");
-        this.phase           = Objects.requireNonNull(phase,    "phase");
-        this.turnNumber      = turnNumber;
-        this.sequence        = sequence;
-        this.result          = result; // nullable
+        this.phase = Objects.requireNonNull(phase, "phase");
+        this.turnNumber = turnNumber;
+        this.sequence = sequence;
+        this.result = result; // nullable
     }
 
     // ---------------------------------------------------------------
@@ -128,12 +132,16 @@ public final class GameState {
         return withTurnNumber(turnNumber + 1);
     }
 
-    /** Increments sequence — called after every valid action. */
+    /**
+     * Increments sequence — called after every valid action.
+     */
     public GameState withIncrementedSequence() {
         return new GameState(matchId, board, players, currentPlayerId, phase, turnNumber, sequence + 1, result);
     }
 
-    /** Restores a validated snapshot counter without depending on serialization. */
+    /**
+     * Restores a validated snapshot counter without depending on serialization.
+     */
     public GameState withSequence(long newSequence) {
         if (newSequence < 0) throw new IllegalArgumentException("sequence must be nonnegative");
         return new GameState(matchId, board, players, currentPlayerId, phase, turnNumber, newSequence, result);
@@ -147,24 +155,56 @@ public final class GameState {
     // Queries
     // ---------------------------------------------------------------
 
-    public String matchId()            { return matchId; }
-    public Board board()               { return board.copy(); }
-    public List<Player> players()      { return players; }
-    public PlayerId currentPlayerId()  { return currentPlayerId; }
-    public GamePhase phase()           { return phase; }
-    public int turnNumber()            { return turnNumber; }
-    public long sequence()             { return sequence; }
-    public Optional<GameResult> result() { return Optional.ofNullable(result); }
+    public String matchId() {
+        return matchId;
+    }
 
-    public boolean isFinished() { return phase == GamePhase.FINISHED; }
-    public boolean isPlaying()  { return phase == GamePhase.PLAYING; }
+    public Board board() {
+        return board.copy();
+    }
 
-    /** Returns the Player object for the given id, or empty. */
+    public List<Player> players() {
+        return players;
+    }
+
+    public PlayerId currentPlayerId() {
+        return currentPlayerId;
+    }
+
+    public GamePhase phase() {
+        return phase;
+    }
+
+    public int turnNumber() {
+        return turnNumber;
+    }
+
+    public long sequence() {
+        return sequence;
+    }
+
+    public Optional<GameResult> result() {
+        return Optional.ofNullable(result);
+    }
+
+    public boolean isFinished() {
+        return phase == GamePhase.FINISHED;
+    }
+
+    public boolean isPlaying() {
+        return phase == GamePhase.PLAYING;
+    }
+
+    /**
+     * Returns the Player object for the given id, or empty.
+     */
     public Optional<Player> findPlayer(PlayerId id) {
         return players.stream().filter(p -> p.id().equals(id)).findFirst();
     }
 
-    /** Returns the current Player object. */
+    /**
+     * Returns the current Player object.
+     */
     public Player currentPlayer() {
         return findPlayer(currentPlayerId)
                 .orElseThrow(() -> new IllegalStateException("currentPlayerId not found: " + currentPlayerId));
@@ -189,7 +229,9 @@ public final class GameState {
                 .toList();
     }
 
-    /** Total alive pieces for a player. */
+    /**
+     * Total alive pieces for a player.
+     */
     public int aliveCount(PlayerId playerId) {
         return alivePiecesOf(playerId).size();
     }

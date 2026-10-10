@@ -10,20 +10,22 @@ import java.util.Objects;
  * A player places a piece onto the board during the PLACEMENT phase.
  */
 public record PlaceAction(
-        PlayerId  playerId,
-        String    pieceId,
+        PlayerId playerId,
+        String pieceId,
         PieceType pieceType,
-        Position  position
+        Position position
 ) implements Action {
 
     public PlaceAction {
-        Objects.requireNonNull(playerId,  "playerId");
-        Objects.requireNonNull(pieceId,   "pieceId");
+        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(pieceId, "pieceId");
         Objects.requireNonNull(pieceType, "pieceType");
-        Objects.requireNonNull(position,  "position");
+        Objects.requireNonNull(position, "position");
     }
 
-    /** Convenience factory. */
+    /**
+     * Convenience factory.
+     */
     public static PlaceAction of(PlayerId playerId, String pieceId,
                                  PieceType pieceType, Position position) {
         return new PlaceAction(playerId, pieceId, pieceType, position);

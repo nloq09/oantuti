@@ -23,7 +23,7 @@ class ClassicMovementRuleTest {
 
     @BeforeEach
     void setUp() {
-        rule  = new ClassicMovementRule();
+        rule = new ClassicMovementRule();
         board = Board.defaultBoard(); // 9x9
     }
 
@@ -36,35 +36,40 @@ class ClassicMovementRuleTest {
     @DisplayName("Legal moves")
     class LegalMoves {
 
-        @Test @DisplayName("move UP by 1 step is allowed")
+        @Test
+        @DisplayName("move UP by 1 step is allowed")
         void moveUp() {
             Piece p = piece("R1", P1, 5, 5, PieceType.ROCK);
             board.placePiece(p);
             assertThat(rule.canMove(p, new Position(5, 5), new Position(4, 5), board)).isTrue();
         }
 
-        @Test @DisplayName("move DOWN by 1 step is allowed")
+        @Test
+        @DisplayName("move DOWN by 1 step is allowed")
         void moveDown() {
             Piece p = piece("R1", P1, 4, 5, PieceType.ROCK);
             board.placePiece(p);
             assertThat(rule.canMove(p, new Position(4, 5), new Position(5, 5), board)).isTrue();
         }
 
-        @Test @DisplayName("move LEFT by 1 step is allowed")
+        @Test
+        @DisplayName("move LEFT by 1 step is allowed")
         void moveLeft() {
             Piece p = piece("R1", P1, 5, 5, PieceType.ROCK);
             board.placePiece(p);
             assertThat(rule.canMove(p, new Position(5, 5), new Position(5, 4), board)).isTrue();
         }
 
-        @Test @DisplayName("move RIGHT by 1 step is allowed")
+        @Test
+        @DisplayName("move RIGHT by 1 step is allowed")
         void moveRight() {
             Piece p = piece("R1", P1, 5, 5, PieceType.ROCK);
             board.placePiece(p);
             assertThat(rule.canMove(p, new Position(5, 5), new Position(5, 6), board)).isTrue();
         }
 
-        @Test @DisplayName("can move into enemy cell (triggers combat)")
+        @Test
+        @DisplayName("can move into enemy cell (triggers combat)")
         void moveIntoEnemy() {
             Piece p1 = piece("R1", P1, 5, 5, PieceType.ROCK);
             Piece p2 = piece("S1", P2, 4, 5, PieceType.SCISSORS);
@@ -79,28 +84,32 @@ class ClassicMovementRuleTest {
     @DisplayName("Illegal moves")
     class IllegalMoves {
 
-        @Test @DisplayName("diagonal move is not allowed")
+        @Test
+        @DisplayName("diagonal move is not allowed")
         void diagonalMove() {
             Piece p = piece("R1", P1, 5, 5, PieceType.ROCK);
             board.placePiece(p);
             assertThat(rule.canMove(p, new Position(5, 5), new Position(4, 4), board)).isFalse();
         }
 
-        @Test @DisplayName("2-step move is not allowed")
+        @Test
+        @DisplayName("2-step move is not allowed")
         void twoStepMove() {
             Piece p = piece("R1", P1, 5, 5, PieceType.ROCK);
             board.placePiece(p);
             assertThat(rule.canMove(p, new Position(5, 5), new Position(3, 5), board)).isFalse();
         }
 
-        @Test @DisplayName("move off bottom edge is not allowed")
+        @Test
+        @DisplayName("move off bottom edge is not allowed")
         void offBottomEdge() {
             Piece p = piece("R1", P1, 8, 0, PieceType.ROCK);
             board.placePiece(p);
             assertThat(rule.canMove(p, p.position(), new Position(9, 0), board)).isFalse();
         }
 
-        @Test @DisplayName("move off right edge is not allowed")
+        @Test
+        @DisplayName("move off right edge is not allowed")
         void offRightEdge() {
             Piece p = piece("R1", P1, 5, 8, PieceType.ROCK);
             board.placePiece(p);
@@ -127,7 +136,9 @@ class ClassicMovementRuleTest {
             board.placePiece(p);
             assertThat(rule.canMove(p, p.position(), new Position(4, 5), board)).isFalse();
         }
-        @Test @DisplayName("cannot move into friendly piece's cell")
+
+        @Test
+        @DisplayName("cannot move into friendly piece's cell")
         void cannotEnterFriendlyCell() {
             Piece p1 = piece("R1", P1, 5, 5, PieceType.ROCK);
             Piece p2 = piece("P1", P1, 4, 5, PieceType.PAPER);

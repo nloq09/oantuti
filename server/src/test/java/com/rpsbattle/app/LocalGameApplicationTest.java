@@ -5,8 +5,10 @@ import com.rpsbattle.game.player.PlayerId;
 import com.rpsbattle.game.state.*;
 import com.rpsbattle.rules.classic.*;
 import org.junit.jupiter.api.Test;
+
 import java.io.StringReader;
 import java.io.StringWriter;
+
 import static org.assertj.core.api.Assertions.*;
 
 class LocalGameApplicationTest {

@@ -5,8 +5,10 @@ import com.rpsbattle.game.board.Position;
 import com.rpsbattle.game.engine.GameEvent;
 import com.rpsbattle.game.player.PlayerId;
 import org.junit.jupiter.api.Test;
+
 import java.util.concurrent.*;
 import java.util.List;
+
 import static org.assertj.core.api.Assertions.*;
 
 class DemoMatchServiceTest {
@@ -34,7 +36,7 @@ class DemoMatchServiceTest {
     @Test
     void invalidActionsKeepTheOriginalSnapshot() {
         var initial = service.state();
-        var bad = MoveAction.of(DemoMatchService.P1, "P1-R1", new Position(6,2), new Position(4,2));
+        var bad = MoveAction.of(DemoMatchService.P1, "P1-R1", new Position(6, 2), new Position(4, 2));
         assertThatThrownBy(() -> service.submitAction(DemoMatchService.P1, 0, bad)).hasMessage("INVALID_MOVE");
         assertThatThrownBy(() -> service.submitAction(DemoMatchService.P1, 1, bad)).hasMessage("INVALID_SEQUENCE");
         assertThatThrownBy(() -> service.submitAction(DemoMatchService.P2, 0, PassAction.of(DemoMatchService.P2))).hasMessage("NOT_YOUR_TURN");
@@ -45,17 +47,17 @@ class DemoMatchServiceTest {
     void combatAndEliminationAreResolvedByTheExistingEngine() {
         var p1 = DemoMatchService.P1;
         var p2 = DemoMatchService.P2;
-        move(p1, "P1-R1", 6,2,5,2);
-        move(p2, "P2-S1", 2,2,3,2);
-        move(p1, "P1-R1", 5,2,4,2);
-        move(p2, "P2-R1", 1,6,2,6);
-        var combat = service.submitAction(p1, 4, MoveAction.of(p1, "P1-R1", new Position(4,2), new Position(3,2)));
+        move(p1, "P1-R1", 6, 2, 5, 2);
+        move(p2, "P2-S1", 2, 2, 3, 2);
+        move(p1, "P1-R1", 5, 2, 4, 2);
+        move(p2, "P2-R1", 1, 6, 2, 6);
+        var combat = service.submitAction(p1, 4, MoveAction.of(p1, "P1-R1", new Position(4, 2), new Position(3, 2)));
         assertThat(combat.events()).anyMatch(event -> event instanceof GameEvent.CombatOccurred);
         assertThat(service.state().board().findById("P2-S1")).isEmpty();
         // Move PAPER to the remaining ROCK; the other player passes through Match.
         for (int row = 7; row > 2; row--) {
             service.submitAction(p2, service.state().sequence(), PassAction.of(p2));
-            move(p1, "P1-P1", row,6,row-1,6);
+            move(p1, "P1-P1", row, 6, row - 1, 6);
         }
         assertThat(service.state().isFinished()).isTrue();
         assertThat(service.state().result().orElseThrow().winner()).contains(p1);
@@ -74,7 +76,9 @@ class DemoMatchServiceTest {
                 try {
                     service.submitAction(DemoMatchService.P1, 0, PassAction.of(DemoMatchService.P1));
                     return "ACCEPTED";
-                } catch (DemoRequestException failure) { return failure.code(); }
+                } catch (DemoRequestException failure) {
+                    return failure.code();
+                }
             };
             var a = executor.submit(submit);
             var b = executor.submit(submit);

@@ -13,12 +13,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/** Applies actions to independent snapshots, delegating variant decisions to rules. */
+/**
+ * Applies actions to independent snapshots, delegating variant decisions to rules.
+ */
 public final class GameEngine {
     private final RuleSet rules;
 
     public GameEngine(RuleSet rules) {
         this.rules = Objects.requireNonNull(rules, "rules");
+    }
+
+    private static void reject(String message) {
+        throw new InvalidActionException(message);
     }
 
     public GameTransition applyAction(GameState state, PlayerId player, Action action) {
@@ -111,9 +117,5 @@ public final class GameEngine {
     private void remove(Board board, Piece piece, long sequence, List<GameEvent> events) {
         board.removePiece(piece.position());
         events.add(new GameEvent.PieceRemoved(sequence, piece));
-    }
-
-    private static void reject(String message) {
-        throw new InvalidActionException(message);
     }
 }

@@ -9,10 +9,12 @@ import com.rpsbattle.game.player.*;
 import com.rpsbattle.game.state.*;
 import com.rpsbattle.rules.classic.ClassicRuleSet;
 import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.io.StringReader;
 import java.io.StringWriter;
+
 import static org.assertj.core.api.Assertions.*;
 
 class MatchTest {
@@ -69,8 +71,16 @@ class MatchTest {
 
     private Match seeded(List<Action> history) {
         RandomBotAgent a = new RandomBotAgent(42), b = new RandomBotAgent(99);
-        PlayerAgent agentA = (view, actions) -> { Action action = a.chooseAction(view, actions); history.add(action); return action; };
-        PlayerAgent agentB = (view, actions) -> { Action action = b.chooseAction(view, actions); history.add(action); return action; };
+        PlayerAgent agentA = (view, actions) -> {
+            Action action = a.chooseAction(view, actions);
+            history.add(action);
+            return action;
+        };
+        PlayerAgent agentB = (view, actions) -> {
+            Action action = b.chooseAction(view, actions);
+            history.add(action);
+            return action;
+        };
         return new Match(state(), new ClassicRuleSet(P1, P2, 30), agentA, agentB);
     }
 
@@ -116,7 +126,9 @@ class MatchTest {
     void surrenderFinishesMatchAndDoesNotAskOpponent() {
         Match match = new Match(state(), new ClassicRuleSet(P1, P2),
                 (view, actions) -> SurrenderAction.of(view.playerId()),
-                (view, actions) -> { throw new AssertionError("Opponent should not act"); });
+                (view, actions) -> {
+                    throw new AssertionError("Opponent should not act");
+                });
         assertThat(match.runToCompletion().result()).contains(GameResult.win(P2));
         assertThat(match.status()).isEqualTo(MatchStatus.FINISHED);
     }
@@ -134,7 +146,9 @@ class MatchTest {
         GameState initial = state();
         Board board = initial.board();
         board.removePiece(new Position(2, 4));
-        PlayerAgent never = (v, a) -> { throw new AssertionError("No turn expected"); };
+        PlayerAgent never = (v, a) -> {
+            throw new AssertionError("No turn expected");
+        };
         Match match = new Match(initial.withBoard(board), new ClassicRuleSet(P1, P2), never, never);
         assertThat(match.runToCompletion().result()).contains(GameResult.win(P1));
         assertThat(match.state().sequence()).isZero();
