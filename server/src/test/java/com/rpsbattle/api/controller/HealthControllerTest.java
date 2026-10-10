@@ -1,6 +1,7 @@
 package com.rpsbattle.api.controller;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -14,9 +15,10 @@ class HealthControllerTest {
     @Autowired
     private TestRestTemplate client;
 
-    @Test
-    void healthIsPublicAndReturnsOnlyUpStatus() {
-        var response = client.getForEntity("/api/v1/health", String.class);
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/health", "/api/v1/health"})
+    void healthIsPublicAndReturnsOnlyUpStatus(String path) {
+        var response = client.getForEntity(path, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getHeaders().getContentType()).isNotNull()

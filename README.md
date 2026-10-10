@@ -2,7 +2,10 @@
 
 Game chiến thuật Oẳn Tù Tì trên bàn cờ 9×9. Dự án Java 21 + Gradle.
 
-Chặng 1 đã hoàn thành. Chặng 2 đang ở **Bước 1 — Spring Boot server và Health API**.
+Chặng 1 đã hoàn thành. Chặng 2 dùng lộ trình **Demo First**; đã hoàn thành
+**Bước 1 — Spring Boot tối thiểu**, bước tiếp theo là **DemoMatchService cố định**.
+Yêu cầu đầy đủ mới nằm trong [Chặng 2 Demo First](docs/CHANG-2-DEMO-FIRST.md),
+thay thế thứ tự triển khai Chặng 2 trước đây.
 
 ## Server online — Chặng 2
 
@@ -22,12 +25,14 @@ cd server
 Server mặc định ở `http://localhost:8080`. Kiểm tra từ terminal khác:
 
 ```powershell
-Invoke-RestMethod http://localhost:8080/api/v1/health
+Invoke-RestMethod http://localhost:8080/api/health
 ```
 
-`GET /api/v1/health` trả HTTP 200, JSON `{"status":"UP"}` và không yêu cầu
+`GET /api/health` trả HTTP 200, JSON `{"status":"UP"}` và không yêu cầu
 đăng nhập. Chưa thêm Spring Security, JPA, Match API hay WebSocket endpoint.
-Các starter Web, WebSocket, Validation, Test và Jackson đã được khai báo.
+Các starter Web, WebSocket, Test và Jackson đã được khai báo. Bỏ starter
+Validation chưa dùng để giữ phần demo tối thiểu. `/api/v1/health` vẫn là alias
+tương thích cho endpoint đã push trước khi đổi lộ trình.
 GameEngine/RuleSet giữ nguyên. `application.yml` đặt port 8080; có thể override
 bằng `--args="--server.port=8081"` khi chạy bootRun.
 
@@ -72,15 +77,39 @@ server/
         └── (các test Chặng 1 giữ nguyên)
 ```
 
-### Tiến độ Chặng 2
+### Tiến độ Chặng 2 — Demo First
 
-- [x] Bước 1 — Spring Boot, Health API và regression Chặng 1
-- [ ] Bước 2 — DTO và API Layer (chưa triển khai)
+- [x] 2A / Bước 1 — Spring Boot tối thiểu, `/api/health`, regression Chặng 1
+- [ ] 2A / Bước 2 — DemoMatchService: `demo-match`, P1/P2, layout cố định
+- [ ] 2A / Bước 3 — DTO tối thiểu và GameStateMapper
+- [ ] 2A / Bước 4 — WebSocket `/ws/game`, protocol tối thiểu
+- [ ] 2A / Bước 5 — JOIN P1/P2 và gửi STATE
+- [ ] 2A / Bước 6 — ACTION qua engine, broadcast STATE/reject
+- [ ] 2A / Bước 7 — Client HTML/CSS/JS thuần, board 9×9
+- [ ] 2A / Bước 8 — Click quân/ô, highlight legalActions từ server
+- [ ] 2A / Bước 9 — Combat demo
+- [ ] 2A / Bước 10 — GAME_OVER; xác nhận demo hai browser tab
 
-Theo yêu cầu tài liệu, kết thúc kiểm tra Bước 1 rồi dừng, chưa làm Bước 2.
+**Mốc bắt buộc trước 2B:** hai tab join P1/P2, cùng thấy board, MOVE được đồng
+bộ, combat và kết quả do GameEngine quyết định. Client chỉ render, highlight
+legalActions và gửi Action. GameEngine/RuleSet không biết HTTP/WebSocket/Spring.
 
-Kết quả Bước 1: **250 tests pass, 0 failures, 0 errors, 0 skipped**, gồm toàn bộ
-249 tests Chặng 1 và 1 integration test health qua HTTP với full Spring context
+- [ ] 2B / Bước 11 — Create Match REST API, OnlineMatchService
+- [ ] 2B / Bước 12 — Join Match REST API
+- [ ] 2B / Bước 13 — MatchRegistry thread-safe
+- [ ] 2B / Bước 14 — Chuẩn hóa WebSocket protocol/version/requestId/sequence
+- [ ] 2B / Bước 15 — Human vs Bot online
+- [ ] 2B / Bước 16 — Timer server side
+- [ ] 2B / Bước 17 — Reconnect full snapshot
+- [ ] 2B / Bước 18 — History trong memory
+- [ ] 2B / Bước 19 — Database metadata/result/events sau khi online ổn
+- [ ] 2B / Bước 20 — Cleanup và kiểm tra ranh giới kiến trúc
+
+Phần demo đầu chưa cần matchmaking, database, login hay reconnect phức tạp.
+Chưa triển khai Bước 2 hoặc các bước sau trong lần điều chỉnh lộ trình này.
+
+Kết quả Bước 1 trước khi đổi lộ trình: **250 tests pass, 0 failures, 0 errors, 0 skipped**,
+gồm toàn bộ 249 tests Chặng 1 và 1 integration test health qua HTTP với full Spring context
 và embedded Tomcat trên port ngẫu nhiên. Đã chạy bootRun trên cổng 8080,
 gọi GET health thực tế nhận HTTP 200, `Content-Type: application/json`,
 `{"status":"UP"}`. bootJar build thành công, manifest Start-Class là
@@ -89,6 +118,12 @@ gọi GET health thực tế nhận HTTP 200, `Content-Type: application/json`,
 Lần kiểm tra dùng JDK 24.0.2 với `--release 21` và thư mục build riêng
 `build-step3-verification-stage2-step1-a` do thư mục kết quả cũ bị Windows khóa.
 Chưa xác nhận runtime trực tiếp JDK 21. Server smoke test đã được dừng sau kiểm tra.
+
+Sau điều chỉnh Demo First: **251 tests pass, 0 failures, 0 errors, 0 skipped**
+(249 tests Chặng 1 và 2 HTTP health cases cho đường dẫn mới/alias cũ).
+`test bootJar` thành công trên JDK 24.0.2 với `--release 21`, build riêng
+`build-step3-verification-stage2-demo-first-step1-a`. Nội dung GameEngine/RuleSet
+không thay đổi.
 
 ## Chạy nhanh
 
