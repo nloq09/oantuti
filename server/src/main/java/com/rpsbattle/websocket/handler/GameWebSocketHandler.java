@@ -43,6 +43,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             if (!service.hasPlayer(player)) throw new DemoRequestException("PLAYER_NOT_FOUND");
             switch (message.type()) {
                 case "JOIN" -> join(session, player);
+                case "ACTION" -> action(session, player, message);
                 default -> throw new DemoRequestException("UNSUPPORTED_MESSAGE");
             }
         } catch (DemoRequestException failure) {
@@ -62,7 +63,29 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
         seats.put(player, session);
         players.put(session.getId(), player);
-        sendState(session, player, List.of());
+        if (seats.size() == 2) broadcast(List.of());
+        else sendState(session, player, List.of());
+    }
+
+    private void action(WebSocketSession session, PlayerId player, ClientMessage message) {
+        PlayerId bound = players.get(session.getId());
+        if (bound == null) throw new DemoRequestException("JOIN_REQUIRED");
+        if (!bound.equals(player)) throw new DemoRequestException("PLAYER_MISMATCH");
+        if (seats.size() != 2) throw new DemoRequestException("WAITING_FOR_PLAYER");
+        if (message.sequence() == null || message.payload() == null) throw new DemoRequestException("INVALID_MESSAGE");
+        try {
+            var transition = service.submitAction(player, message.sequence(), message.payload().toDomain(player));
+            broadcast(transition.events());
+        } catch (DemoRequestException failure) {
+            if (failure.code().equals("INVALID_SEQUENCE")) {
+                reject(session, failure.code());
+                sendState(session, player, List.of());
+            } else throw failure;
+        }
+    }
+
+    private void broadcast(List<GameEvent> events) {
+        for (var seat : List.copyOf(seats.entrySet())) sendState(seat.getValue(), seat.getKey(), events);
     }
 
     private void sendState(WebSocketSession session, PlayerId player, List<GameEvent> events) {
