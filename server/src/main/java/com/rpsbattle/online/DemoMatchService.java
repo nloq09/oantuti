@@ -12,7 +12,12 @@ import com.rpsbattle.game.engine.LegalActionGenerator;
 import com.rpsbattle.game.player.PlayerId;
 import com.rpsbattle.game.state.GameState;
 import com.rpsbattle.match.Match;
-import com.rpsbattle.rules.classic.ClassicGameSetup;
+import com.rpsbattle.game.board.Board;
+import com.rpsbattle.game.board.Position;
+import com.rpsbattle.game.piece.Piece;
+import com.rpsbattle.game.piece.PieceType;
+import com.rpsbattle.game.player.Player;
+import com.rpsbattle.game.state.GamePhase;
 import com.rpsbattle.rules.classic.ClassicRuleSet;
 import org.springframework.stereotype.Service;
 
@@ -32,12 +37,24 @@ public class DemoMatchService {
     private final Map<PlayerId, SubmittedActionAgent> agents = Map.of(P1, new SubmittedActionAgent(), P2, new SubmittedActionAgent());
 
     public DemoMatchService() {
-        var initial = ClassicGameSetup.create(MATCH_ID, P1, P2);
+        var initial = demoLayout();
         match = new Match(initial, rules, agents.get(P1), agents.get(P2));
         match.start();
     }
 
     public synchronized GameState state() { return match.state(); }
+
+    /** Sparse pre-deployed scenario for quick movement/combat, not a placement phase. */
+    private static GameState demoLayout() {
+        Board board = Board.defaultBoard();
+        board.placePiece(Piece.alive("P1-R1", P1, PieceType.ROCK, new Position(6, 2)));
+        board.placePiece(Piece.alive("P1-P1", P1, PieceType.PAPER, new Position(7, 6)));
+        board.placePiece(Piece.alive("P2-S1", P2, PieceType.SCISSORS, new Position(2, 2)));
+        board.placePiece(Piece.alive("P2-R1", P2, PieceType.ROCK, new Position(1, 6)));
+        var players = List.of(new Player(P1, "Player 1", List.of("P1-R1", "P1-P1")),
+                new Player(P2, "Player 2", List.of("P2-S1", "P2-R1")));
+        return GameState.initial(MATCH_ID, board, players).withPhase(GamePhase.READY);
+    }
 
     public synchronized List<Action> legalActions(PlayerId player) {
         var state = match.state();
