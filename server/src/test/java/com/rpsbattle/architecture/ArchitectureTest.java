@@ -26,7 +26,8 @@ class ArchitectureTest {
     void coreHasNoInfrastructureOrAdapters() throws Exception {
         assertThat(imports("game")).noneMatch(i -> i.startsWith("java.io") || i.startsWith("java.net")
                 || i.startsWith("java.sql") || i.startsWith("javax.sql") || i.startsWith("org.springframework")
-                || i.startsWith("com.fasterxml") || i.matches("com\\.rpsbattle\\.(app|agent|bot|match|replay|rules)\\..*"));
+                || i.startsWith("jakarta.persistence") || i.startsWith("com.fasterxml")
+                || i.matches("com\\.rpsbattle\\.(app|agent|bot|match|replay|rules|api|online|websocket|persistence|config)\\..*"));
         assertThat(source("game")).doesNotContain("System.out", "System.in", "ProcessBuilder", "Docker");
     }
 
@@ -34,7 +35,8 @@ class ArchitectureTest {
     void rulesDoNotDependOnUiOrNetwork() throws Exception {
         for (String folder : List.of("rule", "rules")) {
             assertThat(imports(folder)).noneMatch(i -> i.startsWith("java.io") || i.startsWith("java.net")
-                    || i.matches("com\\.rpsbattle\\.(app|agent|bot|match|replay)\\..*"));
+                    || i.startsWith("org.springframework") || i.startsWith("jakarta.persistence")
+                    || i.matches("com\\.rpsbattle\\.(app|agent|bot|match|replay|api|online|websocket|persistence|config)\\..*"));
             assertThat(source(folder)).doesNotContain("System.out", "System.in");
         }
     }

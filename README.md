@@ -2,12 +2,16 @@
 
 Game chiến thuật Oẳn Tù Tì trên bàn cờ 9×9. Dự án Java 21 + Gradle.
 
-Chặng 1 đã hoàn thành. Chặng 2 dùng lộ trình **Demo First**; đã hoàn thành
-**Bước 1 — Spring Boot tối thiểu**, bước tiếp theo là **DemoMatchService cố định**.
+Chặng 1 và **Chặng 2A (bước 1–10) đã hoàn thành**. Chặng 2 dùng lộ trình
+**Demo First**; phần tiếp theo là 2B, bắt đầu bằng Create Match REST API.
 Yêu cầu đầy đủ mới nằm trong [Chặng 2 Demo First](docs/CHANG-2-DEMO-FIRST.md),
 thay thế thứ tự triển khai Chặng 2 trước đây.
 
 ## Server online — Chặng 2
+
+Demo hai người chơi: chạy server rồi mở [http://localhost:8080](http://localhost:8080)
+trong hai tab, chọn P1 và P2. Xem [hướng dẫn demo 2A](docs/CHANG-2A-DEMO.md)
+cho chuỗi nước đi combat và kết thúc trận.
 
 Yêu cầu JDK 21 (hoặc JDK 24 nếu dùng môi trường kiểm tra hiện tại); Gradle
 wrapper 8.14.3 và Spring Boot 3.5.16. Version Jackson/JUnit/AssertJ do
@@ -29,7 +33,8 @@ Invoke-RestMethod http://localhost:8080/api/health
 ```
 
 `GET /api/health` trả HTTP 200, JSON `{"status":"UP"}` và không yêu cầu
-đăng nhập. Chưa thêm Spring Security, JPA, Match API hay WebSocket endpoint.
+đăng nhập. Demo có WebSocket `/ws/game`; chưa thêm Spring Security, JPA hay
+create/join Match REST API của phần 2B.
 Các starter Web, WebSocket, Test và Jackson đã được khai báo. Bỏ starter
 Validation chưa dùng để giữ phần demo tối thiểu. `/api/v1/health` vẫn là alias
 tương thích cho endpoint đã push trước khi đổi lộ trình.
@@ -80,15 +85,15 @@ server/
 ### Tiến độ Chặng 2 — Demo First
 
 - [x] 2A / Bước 1 — Spring Boot tối thiểu, `/api/health`, regression Chặng 1
-- [ ] 2A / Bước 2 — DemoMatchService: `demo-match`, P1/P2, layout cố định
-- [ ] 2A / Bước 3 — DTO tối thiểu và GameStateMapper
-- [ ] 2A / Bước 4 — WebSocket `/ws/game`, protocol tối thiểu
-- [ ] 2A / Bước 5 — JOIN P1/P2 và gửi STATE
-- [ ] 2A / Bước 6 — ACTION qua engine, broadcast STATE/reject
-- [ ] 2A / Bước 7 — Client HTML/CSS/JS thuần, board 9×9
-- [ ] 2A / Bước 8 — Click quân/ô, highlight legalActions từ server
-- [ ] 2A / Bước 9 — Combat demo
-- [ ] 2A / Bước 10 — GAME_OVER; xác nhận demo hai browser tab
+- [x] 2A / Bước 2 — DemoMatchService: `demo-match`, P1/P2, layout cố định
+- [x] 2A / Bước 3 — DTO tối thiểu và GameStateMapper
+- [x] 2A / Bước 4 — WebSocket `/ws/game`, protocol tối thiểu
+- [x] 2A / Bước 5 — JOIN P1/P2 và gửi STATE
+- [x] 2A / Bước 6 — ACTION qua engine, broadcast STATE/reject
+- [x] 2A / Bước 7 — Client HTML/CSS/JS thuần, board 9×9
+- [x] 2A / Bước 8 — Click quân/ô, highlight legalActions từ server
+- [x] 2A / Bước 9 — Combat demo
+- [x] 2A / Bước 10 — GAME_OVER; xác nhận demo hai browser tab
 
 **Mốc bắt buộc trước 2B:** hai tab join P1/P2, cùng thấy board, MOVE được đồng
 bộ, combat và kết quả do GameEngine quyết định. Client chỉ render, highlight
@@ -106,7 +111,15 @@ legalActions và gửi Action. GameEngine/RuleSet không biết HTTP/WebSocket/S
 - [ ] 2B / Bước 20 — Cleanup và kiểm tra ranh giới kiến trúc
 
 Phần demo đầu chưa cần matchmaking, database, login hay reconnect phức tạp.
-Chưa triển khai Bước 2 hoặc các bước sau trong lần điều chỉnh lộ trình này.
+Phần 2A đã chạy ổn và được kiểm tra tổng hợp; các bước 2B chưa triển khai.
+
+Kết quả cuối 2A: **260 tests pass, 0 failures, 0 errors, 0 skipped**, bao gồm
+249 tests Chặng 1, 2 health cases, 4 DemoMatchService tests, 2 DTO tests và
+3 integration tests với hai WebSocket client thật. `test bootJar` thành công
+trên JDK 24.0.2, biên dịch `--release 21`, build riêng
+`build-step3-verification-stage2a-final-a`. Chưa chạy trực tiếp trên JDK 21.
+Hai browser tab cũng đã được kiểm tra click/highlight, combat, đồng bộ board
+và thắng do hết quân ở sequence 15. Không sửa source GameEngine/RuleSet.
 
 Kết quả Bước 1 trước khi đổi lộ trình: **250 tests pass, 0 failures, 0 errors, 0 skipped**,
 gồm toàn bộ 249 tests Chặng 1 và 1 integration test health qua HTTP với full Spring context

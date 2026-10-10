@@ -80,6 +80,12 @@ function render() {
       $("board").append(cell);
     }
   }
+  if (state.phase === "FINISHED") showResult(state.winner, state.outcome);
+}
+
+function showResult(winner, outcome) {
+  $("status").textContent = outcome === "DRAW" ? "DRAW" : `PLAYER ${winner.slice(1)} WINS`;
+  $("status").classList.add("game-over");
 }
 
 if (player !== "P1" && player !== "P2") {
@@ -101,6 +107,11 @@ if (player !== "P1" && player !== "P2") {
       $("status").textContent = state.currentPlayer === player ? "Đến lượt bạn." : "Đang chờ đối thủ.";
       for (const fact of state.events || []) log(`#${fact.sequence} ${fact.type}`);
       render();
+    } else if (message.type === "GAME_OVER") {
+      pending = true;
+      render();
+      showResult(message.payload.winner, message.payload.outcome);
+      log($("status").textContent);
     } else if (message.type === "ACTION_REJECTED") {
       pending = false;
       $("status").textContent = `Server từ chối: ${message.payload.error}`;

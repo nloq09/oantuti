@@ -28,7 +28,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final Map<String, PlayerId> players = new HashMap<>();
 
     public GameWebSocketHandler(ObjectMapper json, DemoMatchService service, GameStateMapper mapper) {
-        this.json = json.copy().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+        this.json = json.copy().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT);
         this.service = service;
         this.mapper = mapper;
     }
@@ -91,6 +93,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private void sendState(WebSocketSession session, PlayerId player, List<GameEvent> events) {
         var state = mapper.toDto(service.state(), service.legalActions(player), events);
         send(session, "STATE", Map.of("gameState", state));
+        if (state.phase().equals("FINISHED")) {
+            send(session, "GAME_OVER", Map.of("winner", state.winner() == null ? "DRAW" : state.winner(),
+                    "outcome", state.outcome(), "sequence", state.sequence()));
+        }
     }
 
     private void reject(WebSocketSession session, String error) {
