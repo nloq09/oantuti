@@ -59,3 +59,35 @@
     margin: 28px auto;
   }
 }
+.bot-panel {
+  margin-top: 24px;
+}
+.bot-panel select {
+  width: 100%;
+  background: #111a26;
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: 9px;
+  font: inherit;
+}
+.bot-panel details {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.bot-panel summary {
+  cursor: pointer;
+}
+.bot-panel input {
+  text-transform: none;
+  letter-spacing: normal;
+  width: 100%;
+  margin-bottom: 12px;
+}
+.bot-panel form {
+  margin-top: 16px;
+}
+.bot-panel a {
+  color: var(--accent);
+}

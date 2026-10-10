@@ -13,7 +13,10 @@ export class ClientState {
   get ownTurn() {
     return (
       this.snapshot?.status === "PLAYING" &&
-      this.game.currentPlayer === this.snapshot.playerId
+      this.game.currentPlayer === this.snapshot.playerId &&
+      !this.snapshot.players.find(
+        (player) => player.playerId === this.snapshot.playerId,
+      )?.bot
     );
   }
   get interactive() {

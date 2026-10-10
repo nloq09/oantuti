@@ -20,7 +20,7 @@ export class GameController {
     this.finished = false;
     this.seen = new Set();
     this.socket = new GameSocket(
-      seat,
+      { matchId: seat.matchId, playerId: seat.playerId, token: seat.token },
       (message) => this.receive(message),
       (status) => this.connection(status),
     );
@@ -95,15 +95,19 @@ export class GameController {
         if (this.state.snapshot && !message.resync)
           await this.animator.play(
             events,
-            this.state.game.currentPlayer === "P2" &&
-              snapshot.mode === "HUMAN_VS_BOT" &&
-              events.length > 0,
+            this.state.snapshot.players.find(
+              (p) => p.playerId === this.state.game.currentPlayer,
+            )?.bot && events.length > 0,
           );
         this.state.snapshot = snapshot;
         this.state.selected = null;
         this.state.busy = false;
         this.render();
         this.log(events);
+        if (snapshot.botError && !this.botErrorShown) {
+          this.botErrorShown = true;
+          toast(snapshot.botError, true);
+        }
         if (snapshot.status === "FINISHED") this.result(snapshot);
       })
       .catch(() => {
@@ -189,7 +193,7 @@ export class GameController {
               ? "Đang diễn hoạt lượt chơi…"
               : this.state.ownTurn
                 ? "Đến lượt bạn"
-                : s.mode === "HUMAN_VS_BOT"
+                : s.players.find((p) => p.playerId === g.currentPlayer)?.bot
                   ? "Bot đang suy nghĩ…"
                   : "Đến lượt đối thủ";
     document.querySelector("#turn").textContent = "Lượt " + g.turn;
@@ -200,7 +204,7 @@ export class GameController {
       ...s.players.map((p) => {
         const item = document.createElement("div");
         item.className = "player " + p.playerId.toLowerCase();
-        item.textContent = `${p.playerId === "P1" ? "Xanh" : "Đỏ"} · ${p.joined ? (p.bot ? "Bot chiến thuật" : p.connected ? "Online" : "Offline") : "Chưa tham gia"}${p.ready ? " · Sẵn sàng" : ""}`;
+        item.textContent = `${p.playerId === "P1" ? "Xanh" : "Đỏ"} · ${p.joined ? (p.bot ? p.botName || "Bot chiến thuật" : p.connected ? "Online" : "Offline") : "Chưa tham gia"}${p.ready ? " · Sẵn sàng" : ""}`;
         return item;
       }),
     );
@@ -232,6 +236,7 @@ export class GameController {
     const ready = document.querySelector("#ready");
     ready.textContent = me.ready ? "Hủy sẵn sàng" : "Sẵn sàng";
     ready.disabled =
+      me.bot ||
       !this.state.interactive ||
       (!me.ready && Object.values(s.remaining).some((n) => n !== 0));
     document.querySelector("#pass").disabled =
@@ -296,7 +301,9 @@ export class GameController {
               try {
                 sessionStorage.setItem(
                   seatKey,
-                  JSON.stringify(await createMatch("HUMAN_VS_BOT")),
+                  JSON.stringify(
+                    await createMatch("HUMAN_VS_BOT", this.seat.bot),
+                  ),
                 );
                 location.reload();
               } catch (error) {

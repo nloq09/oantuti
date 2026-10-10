@@ -16,6 +16,19 @@ import static org.assertj.core.api.Assertions.*;
 class OnlineWebSocketIntegrationTest {
  @LocalServerPort int port;
  @Autowired ObjectMapper json;
+ @Autowired com.rpsbattle.online.OnlineMatchService rooms;
+ @Test void uploadedBotsAdvanceAutonomouslyAndOwnersCanObserveAndSurrender()throws Exception{
+  var a=post("",Map.of("mode","HUMAN_VS_HUMAN"),201);var b=post("/"+a.path("matchId").asText()+"/join",Map.of(),200);
+  var room=rooms.find(a.path("matchId").asText());
+  synchronized(room){for(var id:List.of(com.rpsbattle.online.OnlineMatch.P1,com.rpsbattle.online.OnlineMatch.P2))room.attachBot(id,(view,actions)->actions.getFirst(),"Uploaded "+id);room.prepareBots();}
+  try(var player=new Peer(a)){
+   player.send("JOIN_MATCH",null,null);var first=player.state("PLAYING");long seq=first.path("gameState").path("sequence").asLong();
+   assertThat(first.path("players").get(0).path("botName").asText()).isEqualTo("Uploaded P1");
+   player.send("UNREADY",null,null);player.rejected("BOT_CONTROLLED");
+   player.await(m->m.path("type").asText().equals("GAME_STATE")&&m.path("payload").path("snapshot").path("gameState").path("sequence").asLong()>seq);
+   player.send("LEAVE",null,null);assertThat(player.state("FINISHED").path("gameState").path("winner").asText()).isEqualTo("P2");
+  }
+ }
  JsonNode post(String path,Object body,int status)throws Exception{try(var client=HttpClient.newHttpClient()){var response=client.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/matches"+path)).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build(),HttpResponse.BodyHandlers.ofString());assertThat(response.statusCode()).isEqualTo(status);return json.readTree(response.body());}}
  final class Peer implements WebSocket.Listener,AutoCloseable {
   final BlockingQueue<String> inbox=new LinkedBlockingQueue<>();final StringBuilder buffer=new StringBuilder();final WebSocket ws;final JsonNode seat;

@@ -7,6 +7,10 @@ Yêu cầu Chặng 2B mới nằm trong [đặc tả client](docs/CHANG-2B-CLIEN
 thay thế phần 2B backend/database trong lộ trình Demo First trước đó.
 Xem [hướng dẫn chạy và kiểm thử 2B](docs/CHANG-2B-CLIENT.md).
 
+Đã thêm **tải bot C++, Python, Java/JAR** để đấu với người chơi hoặc bot khác.
+Tải/chọn bot tại trang Vào trận; xem [hướng dẫn bot và thiết lập Docker](docs/BOT-UPLOAD.md).
+Chạy code bot tải lên cần Docker Linux và image ngôn ngữ đã chuẩn bị sẵn.
+
 ## Server online — Chặng 2
 
 Chạy server rồi mở [http://localhost:8080](http://localhost:8080).

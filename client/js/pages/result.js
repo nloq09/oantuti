@@ -29,7 +29,12 @@ else {
     try {
       sessionStorage.setItem(
         seatKey,
-        JSON.stringify(await createMatch("HUMAN_VS_BOT")),
+        JSON.stringify(
+          await createMatch(
+            "HUMAN_VS_BOT",
+            JSON.parse(sessionStorage.getItem(seatKey) || "{}").bot,
+          ),
+        ),
       );
       location.href = "/game.html";
     } catch (error) {

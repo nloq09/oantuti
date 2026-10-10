@@ -52,6 +52,7 @@ public class OnlineGameGateway {
                 var binding=bindings.get(socket.getId());
                 if(binding==null) fail("JOIN_REQUIRED");
                 if(binding.room()!=room || !binding.player().equals(player)) fail("PLAYER_MISMATCH");
+                if(room.uploadedBot(player)&&Set.of("PLACE","RANDOM_PLACEMENT","RESET_PLACEMENT","READY","UNREADY").contains(message.type()))fail("BOT_CONTROLLED");
                 var payload=message.payload();
                 List<com.rpsbattle.game.engine.GameEvent> events=List.of();
                 switch(message.type()) {

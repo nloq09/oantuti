@@ -25,6 +25,41 @@
           ><span>Bot chiến thuật · Ưu tiên ăn quân và tránh nguy hiểm</span>
         </button>
       </div>
+      <section class="panel bot-panel">
+        <h2>Người chơi của bạn</h2>
+        <label for="player-controller">Chơi bằng tay hoặc dùng bot riêng</label>
+        <select id="player-controller">
+          <option value="">Tôi tự chơi</option>
+        </select>
+        <p id="bot-runtime" class="muted" role="status">
+          Đang kiểm tra khả năng chạy bot…
+        </p>
+        <details>
+          <summary>Tải bot của tôi lên</summary>
+          <form id="bot-upload-form">
+            <label for="bot-name">Tên bot</label>
+            <input
+              id="bot-name"
+              maxlength="60"
+              required
+              placeholder="Bot của tôi"
+            />
+            <label for="bot-file">File C++, Python hoặc Java</label>
+            <input
+              id="bot-file"
+              type="file"
+              accept=".cpp,.py,.java,.jar"
+              required
+            />
+            <button id="upload-bot" type="submit">Tải bot lên</button>
+          </form>
+          <p class="muted">
+            Bot được xếp quân tự động. Java source dùng class Main, không
+            package. Source tối đa 512 KB, JAR tối đa 5 MB.
+          </p>
+          <p><a href="/bot-guide.html">Hướng dẫn và bot mẫu →</a></p>
+        </details>
+      </section>
       <button class="primary wide" id="create">Tạo phòng →</button>
       <section class="panel">
         <h2>Đã có mã phòng?</h2>

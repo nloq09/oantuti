@@ -5,9 +5,4 @@ try {
   seat = JSON.parse(sessionStorage.getItem(seatKey));
 } catch {}
 if (!seat?.matchId || !seat?.token) location.replace("/lobby.html");
-else
-  new GameController({
-    matchId: seat.matchId,
-    playerId: seat.playerId,
-    token: seat.token,
-  });
+else new GameController(seat);

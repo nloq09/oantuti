@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Viết bot · RPS Battle</title>
+    <link rel="stylesheet" href="/css/global.css" />
+    <link rel="stylesheet" href="/css/lobby.css" />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">◈ RPS BATTLE</a
+      ><a href="/lobby.html">Vào trận →</a>
+    </header>
+    <main class="lobby">
+      <p class="eyebrow">BOT CỦA BẠN</p>
+      <h1>Code. Tải lên. Đấu.</h1>
+      <section class="panel">
+        <h2>1. Bắt đầu với bot mẫu</h2>
+        <p>
+          Các mẫu chọn nước đi hợp lệ đầu tiên. Thay phần chọn nước đi bằng
+          chiến thuật của bạn.
+        </p>
+        <div class="actions">
+          <a download href="/assets/bot-examples/main.cpp">C++ (.cpp)</a
+          ><a download href="/assets/bot-examples/main.py">Python (.py)</a
+          ><a download href="/assets/bot-examples/Main.java">Java (.java)</a>
+        </div>
+        <p>
+          Mỗi bot là một file. C++ dùng C++17 và thư viện chuẩn; Python dùng thư
+          viện chuẩn; Java dùng Java 21, class Main không package. JAR cần có
+          Main-Class trong manifest và chứa mọi dependency.
+        </p>
+      </section>
+      <section class="panel">
+        <h2>2. Giao tiếp bằng JSON</h2>
+        <p>
+          Đọc từng dòng từ stdin. Mỗi dòng YOUR_TURN có sequence, player,
+          state.board.pieces và legalActions. Chọn một phần tử legalActions và
+          trả đúng sequence:
+        </p>
+        <pre
+          style="overflow: auto"
+        ><code>{"type":"ACTION","sequence":42,"action":{"type":"PASS"}}</code></pre>
+        <p>
+          Ví dụ PASS chỉ dùng khi có trong legalActions. Khi có MOVE, trả nguyên
+          object MOVE đã chọn. Mỗi phản hồi là một dòng JSON và phải flush
+          stdout. Gửi log qua stderr. Tọa độ row/col bắt đầu từ 0; P1 xuất phát
+          dưới, P2 xuất phát trên. Bot nhận tọa độ server, dù bàn cờ hiển thị
+          xoay theo người xem.
+        </p>
+        <p>
+          Đội hình được xếp tự động: 6 Búa, 6 Bao, 6 Kéo. Bot giữ tiến trình
+          trong cả trận. Khởi động và biên dịch tối đa 25 giây; các lượt tiếp
+          theo tối đa 2 giây. Lỗi, quá thời gian hoặc nước đi sai sẽ bị xử thua.
+        </p>
+      </section>
+      <section class="panel">
+        <h2>3. Tải lên và chọn đối thủ</h2>
+        <p>
+          Ở trang Vào trận, mở “Tải bot của tôi lên”, đặt tên và chọn file. Sau
+          đó chọn bot trong “Người chơi của bạn”. Chọn Hai người để tạo hoặc
+          tham gia phòng bạn bè; bên kia có thể tự chơi hoặc chọn bot của họ.
+          Hai bot sẽ tự đấu khi cả hai tham gia. Chọn Đấu với bot để thử bot của
+          bạn với bot chiến thuật có sẵn.
+        </p>
+        <p>
+          Source tối đa 512 KB, JAR tối đa 5 MB. Bot lưu trên server; quyền dùng
+          bot lưu trong trình duyệt này. Không chia sẻ token hoặc xóa dữ liệu
+          trình duyệt nếu muốn tiếp tục dùng bot đã tải lên.
+        </p>
+      </section>
+      <section class="panel">
+        <h2>Thiết lập runner cho chủ server</h2>
+        <p>
+          Cần Docker với Linux containers. Chuẩn bị image trong terminal trước
+          khi dùng bot:
+        </p>
+        <pre style="overflow: auto"><code>docker pull python:3.12-slim
+docker pull gcc:14
+docker pull eclipse-temurin:21-jdk</code></pre>
+        <p>
+          Server chỉ dùng image đã có, không tự tải thêm. Runner giới hạn tài
+          nguyên và tắt mạng container. Khi chưa có runner, vẫn tải file lên
+          được; chọn bot để vào trận sẽ báo chưa sẵn sàng. Chơi tay và bot chiến
+          thuật có sẵn vẫn hoạt động.
+        </p>
+        <p>
+          <a
+            href="https://docs.docker.com/desktop/setup/install/windows-install/"
+            >Cài Docker Desktop trên Windows</a
+          >
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
