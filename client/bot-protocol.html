@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Giao thức bot chi tiết · RPS Battle</title>
+    <link rel="stylesheet" href="/css/global.css" />
+    <link rel="stylesheet" href="/css/bot-guide.css" />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">◈ RPS BATTLE</a
+      ><a href="/bot-guide.html">Bot mẫu và tải lên →</a>
+    </header>
+    <main class="bot-guide">
+      <p class="eyebrow">DỮ LIỆU VÀ CHIẾN THUẬT</p>
+      <nav class="panel" aria-label="Mục lục">
+        <strong>Nội dung hướng dẫn</strong>
+        <ul>
+          <li><a href="#section-2">1. Luồng hoạt động của một bot</a></li>
+          <li><a href="#section-3">2. Dữ liệu server gửi cho bot</a></li>
+          <li>
+            <a href="#section-10">3. Cách dùng legalActions để tính toán</a>
+          </li>
+          <li><a href="#section-11">4. Bot trả về gì cho server?</a></li>
+          <li>
+            <a href="#section-12">5. Vòng lặp đọc/ghi theo từng ngôn ngữ</a>
+          </li>
+          <li>
+            <a href="#section-13">6. Ví dụ thuật toán tính điểm bằng Python</a>
+          </li>
+          <li><a href="#section-14">7. Thời gian và lỗi thường gặp</a></li>
+          <li><a href="#section-15">8. Tự kiểm tra trước khi tải lên</a></li>
+        </ul>
+      </nav>
+      <article class="panel">
+        <h1 id="section-1">Hướng dẫn tạo bot và giao thức với server</h1>
+        <p>
+          Bot là chương trình đọc trạng thái trận đấu, chọn một nước đi hợp lệ
+          rồi trả lựa chọn cho server. Bạn chỉ viết chiến thuật; server quản lý
+          phòng, xếp quân, lượt chơi, giao chiến và kết quả.
+        </p>
+        <h2 id="section-2">1. Luồng hoạt động của một bot</h2>
+        <ol>
+          <li>
+            Viết một file C++, Python hoặc Java; hoặc đóng gói Java thành JAR.
+          </li>
+          <li>
+            Tải file lên ở trang Vào trận, chọn bot rồi tạo/tham gia phòng.
+          </li>
+          <li>
+            Server tự xếp 6 ROCK, 6 PAPER, 6 SCISSORS cho bot và tự sẵn sàng.
+          </li>
+          <li>
+            Đến lượt bot, server gửi một dòng JSON <code>YOUR_TURN</code> vào
+            <strong>stdin</strong> của chương trình.
+          </li>
+          <li>
+            Bot đọc JSON, tính toán và viết một dòng JSON <code>ACTION</code> ra
+            <strong>stdout</strong>, rồi flush.
+          </li>
+          <li>
+            Server đọc phản hồi, kiểm tra sequence và nước đi, áp dụng luật, cập
+            nhật bàn cờ rồi chuyển lượt.
+          </li>
+          <li>
+            Chương trình tiếp tục chờ stdin. Ở lượt tiếp theo của chính bot,
+            server gửi trạng thái mới. Khi tiến trình bị đóng, stdin kết thúc;
+            bot nên thoát.
+          </li>
+        </ol>
+        <p>
+          Bot không cần mở HTTP/WebSocket, không cần biết port, không gửi token
+          và không tự kết nối mạng. Trình duyệt dùng REST/WebSocket để người
+          chơi xem và quản lý trận; chương trình bot dùng stdin/stdout với
+          worker của server.
+        </p>
+        <p>
+          Mỗi bot giữ một tiến trình trong suốt trận. Có thể giữ biến giữa các
+          lượt để ghi nhớ nước đi, tránh lặp hoặc lưu kết quả tìm kiếm. Một trận
+          mới dùng tiến trình mới; không giả định bộ nhớ được giữ giữa các trận.
+          Không có thông điệp kết quả/ACK dành riêng cho bot: sau khi trả một
+          nước đi, chờ dòng YOUR_TURN tiếp theo hoặc EOF, không chờ
+          ACTION_ACCEPTED.
+        </p>
+        <h2 id="section-3">2. Dữ liệu server gửi cho bot</h2>
+        <p>
+          Dưới đây là
+          <strong>ví dụ rút gọn số quân và số nước đi để dễ đọc</strong>. Bàn cờ
+          thật bắt đầu với 36 quân; server gửi tất cả quân đang trên bàn và tất
+          cả nước đi hợp lệ của bot.
+        </p>
+        <pre><code>{
+  &quot;type&quot;: &quot;YOUR_TURN&quot;,
+  &quot;matchId&quot;: &quot;A1B2C3D4&quot;,
+  &quot;turn&quot;: 12,
+  &quot;sequence&quot;: 104,
+  &quot;player&quot;: &quot;P1&quot;,
+  &quot;state&quot;: {
+    &quot;phase&quot;: &quot;PLAYING&quot;,
+    &quot;currentPlayer&quot;: &quot;P1&quot;,
+    &quot;board&quot;: {
+      &quot;rows&quot;: 9,
+      &quot;cols&quot;: 9,
+      &quot;pieces&quot;: [
+        {
+          &quot;id&quot;: &quot;P1-ROCK-1&quot;,
+          &quot;ownerId&quot;: &quot;P1&quot;,
+          &quot;type&quot;: &quot;ROCK&quot;,
+          &quot;status&quot;: &quot;ALIVE&quot;,
+          &quot;position&quot;: {&quot;row&quot;: 4, &quot;col&quot;: 4}
+        },
+        {
+          &quot;id&quot;: &quot;P1-SCISSORS-1&quot;,
+          &quot;ownerId&quot;: &quot;P1&quot;,
+          &quot;type&quot;: &quot;SCISSORS&quot;,
+          &quot;status&quot;: &quot;ALIVE&quot;,
+          &quot;position&quot;: {&quot;row&quot;: 6, &quot;col&quot;: 2}
+        },
+        {
+          &quot;id&quot;: &quot;P2-SCISSORS-1&quot;,
+          &quot;ownerId&quot;: &quot;P2&quot;,
+          &quot;type&quot;: &quot;SCISSORS&quot;,
+          &quot;status&quot;: &quot;ALIVE&quot;,
+          &quot;position&quot;: {&quot;row&quot;: 3, &quot;col&quot;: 4}
+        },
+        {
+          &quot;id&quot;: &quot;P2-PAPER-1&quot;,
+          &quot;ownerId&quot;: &quot;P2&quot;,
+          &quot;type&quot;: &quot;PAPER&quot;,
+          &quot;status&quot;: &quot;ALIVE&quot;,
+          &quot;position&quot;: {&quot;row&quot;: 4, &quot;col&quot;: 6}
+        }
+      ]
+    },
+    &quot;players&quot;: [
+      {&quot;id&quot;: &quot;P1&quot;, &quot;name&quot;: &quot;Player 1&quot;, &quot;pieceIds&quot;: [&quot;P1-ROCK-1&quot;, &quot;P1-SCISSORS-1&quot;]},
+      {&quot;id&quot;: &quot;P2&quot;, &quot;name&quot;: &quot;Player 2&quot;, &quot;pieceIds&quot;: [&quot;P2-SCISSORS-1&quot;, &quot;P2-PAPER-1&quot;]}
+    ]
+  },
+  &quot;legalActions&quot;: [
+    {&quot;type&quot;: &quot;MOVE&quot;, &quot;pieceId&quot;: &quot;P1-ROCK-1&quot;, &quot;from&quot;: {&quot;row&quot;: 4, &quot;col&quot;: 4}, &quot;to&quot;: {&quot;row&quot;: 3, &quot;col&quot;: 4}},
+    {&quot;type&quot;: &quot;MOVE&quot;, &quot;pieceId&quot;: &quot;P1-ROCK-1&quot;, &quot;from&quot;: {&quot;row&quot;: 4, &quot;col&quot;: 4}, &quot;to&quot;: {&quot;row&quot;: 4, &quot;col&quot;: 5}}
+  ]
+}</code></pre>
+        <p>
+          Ví dụ được xuống dòng để đọc. Khi truyền thực tế,
+          <strong>toàn bộ object nằm trên một dòng</strong>; ký tự newline đánh
+          dấu kết thúc thông điệp. Parse JSON theo tên trường, không dựa vào thứ
+          tự các trường hoặc khoảng trắng.
+        </p>
+        <h3 id="section-4">Các trường ở cấp ngoài</h3>
+        <ul>
+          <li>
+            <code>type</code>: chuỗi <code>YOUR_TURN</code>, nghĩa là server
+            đang yêu cầu bot chọn nước đi.
+          </li>
+          <li>
+            <code>matchId</code>: mã trận. Có thể dùng để xác định bộ nhớ chiến
+            thuật thuộc trận nào.
+          </li>
+          <li>
+            <code>turn</code>: số lượt hành động đã được tính trong trận, bắt
+            đầu từ 0 khi bắt đầu chơi. Đây là số lượt chung của cả hai bên,
+            không phải số lượt riêng của bot và không phải một vòng gồm hai
+            người đi. PASS cũng tiêu thụ lượt.
+          </li>
+          <li>
+            <code>sequence</code>: số nguyên đánh dấu phiên bản trạng thái
+            server. Phản hồi phải sao chép
+            <strong>đúng giá trị nhận được</strong>. Nó đã tính cả các thay đổi
+            trước khi chơi, nên không bắt đầu từ 0 và không nhất thiết bằng
+            turn. Không tự tăng, không lấy turn thay sequence, không giả định
+            mỗi lần bot nhận dữ liệu chỉ tăng 1.
+          </li>
+          <li>
+            <code>player</code>: định danh bên mà bot điều khiển,
+            <code>P1</code> hoặc <code>P2</code>.
+            <strong>Tên trường là player</strong>, không phải playerId. Không
+            viết cố định P1 vì bot tham gia phòng có thể là P2.
+          </li>
+          <li><code>state</code>: trạng thái hiện tại để đánh giá nước đi.</li>
+          <li>
+            <code>legalActions</code>: danh sách những hành động bot được phép
+            chọn ở chính trạng thái này.
+          </li>
+        </ul>
+        <h3 id="section-5">state.phase và state.currentPlayer</h3>
+        <p>
+          <code>phase</code> là giai đoạn trận, hiện worker gửi yêu cầu bot
+          trong giai đoạn <code>PLAYING</code>. <code>currentPlayer</code> là
+          người đang có lượt; trong yêu cầu YOUR_TURN bình thường, nó trùng với
+          <code>player</code>.
+        </p>
+        <p>
+          Bot không cần xử lý đặt quân/READY. Không gửi PLACE, READY hay
+          RANDOM_PLACEMENT qua giao thức bot.
+        </p>
+        <h3 id="section-6">state.board</h3>
+        <ul>
+          <li>
+            <code>rows</code>, <code>cols</code>: kích thước bàn; hiện đều là 9.
+            Khi viết thuật toán, đọc từ dữ liệu thay vì luôn gắn cứng 9.
+          </li>
+          <li>
+            <code>pieces</code>: danh sách object quân đang trên bàn. Đây không
+            phải mảng 9×9; ô không có quân không có object riêng. Bot có thể
+            dựng một ma trận hoặc map <code>(row,col) → quân</code> để tra cứu
+            nhanh.
+          </li>
+        </ul>
+        <p>Trong mỗi object quân:</p>
+        <ul>
+          <li>
+            <code>id</code>: ID duy nhất của quân. Khi đi phải dùng đúng ID này
+            làm pieceId. Coi ID là chuỗi opaque: không suy ra loại/chủ quân bằng
+            cách tách tên ID; đọc type và ownerId.
+          </li>
+          <li>
+            <code>ownerId</code>: bên sở hữu.
+            <code>ownerId == request.player</code> là quân của bot; khác player
+            là quân đối thủ.
+          </li>
+          <li>
+            <code>type</code>: <code>ROCK</code> (Búa),
+            <code>PAPER</code> (Bao), <code>SCISSORS</code> (Kéo).
+          </li>
+          <li>
+            <code>status</code>: hiện quân trên bàn có trạng thái
+            <code>ALIVE</code>. Khi bị loại, quân bị gỡ khỏi board.pieces; không
+            chờ một object DEAD xuất hiện trong danh sách này. Lọc ALIVE khi
+            tính toán để giữ logic rõ ràng.
+          </li>
+          <li>
+            <code>position.row</code>, <code>position.col</code>: vị trí hiện
+            tại, đều là số nguyên.
+          </li>
+        </ul>
+        <p>
+          Bot thấy vị trí <strong>và loại quân của cả hai bên</strong>; hiện
+          không có quân ẩn. Dùng board.pieces làm nguồn chính để đếm quân sống
+          và dựng bàn cờ. Mảng được serialize theo ID, không phải theo ô; thứ tự
+          phần tử không thể hiện độ ưu tiên chiến thuật.
+        </p>
+        <h3 id="section-7">Tọa độ bàn cờ</h3>
+        <p>
+          Góc trên trái là <code>(0,0)</code>, góc dưới phải là
+          <code>(8,8)</code>. Row tăng từ trên xuống; col tăng từ trái sang
+          phải:
+        </p>
+        <ul>
+          <li>Đi lên: <code>(row-1,col)</code>.</li>
+          <li>Đi xuống: <code>(row+1,col)</code>.</li>
+          <li>Đi trái: <code>(row,col-1)</code>.</li>
+          <li>Đi phải: <code>(row,col+1)</code>.</li>
+        </ul>
+        <p>
+          P1 xuất phát ở hàng 6–8, P2 ở hàng 0–2. P1 thường tiến lên, P2 thường
+          tiến xuống, nhưng <strong>cả hai được đi đủ bốn hướng</strong>. Giao
+          diện xoay góc nhìn để quân của người xem ở dưới; dữ liệu bot luôn giữ
+          tọa độ server. Không xoay from/to khi bot là P2.
+        </p>
+        <h3 id="section-8">state.players</h3>
+        <p>
+          Mỗi player có <code>id</code>, <code>name</code>,
+          <code>pieceIds</code>. Name là tên hiển thị, không phải khóa nhận
+          diện. PieceIds là danh sách ID gắn với player trong trạng thái; để xác
+          định quân còn sống/vị trí/loại, tra board.pieces và ownerId thay vì
+          chỉ đếm pieceIds.
+        </p>
+        <h3 id="section-9">Những dữ liệu chưa gửi</h3>
+        <p>
+          Giao thức này không gửi event log, lịch sử các nước đi, token
+          upload/phòng, tên bot, seed xếp quân, deadline, thời gian còn lại hay
+          bảng luật. Nếu cần lịch sử, lưu trạng thái giữa các lần YOUR_TURN và
+          so sánh; giữa hai lần nhận của bot có thể có cả nước đi của bot và đối
+          thủ. Không truy cập những trường này như thể chúng có trong JSON. Luật
+          và giới hạn hiện tại được mô tả bên dưới.
+        </p>
+        <h2 id="section-10">3. Cách dùng legalActions để tính toán</h2>
+        <p>
+          Server đã sinh các nước MOVE hợp lệ, bao gồm đi vào ô trống và tấn
+          công. Trong phòng online hiện tại, nếu có MOVE thì danh sách chứa các
+          MOVE; nếu không có MOVE thì server gửi một PASS để bot vẫn trả được
+          hành động:
+        </p>
+        <pre><code>[{&quot;type&quot;:&quot;PASS&quot;}]</code></pre>
+        <p>
+          Bot <strong>không được tự PASS để tránh một nước khó</strong> khi PASS
+          không có trong danh sách. Danh sách online không cung cấp SURRENDER
+          cho chương trình bot; chủ bot có thể đầu hàng bằng giao diện. Bộ
+          decode cấp thấp hỗ trợ nhiều loại hơn, nhưng hành động của bot online
+          vẫn phải có trong legalActions.
+        </p>
+        <p>Một MOVE có:</p>
+        <ul>
+          <li><code>pieceId</code>: quân sẽ đi.</li>
+          <li><code>from</code>: ô hiện tại của quân.</li>
+          <li><code>to</code>: ô đích.</li>
+        </ul>
+        <p>
+          Không có loại ATTACK riêng. Nếu to đang có quân đối thủ, MOVE đó là
+          tấn công. Server chỉ đảm bảo nước đi hợp lệ theo luật;
+          <strong>hợp lệ không có nghĩa là có lợi</strong>. Đi ROCK vào PAPER
+          vẫn có thể nằm trong danh sách và khiến ROCK bị loại.
+        </p>
+        <p>Quy trình dễ triển khai:</p>
+        <ol>
+          <li>Dựng map quân theo ID và map quân theo ô từ board.pieces.</li>
+          <li>Với từng MOVE, tra quân tấn công theo pieceId và quân ở ô to.</li>
+          <li>
+            Tính điểm: ăn quân thắng thì cộng; tự mất quân thì trừ; cân nhắc đổi
+            quân cùng loại.
+          </li>
+          <li>
+            Mô phỏng bàn cờ sau giao chiến rồi kiểm tra quân sống ở ô đích có bị
+            đối thủ ăn ngay ở lượt sau không.
+          </li>
+          <li>
+            Với ô trống, cân nhắc tiến gần quân có thể thắng, né loại khắc chế
+            và tránh lặp đi lặp lại.
+          </li>
+          <li>
+            Chọn action có điểm tốt nhất và trả
+            <strong>nguyên object đã chọn</strong>. Không tự tạo ID mới, đổi tọa
+            độ hay gửi toàn bộ bàn cờ.
+          </li>
+        </ol>
+        <p>
+          Luật đang dùng: mỗi nước di chuyển một ô ngang/dọc, không chéo, không
+          ra ngoài bàn, không vào ô có quân cùng bên. ROCK thắng SCISSORS;
+          SCISSORS thắng PAPER; PAPER thắng ROCK.
+          <strong>Cùng loại thì cả hai bị loại</strong>. Khi bên tấn công thắng,
+          quân đó sống ở ô đích; khi thua, quân phòng thủ vẫn ở ô đích. Nếu cả
+          hai cùng loại, ô đích trống sau trận đánh.
+        </p>
+        <p>
+          Trong ví dụ trên, ROCK ở <code>(4,4)</code> đi lên
+          <code>(3,4)</code> ăn SCISSORS. Đi sang <code>(4,5)</code> tuy hợp lệ
+          nhưng đứng cạnh PAPER ở <code>(4,6)</code>, có nguy cơ bị ăn. Nếu mô
+          phỏng, phải gỡ quân ở ô from và gỡ quân thua trước khi đánh giá bàn
+          sau nước đi; không chỉ thay tọa độ trên bàn cũ.
+        </p>
+        <p>
+          Trận kết thúc khi một bên hết quân. Giới hạn mặc định là 200 lượt; khi
+          chạm giới hạn, bên có nhiều quân sống hơn thắng, bằng nhau thì hòa. Vì
+          vậy đổi quân cùng loại có thể hợp lý tùy chênh lệch quân và số lượt
+          còn lại. Các điểm số/thuật toán gợi ý ở đây là chiến thuật mẫu, không
+          phải điều kiện thắng do server áp đặt.
+        </p>
+        <h2 id="section-11">4. Bot trả về gì cho server?</h2>
+        <p>Với request có sequence 104, bot chọn nước đầu tiên thì trả:</p>
+        <pre><code>{&quot;type&quot;:&quot;ACTION&quot;,&quot;sequence&quot;:104,&quot;action&quot;:{&quot;type&quot;:&quot;MOVE&quot;,&quot;pieceId&quot;:&quot;P1-ROCK-1&quot;,&quot;from&quot;:{&quot;row&quot;:4,&quot;col&quot;:4},&quot;to&quot;:{&quot;row&quot;:3,&quot;col&quot;:4}}}</code></pre>
+        <p>Ba trường cần thiết:</p>
+        <ul>
+          <li>
+            <code>type</code>: đúng chuỗi <code>ACTION</code>, phân biệt chữ
+            hoa/chữ thường.
+          </li>
+          <li>
+            <code>sequence</code>: đúng số nguyên từ request vừa nhận, giữ kiểu
+            số JSON, không chuyển thành chuỗi.
+          </li>
+          <li>
+            <code>action</code>: một object chọn từ legalActions. Với MOVE phải
+            giữ đủ type, pieceId, from, to; row/col phải là số nguyên. Với PASS
+            chỉ cần type PASS.
+          </li>
+        </ul>
+        <p>
+          Ví dụ nếu request mới có sequence 105 và legalActions chỉ có PASS:
+        </p>
+        <pre><code>{&quot;type&quot;:&quot;ACTION&quot;,&quot;sequence&quot;:105,&quot;action&quot;:{&quot;type&quot;:&quot;PASS&quot;}}</code></pre>
+        <p>
+          Không gửi player/token/matchId trong response; server đã gắn tiến
+          trình với bên điều khiển. Không thêm object board đã chỉnh sửa, điểm
+          đánh giá hay danh sách các nước dự kiến. Mỗi YOUR_TURN chỉ trả một
+          ACTION cho lượt hiện tại. Nếu tính trước nhiều lượt, giữ kế hoạch
+          trong bộ nhớ bot, đến lượt sau phải kiểm tra lại theo
+          snapshot/legalActions mới.
+        </p>
+        <p>
+          Server kiểm tra phản hồi theo thứ tự: đọc một dòng hoàn chỉnh → parse
+          JSON → kiểm tra type/sequence/các trường action → đối chiếu action
+          trong danh sách đã gửi → engine kiểm tra và áp dụng luật → phát trạng
+          thái mới cho người xem. Bot không quyết định ai thắng giao chiến hay
+          tự cộng/trừ số quân trên server.
+        </p>
+        <h2 id="section-12">5. Vòng lặp đọc/ghi theo từng ngôn ngữ</h2>
+        <p>
+          Mẫu C++, Python, Java tải tại <code>/bot-guide.html</code>. Thay hàm
+          chọn action, giữ phần giao tiếp. Ví dụ Python tối thiểu:
+        </p>
+        <pre><code>import json
+import sys
+
+def choose_action(request):
+    return request[&quot;legalActions&quot;][0]
+
+for line in sys.stdin:
+    request = json.loads(line)
+    action = choose_action(request)
+    response = {
+        &quot;type&quot;: &quot;ACTION&quot;,
+        &quot;sequence&quot;: request[&quot;sequence&quot;],
+        &quot;action&quot;: action,
+    }
+    print(json.dumps(response, separators=(&quot;,&quot;, &quot;:&quot;)), flush=True)</code></pre>
+        <ul>
+          <li>
+            Python: json.loads đọc request; json.dumps tạo response; print(...,
+            flush=True). Không dùng input(&quot;Nhập nước đi:&quot;) vì prompt
+            in ra stdout làm hỏng giao thức. Debug bằng print(...,
+            file=sys.stderr).
+          </li>
+          <li>
+            C++: std::getline(std::cin, line) đọc một request; in JSON với
+            <code>std::endl</code> hoặc <code>std::flush</code>. Không
+            pretty-print response thành nhiều dòng. Mẫu có sẵn chỉ trích action
+            đầu tiên bằng thư viện chuẩn; để viết chiến thuật đầy đủ cần parser
+            JSON đúng chuẩn, tự chứa trong file source. Môi trường không cài sẵn
+            nlohmann/json nên không chỉ thêm include rồi kỳ vọng biên dịch được.
+          </li>
+          <li>
+            Java: BufferedReader.readLine đọc request;
+            System.out.println(response) rồi System.out.flush(). Source dùng
+            public class Main, không package. Java không kèm sẵn Jackson/Gson
+            trong container; nếu dùng thư viện ngoài, đóng gói JAR có dependency
+            và Main-Class. Mẫu source có sẵn dùng thư viện chuẩn để trả action
+            đầu tiên; regex/trích chuỗi trong mẫu không thay thế một parser JSON
+            đầy đủ để xử lý mọi trường.
+          </li>
+        </ul>
+        <p>
+          Bot nên xử lý nhiều dòng liên tiếp trong cùng tiến trình. Nếu chỉ đọc
+          một lượt rồi thoát, lượt tiếp theo sẽ lỗi. Bot không cần viết file
+          trên máy chủ; nếu dùng bộ nhớ ngoài trong container, chỉ /tmp là vùng
+          ghi tạm và không tồn tại qua trận.
+        </p>
+        <h2 id="section-13">6. Ví dụ thuật toán tính điểm bằng Python</h2>
+        <p>
+          File mẫu chiến thuật tải tại
+          <code>/assets/bot-examples/tactical.py</code>. Nó đọc đủ board.pieces,
+          tra quân theo ID/ô, chấm điểm giao chiến, mô phỏng nước đi, phạt nguy
+          cơ bị ăn ngay và ưu tiên tiến gần quân có thể thắng. Vẫn trả một
+          action nguyên bản từ legalActions. Đây là baseline một lớp, chưa tìm
+          kiếm minimax nhiều lượt và không bảo đảm thắng bot chiến thuật của
+          server.
+        </p>
+        <p>Các phần quan trọng trong file:</p>
+        <ul>
+          <li><code>BEATS</code>: quan hệ thắng giữa ba loại quân.</li>
+          <li>
+            <code>evaluate(action, request)</code>: đánh giá một ứng viên từ
+            trạng thái nhận được.
+          </li>
+          <li>
+            <code>choose_action(request)</code>: chọn ứng viên có điểm cao nhất.
+          </li>
+          <li>
+            Vòng stdin/stdout: giữ đúng sequence, một JSON trên một dòng, flush
+            sau mỗi phản hồi.
+          </li>
+        </ul>
+        <p>
+          Bạn có thể nâng cấp bằng cách thêm minimax/alpha-beta, quiescence khi
+          có giao chiến, bảng trạng thái đã gặp hoặc tìm kiếm có giới hạn thời
+          gian. Khi mô phỏng nước đi của đối thủ, bot phải tự sinh nước theo
+          luật trên bàn đã mô phỏng; legalActions nhận được chỉ là nước của bên
+          hiện tại ở snapshot hiện tại, không phải mọi nước của đối thủ hay của
+          các trạng thái tương lai.
+        </p>
+        <h2 id="section-14">7. Thời gian và lỗi thường gặp</h2>
+        <p>
+          Lượt đầu có 25 giây gồm khởi động/biên dịch; những lượt sau có 2 giây
+          để trả trọn dòng. JSON request không kèm deadline. Nếu tìm kiếm nặng,
+          đặt ngân sách thấp hơn 2 giây, giữ một action hợp lệ làm phương án dự
+          phòng. Tiến trình có 0,5 CPU và 384 MB RAM, không dựa vào tốc độ chạy
+          local để dùng hết sát 2 giây.
+        </p>
+        <p>
+          Phản hồi tối đa 65.536 ký tự. Không gửi log, lời chào, markdown/code
+          fence, hai action hoặc thêm JSON thứ hai trên stdout. Chỉ gửi dòng
+          ACTION, có newline và flush. Stderr được tách khỏi giao thức nhưng
+          hiện bị bỏ, không hiển thị lỗi biên dịch/debug lên giao diện.
+        </p>
+        <p>
+          Các lỗi khiến bot bị xử thua: không biên dịch/khởi động được; tiến
+          trình thoát; không trả dòng đầy đủ; timeout; JSON sai; type sai;
+          sequence cũ; row/col kiểu sai; ID/from/to không khớp; action ngoài
+          legalActions; vượt tài nguyên hoặc độ dài phản hồi. UI hiện báo
+          BOT_FAILED chung, nên hãy tự kiểm tra cú pháp và giao tiếp trước khi
+          tải lên.
+        </p>
+        <p>
+          Nếu chủ bot rời/đầu hàng trong lúc bot tính toán, trận kết thúc và
+          phản hồi đến muộn bị bỏ; bot không thể mở lại trận bằng một ACTION.
+          Sau khi trận kết thúc, server đóng tiến trình/container, không gửi yêu
+          cầu nước đi mới.
+        </p>
+        <h2 id="section-15">8. Tự kiểm tra trước khi tải lên</h2>
+        <ol>
+          <li>
+            Chuẩn bị một file input gồm hai hoặc nhiều request JSON, mỗi object
+            trên đúng một dòng. Để kiểm tra parse/stdout, có thể dùng fixture
+            rút gọn, nhưng tất cả pieceId/from/to của action phải khớp các quân
+            trong fixture.
+          </li>
+          <li>
+            Chạy bot với stdin từ file, lưu stdout riêng; với mỗi request phải
+            có đúng một dòng ACTION.
+          </li>
+          <li>
+            Parse từng response bằng JSON parser; kiểm tra type ACTION, sequence
+            giống request, action thuộc legalActions.
+          </li>
+          <li>
+            Thử bot ở cả P1 và P2; thêm trường hợp chỉ có PASS, ô đích trống,
+            tấn công thắng/thua/cùng loại, nhiều lượt liên tiếp.
+          </li>
+          <li>
+            Kiểm tra thời gian và bộ nhớ trong runner Docker sau khi image sẵn
+            sàng, rồi tải lên thử với bot có sẵn và bạn bè.
+          </li>
+        </ol>
+        <p>
+          Lệnh <code>python tools/verify-bot-examples.py</code> kiểm tra các bot
+          mẫu tin cậy trong repository bằng compiler/interpreter local. Nó không
+          kiểm tra mọi chiến thuật và không thay thế kiểm thử Docker. Không dùng
+          cách chạy local này cho source không tin cậy của người khác.
+        </p>
+        <p>
+          Định dạng upload, cách chuẩn bị Docker, giới hạn file và quyền dùng
+          bot xem trong <a href="/bot-guide.html">BOT-UPLOAD.md</a>.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

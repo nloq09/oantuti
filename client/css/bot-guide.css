@@ -1,0 +1,43 @@
+.bot-guide {
+  width: min(960px, 92vw);
+  margin: 40px auto;
+  line-height: 1.75;
+}
+.bot-guide .panel {
+  margin-bottom: 24px;
+}
+.bot-guide h1 {
+  font-size: clamp(28px, 5vw, 42px);
+  line-height: 1.2;
+}
+.bot-guide h2 {
+  margin-top: 40px;
+  scroll-margin-top: 20px;
+}
+.bot-guide h3 {
+  margin-top: 28px;
+}
+.bot-guide li {
+  margin: 8px 0;
+}
+.bot-guide a,
+header > a:last-child {
+  color: var(--accent);
+}
+.bot-guide pre {
+  overflow: auto;
+  background: #101721;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  line-height: 1.55;
+}
+.bot-guide code {
+  font-family: Consolas, monospace;
+  font-size: 0.92em;
+}
+.bot-guide p code,
+.bot-guide li code {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}

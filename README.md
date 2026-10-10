@@ -10,6 +10,8 @@ Xem [hướng dẫn chạy và kiểm thử 2B](docs/CHANG-2B-CLIENT.md).
 Đã thêm **tải bot C++, Python, Java/JAR** để đấu với người chơi hoặc bot khác.
 Tải/chọn bot tại trang Vào trận; xem [hướng dẫn bot và thiết lập Docker](docs/BOT-UPLOAD.md).
 Chạy code bot tải lên cần Docker Linux và image ngôn ngữ đã chuẩn bị sẵn.
+Để viết chiến thuật, xem [giao thức bot chi tiết: dữ liệu nhận và phản hồi](docs/BOT-PROTOCOL.md)
+hoặc mở `/bot-protocol.html` trên server.
 
 ## Server online — Chặng 2
 

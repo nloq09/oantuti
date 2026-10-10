@@ -1,5 +1,7 @@
 # Bot người chơi: C++, Python, Java
 
+Để viết chiến thuật, đọc [hướng dẫn chi tiết dữ liệu đầu vào/đầu ra và thuật toán mẫu](BOT-PROTOCOL.md).
+
 ## Sử dụng
 
 Khởi động server như README, mở `/lobby.html`, chọn **Tải bot của tôi lên**.
