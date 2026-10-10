@@ -32,7 +32,7 @@ public final class GameState {
     private final int          turnNumber;
     /**
      * Monotonically increasing counter: incremented after every action
-     * that successfully changes the game (valid or not — valid only).
+     * that successfully changes the game, including passing the turn.
      */
     private final long         sequence;
     /** Non-null only when phase == FINISHED. */
@@ -53,7 +53,7 @@ public final class GameState {
             GameResult result) {
 
         this.matchId         = Objects.requireNonNull(matchId,  "matchId");
-        this.board           = Objects.requireNonNull(board,    "board");
+        this.board           = Objects.requireNonNull(board,    "board").copy();
         this.players         = List.copyOf(Objects.requireNonNull(players, "players"));
         this.currentPlayerId = Objects.requireNonNull(currentPlayerId, "currentPlayerId");
         this.phase           = Objects.requireNonNull(phase,    "phase");
@@ -142,7 +142,7 @@ public final class GameState {
     // ---------------------------------------------------------------
 
     public String matchId()            { return matchId; }
-    public Board board()               { return board; }
+    public Board board()               { return board.copy(); }
     public List<Player> players()      { return players; }
     public PlayerId currentPlayerId()  { return currentPlayerId; }
     public GamePhase phase()           { return phase; }

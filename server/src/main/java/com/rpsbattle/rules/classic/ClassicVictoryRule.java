@@ -1,6 +1,8 @@
 package com.rpsbattle.rules.classic;
 
 import com.rpsbattle.game.player.PlayerId;
+import com.rpsbattle.game.action.Action;
+import com.rpsbattle.game.action.SurrenderAction;
 import com.rpsbattle.game.state.GameResult;
 import com.rpsbattle.game.state.GameState;
 import com.rpsbattle.rule.VictoryRule;
@@ -29,6 +31,7 @@ public final class ClassicVictoryRule implements VictoryRule {
 
     @Override
     public Optional<GameResult> checkResult(GameState state) {
+        if (!state.isPlaying()) return Optional.empty();
         List<PlayerId> playerIds = state.players().stream()
                 .map(p -> p.id())
                 .toList();
@@ -54,5 +57,17 @@ public final class ClassicVictoryRule implements VictoryRule {
         }
 
         return Optional.empty(); // game continues
+    }
+
+    @Override
+    public Optional<GameResult> checkResult(GameState state, Action action) {
+        if (action instanceof SurrenderAction surrender) {
+            var opponents = state.opponents(surrender.playerId());
+            if (opponents.size() != 1) {
+                throw new IllegalStateException("Classic surrender requires exactly two players");
+            }
+            return Optional.of(GameResult.win(opponents.get(0).id()));
+        }
+        return checkResult(state);
     }
 }

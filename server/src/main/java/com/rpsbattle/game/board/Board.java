@@ -38,6 +38,14 @@ public final class Board {
         return new Board(9, 9);
     }
 
+    /** Pieces are immutable, so copying the indexes isolates all board mutations. */
+    public Board copy() {
+        Board copy = new Board(rows, cols);
+        copy.grid.putAll(grid);
+        copy.pieceById.putAll(pieceById);
+        return copy;
+    }
+
     // ---- Query ----
 
     public int rows() { return rows; }

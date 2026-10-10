@@ -28,4 +28,9 @@ public interface TurnRule {
      * @return the next player's id
      */
     PlayerId nextPlayer(GameState state);
+
+    /** Whether this action counts toward the match's turn limit. */
+    default boolean advancesTurn(GameState state, Action action) {
+        return true;
+    }
 }

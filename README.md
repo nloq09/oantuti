@@ -39,7 +39,7 @@ server/
 - [x] Bước 1 — Domain Model (Position, Board, Piece, Player, GameResult)
 - [x] Bước 2 — Action & GameState
 - [x] Bước 3 — Rule Engine
-- [ ] Bước 4 — Game Engine
+- [x] Bước 4 — Game Engine
 - [ ] Bước 5 — Legal Action Generator
 - [ ] Bước 6 — Match Engine
 - [ ] Bước 7 — Human vs Human local
@@ -54,7 +54,7 @@ server/
 TurnRule và RuleSet. `rules/classic/` hiện thực luật di chuyển ngang/dọc một ô,
 combat RPS, vùng triển khai, thắng do hết quân hoặc giới hạn 200 lượt và đổi lượt.
 RuleSet tập hợp các luật; các interface không phụ thuộc implementation Classic.
-GameEngine là công việc của Bước 4, chưa triển khai trong bước này.
+GameEngine được bổ sung ở Bước 4 bên dưới.
 
 Kiểm tra: 128 tests pass, 0 failures, 0 errors. Chạy bằng JDK 25 hiện có trên máy,
 biên dịch với `--release 21`; chưa xác nhận chạy trực tiếp trên JDK 21.
@@ -65,3 +65,42 @@ Do Windows khóa thư mục kết quả cũ, lượt kiểm tra dùng thư mục
 Set-Content .verify-step3.gradle "allprojects { layout.buildDirectory.set(file('build-step3-verification-final')) }"
 .\gradlew.bat test --no-daemon --console=plain --init-script .verify-step3.gradle
 ```
+
+## Bước 4 — Game Engine
+
+`GameEngine(RuleSet).applyAction(GameState, PlayerId, Action)` trả về
+`GameTransition(newState, events)`. Action sai bị từ chối bằng
+`InvalidActionException` với nguyên nhân cụ thể và không sửa trạng thái đầu vào.
+GameState sao chép Board cả khi nhận dữ liệu và khi trả qua `board()`;
+để cập nhật board, sửa bản sao rồi gọi `withBoard()`.
+
+```text
+game/engine/
+├── GameEngine.java
+├── GameTransition.java
+├── GameEvent.java
+└── InvalidActionException.java
+test/java/com/rpsbattle/game/engine/
+└── GameEngineTest.java
+```
+
+GameEngine điều phối action; GameTransition giữ snapshot mới và danh sách event
+không thể sửa. GameEvent chứa PiecePlaced, PieceMoved, CombatOccurred,
+PieceRemoved, TurnChanged và GameFinished. Các event được sắp theo thứ tự xử lý,
+cùng sequence của action và chứa payload phục vụ replay sau này.
+
+MovementRule và CombatRule quyết định di chuyển/combat. ClassicTurnRule kiểm tra
+phase, lượt và việc action có tính vào giới hạn lượt không. ClassicVictoryRule
+xử lý surrender và chỉ kiểm tra hết quân khi PLAYING. Placement tăng sequence
+và đổi người nhưng không tăng số lượt thi đấu; Move/Pass tăng lượt trước khi
+kiểm tra victory để kết thúc đúng lượt 200. Trận kết thúc giữ người vừa hành động.
+Việc thiết lập READY/PLAYING sẽ do tầng điều khiển match ở các bước sau.
+
+Test tích hợp bao gồm cả 7 scenario yêu cầu, action sai, placement/pass/surrender,
+giới hạn lượt, cô lập snapshot và một RuleSet khác để xác nhận engine không chứa
+luật Classic. Bước 5 — Legal Action Generator chưa triển khai.
+
+Kết quả kiểm tra Bước 4: **155 tests pass, 0 failures, 0 errors**, trong đó 27
+test tích hợp GameEngine. Chạy trên JDK 25 với `--release 21`; thư mục build
+kiểm tra riêng là `build-step3-verification-step4-b` để tránh khóa file kết quả
+trong thư mục OneDrive. Chưa kiểm tra runtime trực tiếp trên JDK 21.

@@ -1,5 +1,6 @@
 package com.rpsbattle.rule;
 
+import com.rpsbattle.game.action.Action;
 import com.rpsbattle.game.state.GameResult;
 import com.rpsbattle.game.state.GameState;
 
@@ -20,4 +21,9 @@ public interface VictoryRule {
      *         or empty if the game is still ongoing
      */
     Optional<GameResult> checkResult(GameState state);
+
+    /** Allows variants to resolve action-dependent outcomes such as surrender. */
+    default Optional<GameResult> checkResult(GameState state, Action action) {
+        return checkResult(state);
+    }
 }
