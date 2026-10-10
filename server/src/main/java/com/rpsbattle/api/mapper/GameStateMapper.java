@@ -24,7 +24,7 @@ public class GameStateMapper {
     }
 
     private PieceDto piece(Piece value) {
-        return new PieceDto(value.id(), value.owner().value(), value.type().name(),
+        return new PieceDto(value.id(), value.ownerId().value(), value.type().name(),
                 PositionDto.from(value.position()), value.status().name());
     }
 
