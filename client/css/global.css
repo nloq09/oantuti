@@ -1,13 +1,13 @@
 :root {
   color-scheme: dark;
-  --bg: #101721;
-  --panel: #1a2331;
-  --line: #303d50;
-  --muted: #9aabc0;
-  --text: #f0f4fb;
-  --blue: #6b9cff;
-  --red: #f57486;
-  --accent: #bcf07d;
+  --bg: #15191d;
+  --panel: #20252b;
+  --line: #373e46;
+  --muted: #a0a6ad;
+  --text: #f0ede6;
+  --blue: #83a9cc;
+  --red: #c68f91;
+  --accent: #cfb989;
   font-family:
     Inter,
     Segoe UI,
@@ -18,7 +18,7 @@
 }
 body {
   margin: 0;
-  background: radial-gradient(ellipse at 60% 0%, #20324b 0%, var(--bg) 55%);
+  background: radial-gradient(ellipse at 50% 0%, #282d32 0%, var(--bg) 65%);
   color: var(--text);
   min-height: 100dvh;
 }
@@ -44,7 +44,7 @@ button,
   background: #243247;
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 7px;
   padding: 11px 16px;
   text-decoration: none;
   cursor: pointer;
@@ -72,11 +72,11 @@ button:disabled {
 }
 .primary {
   background: var(--accent);
-  color: #182311;
+  color: #24221d;
   border-color: var(--accent);
 }
 .primary:hover {
-  background: #cfff93;
+  background: #ddc99f;
 }
 .danger {
   color: #ff99a8;
@@ -93,7 +93,7 @@ button:disabled {
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 10px;
   padding: 22px;
 }
 .eyebrow {
@@ -135,7 +135,7 @@ dialog {
   background: var(--panel);
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 10px;
   padding: 28px;
   width: min(480px, 92vw);
   box-shadow: 0 24px 100px #0008;

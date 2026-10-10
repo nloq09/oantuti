@@ -1,39 +1,103 @@
 .hero {
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
   text-align: center;
-  padding: 54px 20px 32px;
+  padding: 60px 24px 40px;
 }
 .hero h1 {
-  font-size: clamp(44px, 6vw, 78px);
-  line-height: 1.08;
-  margin: 22px 0;
+  font-size: clamp(44px, 7vw, 88px);
+  line-height: 1.05;
+  margin: 28px 0;
+  font-weight: 900;
+  letter-spacing: -3px;
+}
+.hero-size {
+  display: block;
+  font-size: 0.46em;
+  color: var(--accent);
+  letter-spacing: 9px;
+  margin-top: 14px;
 }
 .intro {
   color: var(--muted);
-  font-size: 18px;
+  font-size: 17px;
 }
 .hero-pieces {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  margin: 34px 0;
+  gap: 18px;
+  margin: 32px 0;
 }
 .hero-pieces img {
-  width: 90px;
-  filter: drop-shadow(0 15px 12px #0004);
-  transform: rotate(-10deg);
-}
-.hero-pieces img:nth-child(2) {
-  transform: rotate(8deg) translateY(-8px);
-}
-.hero-pieces img:nth-child(3) {
-  transform: rotate(15deg);
+  width: 88px;
+  height: 88px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #23282e;
+  filter: saturate(0.7);
 }
 .hero .actions {
   justify-content: center;
   margin: 30px 0;
 }
-.hero .button {
-  padding: 15px 28px;
+.hero .button,
+.hero .actions button {
+  padding: 16px 28px;
+}
+.home-rules {
+  display: flex;
+  gap: 26px;
+  justify-content: center;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.result-screen {
+  width: min(650px, 92vw);
+  margin: 50px auto;
+  padding: 36px;
+}
+.result-screen h1 {
+  font-size: 48px;
+}
+.result-emblem {
+  color: var(--accent);
+  font-size: 76px;
+  line-height: 1;
+}
+.result-stats {
+  margin: 28px 0;
+  text-align: left;
+}
+.result-stats div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.result-stats span {
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .hero {
+    padding-top: 38px;
+  }
+  .home-rules {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .hero .actions {
+    gap: 8px;
+  }
+  .hero .actions button,
+  .hero .button {
+    padding: 12px 18px;
+  }
+  .result-screen {
+    padding: 24px;
+  }
 }

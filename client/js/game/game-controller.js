@@ -177,6 +177,14 @@ export class GameController {
     const g = s.gameState,
       me = s.players.find((p) => p.playerId === s.playerId),
       placement = s.status === "PLACEMENT";
+    const ownArmy = document.querySelector("#army-" + s.playerId),
+      opponentArmy = document.querySelector(
+        "#army-" + (s.playerId === "P1" ? "P2" : "P1"),
+      );
+    if (ownArmy.parentElement.id !== "own-army")
+      document.querySelector("#own-army").append(ownArmy);
+    if (opponentArmy.parentElement.id !== "opponent-army")
+      document.querySelector("#opponent-army").append(opponentArmy);
     document.querySelector("#room-code").textContent = this.seat.matchId;
     document.querySelector("#identity").textContent =
       `Bạn: ${s.playerId === "P1" ? "Xanh" : "Đỏ"} · ${s.mode === "HUMAN_VS_BOT" ? "Bot chiến thuật" : "Hai người"}`;
@@ -213,6 +221,14 @@ export class GameController {
         (p) => p.owner === owner && p.status === "ALIVE",
       );
       document.querySelector("#count-" + owner).textContent = living.length;
+      document
+        .querySelectorAll(`[data-army-owner="${owner}"]`)
+        .forEach(
+          (node) =>
+            (node.textContent = living.filter(
+              (piece) => piece.type === node.dataset.armyType,
+            ).length),
+        );
       document.querySelector("#types-" + owner).textContent = Object.entries(
         labels,
       )

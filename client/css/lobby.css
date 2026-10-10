@@ -91,3 +91,93 @@
 .bot-panel a {
   color: var(--accent);
 }
+
+.wide-lobby {
+  width: min(1100px, 92vw);
+}
+.lobby-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(260px, 1fr);
+  gap: 24px;
+  margin: 28px 0;
+  align-items: start;
+}
+.match-setup > h2,
+.lobby-room h2 {
+  font-size: 22px;
+  margin-top: 4px;
+}
+.mode-grid {
+  margin-top: 22px;
+}
+.mode {
+  padding: 24px 18px;
+  background: #272d34;
+}
+.mode strong {
+  font-size: 20px;
+}
+.chosen {
+  border-color: var(--accent);
+  background: #35332e;
+}
+.bot-panel {
+  background: #1a1f24;
+  margin-top: 22px;
+  padding: 18px;
+}
+.join-panel {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  margin-top: 24px;
+}
+.room-placeholder {
+  border: 1px dashed #575d65;
+  background: #191e23;
+  border-radius: 8px;
+  padding: 22px 12px;
+  margin: 26px 0;
+  text-align: center;
+  font-size: 22px;
+  color: var(--accent);
+}
+.room-placeholder small {
+  display: block;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.lobby-seat {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.lobby-seat p {
+  margin: 5px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.seat-emblem {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 52px;
+  border: 1px solid currentColor;
+  border-radius: 8px 8px 16px 16px;
+  font-weight: 800;
+  background: #191e23;
+}
+.lobby-room > p.muted {
+  font-size: 13px;
+  margin: 24px 0;
+}
+.lobby-room > a {
+  color: var(--accent);
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .lobby-columns {
+    grid-template-columns: 1fr;
+  }
+}

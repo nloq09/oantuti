@@ -8,6 +8,10 @@ try {
 if (!snapshot) location.replace("/");
 else {
   const g = snapshot.gameState;
+  document.querySelector("#result-turns").textContent = g.turn;
+  for (const owner of ["P1", "P2"])
+    document.querySelector("#result-" + owner.toLowerCase()).textContent =
+      g.pieces.filter((p) => p.owner === owner && p.status === "ALIVE").length;
   document.querySelector("#outcome").textContent = !g.winner
     ? "Hòa!"
     : g.winner === snapshot.playerId

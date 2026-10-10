@@ -15,27 +15,85 @@
       <button id="settings">Cài đặt</button>
     </header>
     <main class="game-layout">
-      <aside class="panel side">
-        <p class="eyebrow">PHÒNG CHƠI</p>
-        <div class="actions">
-          <strong id="room-code">—</strong
-          ><button id="copy" aria-label="Sao chép mã phòng">Copy</button>
-        </div>
-        <p id="identity"></p>
-        <div id="players"></div>
-        <div class="counts">
-          <div>
-            <b class="blue">Xanh</b><strong id="count-P1">0</strong
-            ><small>quân còn lại</small>
+      <aside class="side left-side">
+        <section class="panel room-info">
+          <p class="eyebrow">PHÒNG CHƠI</p>
+          <div class="actions">
+            <strong id="room-code">—</strong
+            ><button id="copy" aria-label="Sao chép mã phòng">Copy</button>
           </div>
-          <div>
-            <b class="red">Đỏ</b><strong id="count-P2">0</strong
-            ><small>quân còn lại</small>
+          <p id="identity"></p>
+          <div id="players"></div>
+        </section>
+        <section class="panel clock-panel">
+          <span>Thời gian lượt</span
+          ><strong id="timer" aria-label="Thời gian còn lại">—</strong>
+        </section>
+        <section class="panel">
+          <p class="eyebrow">QUÂN CỦA BẠN</p>
+          <div id="own-army">
+            <section id="army-P1" class="army">
+              <div class="army-heading">
+                <span class="blue">Xanh</span><strong id="count-P1">0</strong
+                ><small>quân còn lại</small>
+              </div>
+              <div class="army-pieces">
+                <div>
+                  <img src="/assets/pieces/rock-blue.svg" alt="Búa" /><strong
+                    data-army-owner="P1"
+                    data-army-type="ROCK"
+                    >0</strong
+                  ><small>Búa</small>
+                </div>
+                <div>
+                  <img src="/assets/pieces/paper-blue.svg" alt="Bao" /><strong
+                    data-army-owner="P1"
+                    data-army-type="PAPER"
+                    >0</strong
+                  ><small>Bao</small>
+                </div>
+                <div>
+                  <img
+                    src="/assets/pieces/scissors-blue.svg"
+                    alt="Kéo"
+                  /><strong data-army-owner="P1" data-army-type="SCISSORS"
+                    >0</strong
+                  ><small>Kéo</small>
+                </div>
+              </div>
+              <p id="types-P1" hidden></p>
+            </section>
           </div>
-        </div>
-        <p id="types-P1" class="blue"></p>
-        <p id="types-P2" class="red"></p>
-        <button id="leave" class="wide">Rời phòng</button>
+        </section>
+        <section class="panel setup-card">
+          <section id="placement-panel" hidden>
+            <p class="eyebrow">ĐẶT QUÂN</p>
+            <p class="muted">
+              Chọn loại quân rồi chọn ô. Chọn quân đã đặt để di chuyển.
+            </p>
+            <div class="palette">
+              <button data-type="ROCK">
+                <img src="/assets/pieces/rock-blue.svg" alt="" /><span
+                  >Búa · 6/6</span
+                ></button
+              ><button data-type="PAPER">
+                <img src="/assets/pieces/paper-blue.svg" alt="" /><span
+                  >Bao · 6/6</span
+                ></button
+              ><button data-type="SCISSORS">
+                <img src="/assets/pieces/scissors-blue.svg" alt="" /><span
+                  >Kéo · 6/6</span
+                >
+              </button>
+            </div>
+            <div class="actions">
+              <button id="random">Ngẫu nhiên</button
+              ><button id="reset">Đặt lại</button>
+            </div>
+            <button id="ready" class="primary wide">Sẵn sàng</button>
+          </section>
+          <button id="leave" class="wide">Rời phòng</button>
+        </section>
       </aside>
       <section class="arena">
         <div class="turn-bar">
@@ -43,9 +101,11 @@
             <span id="turn">Lượt 0</span>
             <h2 id="phase">Đang tải bàn cờ…</h2>
           </div>
-          <strong id="timer" aria-label="Thời gian còn lại">—</strong>
+          <span class="board-tag">BÀN CỜ 9 × 9</span>
         </div>
-        <div id="board" class="board" aria-label="Bàn cờ"></div>
+        <div class="board-frame">
+          <div id="board" class="board" aria-label="Bàn cờ"></div>
+        </div>
         <p id="waiting" class="hint" hidden>
           Gửi mã phòng cho bạn bè. Ván chơi bắt đầu khi cả hai đặt quân và sẵn
           sàng.
@@ -54,37 +114,54 @@
           <button id="pass">Bỏ lượt</button
           ><button id="surrender" class="danger">Đầu hàng</button>
         </div>
+        <p class="board-note">
+          Chọn quân của bạn, rồi chọn ô được đánh dấu để di chuyển.
+        </p>
       </section>
-      <aside class="panel side">
-        <section id="placement-panel" hidden>
-          <p class="eyebrow">ĐẶT QUÂN</p>
-          <p class="muted">
-            Chọn loại quân rồi chọn ô. Chọn quân đã đặt để di chuyển.
-          </p>
-          <div class="palette">
-            <button data-type="ROCK">
-              <img src="/assets/pieces/rock-blue.svg" alt="" /><span
-                >Búa · 6/6</span
-              ></button
-            ><button data-type="PAPER">
-              <img src="/assets/pieces/paper-blue.svg" alt="" /><span
-                >Bao · 6/6</span
-              ></button
-            ><button data-type="SCISSORS">
-              <img src="/assets/pieces/scissors-blue.svg" alt="" /><span
-                >Kéo · 6/6</span
-              >
-            </button>
+      <aside class="side right-side">
+        <section class="panel">
+          <p class="eyebrow">QUÂN ĐỐI THỦ</p>
+          <div id="opponent-army">
+            <section id="army-P2" class="army">
+              <div class="army-heading">
+                <span class="red">Đỏ</span><strong id="count-P2">0</strong
+                ><small>quân còn lại</small>
+              </div>
+              <div class="army-pieces">
+                <div>
+                  <img src="/assets/pieces/rock-red.svg" alt="Búa" /><strong
+                    data-army-owner="P2"
+                    data-army-type="ROCK"
+                    >0</strong
+                  ><small>Búa</small>
+                </div>
+                <div>
+                  <img src="/assets/pieces/paper-red.svg" alt="Bao" /><strong
+                    data-army-owner="P2"
+                    data-army-type="PAPER"
+                    >0</strong
+                  ><small>Bao</small>
+                </div>
+                <div>
+                  <img src="/assets/pieces/scissors-red.svg" alt="Kéo" /><strong
+                    data-army-owner="P2"
+                    data-army-type="SCISSORS"
+                    >0</strong
+                  ><small>Kéo</small>
+                </div>
+              </div>
+              <p id="types-P2" hidden></p>
+            </section>
           </div>
-          <div class="actions">
-            <button id="random">Ngẫu nhiên</button
-            ><button id="reset">Đặt lại</button>
-          </div>
-          <button id="ready" class="primary wide">Sẵn sàng</button>
         </section>
-        <section class="history">
-          <h2>Diễn biến</h2>
+        <section class="panel history">
+          <h2>Diễn biến trận</h2>
           <ol id="event-log" aria-live="polite"></ol>
+        </section>
+        <section class="panel rule-note">
+          <p class="eyebrow">LUẬT GIAO CHIẾN</p>
+          <p>Búa thắng Kéo<br />Kéo thắng Bao<br />Bao thắng Búa</p>
+          <small>Cùng loại: cả hai bị loại.</small>
         </section>
       </aside>
     </main>

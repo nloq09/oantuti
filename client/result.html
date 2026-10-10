@@ -9,11 +9,19 @@
   </head>
   <body>
     <header><a class="brand" href="/">◈ RPS BATTLE</a></header>
-    <main class="hero">
+    <main class="hero result-screen panel">
+      <div class="result-emblem" aria-hidden="true">◇</div>
       <p class="eyebrow">KẾT QUẢ TRẬN ĐẤU</p>
       <h1 id="outcome">Kết quả</h1>
       <p id="summary"></p>
       <p id="remaining" class="muted"></p>
+      <div class="result-stats">
+        <div><span>Tổng lượt</span><strong id="result-turns">—</strong></div>
+        <div>
+          <span>Quân Xanh còn lại</span><strong id="result-p1">—</strong>
+        </div>
+        <div><span>Quân Đỏ còn lại</span><strong id="result-p2">—</strong></div>
+      </div>
       <div class="actions">
         <button id="again" class="primary">Chơi ván mới</button
         ><a class="button" href="/">Trang chủ</a>
