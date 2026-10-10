@@ -45,7 +45,7 @@ server/
 - [x] Bước 7 — Human vs Human local
 - [x] Bước 8 — Bot Protocol
 - [x] Bước 9 — Bot vs Bot
-- [ ] Bước 10 — Event Log & Replay
+- [x] Bước 10 — Event Log & Replay
 - [ ] Bước 11 — Cleanup & Kiểm tra kiến trúc
 
 ## Trạng thái sau Bước 3
@@ -311,4 +311,51 @@ thái cuối, cleanup khi lỗi và đường dẫn có dấu cách. CLI demo:1 
 thành công: P1 thắng ở lượt 200, còn P1=15 và P2=13 quân.
 Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
 `build-step3-verification-step9-a`; chưa kiểm tra runtime trực tiếp trên JDK 21.
-Bước 10 — Event Log và Replay chưa triển khai.
+Event Log và Replay được bổ sung ở Bước 10 bên dưới.
+
+## Bước 10 — Event Log và Replay
+
+Match giữ initialState và danh sách GameEvent không thể sửa từ bên ngoài.
+Các event lifecycle mới gồm MATCH_STARTED, TURN_STARTED, TURN_ENDED,
+MATCH_FINISHED; cùng với PIECE_MOVED, COMBAT_OCCURRED, PIECE_REMOVED và các
+event GameEngine hiện có. Mỗi event JSON có `sequence`, `type`, `payload`.
+Các event trong cùng action chia sẻ sequence; TURN_ENDED hoàn tất sequence đó.
+Action bị reject không thêm event. Match kết thúc ngay lúc start cũng có log.
+
+ReplayService nằm trong `replay/`, cùng MatchLog và codec ReplayJson.
+`write(path, match)` xuất trận đã FINISHED; `read(path)` trả MatchLog;
+`replay(path)` hoặc `replay(initialState, events)` dựng lại trạng thái cuối.
+Replay áp dụng các fact đã ghi, không gọi agent, randomness hay tính lại luật
+combat. Kiểm tra lifecycle, thứ tự sequence, piece payload và kết quả lưu trong
+file; log thiếu MATCH_FINISHED hoặc sai thứ tự bị từ chối.
+
+File chứa matchId, ruleSet, seed, initialState, events và result. Snapshot chứa
+kích thước board, mọi thuộc tính piece/player, currentPlayer, phase, turnNumber,
+sequence và result. Truyền seed qua constructor Match khi caller có seed gốc;
+nếu không được cung cấp thì `seed: null` (ví dụ CLI dùng hai seed bot độc lập).
+Replay chỉ cần initialState + events nên không cần chạy lại các bot.
+
+Xuất log Human vs Human:
+
+```powershell
+.\gradlew.bat run --console=plain --args="human-vs-human --export match-human.json"
+```
+
+Xuất log Bot vs Bot và đọc replay:
+
+```powershell
+.\gradlew.bat run --console=plain --args="bot-vs-bot demo:1 demo:2 --timeout-ms 5000 --export match-demo.json"
+.\gradlew.bat run --console=plain --args="replay match-demo.json"
+```
+
+Log chỉ được xuất khi có `--export`; đường dẫn tương đối tính từ `server`.
+Các file `match-*.json` được ignore trong Git. Core vẫn không phụ thuộc JSON.
+
+Kết quả Bước 10: **239 tests pass, 0 failures, 0 errors**, gồm 11 replay tests.
+So sánh cấu trúc đầy đủ original final state với replay final state, kiểm tra
+JSON round-trip, cả ba outcome combat, pass/surrender, kết thúc ngay lúc start,
+log action sai, log thiếu/sai sequence, metadata result và CLI human export/replay.
+CLI bot export/replay cũng chạy thành công: lượt 200, WIN(P1), còn quân 15–13.
+Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
+`build-step3-verification-step10-b`; chưa kiểm tra runtime trực tiếp JDK 21.
+Bước 11 — Cleanup và kiểm tra kiến trúc chưa triển khai.

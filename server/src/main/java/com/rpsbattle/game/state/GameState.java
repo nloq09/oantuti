@@ -133,6 +133,12 @@ public final class GameState {
         return new GameState(matchId, board, players, currentPlayerId, phase, turnNumber, sequence + 1, result);
     }
 
+    /** Restores a validated snapshot counter without depending on serialization. */
+    public GameState withSequence(long newSequence) {
+        if (newSequence < 0) throw new IllegalArgumentException("sequence must be nonnegative");
+        return new GameState(matchId, board, players, currentPlayerId, phase, turnNumber, newSequence, result);
+    }
+
     public GameState withResult(GameResult newResult) {
         return new GameState(matchId, board, players, currentPlayerId, phase, turnNumber, sequence, newResult);
     }

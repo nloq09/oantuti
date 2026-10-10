@@ -11,6 +11,8 @@ import com.rpsbattle.rules.classic.ClassicRuleSet;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.nio.file.Path;
+import com.rpsbattle.replay.ReplayService;
 
 public final class LocalGameApplication {
     public static void main(String[] args) {
@@ -22,18 +24,29 @@ public final class LocalGameApplication {
     public static int execute(String[] args, Reader input, Writer destination) {
         PrintWriter output = new PrintWriter(destination, true);
         try {
-            if (args.length == 0 || (args.length == 1 && args[0].equalsIgnoreCase("human-vs-human"))) {
+            if (args.length == 2 && args[0].equalsIgnoreCase("replay")) {
+                GameState replayed = new ReplayService().replay(Path.of(args[1]));
+                new ConsoleBoardRenderer().render(replayed, output);
+                output.println("Replay result: " + replayed.result().orElseThrow());
+            } else if (args.length == 3 && args[0].equalsIgnoreCase("human-vs-human") && args[1].equals("--export")) {
+                run(input, output, Path.of(args[2]));
+            } else if (args.length == 0 || (args.length == 1 && args[0].equalsIgnoreCase("human-vs-human"))) {
                 run(input, output);
-            } else if ((args.length == 3 || args.length == 5) && args[0].equalsIgnoreCase("bot-vs-bot")) {
+            } else if ((args.length == 3 || args.length == 5 || args.length == 7) && args[0].equalsIgnoreCase("bot-vs-bot")) {
                 long timeoutMs = 2000;
-                if (args.length == 5) {
-                    if (!args[3].equals("--timeout-ms")) throw new IllegalArgumentException("Expected --timeout-ms");
-                    timeoutMs = Long.parseLong(args[4]);
+                Path export = null;
+                boolean timeoutSeen = false;
+                for (int i = 3; i < args.length; i += 2) {
+                    if (args[i].equals("--timeout-ms") && !timeoutSeen) {
+                        timeoutMs = Long.parseLong(args[i + 1]); timeoutSeen = true;
+                    } else if (args[i].equals("--export") && export == null) {
+                        export = Path.of(args[i + 1]);
+                    } else throw new IllegalArgumentException("Unknown or duplicate option: " + args[i]);
                 }
                 new LocalMatchRunner().run(BotCommands.resolve(args[1]), BotCommands.resolve(args[2]),
-                        Duration.ofMillis(timeoutMs), output);
+                        Duration.ofMillis(timeoutMs), output, export);
             } else {
-                output.println("Usage: human-vs-human | bot-vs-bot <botA> <botB> [--timeout-ms 2000]");
+                output.println("Usage: human-vs-human [--export file.json] | bot-vs-bot <botA> <botB> [--timeout-ms 2000] [--export file.json] | replay file.json");
                 return 2;
             }
             return 0;
@@ -44,6 +57,10 @@ public final class LocalGameApplication {
     }
 
     public static GameState run(Reader input, Writer destination) {
+        return run(input, destination, null);
+    }
+
+    private static GameState run(Reader input, Writer destination, Path export) {
         BufferedReader shared = input instanceof BufferedReader buffered ? buffered : new BufferedReader(input);
         PrintWriter output = new PrintWriter(destination, true);
         PlayerId p1 = PlayerId.of("P1"), p2 = PlayerId.of("P2");
@@ -61,6 +78,7 @@ public final class LocalGameApplication {
             }
         }
         renderer.render(match.state(), output);
+        if (export != null) new ReplayService().write(export, match);
         output.println("Result: " + match.state().result().orElseThrow());
         output.println("Remaining: P1=" + match.state().aliveCount(p1) + ", P2=" + match.state().aliveCount(p2));
         output.flush();

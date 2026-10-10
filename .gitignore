@@ -25,3 +25,4 @@ Thumbs.db
 test-results/
 .verify-step3.gradle
 build-step3-verification-*/
+match-*.json
