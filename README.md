@@ -7,7 +7,7 @@ Game chiến thuật Oẳn Tù Tì trên bàn cờ 9×9. Dự án Java 21 + Grad
 ```bash
 cd server
 ./gradlew test        # Chạy unit tests
-./gradlew run         # Chạy ứng dụng (Bước 7+)
+./gradlew run --console=plain --args=human-vs-human  # Hai người chơi local
 ```
 
 ## Cấu trúc
@@ -42,7 +42,7 @@ server/
 - [x] Bước 4 — Game Engine
 - [x] Bước 5 — Legal Action Generator
 - [x] Bước 6 — Match Engine
-- [ ] Bước 7 — Human vs Human local
+- [x] Bước 7 — Human vs Human local
 - [ ] Bước 8 — Bot Protocol
 - [ ] Bước 9 — Bot vs Bot
 - [ ] Bước 10 — Event Log & Replay
@@ -177,3 +177,36 @@ trận, đổi lượt, pass khi bị chặn, surrender, action sai không sửa
 snapshot của agent, Human/Bot cùng Match và input console dùng chung.
 Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
 `build-step3-verification-step6-b`; chưa kiểm tra runtime trực tiếp trên JDK 21.
+
+## Bước 7 — Human vs Human local
+
+Chạy trong thư mục `server` (cần JDK 21 trở lên):
+
+```powershell
+.\gradlew.bat run --console=plain --args=human-vs-human
+```
+
+Linux/macOS: `./gradlew run --console=plain --args=human-vs-human`.
+Không truyền args cũng chạy Human vs Human. Gradle run chuyển stdin đến ứng dụng.
+
+LocalGameApplication thiết lập hai ConsoleHumanAgent trên cùng Match và dùng
+ConsoleBoardRenderer hiển thị bàn 9×9, cột A–I, hàng 1–9; `R1/P1/S1` là quân
+Player 1, `R2/P2/S2` là quân Player 2. ClassicGameSetup triển khai cố định mỗi
+người 6 ROCK, 6 PAPER, 6 SCISSORS trong vùng hợp lệ, qua PlaceAction và GameEngine.
+
+Nhập `move A7 A6` hoặc `A7 A6` (không phân biệt hoa/thường), số thứ tự action
+trong danh sách, `pass` hoặc `surrender`. Player 1 đi trước; ví dụ hai lượt đầu:
+`A7 A6`, rồi `A2 A3`. Console chỉ đọc tọa độ, tìm pieceId và tạo MoveAction;
+luật di chuyển/combat vẫn do GameEngine kiểm tra. Nước sai báo lỗi và cho nhập
+lại mà không mất lượt. EOF dừng ứng dụng với thông báo rõ ràng.
+
+Khi kết thúc, in bàn cuối, kết quả thắng/hòa và số quân còn lại. Phần console
+nằm ở `app/` và ConsoleHumanAgent; GameEngine không phụ thuộc console.
+
+Kết quả Bước 7: **195 tests pass, 0 failures, 0 errors**, gồm 6 test ứng dụng:
+quota/vùng triển khai, hai dạng tọa độ, retry action sai, lỗi định dạng,
+trận hòa sau 200 lượt và EOF. Đã chạy thử Gradle CLI với `human-vs-human`,
+stdin `surrender`, nhận `Result: WIN(P2)` và BUILD SUCCESSFUL.
+Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
+`build-step3-verification-step7-a`; chưa kiểm tra runtime trực tiếp JDK 21.
+Bước 8 — Bot Protocol Local chưa triển khai.

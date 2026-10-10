@@ -33,6 +33,10 @@ application {
     mainClass = 'com.rpsbattle.app.LocalGameApplication'
 }
 
+tasks.named('run', JavaExec) {
+    standardInput = System.in
+}
+
 test {
     useJUnitPlatform()
     testLogging {
