@@ -40,7 +40,7 @@ server/
 - [x] Bước 2 — Action & GameState
 - [x] Bước 3 — Rule Engine
 - [x] Bước 4 — Game Engine
-- [ ] Bước 5 — Legal Action Generator
+- [x] Bước 5 — Legal Action Generator
 - [ ] Bước 6 — Match Engine
 - [ ] Bước 7 — Human vs Human local
 - [ ] Bước 8 — Bot Protocol
@@ -98,9 +98,37 @@ Việc thiết lập READY/PLAYING sẽ do tầng điều khiển match ở các
 
 Test tích hợp bao gồm cả 7 scenario yêu cầu, action sai, placement/pass/surrender,
 giới hạn lượt, cô lập snapshot và một RuleSet khác để xác nhận engine không chứa
-luật Classic. Bước 5 — Legal Action Generator chưa triển khai.
+luật Classic. Legal Action Generator được bổ sung ở Bước 5 bên dưới.
 
 Kết quả kiểm tra Bước 4: **155 tests pass, 0 failures, 0 errors**, trong đó 27
 test tích hợp GameEngine. Chạy trên JDK 25 với `--release 21`; thư mục build
 kiểm tra riêng là `build-step3-verification-step4-b` để tránh khóa file kết quả
 trong thư mục OneDrive. Chưa kiểm tra runtime trực tiếp trên JDK 21.
+
+## Bước 5 — Legal Action Generator
+
+`new LegalActionGenerator(ruleSet).getLegalActions(state, player)` trả về
+`List<Action>` không thể sửa, gồm các MoveAction hợp lệ và nước tấn công.
+Generator nằm trong `game/engine/`; test ở
+`src/test/java/com/rpsbattle/game/engine/LegalActionGeneratorTest.java`.
+
+Generator xét mỗi ô trong kích thước Board rồi dùng MovementRule và TurnRule
+để lọc. Không hard-code bốn hướng Classic, do đó RuleSet khác có thể cho phép
+đi chéo hoặc đi xa. Chi phí là O(số quân × số ô), phù hợp bàn 9×9 hiện tại.
+Quân được duyệt theo hàng, cột, id; đích theo hàng, cột để kết quả deterministic,
+không phụ thuộc thứ tự chèn quân vào Board.
+
+Không có action trùng, đi ra ngoài bàn hay vào quân cùng đội. Quân chết và quân
+của đối phương không sinh nước đi. Người không còn nước đi nhận danh sách rỗng;
+với Classic, người sai lượt hoặc game ngoài PLAYING cũng nhận danh sách rỗng.
+API này sinh nước di chuyển, không sinh Place/Pass/Surrender. GameEngine vẫn
+validate cuối cùng khi nhận action. Snapshot không bị thay đổi khi sinh nước đi.
+
+Các test bao gồm giữa bàn, hai góc, đồng đội chặn, tấn công (kể cả trận combat
+sẽ thua), hết nước đi, board chữ nhật, thứ tự deterministic và RuleSet khác.
+Một test đối chiếu danh sách sinh ra với mọi MoveAction GameEngine chấp nhận.
+Bước 6 — Match Engine chưa triển khai.
+
+Kết quả Bước 5: **172 tests pass, 0 failures, 0 errors**, gồm 17 test cho
+LegalActionGenerator. Test chạy trên JDK 25 với `--release 21`, dùng thư mục
+build riêng `build-step3-verification-step5-a`; chưa kiểm tra runtime JDK 21.
