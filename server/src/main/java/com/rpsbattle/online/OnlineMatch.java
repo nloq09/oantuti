@@ -136,7 +136,7 @@ public final class OnlineMatch {
         }
         PlayerAgent human=(view,actions)->{ throw new IllegalStateException("Awaiting submitted action"); };
         match=new Match(initial.withPhase(GamePhase.READY),rules,human,
-                mode==MatchMode.HUMAN_VS_BOT?new RandomBotAgent(seed):human,seed);
+                mode==MatchMode.HUMAN_VS_BOT?new TacticalBotAgent(rules,seed):human,seed);
         match.start(); startedAt=clock.instant(); updateDeadline();
         return List.of(new GameEvent.MatchStarted(match.state().sequence()));
     }

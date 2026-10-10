@@ -67,7 +67,9 @@ localStorage. Âm thanh/nhạc được tạo bằng Web Audio và chỉ bật s
 - OnlineRuleSet dùng luật Classic, chỉ cho phép surrender ngoài lượt để rời ván.
   GameEngine không sửa, không phụ thuộc Spring/HTTP/WebSocket/client.
 - In-memory: restart server mất phòng; không có resume sau restart hay lịch sử
-  lâu dài. Bot chỉ có Easy/Random. Không có mutual-rematch protocol cho hai người;
+  lâu dài. Bot online dùng TacticalBotAgent: đánh giá ăn quân, phản công một lượt
+  và khoảng cách tới mục tiêu; hạn chế lặp bàn cờ. RandomBotAgent vẫn giữ cho
+  CLI/kiểm thử. Không có mutual-rematch protocol cho hai người;
   dùng Play Again → lobby như phương án cho phép trong đặc tả.
 - Demo 2A giữ nguyên tại `/demo/` và `demo-match`.
 
@@ -100,3 +102,14 @@ Combat dễ tái lập: P1 đặt Búa A7–F7, Bao A8–F8, Kéo A9–F9.
 P2 đặt Búa A1–F1, Bao A2–F2, Kéo A3–F3. Cả hai Ready.
 P1 A7→A6, P2 A3→A4, P1 A6→A5, P2 Bỏ lượt, P1 A5→A4.
 P2 còn 17 quân; hai tab cùng thấy Búa P1 tại A4 và event tấn công thắng.
+
+## Nâng cấp bot chiến thuật
+
+Bot chỉ chọn trong legalActions được cung cấp. Đánh giá dùng CombatRule và
+MovementRule được inject, không chép ma trận Búa/Bao/Kéo hoặc sửa GameEngine.
+Ưu tiên thắng ván/ăn quân, xét nguy cơ phản công ngay sau nước đi, áp sát quân
+có thể thắng và phạt các trạng thái đã lặp gần đây. Seed quyết định khi hòa điểm.
+Đây là đánh giá chiến thuật một lượt phản công, chưa có tìm kiếm sâu/minimax.
+
+Sau nâng cấp: 277 backend tests và 3 client tests pass. Có 6 tình huống bot mới
+và một ván đầy đủ chống nước đi ngẫu nhiên hợp lệ, gồm combat và kết thúc trận.

@@ -24,5 +24,19 @@ class OnlineMatchTest {
     @Test void staleAndOffTurnMovesCannotMutateButOffTurnSurrenderFinishes(){var room=room(MatchMode.HUMAN_VS_HUMAN,Clock.systemUTC());ready(room);long seq=room.state().sequence();rejects("INVALID_SEQUENCE",()->room.submit(P1,seq-1,PassAction.of(P1)));rejects("NOT_YOUR_TURN",()->room.submit(P2,seq,PassAction.of(P2)));assertEquals(seq,room.state().sequence());room.submit(P2,seq,SurrenderAction.of(P2));assertEquals("FINISHED",room.status());assertEquals(P1,room.state().result().orElseThrow().winner().orElseThrow());assertNull(room.deadline());}
     @Test void deadlinePassesOnceAndBotUsesEngine(){var clock=new MutableClock();var room=room(MatchMode.HUMAN_VS_BOT,clock);ready(room);long seq=room.state().sequence();assertTrue(room.tick().isEmpty());clock.time=clock.time.plusSeconds(30);assertFalse(room.tick().isEmpty());assertEquals(seq+1,room.state().sequence());assertEquals(P2,room.state().currentPlayerId());assertFalse(room.tick().isEmpty());assertEquals(seq+2,room.state().sequence());assertEquals(P1,room.state().currentPlayerId());assertTrue(room.tick().isEmpty());}
     @Test void leaveDuringOpponentsTurnIsSurrender(){var room=room(MatchMode.HUMAN_VS_HUMAN,Clock.systemUTC());ready(room);room.leave(P2);assertEquals(P1,room.state().result().orElseThrow().winner().orElseThrow());}
+    @Test void tacticalBotCompletesFullGameAgainstLegalRandomMoves(){
+        var room=room(MatchMode.HUMAN_VS_BOT,Clock.systemUTC());ready(room);
+        var random=new java.util.Random(123);
+        for(int turn=0;turn<200 && !room.state().isFinished();turn++){
+            if(room.state().currentPlayerId().equals(P2)) room.tick();
+            else{
+                var moves=room.legalActions(P1).stream().filter(action->action instanceof MoveAction).toList();
+                var action=moves.isEmpty()?PassAction.of(P1):moves.get(random.nextInt(moves.size()));
+                room.submit(P1,room.state().sequence(),action);
+            }
+        }
+        assertEquals("FINISHED",room.status());
+        assertTrue(room.events().stream().anyMatch(event->event.type().equals("COMBAT_OCCURRED")));
+    }
     @Test void rejectedMoveKeepsSequenceBoardAndEventLog(){var room=room(MatchMode.HUMAN_VS_BOT,Clock.systemUTC());ready(room);long seq=room.state().sequence();int events=room.events().size();var piece=room.state().board().allPieces().stream().filter(p->p.ownedBy(P1)).findFirst().orElseThrow();rejects("INVALID_MOVE",()->room.submit(P1,seq,MoveAction.of(P1,piece.id(),piece.position(),new Position(0,0))));assertEquals(seq,room.state().sequence());assertEquals(events,room.events().size());assertEquals(piece.position(),room.state().board().findById(piece.id()).orElseThrow().position());}
 }

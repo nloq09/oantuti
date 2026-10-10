@@ -175,7 +175,7 @@ export class GameController {
       placement = s.status === "PLACEMENT";
     document.querySelector("#room-code").textContent = this.seat.matchId;
     document.querySelector("#identity").textContent =
-      `Bạn: ${s.playerId === "P1" ? "Xanh" : "Đỏ"} · ${s.mode === "HUMAN_VS_BOT" ? "Bot dễ" : "Hai người"}`;
+      `Bạn: ${s.playerId === "P1" ? "Xanh" : "Đỏ"} · ${s.mode === "HUMAN_VS_BOT" ? "Bot chiến thuật" : "Hai người"}`;
     document.querySelector("#phase").textContent =
       s.status === "WAITING"
         ? "Đang chờ người thứ hai"
@@ -200,7 +200,7 @@ export class GameController {
       ...s.players.map((p) => {
         const item = document.createElement("div");
         item.className = "player " + p.playerId.toLowerCase();
-        item.textContent = `${p.playerId === "P1" ? "Xanh" : "Đỏ"} · ${p.joined ? (p.bot ? "Bot dễ" : p.connected ? "Online" : "Offline") : "Chưa tham gia"}${p.ready ? " · Sẵn sàng" : ""}`;
+        item.textContent = `${p.playerId === "P1" ? "Xanh" : "Đỏ"} · ${p.joined ? (p.bot ? "Bot chiến thuật" : p.connected ? "Online" : "Offline") : "Chưa tham gia"}${p.ready ? " · Sẵn sàng" : ""}`;
         return item;
       }),
     );
