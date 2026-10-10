@@ -10,18 +10,36 @@ import com.rpsbattle.rules.classic.ClassicGameSetup;
 import com.rpsbattle.rules.classic.ClassicRuleSet;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 public final class LocalGameApplication {
     public static void main(String[] args) {
         PrintWriter output = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true);
-        if (args.length > 1 || (args.length == 1 && !args[0].equalsIgnoreCase("human-vs-human"))) {
-            output.println("Usage: run --args=human-vs-human (or run without arguments)");
-            return;
-        }
+        int code = execute(args, new InputStreamReader(System.in, StandardCharsets.UTF_8), output);
+        if (code != 0) System.exit(code);
+    }
+
+    public static int execute(String[] args, Reader input, Writer destination) {
+        PrintWriter output = new PrintWriter(destination, true);
         try {
-            run(new InputStreamReader(System.in, StandardCharsets.UTF_8), output);
-        } catch (IllegalStateException | UncheckedIOException e) {
+            if (args.length == 0 || (args.length == 1 && args[0].equalsIgnoreCase("human-vs-human"))) {
+                run(input, output);
+            } else if ((args.length == 3 || args.length == 5) && args[0].equalsIgnoreCase("bot-vs-bot")) {
+                long timeoutMs = 2000;
+                if (args.length == 5) {
+                    if (!args[3].equals("--timeout-ms")) throw new IllegalArgumentException("Expected --timeout-ms");
+                    timeoutMs = Long.parseLong(args[4]);
+                }
+                new LocalMatchRunner().run(BotCommands.resolve(args[1]), BotCommands.resolve(args[2]),
+                        Duration.ofMillis(timeoutMs), output);
+            } else {
+                output.println("Usage: human-vs-human | bot-vs-bot <botA> <botB> [--timeout-ms 2000]");
+                return 2;
+            }
+            return 0;
+        } catch (IllegalStateException | IllegalArgumentException | UncheckedIOException e) {
             output.println("Game stopped: " + e.getMessage());
+            return 1;
         }
     }
 

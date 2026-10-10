@@ -44,7 +44,7 @@ server/
 - [x] Bước 6 — Match Engine
 - [x] Bước 7 — Human vs Human local
 - [x] Bước 8 — Bot Protocol
-- [ ] Bước 9 — Bot vs Bot
+- [x] Bước 9 — Bot vs Bot
 - [ ] Bước 10 — Event Log & Replay
 - [ ] Bước 11 — Cleanup & Kiểm tra kiến trúc
 
@@ -262,7 +262,7 @@ Action đúng định dạng vẫn được Match đưa qua GameEngine kiểm tr
 Game Core không import Jackson; BotAgent không gọi GameEngine.
 
 BotProcess là interface transport; sau này có thể thay LocalProcessRunner bằng
-DockerSandboxRunner mà không đổi BotAgent. Bước 9 CLI Bot vs Bot chưa triển khai.
+DockerSandboxRunner mà không đổi BotAgent. CLI Bot vs Bot được bổ sung ở Bước 9.
 
 Dependency: Jackson databind 2.18.6 ([release notes chính thức](https://github.com/FasterXML/jackson/wiki/Jackson-Release-2.18.6)).
 
@@ -271,3 +271,44 @@ Các test dùng JVM bot riêng để kiểm tra nhiều lượt, stderr lớn, t
 EOF giữa dòng, response quá dài, JSON lỗi, sequence sai và nước đi sai luật được
 GameEngine reject. Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
 `build-step3-verification-step8-b`; chưa kiểm tra runtime trực tiếp trên JDK 21.
+
+## Bước 9 — Bot vs Bot local
+
+Trong thư mục `server`, chạy hai bot mẫu ở hai JVM riêng:
+
+```powershell
+.\gradlew.bat run --console=plain --args="bot-vs-bot demo:1 demo:2 --timeout-ms 5000"
+```
+
+Linux/macOS dùng `./gradlew` thay `gradlew.bat`. `demo:1` và `demo:2` truyền seed
+cho DemoBotApplication; bot chỉ chọn từ legalActions nhận qua JSON Lines và
+không import GameEngine. Không có randomness ẩn trong runner.
+
+CLI tổng quát: `bot-vs-bot <botA> <botB> [--timeout-ms 2000]`.
+Mỗi bot có thể là executable không cần argument (ví dụ `botA.exe`), hoặc file
+`.json` chứa mảng command/arguments để giữ nguyên đường dẫn có dấu cách.
+Ví dụ nội dung `botA.json`:
+
+```json
+["python", "bots/bot A.py", "--seed", "42"]
+```
+
+Chạy `--args="bot-vs-bot botA.json botB.json"`. Command và đường dẫn tương đối
+được tính từ thư mục `server`; chương trình không chạy command qua shell.
+Mỗi bot phải thực hiện protocol của Bước 8, flush response và giữ stdout chỉ
+cho JSON Lines. Timeout mặc định là 2.000 ms mỗi lượt ghi/đọc.
+
+LocalMatchRunner sở hữu hai BotProcess và đóng cả hai khi trận kết thúc hoặc
+có lỗi. Luồng là LocalMatchRunner → Match → BotAgent A/B → LocalProcessRunner A/B.
+Match vẫn dùng GameEngine giống Human vs Human. Khi thành công, in Match ID,
+Winner (hoặc DRAW), Total turns, Remaining pieces và Execution time (gồm khởi
+động, thi đấu, cleanup). Khi bot lỗi hoặc trả action sai luật, CLI báo lỗi và
+thoát mã 1, không tự gán kết quả thắng/thua; cú pháp CLI sai trả mã 2.
+
+Kết quả Bước 9: **228 tests pass, 0 failures, 0 errors**, gồm 8 test mới cho
+runner/CLI/command files. Kiểm tra bot process thật, cùng seed cho cùng trạng
+thái cuối, cleanup khi lỗi và đường dẫn có dấu cách. CLI demo:1 vs demo:2 chạy
+thành công: P1 thắng ở lượt 200, còn P1=15 và P2=13 quân.
+Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
+`build-step3-verification-step9-a`; chưa kiểm tra runtime trực tiếp trên JDK 21.
+Bước 10 — Event Log và Replay chưa triển khai.
