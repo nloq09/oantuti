@@ -37,8 +37,8 @@ server/
 ## Bước hoàn thành
 
 - [x] Bước 1 — Domain Model (Position, Board, Piece, Player, GameResult)
-- [ ] Bước 2 — Action & GameState
-- [ ] Bước 3 — Rule Engine
+- [x] Bước 2 — Action & GameState
+- [x] Bước 3 — Rule Engine
 - [ ] Bước 4 — Game Engine
 - [ ] Bước 5 — Legal Action Generator
 - [ ] Bước 6 — Match Engine
@@ -47,3 +47,21 @@ server/
 - [ ] Bước 9 — Bot vs Bot
 - [ ] Bước 10 — Event Log & Replay
 - [ ] Bước 11 — Cleanup & Kiểm tra kiến trúc
+
+## Trạng thái sau Bước 3
+
+`rule/` định nghĩa MovementRule, CombatRule, PlacementRule, VictoryRule,
+TurnRule và RuleSet. `rules/classic/` hiện thực luật di chuyển ngang/dọc một ô,
+combat RPS, vùng triển khai, thắng do hết quân hoặc giới hạn 200 lượt và đổi lượt.
+RuleSet tập hợp các luật; các interface không phụ thuộc implementation Classic.
+GameEngine là công việc của Bước 4, chưa triển khai trong bước này.
+
+Kiểm tra: 128 tests pass, 0 failures, 0 errors. Chạy bằng JDK 25 hiện có trên máy,
+biên dịch với `--release 21`; chưa xác nhận chạy trực tiếp trên JDK 21.
+Do Windows khóa thư mục kết quả cũ, lượt kiểm tra dùng thư mục build riêng:
+
+```powershell
+# Tạo init script dùng một thư mục mới nếu build cũ đang bị khóa.
+Set-Content .verify-step3.gradle "allprojects { layout.buildDirectory.set(file('build-step3-verification-final')) }"
+.\gradlew.bat test --no-daemon --console=plain --init-script .verify-step3.gradle
+```
