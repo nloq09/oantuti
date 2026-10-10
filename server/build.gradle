@@ -7,6 +7,17 @@ plugins {
 group = 'com.rpsbattle'
 version = '1.0-SNAPSHOT'
 
+// Windows sync/indexing can lock class directories inside OneDrive checkouts.
+// Keep a stable, checkout-specific build directory outside the source tree.
+if (System.getProperty('os.name').startsWith('Windows')) {
+    def projectKey = Integer.toUnsignedString(projectDir.canonicalPath.hashCode(), 16)
+    layout.buildDirectory.set(new File(gradle.gradleUserHomeDir, "rps-battle-builds/${projectKey}"))
+}
+
+tasks.register('printBuildDir') {
+    doLast { logger.lifecycle(layout.buildDirectory.get().asFile.absolutePath) }
+}
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21

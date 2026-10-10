@@ -92,6 +92,12 @@ public final class Match {
         }
         Action action = agents.get(player).chooseAction(new PlayerView(state, player), legalActions);
         if (action == null) throw new InvalidActionException("Agent returned no action");
+        return submitAction(player, action);
+    }
+
+    /** Explicit actions use the same engine and event log as agent-selected turns. */
+    public GameTransition submitAction(PlayerId player, Action action) {
+        if (status != MatchStatus.RUNNING) throw new IllegalStateException("Match is not running");
         GameTransition transition = engine.applyAction(state, player, action);
         // Append only after validation succeeds; rejected actions leave no log entries.
         events.add(new GameEvent.TurnStarted(transition.newState().sequence(), player));

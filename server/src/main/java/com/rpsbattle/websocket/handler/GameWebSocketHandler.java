@@ -24,20 +24,26 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper json;
     private final DemoMatchService service;
     private final GameStateMapper mapper;
+    private final OnlineGameGateway online;
     private final Map<PlayerId, WebSocketSession> seats = new HashMap<>();
     private final Map<String, PlayerId> players = new HashMap<>();
 
-    public GameWebSocketHandler(ObjectMapper json, DemoMatchService service, GameStateMapper mapper) {
+    public GameWebSocketHandler(ObjectMapper json, DemoMatchService service, GameStateMapper mapper, OnlineGameGateway online) {
         this.json = json.copy().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                 .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT);
         this.service = service;
         this.mapper = mapper;
+        this.online = online;
     }
 
     @Override
     protected synchronized void handleTextMessage(WebSocketSession session, TextMessage text) throws IOException {
         try {
+            var envelope = json.readTree(text.getPayload());
+            if (envelope != null && (!envelope.path("matchId").asText().equals(DemoMatchService.MATCH_ID))) {
+                online.handle(session, text.getPayload()); return;
+            }
             ClientMessage message = json.readValue(text.getPayload(), ClientMessage.class);
             if (message == null || message.type() == null) throw new IllegalArgumentException();
             if (!DemoMatchService.MATCH_ID.equals(message.matchId())) throw new DemoRequestException("MATCH_NOT_FOUND");
@@ -118,11 +124,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public synchronized void afterConnectionClosed(WebSocketSession session, CloseStatus status) { release(session); }
+    public synchronized void afterConnectionClosed(WebSocketSession session, CloseStatus status) { release(session); online.closed(session); }
 
     @Override
     public synchronized void handleTransportError(WebSocketSession session, Throwable error) throws IOException {
         release(session);
+        online.closed(session);
         session.close(CloseStatus.SERVER_ERROR);
     }
 }
