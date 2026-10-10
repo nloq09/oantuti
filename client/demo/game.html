@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Demo match · RPS Battle</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="game.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <a href="index.html">← Chọn ghế</a>
+        <p class="eyebrow">DEMO-MATCH / REALTIME</p>
+        <h1 id="title">Đang kết nối…</h1>
+      </header>
+      <div class="game-layout">
+        <section aria-label="Bàn cờ">
+          <div class="stats">
+            <span>Bạn: <strong id="you">—</strong></span
+            ><span>Current: <strong id="current">—</strong></span
+            ><span>Turn: <strong id="turn">0</strong></span
+            ><span>Sequence: <strong id="sequence">0</strong></span>
+          </div>
+          <p id="status" role="status" aria-live="polite">
+            Đang kết nối WebSocket…
+          </p>
+          <div id="board" class="game-board" aria-label="Board 9 × 9"></div>
+          <div class="controls">
+            <button id="pass" disabled>Pass</button
+            ><button id="surrender" disabled>Surrender</button>
+          </div>
+          <p class="note">
+            Chọn quân của bạn, rồi chọn ô được highlight. Nước đi hợp lệ do
+            server gửi.
+          </p>
+        </section>
+        <aside>
+          <h2>Event / Status</h2>
+          <ol id="events" aria-live="polite"></ol>
+          <h2>Demo combat nhanh</h2>
+          <p class="note">
+            Lần lượt: P1 C7 → C6; P2 C3 → C4; P1 C6 → C5; P2 G2 → G3; P1 C5 →
+            C4. Server xử lý combat tại C4.
+          </p>
+          <p class="note">
+            P1 ở dưới, P2 ở trên. Đóng tab để nhường ghế. Khởi động lại server
+            để tạo trận mới.
+          </p>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

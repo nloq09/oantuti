@@ -1,0 +1,61 @@
+.lobby {
+  width: min(680px, 92vw);
+  margin: 48px auto;
+}
+.lobby h1 {
+  font-size: 52px;
+  margin: 12px 0;
+}
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 30px;
+}
+.mode {
+  text-align: left;
+  padding: 28px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 150px;
+}
+.mode strong {
+  font-size: 24px;
+}
+.mode span {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.chosen {
+  border-color: var(--accent);
+  background: #2b3b36;
+}
+.lobby > .panel {
+  margin-top: 28px;
+}
+.lobby input {
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.lobby label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+@media (max-width: 500px) {
+  .mode-grid {
+    grid-template-columns: 1fr;
+  }
+  .mode {
+    min-height: 110px;
+    padding: 20px;
+  }
+  .lobby {
+    margin: 28px auto;
+  }
+}

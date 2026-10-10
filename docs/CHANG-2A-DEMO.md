@@ -18,9 +18,13 @@ Nếu có JDK 21, đặt JAVA_HOME tới JDK 21. Mọi source được biên d�
 `--release 21`. Server và client cùng ở `http://localhost:8080`; không cần
 Live Server, Node, React hoặc CORS wildcard. `processResources` đóng gói thư
 mục `client/` vào `static/` trong server jar. Có thể build bằng `bootJar` rồi
-chạy `java -jar build/libs/rps-battle-1.0-SNAPSHOT.jar`.
+chạy executable jar trong `libs/` của thư mục build. In thư mục bằng
+`.\gradlew.bat -q printBuildDir`; trên Windows build được lưu ngoài repo tại
+`GRADLE_USER_HOME/rps-battle-builds/<checkout-key>` để tránh OneDrive khóa class.
+Linux/macOS vẫn dùng `build/libs/rps-battle-1.0-SNAPSHOT.jar`.
 
-Mở hai tab trang đầu. Tab A chọn JOIN AS PLAYER 1, tab B chọn JOIN AS PLAYER 2.
+Mở hai tab `http://localhost:8080/demo/`. Tab A chọn JOIN AS PLAYER 1,
+tab B chọn JOIN AS PLAYER 2. Trang `/` hiện là client Chặng 2B.
 Mỗi ghế chỉ có một session đang mở. Action cần cả hai người đã JOIN; server
 trả WAITING_FOR_PLAYER nếu đối thủ chưa kết nối. Ghế được nhường khi đóng tab.
 Match ở memory không reset khi reload; khởi động lại server để có trận mới.

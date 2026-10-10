@@ -46,7 +46,8 @@ public class OnlineGameGateway {
                     }
                     var binding=new Binding(room,player,new ConcurrentWebSocketSessionDecorator(socket,5000,131072));
                     bindings.put(socket.getId(),binding);players.put(player,binding);room.connection(player,true);
-                    service.publish(room,List.of());return;
+                    var history=room.events();
+                    service.publish(room,history.subList(Math.max(0,history.size()-80),history.size()));return;
                 }
                 var binding=bindings.get(socket.getId());
                 if(binding==null) fail("JOIN_REQUIRED");

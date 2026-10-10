@@ -1,0 +1,77 @@
+.urgent {
+  color: #ff9aad;
+  animation: pulse 0.65s ease-in-out infinite alternate;
+}
+.combat {
+  animation: shake 0.1s linear infinite;
+}
+.combat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  z-index: 3;
+  pointer-events: none;
+}
+.combat[data-effect="rock"]::after {
+  border: 5px solid #f3cf89;
+  animation: impact 0.3s ease-out;
+}
+.combat[data-effect="paper"]::after {
+  background: #eeefff88;
+  animation: wrap 0.3s ease-out;
+}
+.combat[data-effect="scissors"]::after {
+  border-top: 5px solid #fff;
+  transform: rotate(-45deg);
+  animation: slash 0.3s ease-out;
+}
+@keyframes pulse {
+  to {
+    background: #703548;
+    box-shadow: 0 0 18px #f5748644;
+  }
+}
+@keyframes shake {
+  50% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(-2px);
+  }
+}
+@keyframes impact {
+  from {
+    transform: scale(0.3);
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+@keyframes wrap {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes slash {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .urgent,
+  .combat {
+    animation: none;
+  }
+}
+.cell.legal:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 16px #91d79566;
+}

@@ -1,13 +1,94 @@
 <!doctype html>
 <html lang="vi">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo match · RPS Battle</title><link rel="stylesheet" href="style.css"><script src="game.js" defer></script></head>
-<body><main>
-  <header><a href="index.html">← Chọn ghế</a><p class="eyebrow">DEMO-MATCH / REALTIME</p><h1 id="title">Đang kết nối…</h1></header>
-  <div class="game-layout"><section aria-label="Bàn cờ">
-    <div class="stats"><span>Bạn: <strong id="you">—</strong></span><span>Current: <strong id="current">—</strong></span><span>Turn: <strong id="turn">0</strong></span><span>Sequence: <strong id="sequence">0</strong></span></div>
-    <p id="status" role="status" aria-live="polite">Đang kết nối WebSocket…</p>
-    <div id="board" class="game-board" aria-label="Board 9 × 9"></div>
-    <div class="controls"><button id="pass" disabled>Pass</button><button id="surrender" disabled>Surrender</button></div>
-    <p class="note">Chọn quân của bạn, rồi chọn ô được highlight. Nước đi hợp lệ do server gửi.</p>
-  </section><aside><h2>Event / Status</h2><ol id="events" aria-live="polite"></ol><h2>Demo combat nhanh</h2><p class="note">Lần lượt: P1 C7 → C6; P2 C3 → C4; P1 C6 → C5; P2 G2 → G3; P1 C5 → C4. Server xử lý combat tại C4.</p><p class="note">P1 ở dưới, P2 ở trên. Đóng tab để nhường ghế. Khởi động lại server để tạo trận mới.</p></aside></div>
-</main></body></html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bàn cờ · RPS Battle</title>
+    <link rel="stylesheet" href="/css/global.css" />
+    <link rel="stylesheet" href="/css/game.css" />
+    <link rel="stylesheet" href="/css/animations.css" />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">◈ RPS BATTLE</a>
+      <div id="connection" role="status">Đang kết nối…</div>
+      <button id="settings">Cài đặt</button>
+    </header>
+    <main class="game-layout">
+      <aside class="panel side">
+        <p class="eyebrow">PHÒNG CHƠI</p>
+        <div class="actions">
+          <strong id="room-code">—</strong
+          ><button id="copy" aria-label="Sao chép mã phòng">Copy</button>
+        </div>
+        <p id="identity"></p>
+        <div id="players"></div>
+        <div class="counts">
+          <div>
+            <b class="blue">Xanh</b><strong id="count-P1">0</strong
+            ><small>quân còn lại</small>
+          </div>
+          <div>
+            <b class="red">Đỏ</b><strong id="count-P2">0</strong
+            ><small>quân còn lại</small>
+          </div>
+        </div>
+        <p id="types-P1" class="blue"></p>
+        <p id="types-P2" class="red"></p>
+        <button id="leave" class="wide">Rời phòng</button>
+      </aside>
+      <section class="arena">
+        <div class="turn-bar">
+          <div>
+            <span id="turn">Lượt 0</span>
+            <h2 id="phase">Đang tải bàn cờ…</h2>
+          </div>
+          <strong id="timer" aria-label="Thời gian còn lại">—</strong>
+        </div>
+        <div id="board" class="board" aria-label="Bàn cờ"></div>
+        <p id="waiting" class="hint" hidden>
+          Gửi mã phòng cho bạn bè. Ván chơi bắt đầu khi cả hai đặt quân và sẵn
+          sàng.
+        </p>
+        <div id="playing-controls" class="actions" hidden>
+          <button id="pass">Bỏ lượt</button
+          ><button id="surrender" class="danger">Đầu hàng</button>
+        </div>
+      </section>
+      <aside class="panel side">
+        <section id="placement-panel" hidden>
+          <p class="eyebrow">ĐẶT QUÂN</p>
+          <p class="muted">
+            Chọn loại quân rồi chọn ô. Chọn quân đã đặt để di chuyển.
+          </p>
+          <div class="palette">
+            <button data-type="ROCK">
+              <img src="/assets/pieces/rock-blue.svg" alt="" /><span
+                >Búa · 6/6</span
+              ></button
+            ><button data-type="PAPER">
+              <img src="/assets/pieces/paper-blue.svg" alt="" /><span
+                >Bao · 6/6</span
+              ></button
+            ><button data-type="SCISSORS">
+              <img src="/assets/pieces/scissors-blue.svg" alt="" /><span
+                >Kéo · 6/6</span
+              >
+            </button>
+          </div>
+          <div class="actions">
+            <button id="random">Ngẫu nhiên</button
+            ><button id="reset">Đặt lại</button>
+          </div>
+          <button id="ready" class="primary wide">Sẵn sàng</button>
+        </section>
+        <section class="history">
+          <h2>Diễn biến</h2>
+          <ol id="event-log" aria-live="polite"></ol>
+        </section>
+      </aside>
+    </main>
+    <div id="toasts" role="status"></div>
+    <script type="module" src="/js/pages/game.js"></script>
+  </body>
+</html>

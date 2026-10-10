@@ -2,16 +2,17 @@
 
 Game chiến thuật Oẳn Tù Tì trên bàn cờ 9×9. Dự án Java 21 + Gradle.
 
-Chặng 1 và **Chặng 2A (bước 1–10) đã hoàn thành**. Chặng 2 dùng lộ trình
-**Demo First**; phần tiếp theo là 2B, bắt đầu bằng Create Match REST API.
-Yêu cầu đầy đủ mới nằm trong [Chặng 2 Demo First](docs/CHANG-2-DEMO-FIRST.md),
-thay thế thứ tự triển khai Chặng 2 trước đây.
+Chặng 1, **Chặng 2A** và **Chặng 2B — Hoàn thiện client** đã hoàn thành.
+Yêu cầu Chặng 2B mới nằm trong [đặc tả client](docs/CHANG-2B-CLIENT-SPEC.md),
+thay thế phần 2B backend/database trong lộ trình Demo First trước đó.
+Xem [hướng dẫn chạy và kiểm thử 2B](docs/CHANG-2B-CLIENT.md).
 
 ## Server online — Chặng 2
 
-Demo hai người chơi: chạy server rồi mở [http://localhost:8080](http://localhost:8080)
-trong hai tab, chọn P1 và P2. Xem [hướng dẫn demo 2A](docs/CHANG-2A-DEMO.md)
-cho chuỗi nước đi combat và kết thúc trận.
+Chạy server rồi mở [http://localhost:8080](http://localhost:8080).
+Chọn Hai người để tạo phòng và gửi mã cho tab thứ hai, hoặc Đấu với bot để
+chơi ngay. Đặt đủ 6 Búa, 6 Bao, 6 Kéo rồi bấm Sẵn sàng.
+Demo 2A cố định được giữ tại `/demo/`; xem [hướng dẫn 2A](docs/CHANG-2A-DEMO.md).
 
 Yêu cầu JDK 21 (hoặc JDK 24 nếu dùng môi trường kiểm tra hiện tại); Gradle
 wrapper 8.14.3 và Spring Boot 3.5.16. Version Jackson/JUnit/AssertJ do
@@ -33,8 +34,10 @@ Invoke-RestMethod http://localhost:8080/api/health
 ```
 
 `GET /api/health` trả HTTP 200, JSON `{"status":"UP"}` và không yêu cầu
-đăng nhập. Demo có WebSocket `/ws/game`; chưa thêm Spring Security, JPA hay
-create/join Match REST API của phần 2B.
+đăng nhập. WebSocket `/ws/game` phục vụ cả demo cũ và phòng 2B.
+REST có `POST /api/matches`, `POST /api/matches/{id}/join`,
+`GET /api/matches/{id}`. Phòng, quota, Ready, bot và timeout do server quản lý.
+Chưa thêm Spring Security, JPA hay database.
 Các starter Web, WebSocket, Test và Jackson đã được khai báo. Bỏ starter
 Validation chưa dùng để giữ phần demo tối thiểu. `/api/v1/health` vẫn là alias
 tương thích cho endpoint đã push trước khi đổi lộ trình.
@@ -44,12 +47,21 @@ bằng `--args="--server.port=8081"` khi chạy bootRun.
 ```powershell
 .\gradlew.bat test
 .\gradlew.bat bootJar
-# Chạy executable jar của server online:
-java -jar build/libs/rps-battle-1.0-SNAPSHOT.jar
+# In thư mục build để tìm libs/rps-battle-1.0-SNAPSHOT.jar:
+.\gradlew.bat -q printBuildDir
 ```
 
 `bootRun`/`bootJar` dùng RpsBattleApplication; `run` vẫn dùng LocalGameApplication
 cho human/bot/replay local của Chặng 1. Đừng dùng plain jar để chạy server online.
+
+Trên Windows, output build mặc định nằm trong
+`GRADLE_USER_HOME/rps-battle-builds/<checkout-key>` (thường dưới
+`C:\Users\<user>\.gradle`), tránh OneDrive khóa các file class trong repo.
+Các checkout có thư mục output riêng; Linux/macOS vẫn dùng `server/build`.
+In đường dẫn bằng `printBuildDir`; executable jar nằm trong `libs/` của thư mục đó.
+Nếu gặp `Unable to delete directory ... server\build\classes`, cập nhật code
+bằng `git pull`, dừng terminal server cũ bằng Ctrl+C rồi chạy lại bootRun.
+Không cần xóa thư mục build cũ hoặc tắt đồng bộ OneDrive.
 
 Cây thư mục sau Bước 1 (phần Chặng 1 giữ nguyên, xem cây đầy đủ trong
 [báo cáo Chặng 1](docs/CHANG-1-REVIEW.md)):
@@ -99,19 +111,18 @@ server/
 bộ, combat và kết quả do GameEngine quyết định. Client chỉ render, highlight
 legalActions và gửi Action. GameEngine/RuleSet không biết HTTP/WebSocket/Spring.
 
-- [ ] 2B / Bước 11 — Create Match REST API, OnlineMatchService
-- [ ] 2B / Bước 12 — Join Match REST API
-- [ ] 2B / Bước 13 — MatchRegistry thread-safe
-- [ ] 2B / Bước 14 — Chuẩn hóa WebSocket protocol/version/requestId/sequence
-- [ ] 2B / Bước 15 — Human vs Bot online
-- [ ] 2B / Bước 16 — Timer server side
-- [ ] 2B / Bước 17 — Reconnect full snapshot
-- [ ] 2B / Bước 18 — History trong memory
-- [ ] 2B / Bước 19 — Database metadata/result/events sau khi online ổn
-- [ ] 2B / Bước 20 — Cleanup và kiểm tra ranh giới kiến trúc
+- [x] 2B / 1–5 — ES modules, Home, lobby, Create/Join, waiting room
+- [x] 2B / 6–10 — Placement 18 quân, board, SVG, legal highlights, player panels
+- [x] 2B / 11–14 — Timer server, animation queue, event log, kết quả
+- [x] 2B / 15–18 — Bot dễ, surrender/leave, connection status, reconnect
+- [x] 2B / 19–20 — Responsive, settings/sound, polish, kiểm thử tổng hợp
 
-Phần demo đầu chưa cần matchmaking, database, login hay reconnect phức tạp.
-Phần 2A đã chạy ổn và được kiểm tra tổng hợp; các bước 2B chưa triển khai.
+Phạm vi 2B mới tập trung vào trải nghiệm chơi, không có database/login/ranking.
+
+Kết quả cuối 2B: **270 backend tests + 1 client transport test pass**,
+`test bootJar` thành công. Browser đã kiểm tra hai tab chơi/combat đồng bộ,
+Human vs Bot có combat, kết quả/rematch, reload, Settings và desktop/mobile.
+Chi tiết và cách chạy VS Code ở [hướng dẫn 2B](docs/CHANG-2B-CLIENT.md).
 
 Kết quả cuối 2A: **260 tests pass, 0 failures, 0 errors, 0 skipped**, bao gồm
 249 tests Chặng 1, 2 health cases, 4 DemoMatchService tests, 2 DTO tests và
