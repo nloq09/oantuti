@@ -2,6 +2,94 @@
 
 Game chiến thuật Oẳn Tù Tì trên bàn cờ 9×9. Dự án Java 21 + Gradle.
 
+Chặng 1 đã hoàn thành. Chặng 2 đang ở **Bước 1 — Spring Boot server và Health API**.
+
+## Server online — Chặng 2
+
+Yêu cầu JDK 21 (hoặc JDK 24 nếu dùng môi trường kiểm tra hiện tại); Gradle
+wrapper 8.14.3 và Spring Boot 3.5.16. Version Jackson/JUnit/AssertJ do
+[Boot BOM](https://docs.spring.io/spring-boot/3.5/gradle-plugin/managing-dependencies.html)
+quản lý. Wrapper chuyển từ 9.1.0 sang 8.14.3 theo
+[phạm vi Gradle được Boot 3.5 hỗ trợ](https://docs.spring.io/spring-boot/3.5/system-requirements.html).
+Không dùng JDK 25 để chạy wrapper 8.x; cấu hình biên dịch vẫn `--release 21`.
+
+```powershell
+cd server
+# Đặt JAVA_HOME tới JDK phù hợp nếu PATH đang trỏ tới Java cũ.
+.\gradlew.bat bootRun --console=plain
+```
+
+Server mặc định ở `http://localhost:8080`. Kiểm tra từ terminal khác:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/v1/health
+```
+
+`GET /api/v1/health` trả HTTP 200, JSON `{"status":"UP"}` và không yêu cầu
+đăng nhập. Chưa thêm Spring Security, JPA, Match API hay WebSocket endpoint.
+Các starter Web, WebSocket, Validation, Test và Jackson đã được khai báo.
+GameEngine/RuleSet giữ nguyên. `application.yml` đặt port 8080; có thể override
+bằng `--args="--server.port=8081"` khi chạy bootRun.
+
+```powershell
+.\gradlew.bat test
+.\gradlew.bat bootJar
+# Chạy executable jar của server online:
+java -jar build/libs/rps-battle-1.0-SNAPSHOT.jar
+```
+
+`bootRun`/`bootJar` dùng RpsBattleApplication; `run` vẫn dùng LocalGameApplication
+cho human/bot/replay local của Chặng 1. Đừng dùng plain jar để chạy server online.
+
+Cây thư mục sau Bước 1 (phần Chặng 1 giữ nguyên, xem cây đầy đủ trong
+[báo cáo Chặng 1](docs/CHANG-1-REVIEW.md)):
+
+```text
+server/
+├── build.gradle
+├── settings.gradle
+├── gradlew, gradlew.bat
+├── gradle/wrapper/
+│   ├── gradle-wrapper.jar
+│   └── gradle-wrapper.properties
+└── src/
+    ├── main/
+    │   ├── java/com/rpsbattle/
+    │   │   ├── RpsBattleApplication.java
+    │   │   ├── api/controller/HealthController.java
+    │   │   ├── game/{board,piece,player,action,state,engine}/
+    │   │   ├── rule/
+    │   │   ├── rules/classic/
+    │   │   ├── agent/
+    │   │   ├── match/
+    │   │   ├── bot/
+    │   │   ├── replay/
+    │   │   └── app/
+    │   └── resources/application.yml
+    └── test/java/com/rpsbattle/
+        ├── api/controller/HealthControllerTest.java
+        ├── architecture/
+        └── (các test Chặng 1 giữ nguyên)
+```
+
+### Tiến độ Chặng 2
+
+- [x] Bước 1 — Spring Boot, Health API và regression Chặng 1
+- [ ] Bước 2 — DTO và API Layer (chưa triển khai)
+
+Theo yêu cầu tài liệu, kết thúc kiểm tra Bước 1 rồi dừng, chưa làm Bước 2.
+
+Kết quả Bước 1: **250 tests pass, 0 failures, 0 errors, 0 skipped**, gồm toàn bộ
+249 tests Chặng 1 và 1 integration test health qua HTTP với full Spring context
+và embedded Tomcat trên port ngẫu nhiên. Đã chạy bootRun trên cổng 8080,
+gọi GET health thực tế nhận HTTP 200, `Content-Type: application/json`,
+`{"status":"UP"}`. bootJar build thành công, manifest Start-Class là
+`com.rpsbattle.RpsBattleApplication`. Task run vẫn dùng CLI Chặng 1.
+
+Lần kiểm tra dùng JDK 24.0.2 với `--release 21` và thư mục build riêng
+`build-step3-verification-stage2-step1-a` do thư mục kết quả cũ bị Windows khóa.
+Chưa xác nhận runtime trực tiếp JDK 21. Server smoke test đã được dừng sau kiểm tra.
+
 ## Chạy nhanh
 
 ```bash
