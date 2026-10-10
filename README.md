@@ -41,7 +41,7 @@ server/
 - [x] Bước 3 — Rule Engine
 - [x] Bước 4 — Game Engine
 - [x] Bước 5 — Legal Action Generator
-- [ ] Bước 6 — Match Engine
+- [x] Bước 6 — Match Engine
 - [ ] Bước 7 — Human vs Human local
 - [ ] Bước 8 — Bot Protocol
 - [ ] Bước 9 — Bot vs Bot
@@ -127,8 +127,53 @@ validate cuối cùng khi nhận action. Snapshot không bị thay đổi khi si
 Các test bao gồm giữa bàn, hai góc, đồng đội chặn, tấn công (kể cả trận combat
 sẽ thua), hết nước đi, board chữ nhật, thứ tự deterministic và RuleSet khác.
 Một test đối chiếu danh sách sinh ra với mọi MoveAction GameEngine chấp nhận.
-Bước 6 — Match Engine chưa triển khai.
+Match Engine được bổ sung ở Bước 6 bên dưới.
 
 Kết quả Bước 5: **172 tests pass, 0 failures, 0 errors**, gồm 17 test cho
 LegalActionGenerator. Test chạy trên JDK 25 với `--release 21`, dùng thư mục
 build riêng `build-step3-verification-step5-a`; chưa kiểm tra runtime JDK 21.
+
+## Bước 6 — Match Engine
+
+```text
+main/java/com/rpsbattle/
+├── match/
+│   ├── Match.java
+│   └── MatchStatus.java
+└── agent/
+    ├── PlayerAgent.java
+    ├── PlayerView.java
+    ├── ConsoleHumanAgent.java
+    └── RandomBotAgent.java
+```
+
+`Match(initialState, ruleSet, player1, player2)` nhận trạng thái READY hoặc
+PLAYING đã triển khai quân, với đúng hai player khác nhau. Hai agent tương ứng
+thứ tự `players` trong GameState. `start()` chuyển sang PLAYING;
+`playTurn()` gọi agent hiện tại với PlayerView và legalActions, rồi chuyển action
+qua GameEngine. `runToCompletion()` tự start và lặp đến FINISHED.
+MatchStatus gồm CREATED, RUNNING, FINISHED. Match không chứa luật combat hoặc
+di chuyển, không phụ thuộc console và không tự tạo randomness.
+
+Nếu hết nước di chuyển, Match cung cấp PassAction khi TurnRule cho phép; nếu
+không được pass thì báo lỗi rõ ràng. Action sai/null hoặc lỗi của agent được
+trả về caller và không cập nhật GameState, caller có thể gọi lại `playTurn()`.
+Trạng thái đã thắng/hòa ngay từ đầu được kết thúc trước khi hỏi agent.
+
+PlayerView cung cấp snapshot và playerId; agent không thể sửa Board của match.
+RandomBotAgent nhận `RandomGenerator` hoặc seed qua constructor, chọn một phần
+tử của legalActions và không gọi GameEngine. Cùng seed và cùng thứ tự action
+sẽ cho cùng lịch sử trận đấu.
+
+ConsoleHumanAgent nhận Reader/Writer từ bên ngoài, chọn số thứ tự nước đi hoặc
+nhập `pass`/`surrender`. Khi hai người dùng chung console, truyền cùng một
+BufferedReader cho hai agent. Input sai định dạng được hỏi lại, EOF báo lỗi;
+luật vẫn do GameEngine validate. Chưa làm giao diện bàn cờ, nhập tọa độ hay
+entry point Human vs Human của Bước 7.
+
+Kết quả Bước 6: **189 tests pass, 0 failures, 0 errors**, gồm 10 Match tests
+và 7 PlayerAgent tests. Kiểm tra hai seeded bot cho cùng lịch sử action, kết thúc
+trận, đổi lượt, pass khi bị chặn, surrender, action sai không sửa state,
+snapshot của agent, Human/Bot cùng Match và input console dùng chung.
+Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
+`build-step3-verification-step6-b`; chưa kiểm tra runtime trực tiếp trên JDK 21.
