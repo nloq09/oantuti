@@ -4,6 +4,14 @@ export function renderBoard(element, state, click) {
   element.replaceChildren();
   const s = state.snapshot,
     g = s.gameState;
+  // Rotate P2's view; labels, DOM coordinates and actions remain server coordinates.
+  const reversed = s.playerId === "P2";
+  const rows = Array.from({ length: g.boardHeight }, (_, index) =>
+    reversed ? g.boardHeight - 1 - index : index,
+  );
+  const columns = Array.from({ length: g.boardWidth }, (_, index) =>
+    reversed ? g.boardWidth - 1 - index : index,
+  );
   const targets = new Map(
     (g.legalActions || [])
       .filter((a) => a.type === "MOVE" && a.pieceId === state.selected)
@@ -16,18 +24,18 @@ export function renderBoard(element, state, click) {
       .map((p) => [key(p.position), p]),
   );
   element.append(document.createElement("span"));
-  for (let c = 0; c < g.boardWidth; c++) {
+  for (const c of columns) {
     const label = document.createElement("span");
     label.className = "coordinate";
     label.textContent = String.fromCharCode(65 + c);
     element.append(label);
   }
-  for (let r = 0; r < g.boardHeight; r++) {
+  for (const r of rows) {
     const label = document.createElement("span");
     label.className = "coordinate";
     label.textContent = r + 1;
     element.append(label);
-    for (let c = 0; c < g.boardWidth; c++) {
+    for (const c of columns) {
       const position = { row: r, col: c },
         piece = pieces.get(key(position));
       const cell = document.createElement("button");

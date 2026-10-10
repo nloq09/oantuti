@@ -35,6 +35,8 @@ Trên Windows, build nằm ngoài OneDrive tại
    và ô trống để đổi vị trí. Có Ngẫu nhiên và Đặt lại.
 4. Sẵn sàng bật khi đủ 6 quân mỗi loại. Có thể Hủy sẵn sàng trước lúc bắt đầu.
 5. P1/Xanh đi trước. Chọn quân, chọn ô xanh để đi hoặc ô đỏ để tấn công.
+   Quân của người đang xem luôn ở phía dưới: P2 nhìn bàn cờ xoay 180°.
+   Nhãn ô giữ tọa độ chung của server để hai người trao đổi cùng một nước đi.
 6. Server xử lý bot, combat và timeout; client diễn hoạt lần lượt và cập nhật board.
 7. Đầu hàng hoặc Rời phòng khi đang chơi đều kết thúc ván. Cần xác nhận.
 8. Popup kết quả → Chi tiết xem số lượt, thời lượng và quân còn lại.
