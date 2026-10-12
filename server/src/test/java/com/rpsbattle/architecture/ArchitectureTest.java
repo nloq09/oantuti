@@ -13,6 +13,12 @@ import static org.assertj.core.api.Assertions.*;
  * Source-level boundaries are checked without introducing a framework dependency.
  */
 class ArchitectureTest {
+    @Test void tournamentDependenciesOnlyPointOutward() throws Exception {
+        assertThat(imports("game")).noneMatch(i->i.startsWith("com.rpsbattle.tournament")||i.startsWith("com.rpsbattle.spectator"));
+        assertThat(imports("rule")).noneMatch(i->i.startsWith("com.rpsbattle.tournament")||i.startsWith("com.rpsbattle.spectator"));
+        assertThat(imports("match")).noneMatch(i->i.startsWith("com.rpsbattle.tournament"));
+        assertThat(source("tournament")).doesNotContain("new GameEngine(","new Thread(");
+    }
     private String source(String folder) throws IOException {
         try (var files = Files.walk(Path.of("src/main/java/com/rpsbattle", folder))) {
             StringBuilder result = new StringBuilder();

@@ -26,22 +26,29 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final DemoMatchService service;
     private final GameStateMapper mapper;
     private final OnlineGameGateway online;
+    private final com.rpsbattle.spectator.SpectatorService spectators;
     private final Map<PlayerId, WebSocketSession> seats = new HashMap<>();
     private final Map<String, PlayerId> players = new HashMap<>();
 
-    public GameWebSocketHandler(ObjectMapper json, DemoMatchService service, GameStateMapper mapper, OnlineGameGateway online) {
+    public GameWebSocketHandler(ObjectMapper json, DemoMatchService service, GameStateMapper mapper, OnlineGameGateway online, com.rpsbattle.spectator.SpectatorService spectators) {
         this.json = json.copy().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                 .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT);
         this.service = service;
         this.mapper = mapper;
         this.online = online;
+        this.spectators = spectators;
     }
 
     @Override
     protected synchronized void handleTextMessage(WebSocketSession session, TextMessage text) throws IOException {
         try {
             var envelope = json.readTree(text.getPayload());
+            if (envelope != null && (spectators.owns(session) || envelope.path("type").asText().equals("SPECTATE_MATCH") || envelope.path("type").asText().equals("WATCH_TOURNAMENT"))) {
+                online.closed(session);
+                spectators.handle(session,envelope);
+                return;
+            }
             if (envelope != null && (!envelope.path("matchId").asText().equals(DemoMatchService.MATCH_ID))) {
                 online.handle(session, text.getPayload());
                 return;
@@ -132,12 +139,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     public synchronized void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         release(session);
         online.closed(session);
+        spectators.closed(session);
     }
 
     @Override
     public synchronized void handleTransportError(WebSocketSession session, Throwable error) throws IOException {
         release(session);
         online.closed(session);
+        spectators.closed(session);
         session.close(CloseStatus.SERVER_ERROR);
     }
 }

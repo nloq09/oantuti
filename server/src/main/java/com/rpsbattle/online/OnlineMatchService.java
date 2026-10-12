@@ -66,7 +66,9 @@ public class OnlineMatchService {
 
     public void publish(OnlineMatch match, List<GameEvent> events) {
         var update = new Update(match, List.copyOf(events));
-        for (var listener : listeners) listener.accept(update);
+        for (var listener : listeners) {
+            try { listener.accept(update); } catch (RuntimeException ignored) { }
+        }
     }
 
     public OnlineSnapshot snapshot(OnlineMatch room, PlayerId player, List<GameEvent> events) {
@@ -81,9 +83,11 @@ public class OnlineMatchService {
         }
     }
 
-    @Scheduled(fixedDelay = 200)
+    @Scheduled(fixedDelayString = "${rps.bot-tick-millis:200}")
     public void tick() {
-        for (var room : registry.getActiveMatches())
+        for (var room : registry.getActiveMatches()) {
+            if(room.infrastructureError()!=null)continue;
+            try {
             synchronized (room) {
                 var events = room.tick();
                 if (!events.isEmpty()) publish(room, events);
@@ -110,8 +114,10 @@ public class OnlineMatchService {
                             failed = true;
                         }
                         synchronized (room) {
-                            var result = room.completeBot(turn, action, failed);
-                            if (!result.isEmpty()) publish(room, result);
+                            try {
+                                var result = room.completeBot(turn, action, failed);
+                                if (!result.isEmpty()) publish(room, result);
+                            } catch(RuntimeException error) { room.infrastructureFailure(); }
                         }
                         return null;
                     }) {
@@ -133,6 +139,8 @@ public class OnlineMatchService {
                     }
                 }
             }
+            } catch(RuntimeException error) { room.infrastructureFailure(); }
+        }
     }
 
     private void closeAgents(OnlineMatch room) {
@@ -144,6 +152,17 @@ public class OnlineMatchService {
                     } catch (Exception ignored) {
                     }
                 });
+    }
+    /** Tournament ownership ends here; replay and spectator archives must be captured first. */
+    public void release(String id) {
+        var room = registry.findById(id);
+        var running = jobs.remove(id);
+        if (running != null) running.cancel(true);
+        for (var agent : room.uploadedAgents()) if (agent instanceof AutoCloseable closeable) {
+            try { closeable.close(); } catch (Exception ignored) { }
+        }
+        registry.remove(id);
+        cleaned.remove(id);
     }
 
     @PreDestroy

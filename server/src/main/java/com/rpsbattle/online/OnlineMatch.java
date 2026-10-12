@@ -36,6 +36,14 @@ public final class OnlineMatch {
     private Match match;
     private Instant deadline, startedAt, finishedAt;
     private long revision;
+    private long botDelayMillis = 600;
+    private String infrastructureError;
+    public synchronized String infrastructureError() { return infrastructureError; }
+    public synchronized void infrastructureFailure() { infrastructureError="MATCH_INFRASTRUCTURE_ERROR"; }
+    public synchronized void setBotDelayMillis(long millis) {
+        if(millis<0||millis>5000)throw new IllegalArgumentException("Invalid bot pacing");
+        botDelayMillis=millis;
+    }
     public OnlineMatch(String id, MatchMode mode, long seed, Clock clock, Duration turnTime) {
         this.id = id;
         this.mode = mode;
@@ -335,7 +343,7 @@ public final class OnlineMatch {
             finishedAt = clock.instant();
             deadline = null;
         } else deadline = clock.instant().plus(turnTime);
-        nextBotAt = clock.instant().plusMillis(600);
+        nextBotAt = clock.instant().plusMillis(botDelayMillis);
     }
 
     public synchronized List<GameEvent> leave(PlayerId player) {
@@ -356,6 +364,10 @@ public final class OnlineMatch {
 
     public synchronized List<GameEvent> events() {
         return match == null ? List.of() : match.events();
+    }
+    public synchronized com.rpsbattle.replay.MatchLog replayLog() {
+        if (match == null || !match.state().isFinished()) fail("REPLAY_NOT_READY");
+        return new com.rpsbattle.replay.MatchLog(id, rules.name(), seed, match.initialState(), match.events(), match.state().result().orElseThrow());
     }
 
     public record Seat(PlayerId id, String token, boolean bot) {

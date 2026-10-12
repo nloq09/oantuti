@@ -14,7 +14,7 @@ public class ApiErrorHandler {
     @ExceptionHandler(DemoRequestException.class)
     public ResponseEntity<Map<String, String>> domain(DemoRequestException error) {
         var status = error.code().equals("BOT_SANDBOX_UNAVAILABLE") ? HttpStatus.SERVICE_UNAVAILABLE :
-                error.code().equals("MATCH_NOT_FOUND") || error.code().equals("BOT_NOT_FOUND") ? HttpStatus.NOT_FOUND :
+                error.code().equals("MATCH_NOT_FOUND") || error.code().equals("BOT_NOT_FOUND") || error.code().equals("TOURNAMENT_NOT_FOUND") || error.code().equals("PARTICIPANT_NOT_FOUND") ? HttpStatus.NOT_FOUND :
                         error.code().equals("MATCH_FULL") ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(Map.of("error", error.code()));
     }
