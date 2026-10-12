@@ -39,7 +39,7 @@ class LocalGameApplicationTest {
     @Test
     void humansMoveWithBothCoordinateFormatsThenFinishBySurrender() {
         StringWriter output = new StringWriter();
-        GameState finalState = LocalGameApplication.run(new StringReader("move A7 A6\nb2 b3\nsurrender\n"), output);
+        GameState finalState = LocalGameApplication.run(new StringReader("move C7 D7\ng3 g4\nsurrender\n"), output);
         assertThat(finalState.phase()).isEqualTo(GamePhase.FINISHED);
         assertThat(finalState.result()).contains(GameResult.win(P2));
         assertThat(finalState.turnNumber()).isEqualTo(3);
@@ -52,7 +52,7 @@ class LocalGameApplicationTest {
     void invalidMovesDoNotConsumeTurnAndUserCanRetry() {
         StringWriter output = new StringWriter();
         GameState finalState = LocalGameApplication.run(new StringReader(
-                "A7 A5\nA1 A3\nI9 I8\nA7 J7\nA7 A6\nsurrender\n"), output);
+                "C7 C5\nB1 B3\nI9 I8\nC7 J7\nC7 D7\nsurrender\n"), output);
         assertThat(finalState.turnNumber()).isEqualTo(2);
         assertThat(finalState.sequence()).isEqualTo(38);
         assertThat(finalState.result()).contains(GameResult.win(P1));

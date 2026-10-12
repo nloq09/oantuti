@@ -20,6 +20,23 @@ class ClassicPlacementRuleTest {
     private ClassicPlacementRule rule;
     private Board board;
 
+    @Test
+    void everyCellIsInItsOwnHalfExceptBoundaryAndBases() {
+        int firstCount = 0, secondCount = 0;
+        for (int row = 0; row < 9; row++) for (int col = 0; col < 9; col++) {
+            var pos = new Position(row, col);
+            boolean base = (row == 8 && col == 0) || (row == 0 && col == 8);
+            boolean first = rule.canPlace(P1, PieceType.ROCK, pos, board);
+            boolean second = rule.canPlace(P2, PieceType.ROCK, pos, board);
+            assertThat(first).isEqualTo(row > col && !base);
+            assertThat(second).isEqualTo(row < col && !base);
+            if (first) firstCount++;
+            if (second) secondCount++;
+        }
+        assertThat(firstCount).isEqualTo(35);
+        assertThat(secondCount).isEqualTo(35);
+    }
+
     @BeforeEach
     void setUp() {
         rule = new ClassicPlacementRule(P1, P2);
@@ -55,7 +72,7 @@ class ClassicPlacementRuleTest {
     }
 
     @Nested
-    @DisplayName("Player 1 placement (rows 6-8)")
+    @DisplayName("Player 1 placement below diagonal")
     class Player1Placement {
 
         @Test
@@ -73,13 +90,13 @@ class ClassicPlacementRuleTest {
         @Test
         @DisplayName("P1 can place at row 8")
         void row8() {
-            assertThat(rule.canPlace(P1, PieceType.SCISSORS, new Position(8, 8), board)).isTrue();
+            assertThat(rule.canPlace(P1, PieceType.SCISSORS, new Position(8, 7), board)).isTrue();
         }
 
         @Test
-        @DisplayName("P1 cannot place at row 5 (out of zone)")
-        void row5Rejected() {
-            assertThat(rule.canPlace(P1, PieceType.ROCK, new Position(5, 0), board)).isFalse();
+        @DisplayName("P1 can place below diagonal outside the old deployment zone")
+        void row5Allowed() {
+            assertThat(rule.canPlace(P1, PieceType.ROCK, new Position(5, 0), board)).isTrue();
         }
 
         @Test
@@ -90,13 +107,13 @@ class ClassicPlacementRuleTest {
     }
 
     @Nested
-    @DisplayName("Player 2 placement (rows 0-2)")
+    @DisplayName("Player 2 placement above diagonal")
     class Player2Placement {
 
         @Test
         @DisplayName("P2 can place at row 0")
         void row0() {
-            assertThat(rule.canPlace(P2, PieceType.ROCK, new Position(0, 0), board)).isTrue();
+            assertThat(rule.canPlace(P2, PieceType.ROCK, new Position(0, 1), board)).isTrue();
         }
 
         @Test

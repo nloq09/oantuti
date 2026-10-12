@@ -39,8 +39,8 @@ export function renderBoard(element, state, click) {
       const position = { row: r, col: c },
         piece = pieces.get(key(position));
       const cell = document.createElement("button");
-      cell.className =
-        "cell " + (r < 3 ? "red-zone" : r >= 6 ? "blue-zone" : "");
+      const side = r * (g.boardWidth - 1) - c * (g.boardHeight - 1);
+      cell.className = "cell " + (side > 0 ? "blue-zone" : side < 0 ? "red-zone" : "diagonal-boundary");
       cell.dataset.row = r;
       cell.dataset.col = c;
       const stronghold =

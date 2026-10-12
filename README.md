@@ -60,7 +60,7 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 ## Luật chơi
 
-1. Mỗi bên có **6 Búa, 6 Bao, 6 Kéo**; đặt trong ba hàng của mình. Trận bắt đầu khi cả hai bên đủ quân và sẵn sàng.
+1. Mỗi bên có **6 Búa, 6 Bao, 6 Kéo**; đặt trong nửa bàn cờ của mình, chia bởi đường chéo A1–I9 (P1: row > col; P2: row < col); không đặt trên đường chéo hoặc cứ điểm. Trận bắt đầu khi cả hai bên đủ quân và sẵn sàng.
 2. Mỗi lượt di chuyển một quân **một ô theo cả 8 hướng**, gồm ngang, dọc và chéo; không ra ngoài bàn hoặc vào ô có quân cùng bên.
 3. Đi vào quân đối thủ để giao chiến: **Búa thắng Kéo, Kéo thắng Bao, Bao thắng Búa**. Cùng loại thì hòa: cả hai sống và giữ nguyên vị trí, vẫn tính một lượt.
 4. Cứ điểm của mỗi đội nằm ở **góc dưới bên trái theo góc nhìn của đội đó**: P1 ở **A9 `(8,0)`**, P2 ở **I1 `(0,8)`**. Chiếm cứ điểm đối thủ (quân tấn công phải sống và đứng trên ô đó sau giao chiến) hoặc loại hết quân đối thủ thì **thắng ngay**. Không được đặt quân vào cứ điểm khi xếp đội hình ban đầu; chỉ được di chuyển quân vào để phòng thủ sau khi trận bắt đầu. Cả hai hết quân thì hòa. Đầu hàng thì đối thủ thắng.

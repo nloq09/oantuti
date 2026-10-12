@@ -9,8 +9,8 @@ import com.rpsbattle.rule.PlacementRule;
 /**
  * Classic placement rule:
  * <p>
- * Player 1 (index 0) → rows 6, 7, 8
- * Player 2 (index 1) → rows 0, 1, 2
+ * Default: P1 below the top-left to bottom-right diagonal, P2 above it.
+ * Diagonal cells and both strongholds are excluded during deployment.
  * <p>
  * The rule is configured at construction time so it can be adapted
  * to other board sizes without subclassing.
@@ -19,6 +19,7 @@ public final class ClassicPlacementRule implements PlacementRule {
 
     private final PlayerId player1Id;
     private final PlayerId player2Id;
+    private boolean diagonal;
 
     /**
      * Inclusive row range for player 1 placement.
@@ -37,6 +38,7 @@ public final class ClassicPlacementRule implements PlacementRule {
      */
     public ClassicPlacementRule(PlayerId player1Id, PlayerId player2Id) {
         this(player1Id, player2Id, 6, 8, 0, 2);
+        diagonal = true;
     }
 
     /**
@@ -65,6 +67,12 @@ public final class ClassicPlacementRule implements PlacementRule {
                 || position.equals(new Position(0, board.cols() - 1))) return false;
 
         int row = position.row();
+        if (diagonal) {
+            long side = (long) row * (board.cols() - 1) - (long) position.col() * (board.rows() - 1);
+            if (playerId.equals(player1Id)) return side > 0;
+            if (playerId.equals(player2Id)) return side < 0;
+            return false;
+        }
 
         if (playerId.equals(player1Id)) {
             return row >= p1RowMin && row <= p1RowMax;

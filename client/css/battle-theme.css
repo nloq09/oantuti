@@ -489,3 +489,7 @@ select {
   outline: 3px solid #fff0ac;
   outline-offset: -3px;
 }
+.cell.diagonal-boundary {
+  background: linear-gradient(135deg, #42494a 45%, #e3c786 46%, #e3c786 53%, #42494a 54%);
+  border-color: #a28d61;
+}

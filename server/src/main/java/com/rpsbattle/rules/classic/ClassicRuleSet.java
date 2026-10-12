@@ -27,8 +27,8 @@ public final class ClassicRuleSet implements RuleSet {
     /**
      * Standard constructor for a 9×9 classic game.
      *
-     * @param player1Id the first player's id (rows 6-8)
-     * @param player2Id the second player's id (rows 0-2)
+     * @param player1Id the first player's id (below the diagonal)
+     * @param player2Id the second player's id (above the diagonal)
      */
     public ClassicRuleSet(PlayerId player1Id, PlayerId player2Id) {
         this(player1Id, player2Id, DEFAULT_MAX_TURNS);

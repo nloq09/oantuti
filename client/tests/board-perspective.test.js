@@ -25,8 +25,8 @@ for (const playerId of ["P1", "P2"]) {
     const originalDocument = globalThis.document;
     globalThis.document = { createElement: tag => new Element(tag) };
     try {
-      const position = { row: playerId === "P1" ? 6 : 2, col: 0 };
-      const destination = { row: playerId === "P1" ? 5 : 3, col: 0 };
+      const position = { row: playerId === "P1" ? 6 : 2, col: playerId === "P1" ? 0 : 8 };
+      const destination = { row: playerId === "P1" ? 5 : 3, col: position.col };
       const action = { type: "MOVE", pieceId: "own", from: position, to: destination };
       const board = new Element("div");
       const state = {
@@ -48,6 +48,11 @@ for (const playerId of ["P1", "P2"]) {
       assert.equal(board.children[1].textContent, playerId === "P1" ? "A" : "I");
       assert.equal(cells[0].dataset.row, playerId === "P1" ? 0 : 8);
       assert.equal(cells[0].dataset.col, playerId === "P1" ? 0 : 8);
+      assert.equal(cells.filter(cell => cell.className.includes("diagonal-boundary")).length, 9);
+      for (const cell of cells) {
+        const side = cell.dataset.row - cell.dataset.col;
+        assert.ok(cell.className.includes(side > 0 ? "blue-zone" : side < 0 ? "red-zone" : "diagonal-boundary"));
+      }
       assert.equal(cells[72].dataset.stronghold, playerId, "own stronghold is the bottom-left cell");
       assert.equal(cells[8].dataset.stronghold, playerId === "P1" ? "P2" : "P1");
       assert.ok(cells[72].attributes["aria-label"].includes("Cứ điểm " + playerId));

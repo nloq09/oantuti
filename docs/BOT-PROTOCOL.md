@@ -119,7 +119,7 @@ Góc trên trái là `(0,0)`, góc dưới phải là `(8,8)`. Row tăng từ tr
 - Đi phải: `(row,col+1)`.
 - Đi chéo: `(row-1,col-1)`, `(row-1,col+1)`, `(row+1,col-1)`, `(row+1,col+1)`.
 
-P1 xuất phát ở hàng 6–8, P2 ở hàng 0–2. P1 thường tiến lên, P2 thường tiến xuống, nhưng **cả hai được đi đủ 8 hướng, kể cả chéo**. Giao diện xoay góc nhìn để quân của người xem ở dưới; dữ liệu bot luôn giữ tọa độ server. Không xoay from/to khi bot là P2.
+P1 xếp quân dưới đường chéo A1–I9 (row > col), P2 ở phía trên (row < col); không đặt trên đường chéo hoặc cứ điểm. P1 thường tiến lên, P2 thường tiến xuống, nhưng **cả hai được đi đủ 8 hướng, kể cả chéo**. Giao diện xoay góc nhìn để quân của người xem ở dưới; dữ liệu bot luôn giữ tọa độ server. Không xoay from/to khi bot là P2.
 
 ### state.players
 

@@ -77,6 +77,10 @@ class OnlineMatchTest {
             room.randomize(P2);
             assertTrue(room.state().board().isEmpty(new Position(8, 0)));
             assertTrue(room.state().board().isEmpty(new Position(0, 8)));
+            for (var deployed : room.state().board().allPieces()) {
+                var pos = deployed.position();
+                assertTrue(deployed.ownedBy(P1) ? pos.row() > pos.col() : pos.row() < pos.col());
+            }
         }
         room.markReady(P1);
         room.markReady(P2);
