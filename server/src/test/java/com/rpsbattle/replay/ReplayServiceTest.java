@@ -62,19 +62,24 @@ class ReplayServiceTest {
 
     @ParameterizedTest
     @EnumSource(PieceType.class)
-    void replaysAllCombatOutcomesIncludingBothLastPiecesDying(PieceType defender) {
+    void replaysAllCombatOutcomesIncludingSameTypeStalemate(PieceType defender) {
         Board board = Board.defaultBoard();
         board.placePiece(Piece.alive("a", P1, PieceType.ROCK, new Position(3, 3)));
         board.placePiece(Piece.alive("d", P2, defender, new Position(2, 3)));
         GameState initial = GameState.initial("combat", board, List.of(Player.of(P1, "A"), Player.of(P2, "B"))).withPhase(GamePhase.READY);
-        Match match = new Match(initial, new ClassicRuleSet(P1, P2),
-                (v, a) -> MoveAction.of(P1, "a", new Position(3, 3), new Position(2, 3)), (v, a) -> a.get(0));
+        Match match = new Match(initial, new ClassicRuleSet(P1, P2, 2),
+                (v, a) -> MoveAction.of(P1, "a", new Position(3, 3), new Position(2, 3)),
+                (v, a) -> PassAction.of(P2));
         match.runToCompletion();
         Path file = directory.resolve("combat.json");
         service.write(file, match);
         sameState(match.state(), service.replay(file));
-        assertThat(match.events()).anyMatch(e -> e.type().equals("COMBAT_OCCURRED"))
-                .anyMatch(e -> e.type().equals("PIECE_REMOVED"));
+        assertThat(match.events()).anyMatch(e -> e.type().equals("COMBAT_OCCURRED"));
+        if (defender == PieceType.ROCK) {
+            assertThat(match.events()).noneMatch(e -> e.type().equals("PIECE_REMOVED") || e.type().equals("PIECE_MOVED"));
+            assertThat(match.state().board().findById("a").orElseThrow().position()).isEqualTo(new Position(3, 3));
+            assertThat(match.state().board().findById("d").orElseThrow().position()).isEqualTo(new Position(2, 3));
+        } else assertThat(match.events()).anyMatch(e -> e.type().equals("PIECE_REMOVED"));
     }
 
     @Test

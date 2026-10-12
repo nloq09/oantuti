@@ -27,8 +27,7 @@ def evaluate(action, request):
 
     if defender:
         if attacker["type"] == defender["type"]:
-            del board[target]  # Same type: both pieces disappear.
-            return 0
+            return -25  # Same type: neither moves or dies; avoid wasting a turn.
         if BEATS[attacker["type"]] != defender["type"]:
             return -100  # Attacker disappears; defender remains.
         score += 100
@@ -47,7 +46,7 @@ def evaluate(action, request):
         score -= 1_000_000
     threats = sum(
         distance(pos, target) == 1
-        and (BEATS[p["type"]] == attacker["type"] or p["type"] == attacker["type"])
+        and BEATS[p["type"]] == attacker["type"]
         for pos, p in enemies
     )
     score -= 120 * threats

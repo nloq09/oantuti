@@ -33,15 +33,15 @@ class ClassicCombatRuleTest {
     // Full 3x3 combat matrix — all 9 combinations
     @ParameterizedTest(name = "{0} vs {1} → {2}")
     @CsvSource({
-            "ROCK,     ROCK,     BOTH_DIE",
+            "ROCK,     ROCK,     DRAW",
             "ROCK,     PAPER,    DEFENDER_WIN",
             "ROCK,     SCISSORS, ATTACKER_WIN",
             "PAPER,    ROCK,     ATTACKER_WIN",
-            "PAPER,    PAPER,    BOTH_DIE",
+            "PAPER,    PAPER,    DRAW",
             "PAPER,    SCISSORS, DEFENDER_WIN",
             "SCISSORS, ROCK,     DEFENDER_WIN",
             "SCISSORS, PAPER,    ATTACKER_WIN",
-            "SCISSORS, SCISSORS, BOTH_DIE"
+            "SCISSORS, SCISSORS, DRAW"
     })
     @DisplayName("combat matrix")
     void combatMatrix(String attackerType, String defenderType, String expectedResult) {
@@ -97,23 +97,23 @@ class ClassicCombatRuleTest {
     }
 
     @Test
-    @DisplayName("ROCK vs ROCK → BOTH_DIE")
+    @DisplayName("ROCK vs ROCK → DRAW")
     void rockVsRock() {
         assertThat(rule.resolve(piece(PieceType.ROCK, P1), piece(PieceType.ROCK, P2)))
-                .isEqualTo(CombatResult.BOTH_DIE);
+                .isEqualTo(CombatResult.DRAW);
     }
 
     @Test
-    @DisplayName("PAPER vs PAPER → BOTH_DIE")
+    @DisplayName("PAPER vs PAPER → DRAW")
     void paperVsPaper() {
         assertThat(rule.resolve(piece(PieceType.PAPER, P1), piece(PieceType.PAPER, P2)))
-                .isEqualTo(CombatResult.BOTH_DIE);
+                .isEqualTo(CombatResult.DRAW);
     }
 
     @Test
-    @DisplayName("SCISSORS vs SCISSORS → BOTH_DIE")
+    @DisplayName("SCISSORS vs SCISSORS → DRAW")
     void scissorsVsScissors() {
         assertThat(rule.resolve(piece(PieceType.SCISSORS, P1), piece(PieceType.SCISSORS, P2)))
-                .isEqualTo(CombatResult.BOTH_DIE);
+                .isEqualTo(CombatResult.DRAW);
     }
 }

@@ -11,7 +11,7 @@ import com.rpsbattle.rule.CombatRule;
  * ROCK     beats SCISSORS
  * SCISSORS beats PAPER
  * PAPER    beats ROCK
- * same type → BOTH_DIE
+ * same type → DRAW (both pieces stay alive at their original positions)
  * <p>
  * The rule is encoded as a data table — no long if/else chain.
  */
@@ -34,7 +34,7 @@ public final class ClassicCombatRule implements CombatRule {
         PieceType a = attacker.type();
         PieceType d = defender.type();
 
-        if (a == d) return CombatResult.BOTH_DIE;
+        if (a == d) return CombatResult.DRAW;
         if (defeats(a) == d) return CombatResult.ATTACKER_WIN;
         return CombatResult.DEFENDER_WIN;
     }

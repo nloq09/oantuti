@@ -309,8 +309,8 @@
           <li>Dựng map quân theo ID và map quân theo ô từ board.pieces.</li>
           <li>Với từng MOVE, tra quân tấn công theo pieceId và quân ở ô to.</li>
           <li>
-            Tính điểm: ăn quân thắng thì cộng; tự mất quân thì trừ; cân nhắc đổi
-            quân cùng loại.
+            Tính điểm: ăn quân thắng thì cộng; tự mất quân thì trừ; tránh lãng phí
+            lượt khi tấn công quân cùng loại.
           </li>
           <li>
             Mô phỏng bàn cờ sau giao chiến rồi kiểm tra quân sống ở ô đích có bị
@@ -330,9 +330,9 @@
           Luật đang dùng: mỗi nước di chuyển một ô theo 8 hướng, kể cả chéo, không
           ra ngoài bàn, không vào ô có quân cùng bên. ROCK thắng SCISSORS;
           SCISSORS thắng PAPER; PAPER thắng ROCK.
-          <strong>Cùng loại thì cả hai bị loại</strong>. Khi bên tấn công thắng,
+          <strong>Cùng loại thì hòa: cả hai sống và giữ nguyên vị trí, vẫn tính một lượt</strong>. Khi bên tấn công thắng,
           quân đó sống ở ô đích; khi thua, quân phòng thủ vẫn ở ô đích. Nếu cả
-          hai cùng loại, ô đích trống sau trận đánh.
+          hai cùng loại, cả hai giữ nguyên vị trí sau trận đánh.
         </p>
         <p>Cứ điểm P1 ở A9 <code>(8,0)</code>, P2 ở I1 <code>(0,8)</code>.
           Đội mất cứ điểm hoặc hết quân thua ngay. Chiếm cứ điểm cần quân tấn công
@@ -347,8 +347,8 @@
         <p>
           Trận kết thúc khi một bên hết quân. Giới hạn mặc định là 200 lượt; khi
           chạm giới hạn, bên có nhiều quân sống hơn thắng, bằng nhau thì hòa. Vì
-          vậy đổi quân cùng loại có thể hợp lý tùy chênh lệch quân và số lượt
-          còn lại. Các điểm số/thuật toán gợi ý ở đây là chiến thuật mẫu, không
+          vậy tấn công quân cùng loại vẫn tiêu tốn lượt dù không thay đổi bàn cờ.
+          Các điểm số/thuật toán gợi ý ở đây là chiến thuật mẫu, không
           phải điều kiện thắng do server áp đặt.
         </p>
         <h2 id="section-11">4. Bot trả về gì cho server?</h2>

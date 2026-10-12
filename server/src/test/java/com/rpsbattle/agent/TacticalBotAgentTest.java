@@ -79,9 +79,9 @@ class TacticalBotAgentTest {
     }
 
     @Test
-    void handlesMutualEliminationAndPassFallback() {
+    void avoidsSameTypeStalemateAndHandlesPassFallback() {
         var view = view(piece("bot", P1, PieceType.ROCK, 4, 4), piece("enemy", P2, PieceType.ROCK, 4, 5));
-        assertThat(((MoveAction) choose(view)).to()).isEqualTo(new Position(4, 5));
+        assertThat(((MoveAction) choose(view)).to()).isNotEqualTo(new Position(4, 5));
         var pass = PassAction.of(P1);
         assertThat(new TacticalBotAgent(rules, 42).chooseAction(view, List.of(pass, SurrenderAction.of(P1)))).isEqualTo(pass);
         assertThatThrownBy(() -> new TacticalBotAgent(rules, 42).chooseAction(view, List.of())).isInstanceOf(IllegalArgumentException.class);

@@ -63,20 +63,23 @@ class GameEngineTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"SCISSORS,true,false,ATTACKER_WIN", "PAPER,false,true,DEFENDER_WIN", "ROCK,false,false,BOTH_DIE"})
+    @CsvSource({"SCISSORS,true,false,ATTACKER_WIN", "PAPER,false,true,DEFENDER_WIN", "ROCK,true,true,DRAW"})
     void resolvesCombat(PieceType defender, boolean attackerLives, boolean defenderLives, CombatResult result) {
         GameState original = state(defender);
         GameTransition transition = engine.applyAction(original, P1, move());
         Board board = transition.newState().board();
         assertThat(board.findById("a").isPresent()).isEqualTo(attackerLives);
         assertThat(board.findById("d").isPresent()).isEqualTo(defenderLives);
-        assertThat(board.getPiece(FROM)).isEmpty();
-        if (attackerLives) assertThat(board.findById("a").orElseThrow().position()).isEqualTo(TO);
+        assertThat(board.getPiece(FROM).isPresent()).isEqualTo(result == CombatResult.DRAW);
+        if (attackerLives) assertThat(board.findById("a").orElseThrow().position())
+                .isEqualTo(result == CombatResult.DRAW ? FROM : TO);
         if (defenderLives) assertThat(board.findById("d").orElseThrow().position()).isEqualTo(TO);
         assertThat(transition.events().get(0)).isInstanceOf(GameEvent.CombatOccurred.class);
         assertThat(((GameEvent.CombatOccurred) transition.events().get(0)).result()).isEqualTo(result);
         assertThat(transition.events().stream().filter(GameEvent.PieceRemoved.class::isInstance).count())
-                .isEqualTo(result == CombatResult.BOTH_DIE ? 2 : 1);
+                .isEqualTo(result == CombatResult.DRAW ? 0 : 1);
+        assertThat(transition.newState().turnNumber()).isEqualTo(1);
+        assertThat(transition.newState().currentPlayerId()).isEqualTo(P2);
         assertThat(transition.events()).allMatch(e -> e.sequence() == 1);
         assertThat(original.board().findById("a")).isPresent();
         assertThat(original.board().findById("d")).isPresent();
@@ -163,15 +166,18 @@ class GameEngineTest {
     }
 
     @Test
-    void bothLastPiecesDieProducesDraw() {
+    void sameTypeLastPiecesSurviveAndGameContinues() {
         GameState original = state(PieceType.ROCK);
         Board board = original.board();
         board.removePiece(new Position(0, 0));
         board.removePiece(new Position(8, 8));
         GameState next = engine.applyAction(original.withBoard(board), P1, move()).newState();
-        assertThat(next.phase()).isEqualTo(GamePhase.FINISHED);
-        assertThat(next.result()).contains(GameResult.draw());
-        assertThat(next.board().allPieces()).isEmpty();
+        assertThat(next.phase()).isEqualTo(GamePhase.PLAYING);
+        assertThat(next.result()).isEmpty();
+        assertThat(next.board().allPieces()).hasSize(2);
+        assertThat(next.board().findById("a").orElseThrow().position()).isEqualTo(FROM);
+        assertThat(next.board().findById("d").orElseThrow().position()).isEqualTo(TO);
+        assertThat(next.currentPlayerId()).isEqualTo(P2);
     }
 
     @Test

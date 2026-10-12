@@ -151,16 +151,16 @@ Quy trình dễ triển khai:
 
 1. Dựng map quân theo ID và map quân theo ô từ board.pieces.
 2. Với từng MOVE, tra quân tấn công theo pieceId và quân ở ô to.
-3. Tính điểm: ăn quân thắng thì cộng; tự mất quân thì trừ; cân nhắc đổi quân cùng loại.
+3. Tính điểm: ăn quân thắng thì cộng; tự mất quân thì trừ; tránh lãng phí lượt khi tấn công quân cùng loại.
 4. Mô phỏng bàn cờ sau giao chiến rồi kiểm tra quân sống ở ô đích có bị đối thủ ăn ngay ở lượt sau không.
 5. Với ô trống, cân nhắc tiến gần quân có thể thắng, né loại khắc chế và tránh lặp đi lặp lại.
 6. Chọn action có điểm tốt nhất và trả **nguyên object đã chọn**. Không tự tạo ID mới, đổi tọa độ hay gửi toàn bộ bàn cờ.
 
-Luật đang dùng: mỗi nước di chuyển một ô theo 8 hướng, kể cả chéo, không ra ngoài bàn, không vào ô có quân cùng bên. ROCK thắng SCISSORS; SCISSORS thắng PAPER; PAPER thắng ROCK. **Cùng loại thì cả hai bị loại**. Khi bên tấn công thắng, quân đó sống ở ô đích; khi thua, quân phòng thủ vẫn ở ô đích. Nếu cả hai cùng loại, ô đích trống sau trận đánh.
+Luật đang dùng: mỗi nước di chuyển một ô theo 8 hướng, kể cả chéo, không ra ngoài bàn, không vào ô có quân cùng bên. ROCK thắng SCISSORS; SCISSORS thắng PAPER; PAPER thắng ROCK. **Cùng loại thì hòa: cả hai sống và giữ nguyên vị trí, vẫn tính một lượt**. Khi bên tấn công thắng, quân đó sống ở ô đích; khi thua, quân phòng thủ vẫn ở ô đích. Nếu cả hai cùng loại, cả hai giữ nguyên vị trí sau trận đánh.
 
 Trong ví dụ trên, ROCK ở `(4,4)` đi lên `(3,4)` ăn SCISSORS. Đi sang `(4,5)` tuy hợp lệ nhưng đứng cạnh PAPER ở `(4,6)`, có nguy cơ bị ăn. Nếu mô phỏng, phải gỡ quân ở ô from và gỡ quân thua trước khi đánh giá bàn sau nước đi; không chỉ thay tọa độ trên bàn cũ.
 
-Trận kết thúc khi một bên hết quân. Giới hạn mặc định là 200 lượt; khi chạm giới hạn, bên có nhiều quân sống hơn thắng, bằng nhau thì hòa. Vì vậy đổi quân cùng loại có thể hợp lý tùy chênh lệch quân và số lượt còn lại. Các điểm số/thuật toán gợi ý ở đây là chiến thuật mẫu, không phải điều kiện thắng do server áp đặt.
+Trận kết thúc khi một bên hết quân. Giới hạn mặc định là 200 lượt; khi chạm giới hạn, bên có nhiều quân sống hơn thắng, bằng nhau thì hòa. Tấn công quân cùng loại không làm thay đổi bàn cờ nhưng vẫn tiêu tốn một lượt. Các điểm số/thuật toán gợi ý ở đây là chiến thuật mẫu, không phải điều kiện thắng do server áp đặt.
 
 ## 4. Bot trả về gì cho server?
 
@@ -252,4 +252,4 @@ Lệnh `python tools/verify-bot-examples.py` kiểm tra các bot mẫu tin cậy
 
 ## Cứ điểm
 
-Cứ điểm P1 ở A9 `(8,0)`, P2 ở I1 `(0,8)`, đều là góc dưới bên trái theo góc nhìn của đội mình. Chiếm cứ điểm đối phương sau giao chiến hoặc loại hết quân đối phương thì thắng ngay. Nếu cùng loại, cả hai bị loại nên quân tấn công không chiếm được cứ điểm. Không được đặt quân vào cứ điểm khi xếp đội hình ban đầu; có thể di chuyển quân vào để phòng thủ khi đang chơi. Tọa độ trong giao thức vẫn là tọa độ server, không xoay theo người chơi.
+Cứ điểm P1 ở A9 `(8,0)`, P2 ở I1 `(0,8)`, đều là góc dưới bên trái theo góc nhìn của đội mình. Chiếm cứ điểm đối phương sau giao chiến hoặc loại hết quân đối phương thì thắng ngay. Nếu cùng loại, cả hai giữ nguyên vị trí nên quân tấn công không chiếm được cứ điểm. Không được đặt quân vào cứ điểm khi xếp đội hình ban đầu; có thể di chuyển quân vào để phòng thủ khi đang chơi. Tọa độ trong giao thức vẫn là tọa độ server, không xoay theo người chơi.

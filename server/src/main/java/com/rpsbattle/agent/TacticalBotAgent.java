@@ -34,6 +34,9 @@ public final class TacticalBotAgent implements PlayerAgent {
             if (action instanceof MoveAction move) {
                 Board next = predict(current, move);
                 score = evaluate(next, view.playerId(), view.state());
+                if (current.getPiece(move.to()).filter(target -> rules.combatRule().resolve(
+                        current.findById(move.pieceId()).orElseThrow(), target) == CombatResult.DRAW).isPresent())
+                    score -= 25; // Same-type attacks consume a turn without changing the board.
                 String fingerprint = fingerprint(next);
                 score -= 45 * recentBoards.stream().filter(fingerprint::equals).count();
             } else if (action instanceof PassAction) score = evaluate(current, view.playerId(), view.state()) - 100;
