@@ -117,8 +117,9 @@ Góc trên trái là `(0,0)`, góc dưới phải là `(8,8)`. Row tăng từ tr
 - Đi xuống: `(row+1,col)`.
 - Đi trái: `(row,col-1)`.
 - Đi phải: `(row,col+1)`.
+- Đi chéo: `(row-1,col-1)`, `(row-1,col+1)`, `(row+1,col-1)`, `(row+1,col+1)`.
 
-P1 xuất phát ở hàng 6–8, P2 ở hàng 0–2. P1 thường tiến lên, P2 thường tiến xuống, nhưng **cả hai được đi đủ bốn hướng**. Giao diện xoay góc nhìn để quân của người xem ở dưới; dữ liệu bot luôn giữ tọa độ server. Không xoay from/to khi bot là P2.
+P1 xuất phát ở hàng 6–8, P2 ở hàng 0–2. P1 thường tiến lên, P2 thường tiến xuống, nhưng **cả hai được đi đủ 8 hướng, kể cả chéo**. Giao diện xoay góc nhìn để quân của người xem ở dưới; dữ liệu bot luôn giữ tọa độ server. Không xoay from/to khi bot là P2.
 
 ### state.players
 
@@ -155,7 +156,7 @@ Quy trình dễ triển khai:
 5. Với ô trống, cân nhắc tiến gần quân có thể thắng, né loại khắc chế và tránh lặp đi lặp lại.
 6. Chọn action có điểm tốt nhất và trả **nguyên object đã chọn**. Không tự tạo ID mới, đổi tọa độ hay gửi toàn bộ bàn cờ.
 
-Luật đang dùng: mỗi nước di chuyển một ô ngang/dọc, không chéo, không ra ngoài bàn, không vào ô có quân cùng bên. ROCK thắng SCISSORS; SCISSORS thắng PAPER; PAPER thắng ROCK. **Cùng loại thì cả hai bị loại**. Khi bên tấn công thắng, quân đó sống ở ô đích; khi thua, quân phòng thủ vẫn ở ô đích. Nếu cả hai cùng loại, ô đích trống sau trận đánh.
+Luật đang dùng: mỗi nước di chuyển một ô theo 8 hướng, kể cả chéo, không ra ngoài bàn, không vào ô có quân cùng bên. ROCK thắng SCISSORS; SCISSORS thắng PAPER; PAPER thắng ROCK. **Cùng loại thì cả hai bị loại**. Khi bên tấn công thắng, quân đó sống ở ô đích; khi thua, quân phòng thủ vẫn ở ô đích. Nếu cả hai cùng loại, ô đích trống sau trận đánh.
 
 Trong ví dụ trên, ROCK ở `(4,4)` đi lên `(3,4)` ăn SCISSORS. Đi sang `(4,5)` tuy hợp lệ nhưng đứng cạnh PAPER ở `(4,6)`, có nguy cơ bị ăn. Nếu mô phỏng, phải gỡ quân ở ô from và gỡ quân thua trước khi đánh giá bàn sau nước đi; không chỉ thay tọa độ trên bàn cũ.
 
@@ -247,3 +248,8 @@ Nếu chủ bot rời/đầu hàng trong lúc bot tính toán, trận kết thú
 Lệnh `python tools/verify-bot-examples.py` kiểm tra các bot mẫu tin cậy trong repository bằng compiler/interpreter local. Nó không kiểm tra mọi chiến thuật và không thay thế kiểm thử Docker. Không dùng cách chạy local này cho source không tin cậy của người khác.
 
 Định dạng upload, cách chuẩn bị Docker, giới hạn file và quyền dùng bot xem trong [BOT-UPLOAD.md](BOT-UPLOAD.md).
+
+
+## Cứ điểm
+
+Cứ điểm P1 ở A9 `(8,0)`, P2 ở I1 `(0,8)`, đều là góc dưới bên trái theo góc nhìn của đội mình. Chiếm cứ điểm đối phương sau giao chiến hoặc loại hết quân đối phương thì thắng ngay. Nếu cùng loại, cả hai bị loại nên quân tấn công không chiếm được cứ điểm. Không được đặt quân vào cứ điểm khi xếp đội hình ban đầu; có thể di chuyển quân vào để phòng thủ khi đang chơi. Tọa độ trong giao thức vẫn là tọa độ server, không xoay theo người chơi.

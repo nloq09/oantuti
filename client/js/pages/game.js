@@ -1,6 +1,6 @@
-import { GameController } from "../game/game-controller.js?v=stage3";
+import { GameController } from "../game/game-controller.js?v=strongholds";
 import { seatKey } from "../config.js";
-import { SpectatorController } from "../spectator/spectator-controller.js?v=stage3";
+import { SpectatorController } from "../spectator/spectator-controller.js?v=strongholds";
 const spectate = new URLSearchParams(location.search).get("spectate");
 let seat;
 try {

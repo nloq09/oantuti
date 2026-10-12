@@ -49,25 +49,26 @@ class LegalActionGeneratorTest {
     }
 
     @Test
-    void middlePieceHasExactlyFourMoves() {
+    void middlePieceHasExactlyEightMoves() {
         var actions = generator.getLegalActions(state(piece("a", P1, 5, 5)), P1);
         assertThat(actions).containsExactly(
-                move("a", 5, 5, 4, 5), move("a", 5, 5, 5, 4),
-                move("a", 5, 5, 5, 6), move("a", 5, 5, 6, 5));
+                move("a", 5, 5, 4, 4), move("a", 5, 5, 4, 5), move("a", 5, 5, 4, 6),
+                move("a", 5, 5, 5, 4), move("a", 5, 5, 5, 6),
+                move("a", 5, 5, 6, 4), move("a", 5, 5, 6, 5), move("a", 5, 5, 6, 6));
         assertThat(actions).doesNotHaveDuplicates();
         assertThatThrownBy(actions::clear).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
-    void topLeftCornerHasOnlyTwoInsideMoves() {
+    void topLeftCornerHasOnlyThreeInsideMoves() {
         var actions = generator.getLegalActions(state(piece("a", P1, 0, 0)), P1);
-        assertThat(actions).containsExactly(move("a", 0, 0, 0, 1), move("a", 0, 0, 1, 0));
+        assertThat(actions).containsExactly(move("a", 0, 0, 0, 1), move("a", 0, 0, 1, 0), move("a", 0, 0, 1, 1));
     }
 
     @Test
-    void bottomRightCornerHasOnlyTwoInsideMoves() {
+    void bottomRightCornerHasOnlyThreeInsideMoves() {
         var actions = generator.getLegalActions(state(piece("a", P1, 8, 8)), P1);
-        assertThat(actions).containsExactly(move("a", 8, 8, 7, 8), move("a", 8, 8, 8, 7));
+        assertThat(actions).containsExactly(move("a", 8, 8, 7, 7), move("a", 8, 8, 7, 8), move("a", 8, 8, 8, 7));
     }
 
     @Test
@@ -79,14 +80,14 @@ class LegalActionGeneratorTest {
             MoveAction move = (MoveAction) action;
             assertThat(original.board().getPiece(move.to())).isEmpty();
         });
-        assertThat(actions).hasSize(6).doesNotHaveDuplicates();
+        assertThat(actions).hasSize(14).doesNotHaveDuplicates();
     }
 
     @Test
     void includesAttackEvenWhenAttackerWillLose() {
         Piece enemy = Piece.alive("enemy", P2, PieceType.PAPER, new Position(4, 5));
         var actions = generator.getLegalActions(state(piece("a", P1, 5, 5), enemy), P1);
-        assertThat(actions).hasSize(4).contains(move("a", 5, 5, 4, 5));
+        assertThat(actions).hasSize(8).contains(move("a", 5, 5, 4, 5));
         assertThat(actions).allSatisfy(action -> assertThat(action.playerId()).isEqualTo(P1));
     }
 
@@ -115,7 +116,7 @@ class LegalActionGeneratorTest {
         GameState original = state(piece("a", P1, 4, 4), piece("b", P2, 1, 1));
         assertThat(generator.getLegalActions(original, P2)).isEmpty();
         assertThat(generator.getLegalActions(original, PlayerId.of("outsider"))).isEmpty();
-        assertThat(generator.getLegalActions(original.withCurrentPlayer(P2), P2)).hasSize(4);
+        assertThat(generator.getLegalActions(original.withCurrentPlayer(P2), P2)).hasSize(8);
     }
 
     @ParameterizedTest
@@ -129,7 +130,7 @@ class LegalActionGeneratorTest {
         Board board = new Board(3, 5);
         board.placePiece(piece("a", P1, 2, 4));
         assertThat(generator.getLegalActions(state(board), P1))
-                .containsExactly(move("a", 2, 4, 1, 4), move("a", 2, 4, 2, 3));
+                .containsExactly(move("a", 2, 4, 1, 3), move("a", 2, 4, 1, 4), move("a", 2, 4, 2, 3));
     }
 
     @Test

@@ -100,7 +100,7 @@ class DemoWebSocketIntegrationTest {
             p1.rejected("PLAYER_MISMATCH");
             p2.action("P2", 0, Map.of("type", "PASS"));
             p2.rejected("NOT_YOUR_TURN");
-            p1.action("P1", 0, move("P1-R1", 6, 2, 5, 3));
+            p1.action("P1", 0, move("P1-R1", 6, 2, 4, 3));
             p1.rejected("INVALID_MOVE");
             p1.action("P1", 1, Map.of("type", "PASS"));
             p1.rejected("INVALID_SEQUENCE");

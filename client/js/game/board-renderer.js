@@ -43,9 +43,17 @@ export function renderBoard(element, state, click) {
         "cell " + (r < 3 ? "red-zone" : r >= 6 ? "blue-zone" : "");
       cell.dataset.row = r;
       cell.dataset.col = c;
+      const stronghold =
+        r === g.boardHeight - 1 && c === 0 ? "P1"
+        : r === 0 && c === g.boardWidth - 1 ? "P2" : null;
+      if (stronghold) {
+        cell.classList.add("stronghold", "stronghold-" + stronghold.toLowerCase());
+        cell.title = "Cứ điểm " + stronghold;
+        cell.dataset.stronghold = stronghold;
+      }
       cell.setAttribute(
         "aria-label",
-        `${String.fromCharCode(65 + c)}${r + 1}${piece ? " " + labels[piece.type] + " " + piece.owner : ""}`,
+        `${String.fromCharCode(65 + c)}${r + 1}${stronghold ? " Cứ điểm " + stronghold : ""}${piece ? " " + labels[piece.type] + " " + piece.owner : ""}`,
       );
       cell.classList.toggle("selected", piece?.id === state.selected);
       cell.classList.toggle("legal", targets.has(key(position)));

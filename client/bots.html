@@ -9,18 +9,10 @@
     <link rel="stylesheet" href="/css/battle-theme.css" />
   </head>
   <body>
-    <header>
-      <a class="brand" href="/">◈ RPS BATTLE</a>
-      <nav class="header-links">
-        <a href="/lobby.html">Vào trận</a><button id="settings">Cài đặt</button>
-      </nav>
-    </header>
     <main class="bot-workshop">
-      <p class="eyebrow">XƯỞNG CHIẾN THUẬT</p>
-      <h1 class="page-title">Bot của tôi</h1>
-      <p class="workshop-intro">
-        Tải chiến thuật của bạn lên và đưa bot ra đấu trường.
-      </p>
+      <nav class="actions workshop-navigation">
+        <a class="button" href="/">Trang chủ</a>
+      </nav>
       <div class="workshop-grid">
         <aside class="panel bot-library">
           <h2>Đội hình bot</h2>
@@ -73,17 +65,8 @@
           <a href="/bot-guide.html">Hướng dẫn và bot mẫu →</a
           ><a href="/bot-protocol.html">Dữ liệu bot nhận và trả về →</a>
         </section>
-        <section class="panel workshop-log">
-          <div class="history-heading">
-            <h2>Nhật ký thao tác</h2>
-            <button id="clear-log">Xóa</button>
-          </div>
-          <ol id="upload-log" aria-live="polite">
-            <li>Chọn bot hoặc tải file mới để bắt đầu.</li>
-          </ol>
-        </section>
       </div>
     </main>
-    <script type="module" src="/js/pages/bots.js"></script>
+    <script type="module" src="/js/pages/bots.js?v=no-operation-log"></script>
   </body>
 </html>

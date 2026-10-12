@@ -1,7 +1,6 @@
 import { savedBots, uploadBot, botCapabilities } from "../api/bot-api.js";
 import { createMatch } from "../api/match-api.js";
 import { seatKey } from "../config.js";
-import { openSettings } from "../ui/sound.js";
 import { toast } from "../ui/toast.js";
 
 let selected =
@@ -10,14 +9,6 @@ let selected =
   ) || savedBots()[0];
 let capabilities = {},
   busy = false;
-function log(message, error = false) {
-  const item = document.createElement("li");
-  item.textContent = `[${new Date().toLocaleTimeString("vi-VN")}] ${message}`;
-  item.classList.toggle("error", error);
-  document.querySelector("#upload-log").prepend(item);
-  const list = document.querySelector("#upload-log");
-  while (list.children.length > 30) list.lastElementChild.remove();
-}
 function render() {
   const list = document.querySelector("#bot-list");
   list.replaceChildren();
@@ -70,7 +61,6 @@ async function refresh() {
       "Không kết nối được server để kiểm tra Docker.";
   }
 }
-document.querySelector("#settings").onclick = openSettings;
 document.querySelector("#new-bot").onclick = () => {
   document.querySelector("#bot-upload-form").reset();
   setLanguage();
@@ -93,8 +83,6 @@ function setLanguage() {
 document
   .querySelectorAll('[name="language"]')
   .forEach((input) => (input.onchange = setLanguage));
-document.querySelector("#clear-log").onclick = () =>
-  document.querySelector("#upload-log").replaceChildren();
 document.querySelector("#bot-upload-form").onsubmit = async (event) => {
   event.preventDefault();
   if (busy) return;
@@ -102,17 +90,12 @@ document.querySelector("#bot-upload-form").onsubmit = async (event) => {
   render();
   const name = document.querySelector("#bot-name").value.trim(),
     file = document.querySelector("#bot-file").files[0];
-  log(`Đang tải ${file.name} lên server…`);
   try {
     selected = await uploadBot(name, file);
     sessionStorage.setItem("rps-preferred-bot", selected.id);
-    log(
-      `Đã lưu ${selected.name} (${selected.language}). Dùng Đấu thử để kiểm tra bot trong trận thật.`,
-    );
     toast("Đã tải bot lên: " + selected.name);
     await refresh();
   } catch (error) {
-    log("Tải lên thất bại: " + error.message, true);
     toast(error.message, true);
   } finally {
     busy = false;
@@ -132,14 +115,12 @@ document.querySelector("#test-bot").onclick = async () => {
     await refresh();
     if (!capabilities[selected.language])
       throw new Error("BOT_SANDBOX_UNAVAILABLE");
-    log(`Tạo trận thử cho ${selected.name}…`);
     sessionStorage.setItem(
       seatKey,
       JSON.stringify(await createMatch("HUMAN_VS_BOT", selected)),
     );
     location.href = "/game.html";
   } catch (error) {
-    log("Không tạo được trận: " + error.message, true);
     toast(error.message, true);
     busy = false;
     render();

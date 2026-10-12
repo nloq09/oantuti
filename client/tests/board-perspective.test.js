@@ -10,6 +10,7 @@ class Element {
     this.attributes = {};
     this.classes = new Set();
     this.classList = {
+      add: (...names) => names.forEach(name => this.classes.add(name)),
       toggle: (name, enabled) => enabled
         ? this.classes.add(name) : this.classes.delete(name),
     };
@@ -47,6 +48,9 @@ for (const playerId of ["P1", "P2"]) {
       assert.equal(board.children[1].textContent, playerId === "P1" ? "A" : "I");
       assert.equal(cells[0].dataset.row, playerId === "P1" ? 0 : 8);
       assert.equal(cells[0].dataset.col, playerId === "P1" ? 0 : 8);
+      assert.equal(cells[72].dataset.stronghold, playerId, "own stronghold is the bottom-left cell");
+      assert.equal(cells[8].dataset.stronghold, playerId === "P1" ? "P2" : "P1");
+      assert.ok(cells[72].attributes["aria-label"].includes("Cứ điểm " + playerId));
       const target = cells.find(cell => cell.dataset.row === destination.row && cell.dataset.col === destination.col);
       assert.ok(target.classes.has("legal"));
       target.onclick();

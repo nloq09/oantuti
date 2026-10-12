@@ -24,7 +24,7 @@ for sequence, action in enumerate([
 ], 42):
     pieces = [] if action["type"] == "PASS" else [{"id": action["pieceId"], "ownerId": "P1", "type": "ROCK", "status": "ALIVE", "position": action["from"]}]
     requests.append({"type": "YOUR_TURN", "matchId": "EXAMPLES", "turn": sequence - 42,
-                     "sequence": sequence, "player": "P1", "state": {"board": {"pieces": pieces}},
+                     "sequence": sequence, "player": "P1", "state": {"board": {"rows": 9, "cols": 9, "pieces": pieces}},
                      "legalActions": [action]})
 
 
@@ -48,7 +48,7 @@ with tempfile.TemporaryDirectory(prefix="rps-owned-examples-") as directory:
         opponent = "P2" if player == "P1" else "P1"
         for own_type, enemy_type in [("ROCK", "SCISSORS"), ("SCISSORS", "ROCK")]:
             actions = [{"type": "MOVE", "pieceId": "own", "from": {"row": 4, "col": 4}, "to": pos}
-                       for pos in [{"row": 3, "col": 4}, {"row": 4, "col": 5}]]
+                       for pos in [{"row": 3, "col": 4}, {"row": 5, "col": 3}]]
             pieces = [{"id": name, "ownerId": owner, "type": kind, "status": "ALIVE", "position": pos}
                       for name, owner, kind, pos in [
                           ("own", player, own_type, {"row": 4, "col": 4}),

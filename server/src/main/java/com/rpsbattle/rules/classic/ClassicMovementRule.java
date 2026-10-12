@@ -7,8 +7,7 @@ import com.rpsbattle.rule.MovementRule;
 
 /**
  * Classic movement rule:
- * - Exactly 1 step orthogonally (UP / DOWN / LEFT / RIGHT).
- * - Cannot move diagonally.
+ * - Exactly 1 step in any of the eight directions, including diagonals.
  * - Cannot leave the board.
  * - Cannot move into a cell occupied by a friendly piece.
  * - Can move into a cell occupied by an enemy (triggers combat).
@@ -28,10 +27,10 @@ public final class ClassicMovementRule implements MovementRule {
         // 1. Must be inside the board
         if (!board.isInside(to)) return false;
 
-        // 2. Must be exactly 1 step orthogonally
+        // 2. Must be exactly one neighboring cell (Chebyshev distance).
         int dr = Math.abs(to.row() - from.row());
         int dc = Math.abs(to.col() - from.col());
-        if (dr + dc != 1) return false;   // not exactly 1 step, or diagonal
+        if (Math.max(dr, dc) != 1) return false;
 
         // 3. Cannot enter a cell occupied by a friendly piece
         return board.getPiece(to)

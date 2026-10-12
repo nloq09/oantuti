@@ -32,6 +32,23 @@ class ClassicPlacementRuleTest {
     }
 
     @Test
+    void neitherPlayerCanDeployAnyPieceTypeOnEitherStronghold() {
+        for (var player : new PlayerId[]{P1, P2})
+            for (var type : PieceType.values()) {
+                assertThat(rule.canPlace(player, type, new Position(8, 0), board)).isFalse();
+                assertThat(rule.canPlace(player, type, new Position(0, 8), board)).isFalse();
+            }
+    }
+
+    @Test
+    void defaultDeploymentLeavesBothStrongholdsEmpty() {
+        var state = ClassicGameSetup.create("empty-bases", P1, P2);
+        assertThat(state.board().allPieces()).hasSize(36);
+        assertThat(state.board().isEmpty(new Position(8, 0))).isTrue();
+        assertThat(state.board().isEmpty(new Position(0, 8))).isTrue();
+    }
+
+    @Test
     void rejectsOutsideBoard() {
         assertThat(rule.canPlace(P1, PieceType.ROCK, new Position(6, 9), board)).isFalse();
         assertThat(rule.canPlace(P1, PieceType.ROCK, new Position(9, 0), board)).isFalse();

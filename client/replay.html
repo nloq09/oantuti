@@ -6,8 +6,8 @@
     <title>Replay · RPS Battle</title>
     <link rel="stylesheet" href="/css/global.css" />
     <link rel="stylesheet" href="/css/game.css" />
-    <link rel="stylesheet" href="/css/battle-theme.css" />
-    <link rel="stylesheet" href="/css/replay.css" />
+    <link rel="stylesheet" href="/css/battle-theme.css?v=fortress" />
+    <link rel="stylesheet" href="/css/replay.css?v=side-panels" />
   </head>
   <body>
     <main class="replay-page">
@@ -17,9 +17,11 @@
       </nav>
       <h1 id="replay-title" class="page-title">Đang tải replay…</h1>
       <p id="replay-status" role="status"></p>
+      <div class="replay-layout">
       <div class="board-frame">
         <div id="board" class="board" aria-label="Bàn cờ replay"></div>
       </div>
+      <div class="replay-sidebar">
       <section class="panel replay-controls">
         <div class="actions">
           <button id="first" aria-label="Về đầu">|◀</button
@@ -44,6 +46,8 @@
         <h2>Diễn biến</h2>
         <ol id="event-log"></ol>
       </section>
+      </div>
+      </div>
     </main>
     <script
       type="module"

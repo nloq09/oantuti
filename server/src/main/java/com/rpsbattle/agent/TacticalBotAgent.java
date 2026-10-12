@@ -4,6 +4,8 @@ import com.rpsbattle.game.action.*;
 import com.rpsbattle.game.board.Board;
 import com.rpsbattle.game.piece.Piece;
 import com.rpsbattle.game.player.PlayerId;
+import com.rpsbattle.game.state.GameState;
+import com.rpsbattle.rules.classic.ClassicVictoryRule;
 import com.rpsbattle.rule.*;
 
 import java.util.*;
@@ -31,10 +33,10 @@ public final class TacticalBotAgent implements PlayerAgent {
             double score = -Double.MAX_VALUE;
             if (action instanceof MoveAction move) {
                 Board next = predict(current, move);
-                score = evaluate(next, view.playerId());
+                score = evaluate(next, view.playerId(), view.state());
                 String fingerprint = fingerprint(next);
                 score -= 45 * recentBoards.stream().filter(fingerprint::equals).count();
-            } else if (action instanceof PassAction) score = evaluate(current, view.playerId()) - 100;
+            } else if (action instanceof PassAction) score = evaluate(current, view.playerId(), view.state()) - 100;
             if (score > best) {
                 best = score;
                 candidates.clear();
@@ -72,7 +74,11 @@ public final class TacticalBotAgent implements PlayerAgent {
         return next;
     }
 
-    private double evaluate(Board board, PlayerId player) {
+    private double evaluate(Board board, PlayerId player, GameState context) {
+        var projected = context.withBoard(board);
+        var result = rules.victoryRule().checkResult(projected);
+        if (result.isPresent()) return result.get().isDraw() ? 0
+                : result.get().winner().filter(player::equals).isPresent() ? 1_000_000 : -1_000_000;
         var own = board.allPieces().stream().filter(p -> p.isAlive() && p.ownedBy(player)).toList();
         var enemy = board.allPieces().stream().filter(p -> p.isAlive() && !p.ownedBy(player)).toList();
         if (own.isEmpty() && enemy.isEmpty()) return 0;
@@ -80,12 +86,27 @@ public final class TacticalBotAgent implements PlayerAgent {
         if (own.isEmpty()) return -1_000_000;
         double score = (own.size() - enemy.size()) * 1000;
         double worstReply = 0;
+        if (rules.victoryRule() instanceof ClassicVictoryRule classic) {
+            var home = classic.stronghold(projected, player);
+            var opponent = context.opponents(player).get(0).id();
+            var goal = classic.stronghold(projected, opponent);
+            int closest = own.stream().mapToInt(p -> Math.max(Math.abs(p.position().row() - goal.row()),
+                    Math.abs(p.position().col() - goal.col()))).min().orElse(0);
+            score -= 12 * closest;
+            for (Piece attacker : enemy) {
+                if (rules.movementRule().canMove(attacker, attacker.position(), home, board)) {
+                    var defender = board.getPiece(home);
+                    if (defender.isEmpty() || rules.combatRule().resolve(attacker, defender.get()) == CombatResult.ATTACKER_WIN)
+                        worstReply = 1_000_000;
+                }
+            }
+        }
         for (Piece defender : own) {
             int preyDistance = Integer.MAX_VALUE;
             int anyDistance = Integer.MAX_VALUE;
             for (Piece attacker : enemy) {
-                int distance = Math.abs(defender.position().row() - attacker.position().row())
-                        + Math.abs(defender.position().col() - attacker.position().col());
+                int distance = Math.max(Math.abs(defender.position().row() - attacker.position().row()),
+                        Math.abs(defender.position().col() - attacker.position().col()));
                 anyDistance = Math.min(anyDistance, distance);
                 if (rules.combatRule().resolve(defender, attacker) == CombatResult.ATTACKER_WIN)
                     preyDistance = Math.min(preyDistance, distance);

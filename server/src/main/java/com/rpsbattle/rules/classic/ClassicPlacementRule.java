@@ -60,6 +60,9 @@ public final class ClassicPlacementRule implements PlacementRule {
         // Cell must be inside the board and currently empty
         if (!board.isInside(position)) return false;
         if (!board.isEmpty(position)) return false;
+        // Both strongholds must remain empty throughout initial deployment.
+        if (position.equals(new Position(board.rows() - 1, 0))
+                || position.equals(new Position(0, board.cols() - 1))) return false;
 
         int row = position.row();
 

@@ -1,4 +1,4 @@
-import { GameController } from "../game/game-controller.js?v=stage3";
+import { GameController } from "../game/game-controller.js?v=strongholds";
 import { openSettings } from "../ui/sound.js";
 import { toast } from "../ui/toast.js";
 export class SpectatorController extends GameController {

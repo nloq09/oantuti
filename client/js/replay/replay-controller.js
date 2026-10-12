@@ -1,4 +1,4 @@
-import { renderBoard } from "../game/board-renderer.js";
+import { renderBoard } from "../game/board-renderer.js?v=strongholds";
 import { ClientState } from "../game/game-state.js";
 import {
   replayFrames,

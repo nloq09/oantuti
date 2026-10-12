@@ -85,11 +85,12 @@ class ClassicMovementRuleTest {
     class IllegalMoves {
 
         @Test
-        @DisplayName("diagonal move is not allowed")
+        @DisplayName("all four diagonal moves are allowed")
         void diagonalMove() {
             Piece p = piece("R1", P1, 5, 5, PieceType.ROCK);
             board.placePiece(p);
-            assertThat(rule.canMove(p, new Position(5, 5), new Position(4, 4), board)).isFalse();
+            for (int dr : new int[]{-1, 1}) for (int dc : new int[]{-1, 1})
+                assertThat(rule.canMove(p, p.position(), new Position(5 + dr, 5 + dc), board)).isTrue();
         }
 
         @Test

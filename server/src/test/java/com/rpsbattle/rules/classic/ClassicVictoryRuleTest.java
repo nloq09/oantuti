@@ -47,6 +47,24 @@ class ClassicVictoryRuleTest {
     }
 
     @Test
+    void enemyCapturingEitherStrongholdWinsImmediately() {
+        place(P1, PieceType.ROCK, 7, 0);
+        place(P2, PieceType.PAPER, 8, 0);
+        assertThat(rule.checkResult(stateWithTurn(1))).contains(GameResult.win(P2));
+        board = Board.defaultBoard();
+        place(P1, PieceType.ROCK, 0, 8);
+        place(P2, PieceType.PAPER, 1, 8);
+        assertThat(rule.checkResult(stateWithTurn(1))).contains(GameResult.win(P1));
+    }
+
+    @Test
+    void ownPiecesCanDefendStrongholdsWithoutEndingGame() {
+        place(P1, PieceType.ROCK, 8, 0);
+        place(P2, PieceType.PAPER, 0, 8);
+        assertThat(rule.checkResult(stateWithTurn(1))).isEmpty();
+    }
+
+    @Test
     void defaultLimitEndsAtTwoHundredTurns() {
         place(P1, PieceType.ROCK, 7, 0);
         place(P2, PieceType.PAPER, 1, 0);

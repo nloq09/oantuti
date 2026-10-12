@@ -258,7 +258,7 @@ Luật:
 ```text
 - Board 9×9
 - Mỗi lượt đi một quân
-- Đi 1 ô ngang/dọc
+- Đi 1 ô theo 8 hướng, kể cả chéo
 - Đi vào quân địch để combat
 - Hết quân thì thua
 ```

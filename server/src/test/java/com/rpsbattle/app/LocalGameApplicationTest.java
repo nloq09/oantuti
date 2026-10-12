@@ -39,7 +39,7 @@ class LocalGameApplicationTest {
     @Test
     void humansMoveWithBothCoordinateFormatsThenFinishBySurrender() {
         StringWriter output = new StringWriter();
-        GameState finalState = LocalGameApplication.run(new StringReader("move A7 A6\na2 a3\nsurrender\n"), output);
+        GameState finalState = LocalGameApplication.run(new StringReader("move A7 A6\nb2 b3\nsurrender\n"), output);
         assertThat(finalState.phase()).isEqualTo(GamePhase.FINISHED);
         assertThat(finalState.result()).contains(GameResult.win(P2));
         assertThat(finalState.turnNumber()).isEqualTo(3);

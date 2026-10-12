@@ -1,5 +1,5 @@
 import { ClientState } from "./game-state.js?v=stage3";
-import { renderBoard } from "./board-renderer.js";
+import { renderBoard } from "./board-renderer.js?v=strongholds";
 import { boardClick } from "./input-controller.js";
 import { AnimationController } from "./animation-controller.js";
 import { GameSocket } from "../socket/game-socket.js?v=stage3";

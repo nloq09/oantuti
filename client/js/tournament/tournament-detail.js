@@ -30,10 +30,7 @@ function render(t) {
   if (t.revision < latest) return;
   latest = t.revision;
   document.querySelector("#name").textContent = t.name;
-  document.querySelector("#status").textContent = statusLabels[t.status];
   const p = t.progress;
-  document.querySelector("#progress").textContent =
-    `${p.completed}/${p.total} trận hoàn tất · ${p.running} đang chạy · ${p.pending} chờ · ${p.failed} lỗi hạ tầng`;
   const draft = t.status === "DRAFT";
   document.querySelector("#start").hidden = !draft;
   document.querySelector("#start").disabled = t.participants.length < 2;
@@ -102,11 +99,13 @@ function render(t) {
     card.className = "panel match-card";
     const title = document.createElement("h3");
     title.textContent = `${m.participantA.displayName} vs ${m.participantB.displayName}`;
-    const state = document.createElement("span");
-    state.className = "status-badge";
-    state.textContent =
-      m.status === "RUNNING" ? "● LIVE" : statusLabels[m.status];
-    card.append(title, state);
+    card.append(title);
+    if (m.status !== "RUNNING") {
+      const state = document.createElement("span");
+      state.className = "status-badge";
+      state.textContent = statusLabels[m.status];
+      card.append(state);
+    }
     if (m.status === "FINISHED") {
       const result = document.createElement("p");
       result.textContent = m.winnerParticipantId
@@ -167,13 +166,6 @@ else {
   getTournament(id)
     .then(render)
     .catch((error) => toast(error.message, true));
-  const stream = new TournamentStream(id, render, (state) => {
-    document.querySelector("#connection").textContent =
-      {
-        connected: "● Đã kết nối",
-        connecting: "◌ Đang kết nối…",
-        disconnected: "○ Đang kết nối lại",
-      }[state] || state;
-  });
+  const stream = new TournamentStream(id, render);
   window.addEventListener("pagehide", () => stream.close());
 }

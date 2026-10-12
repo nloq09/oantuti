@@ -10,7 +10,7 @@ def cell(position):
 
 
 def distance(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+    return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
 
 
 def evaluate(action, request):
@@ -33,8 +33,18 @@ def evaluate(action, request):
             return -100  # Attacker disappears; defender remains.
         score += 100
     board[target] = attacker  # Moving onto an empty cell or winning combat.
+    state_board = request["state"]["board"]
+    goal = (0, state_board["cols"] - 1) if request["player"] == "P1" else (state_board["rows"] - 1, 0)
+    home = (state_board["rows"] - 1, 0) if request["player"] == "P1" else (0, state_board["cols"] - 1)
+    if target == goal:
+        return 1_000_000
+    score += 4 * (distance(origin, goal) - distance(target, goal))
 
     enemies = [(pos, p) for pos, p in board.items() if p["ownerId"] != request["player"]]
+    guard = board.get(home)
+    if any(distance(pos, home) == 1 and (guard is None or BEATS[p["type"]] == guard["type"])
+           for pos, p in enemies):
+        score -= 1_000_000
     threats = sum(
         distance(pos, target) == 1
         and (BEATS[p["type"]] == attacker["type"] or p["type"] == attacker["type"])

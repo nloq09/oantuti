@@ -1,12 +1,20 @@
 .replay-page {
-  width: min(650px, 94vw);
+  width: min(1200px, 94vw);
   margin: 28px auto;
 }
 .replay-page h1 {
   font-size: 28px;
 }
-.replay-controls {
-  margin: 20px 0;
+.replay-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 650px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.replay-sidebar {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
 }
 .replay-controls .actions {
   justify-content: center;
@@ -25,7 +33,7 @@
   accent-color: var(--accent);
 }
 .replay-page .panel {
-  margin-top: 20px;
+  margin: 0;
 }
 .replay-page #event-log {
   font-size: 12px;
@@ -36,4 +44,12 @@
 }
 .replay-page .board {
   pointer-events: none;
+}
+@media (max-width: 900px) {
+  .replay-page {
+    width: min(650px, 94vw);
+  }
+  .replay-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

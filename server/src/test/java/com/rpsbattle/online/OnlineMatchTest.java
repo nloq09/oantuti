@@ -61,6 +61,32 @@ class OnlineMatchTest {
     }
 
     @Test
+    void strongholdsAreExcludedFromManualRepositionAndRandomDeployment() {
+        var room = room(MatchMode.HUMAN_VS_HUMAN, Clock.systemUTC());
+        room.join();
+        assertFalse(room.placementCells(P1).contains(new Position(8, 0)));
+        assertFalse(room.placementCells(P2).contains(new Position(0, 8)));
+        rejects("INVALID_PLACEMENT", () -> room.place(P1, PieceType.ROCK, new Position(8, 0), null));
+        rejects("INVALID_PLACEMENT", () -> room.place(P2, PieceType.ROCK, new Position(0, 8), null));
+        room.place(P1, PieceType.ROCK, new Position(6, 0), null);
+        var piece = room.state().board().getPiece(new Position(6, 0)).orElseThrow();
+        rejects("INVALID_PLACEMENT", () -> room.place(P1, PieceType.ROCK, new Position(8, 0), piece.id()));
+        assertTrue(room.state().board().getPiece(new Position(6, 0)).isPresent());
+        for (int i = 0; i < 20; i++) {
+            room.randomize(P1);
+            room.randomize(P2);
+            assertTrue(room.state().board().isEmpty(new Position(8, 0)));
+            assertTrue(room.state().board().isEmpty(new Position(0, 8)));
+        }
+        room.markReady(P1);
+        room.markReady(P2);
+        assertEquals("PLAYING", room.status());
+        assertEquals(36, room.state().board().allPieces().size());
+        assertTrue(room.state().board().isEmpty(new Position(8, 0)));
+        assertTrue(room.state().board().isEmpty(new Position(0, 8)));
+    }
+
+    @Test
     void bothReadyStartsValidatedThirtySixPieceBoard() {
         var room = room(MatchMode.HUMAN_VS_HUMAN, Clock.systemUTC());
         room.join();

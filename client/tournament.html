@@ -17,11 +17,6 @@
         ><button id="cancel" class="danger" hidden>Hủy giải</button>
       </nav>
       <h1 id="name" class="page-title">Đang tải giải đấu…</h1>
-      <div class="actions">
-        <span id="status" class="status-badge"></span
-        ><span id="connection" role="status"></span>
-      </div>
-      <p id="progress" aria-live="polite"></p>
       <div id="champion" class="panel champion" hidden></div>
       <nav class="actions tab-bar" aria-label="Nội dung giải đấu">
         <button data-tab="overview" aria-pressed="true">Tổng quan</button
@@ -66,7 +61,7 @@
     </main>
     <script
       type="module"
-      src="/js/tournament/tournament-detail.js?v=stage3"
+      src="/js/tournament/tournament-detail.js?v=no-live-badge"
     ></script>
   </body>
 </html>

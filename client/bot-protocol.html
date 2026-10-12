@@ -256,7 +256,7 @@
         </ul>
         <p>
           P1 xuất phát ở hàng 6–8, P2 ở hàng 0–2. P1 thường tiến lên, P2 thường
-          tiến xuống, nhưng <strong>cả hai được đi đủ bốn hướng</strong>. Giao
+          tiến xuống, nhưng <strong>cả hai được đi đủ 8 hướng, kể cả chéo</strong>. Giao
           diện xoay góc nhìn để quân của người xem ở dưới; dữ liệu bot luôn giữ
           tọa độ server. Không xoay from/to khi bot là P2.
         </p>
@@ -327,13 +327,16 @@
           </li>
         </ol>
         <p>
-          Luật đang dùng: mỗi nước di chuyển một ô ngang/dọc, không chéo, không
+          Luật đang dùng: mỗi nước di chuyển một ô theo 8 hướng, kể cả chéo, không
           ra ngoài bàn, không vào ô có quân cùng bên. ROCK thắng SCISSORS;
           SCISSORS thắng PAPER; PAPER thắng ROCK.
           <strong>Cùng loại thì cả hai bị loại</strong>. Khi bên tấn công thắng,
           quân đó sống ở ô đích; khi thua, quân phòng thủ vẫn ở ô đích. Nếu cả
           hai cùng loại, ô đích trống sau trận đánh.
         </p>
+        <p>Cứ điểm P1 ở A9 <code>(8,0)</code>, P2 ở I1 <code>(0,8)</code>.
+          Đội mất cứ điểm hoặc hết quân thua ngay. Chiếm cứ điểm cần quân tấn công
+          sống và đứng trên ô đó sau giao chiến. Không được đặt quân vào cứ điểm khi xếp đội hình ban đầu; có thể di chuyển quân vào để phòng thủ khi đang chơi.</p>
         <p>
           Trong ví dụ trên, ROCK ở <code>(4,4)</code> đi lên
           <code>(3,4)</code> ăn SCISSORS. Đi sang <code>(4,5)</code> tuy hợp lệ

@@ -61,9 +61,9 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 ## Luật chơi
 
 1. Mỗi bên có **6 Búa, 6 Bao, 6 Kéo**; đặt trong ba hàng của mình. Trận bắt đầu khi cả hai bên đủ quân và sẵn sàng.
-2. Mỗi lượt di chuyển một quân **một ô lên/xuống/trái/phải**; không đi chéo, ra ngoài bàn hoặc vào ô có quân cùng bên.
+2. Mỗi lượt di chuyển một quân **một ô theo cả 8 hướng**, gồm ngang, dọc và chéo; không ra ngoài bàn hoặc vào ô có quân cùng bên.
 3. Đi vào quân đối thủ để giao chiến: **Búa thắng Kéo, Kéo thắng Bao, Bao thắng Búa**. Cùng loại thì cả hai bị loại.
-4. Loại hết quân đối thủ để thắng; cả hai hết quân thì hòa. Đầu hàng thì đối thủ thắng.
+4. Cứ điểm của mỗi đội nằm ở **góc dưới bên trái theo góc nhìn của đội đó**: P1 ở **A9 `(8,0)`**, P2 ở **I1 `(0,8)`**. Chiếm cứ điểm đối thủ (quân tấn công phải sống và đứng trên ô đó sau giao chiến) hoặc loại hết quân đối thủ thì **thắng ngay**. Không được đặt quân vào cứ điểm khi xếp đội hình ban đầu; chỉ được di chuyển quân vào để phòng thủ sau khi trận bắt đầu. Cả hai hết quân thì hòa. Đầu hàng thì đối thủ thắng.
 5. Giới hạn mặc định **200 lượt**: bên còn nhiều quân hơn thắng, bằng nhau thì hòa.
 6. Thời gian lượt online mặc định **30 giây**; hết giờ server tự bỏ lượt. Đây là cấu hình server, không phải lựa chọn trên client.
 

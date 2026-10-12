@@ -50,13 +50,32 @@ class TacticalBotAgentTest {
     @Test
     void seesImmediateRecaptureAfterApparentlyWinningAttack() {
         var view = view(piece("bot", P1, PieceType.ROCK, 4, 4), piece("bait", P2, PieceType.SCISSORS, 4, 5), piece("trap", P2, PieceType.PAPER, 3, 5));
-        assertThat(((MoveAction) choose(view)).to()).isIn(new Position(5, 4), new Position(4, 3));
+        var destination = ((MoveAction) choose(view)).to();
+        assertThat(Math.max(Math.abs(destination.row() - 3), Math.abs(destination.col() - 5))).isGreaterThan(1);
     }
 
     @Test
     void advancesTowardsFavorableOpponent() {
         var view = view(piece("bot", P1, PieceType.ROCK, 8, 4), piece("prey", P2, PieceType.SCISSORS, 0, 4));
-        assertThat(((MoveAction) choose(view)).to()).isEqualTo(new Position(7, 4));
+        var destination = ((MoveAction) choose(view)).to();
+        assertThat(destination.row()).isEqualTo(7);
+        assertThat(Math.abs(destination.col() - 4)).isLessThanOrEqualTo(1);
+    }
+
+    @Test
+    void takesStrongholdInsteadOfChasingMaterial() {
+        var view = view(piece("bot", P1, PieceType.ROCK, 1, 7),
+                piece("prey", P2, PieceType.SCISSORS, 1, 6),
+                piece("reserve", P2, PieceType.PAPER, 3, 3));
+        assertThat(((MoveAction) choose(view)).to()).isEqualTo(new Position(0, 8));
+    }
+
+    @Test
+    void stopsEnemyFromEnteringOwnStronghold() {
+        var view = view(piece("bot", P1, PieceType.ROCK, 6, 2),
+                piece("invader", P2, PieceType.SCISSORS, 7, 1),
+                piece("reserve", P2, PieceType.PAPER, 0, 4));
+        assertThat(((MoveAction) choose(view)).to()).isEqualTo(new Position(7, 1));
     }
 
     @Test

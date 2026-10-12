@@ -116,7 +116,7 @@ class GameEngineTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"2,4", "3,3", "9,4", "8,8"})
+    @CsvSource({"2,4", "2,2", "9,4", "8,8"})
     void rejectsIllegalMovement(int row, int col) {
         rejects(state(null), P1, MoveAction.of(P1, "a", FROM, new Position(row, col)), "Illegal movement");
     }
