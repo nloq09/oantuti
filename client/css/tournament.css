@@ -1,0 +1,127 @@
+.tournament-page {
+  width: min(1150px, 92vw);
+  margin: 32px auto;
+  color: var(--text);
+}
+.tournament-page h1 {
+  font-size: clamp(28px, 4vw, 44px);
+}
+.tournament-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.tournament-page label {
+  display: block;
+  margin: 12px 0;
+}
+.tournament-page input:not([type="checkbox"]),
+.tournament-page select {
+  width: 100%;
+  margin: 8px 0 12px;
+}
+.bot-option {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #122a40;
+  border: 1px solid #69849c;
+  border-radius: 7px;
+}
+.bot-option input {
+  accent-color: var(--accent);
+  width: 20px;
+  height: 20px;
+}
+.tournament-card,
+.match-card {
+  margin-bottom: 16px;
+}
+.tournament-card h3,
+.match-card h3 {
+  margin-top: 0;
+}
+.status-badge {
+  display: inline-block;
+  padding: 8px 14px;
+  background: #142a40;
+  border: 1px solid #b99455;
+  border-radius: 7px;
+  font-size: 13px;
+}
+.tab-bar {
+  margin: 24px 0;
+}
+.tab-bar [aria-pressed="true"] {
+  background: #126db1;
+  border-color: #82ceff;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.stats-grid div {
+  padding: 16px;
+  background: #10283f;
+  border: 1px solid #456882;
+  border-radius: 7px;
+}
+.stats-grid strong {
+  display: block;
+  font-size: 26px;
+  color: var(--accent);
+}
+.participant-row {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #63819755;
+}
+.champion {
+  margin: 22px 0;
+  text-align: center;
+  font-size: 24px;
+  color: #ffe2a0;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+th,
+td {
+  padding: 14px 10px;
+  border-bottom: 1px solid #64819a66;
+  white-space: nowrap;
+}
+th {
+  color: var(--accent);
+  font-size: 12px;
+}
+.tournament-page a:not(.button) {
+  color: var(--accent);
+}
+@media (max-width: 760px) {
+  .tournament-grid {
+    grid-template-columns: 1fr;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tournament-page nav.actions {
+    gap: 8px;
+  }
+  .tournament-page nav.actions .button,
+  .tournament-page nav.actions button {
+    padding: 10px;
+    font-size: 12px;
+  }
+}

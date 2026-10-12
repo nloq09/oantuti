@@ -6,7 +6,7 @@
 - `/game.html`: mã phòng, trạng thái tham gia/sẵn sàng, thời gian, số quân hai bên, xếp quân, bỏ lượt, đầu hàng, rời phòng, diễn biến. Quân của người chơi luôn ở dưới kể cả P2. Nút Xóa chỉ xóa diễn biến đang hiển thị.
 - `/result.html`: kết quả, số lượt/quân, tạo ván mới và xem sự kiện trong trạng thái cuối trận. Nhật ký này không phải replay đầy đủ.
 
-ZIP, manifest, sửa source, build độc lập và phát lại toàn trận chưa có API nên không hiển thị thành nút hoạt động. C++/Java được biên dịch trong Docker khi bắt đầu trận thật.
+ZIP, manifest riêng, sửa source và build độc lập chưa có API nên không hiển thị thành nút hoạt động. C++/Java được biên dịch trong Docker khi bắt đầu trận thật. Chặng 3 bổ sung Giải đấu tại `/tournaments.html`, chi tiết/ranking tại `/tournament.html`, khán giả chỉ đọc trong game.html và replay đầy đủ tại `/replay.html`; xem [CHANG-3.md](CHANG-3.md).
 
 ## Nền minh họa
 

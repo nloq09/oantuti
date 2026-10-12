@@ -1,4 +1,13 @@
 const errors = {
+  TOURNAMENT_NOT_FOUND: "Không tìm thấy giải đấu.",
+  TOURNAMENT_LOCKED:
+    "Giải đấu đã bắt đầu hoặc kết thúc; không thể sửa danh sách bot.",
+  NOT_ENOUGH_BOTS: "Cần ít nhất 2 bot để bắt đầu giải.",
+  DUPLICATE_PARTICIPANT: "Bot này đã tham gia giải.",
+  PARTICIPANT_LIMIT: "Mỗi giải có tối đa 10 bot.",
+  INVALID_TOURNAMENT_NAME: "Tên giải cần từ 1 đến 80 ký tự.",
+  REPLAY_NOT_READY: "Replay chỉ sẵn sàng sau khi trận kết thúc.",
+  SPECTATOR_READ_ONLY: "Khán giả chỉ được xem trận.",
   BOT_REQUIRED: "Hãy chọn bot của bạn trước khi tạo trận bot đấu bot.",
   BOT_SANDBOX_UNAVAILABLE:
     "Chưa có Docker Linux hoặc image cho ngôn ngữ này. Xem hướng dẫn bot để thiết lập.",

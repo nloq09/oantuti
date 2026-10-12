@@ -25,6 +25,19 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 - Tự kết nối lại và nhận trạng thái đầy đủ khi WebSocket bị mất kết nối.
 - Màn hình kết quả hiển thị thắng/thua/hòa, thời gian, số lượt và quân còn lại; tạo ván mới hoặc về trang chủ.
 - Nhật ký ở màn hình kết quả chỉ chứa sự kiện trong trạng thái cuối trận, **không phải replay toàn trận**.
+- Nút **Replay đầy đủ** mở toàn bộ diễn biến từ trạng thái đầu trận, hỗ trợ tua, bước trước/sau, phát/dừng và ×1/×2/×4.
+
+### Giải đấu, xếp hạng và khán giả — Chặng 3
+
+- Home → **Giải đấu**: tạo giải Round Robin, chọn từ 2 đến 10 bot đã upload. Mỗi cặp gặp nhau một lần, tổng `n × (n − 1) / 2` trận.
+- Bản nháp cho phép thêm/gỡ bot; Bắt đầu kiểm tra lại token và Docker rồi khóa danh sách.
+- Server tự cấu hình hai seat trong chế độ `HUMAN_VS_HUMAN`, xếp quân, sẵn sàng và chạy qua Match/GameEngine hiện có. Không tạo game mode hoặc engine mới.
+- Hàng đợi giới hạn mặc định 4 trận đồng thời trên toàn bộ giải đấu trong một server. Một trận lỗi không làm dừng các trận còn lại; có thể hủy giải.
+- Cập nhật trực tiếp tiến độ, LIVE, kết quả và bảng xếp hạng qua WebSocket.
+- Thắng 3, hòa 1, thua 0 điểm; ưu tiên điểm → số thắng → tổng quân còn lại → participant ID. Trận lỗi hạ tầng `FAILED` không tính điểm.
+- Xem LIVE trong `game.html` ở chế độ khán giả chỉ đọc, không chiếm seat; server từ chối thao tác chơi từ spectator.
+- Giải hoàn tất hiển thị vô địch; replay đầy đủ và xuất JSON metadata/participants/matches/ranking. Token bot không xuất trong JSON công khai.
+- Giải đấu và replay lưu trong RAM, không có login/database. Chi tiết ở [CHANG-3.md](docs/CHANG-3.md).
 
 ### Bot của người chơi
 
@@ -35,7 +48,7 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 - Bot được tự xếp 18 quân, tự sẵn sàng và tự chọn nước đi; chủ bot theo dõi trận.
 - Bot sai giao thức, trả nước đi không hợp lệ, lỗi tiến trình hoặc quá thời gian sẽ bị xử thua.
 - Bot riêng chạy trong container Docker; chơi tay và bot chiến thuật có sẵn **không cần Docker**.
-- ZIP, tải manifest riêng, sửa mã nguồn, build độc lập và replay toàn trận trên web chưa được hỗ trợ.
+- ZIP, tải manifest riêng, sửa mã nguồn và build độc lập chưa được hỗ trợ.
 
 ### Giao diện
 
@@ -161,6 +174,10 @@ Cấu hình mặc định nằm trong `server/src/main/resources/application.yml
 - `rps.turn-seconds`: mặc định 30 giây.
 - `rps.bots.enabled`: mặc định `true`; đặt `false` để tắt runner bot riêng.
 - `rps.bots.directory`: mặc định `data/bots`, tính từ thư mục làm việc server.
+- `rps.tournament.max-concurrent-matches`: mặc định 4, cho phép 1–4.
+- `rps.tournament.match-timeout-seconds`: mặc định 900 giây, timeout hạ tầng để không giữ slot mãi.
+- `rps.tournament.bot-delay-millis`: mặc định 600 ms để dễ xem LIVE; dùng 0 trên server stress test.
+- `rps.bot-tick-millis`: mặc định 200 ms; dùng 10 trên server stress test.
 
 Ví dụ chạy JAR với thời gian 60 giây:
 
@@ -178,10 +195,17 @@ REST hiện có:
 - `POST /api/matches/{id}/join`: tham gia, tùy chọn `botId`, `botToken`.
 - `POST /api/bots`: tải multipart với `name` và `file`, trả metadata/quyền sử dụng bot.
 - `GET /api/bots/capabilities`: trạng thái Docker/image từng ngôn ngữ và giới hạn kích thước file.
+- `POST /api/tournaments`, `GET /api/tournaments`, `GET /api/tournaments/{id}`: tạo/list/detail giải.
+- `POST /api/tournaments/{id}/participants`, `DELETE /api/tournaments/{id}/participants/{participantId}`: thêm/gỡ bot ở bản nháp.
+- `POST /api/tournaments/{id}/start`, `POST /api/tournaments/{id}/cancel`: bắt đầu/hủy.
+- `GET /api/tournaments/{id}/ranking`, `GET /api/tournaments/{id}/export`: xếp hạng và xuất JSON.
+- `GET /api/matches/{id}/replay`: initialState, full events, result, finalState và tên hai bên.
 
 WebSocket `/ws/game` nhận JSON với thông tin vị trí/token. Các thông điệp chính: `JOIN_MATCH`, `RESUME_MATCH`, `PLACE`, `RANDOM_PLACEMENT`, `RESET_PLACEMENT`, `READY`, `UNREADY`, `ACTION`, `STATE_REQUEST`, `LEAVE`, `PING`. Server trả `GAME_STATE`, `ACTION_REJECTED`, `LEFT_ROOM`, `PONG`. Snapshot server là nguồn trạng thái chính; client không tự quyết định kết quả nước đi.
 
 Client tự dùng `ws://` với HTTP và `wss://` với HTTPS, cùng host với trang web.
+
+Khán giả gửi `SPECTATE_MATCH` với `matchId`, nhận snapshot `GAME_STATE`/`GAME_OVER`. Theo dõi giải gửi `WATCH_TOURNAMENT` với `tournamentId`, nhận `TOURNAMENT_STATE`. Hai subscription không gửi token người chơi/bot; không có quyền PLACE/READY/ACTION/LEAVE-as-player.
 
 ## Cấu trúc project
 
@@ -194,6 +218,9 @@ oantuti/
 │   ├── bots.html                   # Quản lý, tải và đấu thử bot
 │   ├── game.html                   # Xếp quân và chơi online
 │   ├── result.html                 # Kết quả và sự kiện cuối trận
+│   ├── tournaments.html            # Danh sách, tạo giải và chọn bot
+│   ├── tournament.html             # Tiến độ, các trận, ranking, champion
+│   ├── replay.html                 # Phát lại toàn trận, tua và tốc độ
 │   ├── bot-guide.html              # Hướng dẫn upload, bot mẫu
 │   ├── bot-protocol.html           # Giao thức stdin/stdout
 │   ├── css/                        # Theme, layout từng trang, hiệu ứng
@@ -206,6 +233,9 @@ oantuti/
 │   │   ├── api/                    # REST phòng và upload bot
 │   │   ├── socket/                 # Kết nối, reconnect WebSocket
 │   │   ├── game/                   # Client state, board, input, animation
+│   │   ├── tournament/             # REST/WS giải đấu, ranking và các trang
+│   │   ├── spectator/              # GameController chỉ đọc
+│   │   ├── replay/                 # Dựng board từ event facts, không gọi engine
 │   │   └── ui/                     # Dialog, thông báo, timer, âm thanh
 │   ├── tests/                      # Node test runner
 │   ├── demo/                       # Demo cố định của chặng 2A
@@ -232,6 +262,8 @@ oantuti/
 │       │       ├── websocket/       # Gateway, handler, message, cấu hình
 │       │       ├── config/          # Cấu hình online
 │       │       ├── replay/          # Log và replay cho CLI
+│       │       ├── tournament/      # Domain, registry, scheduler, execution, ranking
+│       │       ├── spectator/       # Subscription chỉ đọc và snapshot live
 │       │       └── app/             # Entry point console và CLI bot
 │       └── test/                    # Unit, architecture, API/WS, Docker tests
 ├── tools/                          # Kiểm tra bot mẫu/upload, sinh hướng dẫn
@@ -270,6 +302,8 @@ node tools/verify-uploaded-bots.mjs
 
 Script tạo bot và phòng thử trên server đích; mặc định `http://127.0.0.1:8081`, đổi bằng biến `RPS_TEST_URL`. Chỉ dùng với server kiểm thử. Test Docker trong Gradle có thể **SKIPPED** nếu thiếu Engine/image; skipped không có nghĩa đã kiểm chứng sandbox.
 
+Stress test Chặng 3: dùng server riêng cổng 8081 với `--rps.bot-tick-millis=10 --rps.tournament.bot-delay-millis=0`, sau đó chạy `node tools/verify-tournaments.mjs`. Script tạo 4/10 bot, kiểm tra 6/45 trận, lỗi bot, spectator, replay và dọn container/phòng. Không chạy lên server đang dùng cho người chơi.
+
 ## Chương trình console và replay
 
 Chặng 1 được giữ độc lập với server web. Trong thư mục `server`:
@@ -286,7 +320,7 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 ## Giới hạn hiện tại
 
 - Phòng và trận lưu trong RAM: restart server làm mất phòng/trận. File bot có thể còn trên ổ đĩa, nhưng danh sách và token phía client phụ thuộc storage trình duyệt.
-- Chưa có tài khoản, database, bảng xếp hạng, matchmaking tự động hoặc replay đầy đủ trên web.
+- Chưa có tài khoản, database, xếp hạng người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
 - Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng.
 - Hosting chỉ chạy một container ứng dụng không tự cung cấp Docker Engine cho runner bot riêng. Muốn giữ tính năng upload bot, cần môi trường phù hợp hoặc worker Docker riêng.
 - Bản hiện tại phù hợp demo/kiểm thử; public với người dùng không tin cậy cần bổ sung kiểm soát truy cập, quota/rate limit và cách ly worker.
@@ -294,6 +328,7 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 ## Tài liệu liên quan
 
 - [Giao diện và các màn hình](docs/CLIENT-BATTLE-UI.md).
+- [Chặng 3: Tournament, Ranking, Spectator và Replay](docs/CHANG-3.md).
 - [Upload bot và Docker](docs/BOT-UPLOAD.md).
 - [Giao thức bot chi tiết](docs/BOT-PROTOCOL.md).
 - [Hướng dẫn chặng 2B](docs/CHANG-2B-CLIENT.md), [đặc tả client](docs/CHANG-2B-CLIENT-SPEC.md).

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Giải đấu · RPS Battle</title>
+    <link rel="stylesheet" href="/css/global.css" />
+    <link rel="stylesheet" href="/css/battle-theme.css" />
+    <link rel="stylesheet" href="/css/tournament.css" />
+  </head>
+  <body>
+    <main class="tournament-page">
+      <nav class="actions">
+        <a class="button" href="/">Trang chủ</a
+        ><a class="button" href="/bots.html">Bot của tôi</a>
+      </nav>
+      <h1 class="page-title">Đấu trường giải đấu</h1>
+      <p class="muted">
+        Round Robin · Mỗi cặp bot gặp nhau một lần · Thắng 3, hòa 1, thua 0 điểm
+      </p>
+      <div class="tournament-grid">
+        <section class="panel">
+          <h2>Tạo giải đấu</h2>
+          <form id="create-tournament">
+            <label for="tournament-name">Tên giải đấu</label
+            ><input
+              id="tournament-name"
+              required
+              maxlength="80"
+              placeholder="RPS Championship"
+            />
+            <p>Thể thức: Round Robin</p>
+            <h3>Chọn bot của bạn</h3>
+            <div id="bot-options"></div>
+            <p id="bot-empty" hidden>
+              Cần ít nhất 2 bot để tạo giải.
+              <a href="/bots.html">Đi tới Bot của tôi →</a>
+            </p>
+            <button class="primary wide" id="create">Tạo giải đấu</button>
+          </form>
+        </section>
+        <section>
+          <h2>Các giải đấu</h2>
+          <div id="tournament-list" aria-live="polite"></div>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/js/tournament/tournament-list.js"></script>
+  </body>
+</html>

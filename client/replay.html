@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Replay · RPS Battle</title>
+    <link rel="stylesheet" href="/css/global.css" />
+    <link rel="stylesheet" href="/css/game.css" />
+    <link rel="stylesheet" href="/css/battle-theme.css" />
+    <link rel="stylesheet" href="/css/replay.css" />
+  </head>
+  <body>
+    <main class="replay-page">
+      <nav class="actions">
+        <a class="button" href="/tournaments.html">Giải đấu</a
+        ><a class="button" href="/">Trang chủ</a>
+      </nav>
+      <h1 id="replay-title" class="page-title">Đang tải replay…</h1>
+      <p id="replay-status" role="status"></p>
+      <div class="board-frame">
+        <div id="board" class="board" aria-label="Bàn cờ replay"></div>
+      </div>
+      <section class="panel replay-controls">
+        <div class="actions">
+          <button id="first" aria-label="Về đầu">|◀</button
+          ><button id="previous" aria-label="Bước trước">◀</button
+          ><button id="play">▶ Phát</button
+          ><button id="next" aria-label="Bước tiếp">▶</button
+          ><button id="last" aria-label="Tới cuối">▶|</button
+          ><label for="speed">Tốc độ</label
+          ><select id="speed">
+            <option value="1">×1</option>
+            <option value="2">×2</option>
+            <option value="4">×4</option>
+          </select>
+        </div>
+        <label for="seek">Tua theo bước/lượt</label
+        ><input id="seek" type="range" min="0" value="0" />
+        <label for="turn-seek">Đi đến lượt</label
+        ><input id="turn-seek" type="number" min="0" value="0" />
+        <p id="position"></p>
+      </section>
+      <section class="panel">
+        <h2>Diễn biến</h2>
+        <ol id="event-log"></ol>
+      </section>
+    </main>
+    <script
+      type="module"
+      src="/js/replay/replay-controller.js?v=stage3-final"
+    ></script>
+  </body>
+</html>

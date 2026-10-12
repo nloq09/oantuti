@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Chi tiết giải đấu · RPS Battle</title>
+    <link rel="stylesheet" href="/css/global.css" />
+    <link rel="stylesheet" href="/css/battle-theme.css" />
+    <link rel="stylesheet" href="/css/tournament.css" />
+  </head>
+  <body>
+    <main class="tournament-page">
+      <nav class="actions">
+        <a class="button" href="/tournaments.html">← Các giải đấu</a
+        ><a id="export" class="button">Xuất JSON</a
+        ><button id="start" class="primary" hidden>Bắt đầu giải</button
+        ><button id="cancel" class="danger" hidden>Hủy giải</button>
+      </nav>
+      <h1 id="name" class="page-title">Đang tải giải đấu…</h1>
+      <div class="actions">
+        <span id="status" class="status-badge"></span
+        ><span id="connection" role="status"></span>
+      </div>
+      <p id="progress" aria-live="polite"></p>
+      <div id="champion" class="panel champion" hidden></div>
+      <nav class="actions tab-bar" aria-label="Nội dung giải đấu">
+        <button data-tab="overview" aria-pressed="true">Tổng quan</button
+        ><button data-tab="matches" aria-pressed="false">Các trận</button
+        ><button data-tab="ranking" aria-pressed="false">Xếp hạng</button>
+      </nav>
+      <section id="overview" class="panel">
+        <h2>Tổng quan · Round Robin</h2>
+        <div id="counts" class="stats-grid"></div>
+        <h3>Bot tham gia</h3>
+        <div id="participants"></div>
+        <form id="add-participant" hidden>
+          <label for="available-bot">Thêm bot của bạn</label
+          ><select id="available-bot"></select
+          ><button>Thêm bot</button>
+        </form>
+      </section>
+      <section id="matches" hidden><div id="match-list"></div></section>
+      <section id="ranking" class="panel" hidden>
+        <h2>Bảng xếp hạng</h2>
+        <p class="muted">
+          Ưu tiên điểm → số trận thắng → tổng quân còn lại → ID participant.
+        </p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Hạng</th>
+                <th>Bot</th>
+                <th>Trận</th>
+                <th>Thắng</th>
+                <th>Hòa</th>
+                <th>Thua</th>
+                <th>Điểm</th>
+                <th>Quân còn</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script
+      type="module"
+      src="/js/tournament/tournament-detail.js?v=stage3"
+    ></script>
+  </body>
+</html>

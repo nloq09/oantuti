@@ -143,6 +143,9 @@ select {
   margin: 30px auto;
   gap: 18px;
 }
+.hero #hero-settings:last-child {
+  grid-column: 1 / -1;
+}
 .hero .actions .button,
 .hero .actions button {
   font-size: 20px;
@@ -403,7 +406,7 @@ select {
   text-shadow: 0 5px #513b17;
 }
 .result-screen .actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   max-width: none;
   gap: 10px;
 }

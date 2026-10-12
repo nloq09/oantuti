@@ -1,0 +1,179 @@
+import { savedBots } from "../api/bot-api.js";
+import {
+  getTournament,
+  addParticipant,
+  removeParticipant,
+  startTournament,
+  cancelTournament,
+  TournamentStream,
+} from "./tournament-api.js";
+import { statusLabels, renderRanking } from "./ranking-renderer.js";
+import { toast } from "../ui/toast.js";
+import { confirmAction } from "../ui/modal.js";
+const id = new URLSearchParams(location.search).get("id");
+let latest = -1,
+  busy = false;
+document.querySelector("#export").href =
+  "/api/tournaments/" + encodeURIComponent(id) + "/export";
+async function action(operation) {
+  if (busy) return;
+  busy = true;
+  try {
+    render(await operation());
+  } catch (error) {
+    toast(error.message, true);
+  } finally {
+    busy = false;
+  }
+}
+function render(t) {
+  if (t.revision < latest) return;
+  latest = t.revision;
+  document.querySelector("#name").textContent = t.name;
+  document.querySelector("#status").textContent = statusLabels[t.status];
+  const p = t.progress;
+  document.querySelector("#progress").textContent =
+    `${p.completed}/${p.total} trận hoàn tất · ${p.running} đang chạy · ${p.pending} chờ · ${p.failed} lỗi hạ tầng`;
+  const draft = t.status === "DRAFT";
+  document.querySelector("#start").hidden = !draft;
+  document.querySelector("#start").disabled = t.participants.length < 2;
+  document.querySelector("#cancel").hidden = ["FINISHED", "CANCELLED"].includes(
+    t.status,
+  );
+  const champion = document.querySelector("#champion");
+  champion.hidden = !t.champion;
+  champion.textContent = t.champion
+    ? `🏆 VÔ ĐỊCH · ${t.champion.displayName} · ${t.champion.points} điểm`
+    : "";
+  const counts = document.querySelector("#counts");
+  counts.replaceChildren();
+  for (const [label, value] of [
+    ["Bot tham gia", t.participants.length],
+    ["Tổng trận", p.total],
+    ["Hoàn thành", p.completed],
+    ["Đang chạy", p.running],
+    ["Chờ chạy", p.pending],
+    ["Lỗi hạ tầng", p.failed],
+  ]) {
+    const cell = document.createElement("div"),
+      strong = document.createElement("strong");
+    strong.textContent = value;
+    cell.append(document.createTextNode(label), strong);
+    counts.append(cell);
+  }
+  const participants = document.querySelector("#participants");
+  participants.replaceChildren();
+  for (const bot of t.participants) {
+    const row = document.createElement("div");
+    row.className = "participant-row";
+    const name = document.createElement("span");
+    name.textContent = bot.displayName;
+    row.append(name);
+    if (draft) {
+      const remove = document.createElement("button");
+      remove.textContent = "Gỡ";
+      remove.onclick = () =>
+        action(() => removeParticipant(id, bot.participantId));
+      row.append(remove);
+    }
+    participants.append(row);
+  }
+  const available = document.querySelector("#available-bot"),
+    selected = available.value;
+  available.replaceChildren();
+  for (const bot of savedBots().filter(
+    (bot) => !t.participants.some((p) => p.botId === bot.id),
+  ))
+    available.append(new Option(`${bot.name} · ${bot.language}`, bot.id));
+  if ([...available.options].some((o) => o.value === selected))
+    available.value = selected;
+  document.querySelector("#add-participant").hidden =
+    !draft || !available.options.length || t.participants.length >= 10;
+  const matches = document.querySelector("#match-list");
+  matches.replaceChildren();
+  if (!t.matches.length) {
+    const text = document.createElement("p");
+    text.className = "panel";
+    text.textContent = "Lịch đấu được tạo khi bắt đầu giải.";
+    matches.append(text);
+  }
+  for (const m of t.matches) {
+    const card = document.createElement("article");
+    card.className = "panel match-card";
+    const title = document.createElement("h3");
+    title.textContent = `${m.participantA.displayName} vs ${m.participantB.displayName}`;
+    const state = document.createElement("span");
+    state.className = "status-badge";
+    state.textContent =
+      m.status === "RUNNING" ? "● LIVE" : statusLabels[m.status];
+    card.append(title, state);
+    if (m.status === "FINISHED") {
+      const result = document.createElement("p");
+      result.textContent = m.winnerParticipantId
+        ? `Thắng: ${m.winnerParticipantId === m.participantA.participantId ? m.participantA.displayName : m.participantB.displayName}`
+        : "Hòa";
+      card.append(result);
+    }
+    if (m.failure) {
+      const reason = document.createElement("p");
+      reason.textContent =
+        m.failure === "BOT_FAILED"
+          ? "Bot lỗi hoặc quá thời gian; kết quả theo luật xử thua hiện tại."
+          : "Lỗi: " + m.failure;
+      card.append(reason);
+    }
+    if (m.onlineMatchId && ["RUNNING", "FINISHED"].includes(m.status)) {
+      const link = document.createElement("a");
+      link.className = "button primary";
+      link.textContent =
+        m.status === "RUNNING" ? "Xem trực tiếp" : "Xem replay";
+      link.href =
+        (m.status === "RUNNING"
+          ? "/game.html?v=stage3&spectate="
+          : "/replay.html?match=") + encodeURIComponent(m.onlineMatchId);
+      card.append(document.createElement("br"), link);
+    }
+    matches.append(card);
+  }
+  renderRanking(document.querySelector("#ranking-rows"), t.ranking);
+}
+document.querySelectorAll("[data-tab]").forEach(
+  (button) =>
+    (button.onclick = () => {
+      document.querySelectorAll("[data-tab]").forEach((item) => {
+        const active = item === button;
+        item.setAttribute("aria-pressed", String(active));
+        document.querySelector("#" + item.dataset.tab).hidden = !active;
+      });
+    }),
+);
+document.querySelector("#start").onclick = () =>
+  action(() => startTournament(id));
+document.querySelector("#cancel").onclick = () =>
+  confirmAction(
+    "Hủy giải đấu?",
+    "Các trận đang chạy sẽ bị dừng. Kết quả đã hoàn tất vẫn được giữ.",
+    () => action(() => cancelTournament(id)),
+  );
+document.querySelector("#add-participant").onsubmit = (event) => {
+  event.preventDefault();
+  const bot = savedBots().find(
+    (bot) => bot.id === document.querySelector("#available-bot").value,
+  );
+  if (bot) action(() => addParticipant(id, bot));
+};
+if (!id) location.replace("/tournaments.html");
+else {
+  getTournament(id)
+    .then(render)
+    .catch((error) => toast(error.message, true));
+  const stream = new TournamentStream(id, render, (state) => {
+    document.querySelector("#connection").textContent =
+      {
+        connected: "● Đã kết nối",
+        connecting: "◌ Đang kết nối…",
+        disconnected: "○ Đang kết nối lại",
+      }[state] || state;
+  });
+  window.addEventListener("pagehide", () => stream.close());
+}

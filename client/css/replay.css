@@ -1,0 +1,39 @@
+.replay-page {
+  width: min(650px, 94vw);
+  margin: 28px auto;
+}
+.replay-page h1 {
+  font-size: 28px;
+}
+.replay-controls {
+  margin: 20px 0;
+}
+.replay-controls .actions {
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+.replay-controls label {
+  font-size: 12px;
+}
+.replay-controls button {
+  padding: 10px;
+}
+.replay-controls input[type="range"] {
+  width: 100%;
+  margin-top: 18px;
+  accent-color: var(--accent);
+}
+.replay-page .panel {
+  margin-top: 20px;
+}
+.replay-page #event-log {
+  font-size: 12px;
+  line-height: 1.8;
+  max-height: 250px;
+  overflow: auto;
+  padding-left: 20px;
+}
+.replay-page .board {
+  pointer-events: none;
+}

@@ -1,8 +1,8 @@
-import { ClientState } from "./game-state.js";
+import { ClientState } from "./game-state.js?v=stage3";
 import { renderBoard } from "./board-renderer.js";
 import { boardClick } from "./input-controller.js";
 import { AnimationController } from "./animation-controller.js";
-import { GameSocket } from "../socket/game-socket.js";
+import { GameSocket } from "../socket/game-socket.js?v=stage3";
 import { TurnTimer } from "../ui/timer.js";
 import { toast } from "../ui/toast.js";
 import { modal, confirmAction } from "../ui/modal.js";
@@ -12,6 +12,7 @@ import { createMatch } from "../api/match-api.js";
 export class GameController {
   constructor(seat) {
     this.state = new ClientState();
+    this.state.role = seat.role || "PLAYER";
     this.seat = seat;
     this.board = document.querySelector("#board");
     this.animator = new AnimationController(this.board);
@@ -20,7 +21,12 @@ export class GameController {
     this.finished = false;
     this.seen = new Set();
     this.socket = new GameSocket(
-      { matchId: seat.matchId, playerId: seat.playerId, token: seat.token },
+      {
+        matchId: seat.matchId,
+        playerId: seat.playerId,
+        token: seat.token,
+        ...(seat.role ? { role: seat.role } : {}),
+      },
       (message) => this.receive(message),
       (status) => this.connection(status),
     );
@@ -95,9 +101,11 @@ export class GameController {
         if (this.state.snapshot && !message.resync)
           await this.animator.play(
             events,
-            this.state.snapshot.players.find(
-              (p) => p.playerId === this.state.game.currentPlayer,
-            )?.bot && events.length > 0,
+            this.state.role === "PLAYER" &&
+              this.state.snapshot.players.find(
+                (p) => p.playerId === this.state.game.currentPlayer,
+              )?.bot &&
+              events.length > 0,
           );
         this.state.snapshot = snapshot;
         this.state.selected = null;
@@ -113,7 +121,9 @@ export class GameController {
       .catch(() => {
         this.state.busy = false;
         toast("Không thể hiển thị hiệu ứng. Đang tải lại bàn cờ.", true);
-        this.socket.send("STATE_REQUEST");
+        this.socket.send(
+          this.state.role === "SPECTATOR" ? "SPECTATE_MATCH" : "STATE_REQUEST",
+        );
       });
   }
   bind() {

@@ -1,6 +1,7 @@
 export class ClientState {
   constructor() {
     this.snapshot = null;
+    this.role = "PLAYER";
     this.selected = null;
     this.type = "ROCK";
     this.connected = false;
@@ -12,6 +13,7 @@ export class ClientState {
   }
   get ownTurn() {
     return (
+      this.role === "PLAYER" &&
       this.snapshot?.status === "PLAYING" &&
       this.game.currentPlayer === this.snapshot.playerId &&
       !this.snapshot.players.find(
@@ -20,6 +22,8 @@ export class ClientState {
     );
   }
   get interactive() {
-    return this.connected && !this.busy && !this.pending;
+    return (
+      this.role === "PLAYER" && this.connected && !this.busy && !this.pending
+    );
   }
 }

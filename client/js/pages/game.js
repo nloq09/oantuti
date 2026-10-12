@@ -1,8 +1,11 @@
-import { GameController } from "../game/game-controller.js";
+import { GameController } from "../game/game-controller.js?v=stage3";
 import { seatKey } from "../config.js";
+import { SpectatorController } from "../spectator/spectator-controller.js?v=stage3";
+const spectate = new URLSearchParams(location.search).get("spectate");
 let seat;
 try {
   seat = JSON.parse(sessionStorage.getItem(seatKey));
 } catch {}
-if (!seat?.matchId || !seat?.token) location.replace("/lobby.html");
+if (spectate) new SpectatorController(spectate);
+else if (!seat?.matchId || !seat?.token) location.replace("/lobby.html");
 else new GameController(seat);

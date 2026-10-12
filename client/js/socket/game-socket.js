@@ -1,6 +1,8 @@
 export class GameSocket {
   constructor(seat, onMessage, onStatus) {
     this.seat = seat;
+    this.role = seat.role || "PLAYER";
+    if (this.role !== "PLAYER") this.seat = { matchId: seat.matchId };
     this.onMessage = onMessage;
     this.onStatus = onStatus;
     this.attempt = 0;
@@ -14,7 +16,13 @@ export class GameSocket {
       `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws/game`,
     );
     this.socket.onopen = () => {
-      this.send(resume ? "RESUME_MATCH" : "JOIN_MATCH");
+      this.send(
+        this.role === "SPECTATOR"
+          ? "SPECTATE_MATCH"
+          : resume
+            ? "RESUME_MATCH"
+            : "JOIN_MATCH",
+      );
     };
     this.socket.onmessage = (event) => {
       try {
@@ -39,6 +47,8 @@ export class GameSocket {
     this.socket.onerror = () => this.socket.close();
   }
   send(type, payload, sequence) {
+    if (this.role === "SPECTATOR" && !["SPECTATE_MATCH", "PING"].includes(type))
+      return false;
     if (this.socket.readyState !== WebSocket.OPEN) return false;
     this.socket.send(JSON.stringify({ type, ...this.seat, payload, sequence }));
     return true;
