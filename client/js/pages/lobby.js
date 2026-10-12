@@ -25,8 +25,9 @@ botCapabilities()
     document.querySelector("#bot-runtime").textContent =
       "Chưa kiểm tra được runner bot.";
   });
-function selectedBot() {
+async function selectedBot() {
   const bot = savedBots().find((item) => item.id === controller.value);
+  if (bot) capabilities = (await botCapabilities()).languages;
   if (bot && !capabilities[bot.language])
     throw new Error("BOT_SANDBOX_UNAVAILABLE");
   return bot;
@@ -79,14 +80,14 @@ async function enter(operation) {
   }
 }
 document.querySelector("#create").onclick = () =>
-  enter(() => createMatch(mode, selectedBot()));
+  enter(async () => createMatch(mode, await selectedBot()));
 document.querySelector("#join-form").onsubmit = (event) => {
   event.preventDefault();
   const id = document.querySelector("#code").value.trim().toUpperCase();
   if (!id) return;
   enter(async () => {
     await getMatch(id);
-    return joinMatch(id, selectedBot());
+    return joinMatch(id, await selectedBot());
   });
 };
 document.querySelector("#settings").onclick = openSettings;

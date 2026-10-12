@@ -35,9 +35,12 @@ export function toast(message, error = false) {
     box.setAttribute("role", "status");
     document.body.append(box);
   }
+  const text = errors[message] || message;
+  if ([...box.children].some((item) => item.textContent === text)) return;
+  while (box.children.length >= 3) box.firstElementChild.remove();
   const item = document.createElement("div");
   item.className = "toast" + (error ? " error" : "");
-  item.textContent = errors[message] || message;
+  item.textContent = text;
   box.append(item);
   setTimeout(() => item.remove(), 4500);
 }
