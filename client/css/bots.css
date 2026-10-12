@@ -1,0 +1,152 @@
+.bot-workshop {
+  width: min(1100px, 92vw);
+  margin: 30px auto;
+}
+.bot-workshop h1 {
+  font-size: 44px;
+  margin: 12px 0;
+}
+.workshop-intro {
+  color: #fff0d7;
+  text-shadow: 0 1px 3px #000;
+}
+.workshop-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.bot-library h2,
+.upload-workbench h2 {
+  margin-top: 0;
+  font-size: 23px;
+}
+.bot-library > .muted {
+  font-size: 12px;
+}
+#bot-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+.bot-entry {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  min-height: 90px;
+  gap: 14px;
+  padding: 16px;
+}
+.bot-entry.selected {
+  border-color: #60caff;
+  background: linear-gradient(#235780, #102d4b);
+}
+.bot-avatar {
+  font-size: 32px;
+  color: #8ad6ff;
+}
+.bot-entry strong,
+.bot-entry small {
+  display: block;
+}
+.bot-entry small {
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.bot-state {
+  color: #a8e99c;
+}
+.empty-bots {
+  text-align: center;
+  padding: 30px 10px;
+  border: 1px dashed #758797;
+  border-radius: 7px;
+  color: var(--muted);
+}
+.upload-workbench label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+.upload-workbench input:not([type="radio"]) {
+  width: 100%;
+}
+.language-choices {
+  border: 0;
+  padding: 0;
+  margin: 20px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.language-choices legend {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.language-choices label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #7290a7;
+  padding: 12px;
+  border-radius: 7px;
+  background: #193b56;
+  cursor: pointer;
+}
+.language-choices label:has(:checked) {
+  background: #1369ac;
+  border-color: #8bcfff;
+}
+.language-choices input {
+  accent-color: #f2c76d;
+}
+.upload-workbench .muted {
+  font-size: 12px;
+}
+.bot-tools {
+  margin-top: 24px;
+}
+.bot-tools button {
+  flex: 1;
+}
+.upload-workbench > a {
+  display: block;
+  color: var(--accent);
+  margin-top: 12px;
+  font-size: 13px;
+}
+.workshop-log {
+  grid-column: 1/-1;
+}
+#upload-log {
+  max-height: 200px;
+  overflow: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font:
+    12px/1.9 Consolas,
+    monospace;
+  color: #c8d8e6;
+}
+#upload-log .error {
+  color: #ffafa7;
+}
+@media (max-width: 720px) {
+  .workshop-grid {
+    grid-template-columns: 1fr;
+  }
+  .bot-workshop h1 {
+    font-size: 34px;
+  }
+  .language-choices {
+    gap: 7px;
+  }
+  .language-choices label {
+    padding: 10px;
+  }
+}

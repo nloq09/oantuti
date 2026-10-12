@@ -1,526 +1,303 @@
 # RPS Battle — Oẳn Tù Tì Chiến Thuật
 
-Game chiến thuật Oẳn Tù Tì trên bàn cờ 9×9. Dự án Java 21 + Gradle.
+Game chiến thuật trên bàn cờ **9 × 9**, kết hợp luật Búa–Bao–Kéo với di chuyển theo lượt. Server Java xử lý luật và trạng thái trận; client chạy trên trình duyệt, đồng bộ thời gian thực qua WebSocket.
 
-Chặng 1, **Chặng 2A** và **Chặng 2B — Hoàn thiện client** đã hoàn thành.
-Yêu cầu Chặng 2B mới nằm trong [đặc tả client](docs/CHANG-2B-CLIENT-SPEC.md),
-thay thế phần 2B backend/database trong lộ trình Demo First trước đó.
-Xem [hướng dẫn chạy và kiểm thử 2B](docs/CHANG-2B-CLIENT.md).
+Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
-Đã thêm **tải bot C++, Python, Java/JAR** để đấu với người chơi hoặc bot khác.
-Tải/chọn bot tại trang Vào trận; xem [hướng dẫn bot và thiết lập Docker](docs/BOT-UPLOAD.md).
-Chạy code bot tải lên cần Docker Linux và image ngôn ngữ đã chuẩn bị sẵn.
-Để viết chiến thuật, xem [giao thức bot chi tiết: dữ liệu nhận và phản hồi](docs/BOT-PROTOCOL.md)
-hoặc mở `/bot-protocol.html` trên server.
+## Chức năng hiện tại
 
-## Server online — Chặng 2
+### Chế độ và phòng chơi
 
-Chạy server rồi mở [http://localhost:8080](http://localhost:8080).
-Chọn Hai người để tạo phòng và gửi mã cho tab thứ hai, hoặc Đấu với bot để
-chơi ngay. Đặt đủ 6 Búa, 6 Bao, 6 Kéo rồi bấm Sẵn sàng.
-Demo 2A cố định được giữ tại `/demo/`; xem [hướng dẫn 2A](docs/CHANG-2A-DEMO.md).
+- **Hai người**: tạo phòng, sao chép/chia sẻ mã và tham gia phòng từ trình duyệt khác.
+- **Đấu với bot**: chơi với bot chiến thuật có sẵn của game.
+- Trong **cả hai chế độ**, mỗi người được chọn **Tôi tự chơi** hoặc bot riêng đã tải lên để điều khiển quân. Lựa chọn áp dụng khi tạo hoặc tham gia phòng.
+- Giao diện chỉ có hai chế độ trên, không có nút chế độ Bot đấu bot. Hai người vẫn có thể cùng chọn bot riêng trong một phòng Hai người.
+- Phòng quản lý vị trí Xanh/P1 và Đỏ/P2, kết nối, xếp quân và trạng thái sẵn sàng.
+- Server xác thực token vị trí, kiểm tra lượt/sequence và từ chối thao tác không hợp lệ.
 
-Yêu cầu JDK 21 (hoặc JDK 24 nếu dùng môi trường kiểm tra hiện tại); Gradle
-wrapper 8.14.3 và Spring Boot 3.5.16. Version Jackson/JUnit/AssertJ do
-[Boot BOM](https://docs.spring.io/spring-boot/3.5/gradle-plugin/managing-dependencies.html)
-quản lý. Wrapper chuyển từ 9.1.0 sang 8.14.3 theo
-[phạm vi Gradle được Boot 3.5 hỗ trợ](https://docs.spring.io/spring-boot/3.5/system-requirements.html).
-Không dùng JDK 25 để chạy wrapper 8.x; cấu hình biên dịch vẫn `--release 21`.
+### Bàn cờ và trận đấu
+
+- Đặt quân thủ công, di chuyển quân đang xếp, xếp ngẫu nhiên, đặt lại, sẵn sàng và hủy sẵn sàng.
+- Bàn cờ xoay theo người chơi: **quân của bạn luôn ở dưới**, kể cả P2; tọa độ gửi tới server giữ nguyên.
+- Đánh dấu quân đã chọn, ô di chuyển hợp lệ và ô tấn công; hiệu ứng di chuyển/giao chiến.
+- Đồng hồ lượt, số quân từng loại của hai bên và diễn biến trận; nút Xóa chỉ xóa nhật ký đang hiển thị.
+- Bỏ lượt, đầu hàng và rời phòng. Rời khi trận đang chơi được tính là đầu hàng.
+- Tự kết nối lại và nhận trạng thái đầy đủ khi WebSocket bị mất kết nối.
+- Màn hình kết quả hiển thị thắng/thua/hòa, thời gian, số lượt và quân còn lại; tạo ván mới hoặc về trang chủ.
+- Nhật ký ở màn hình kết quả chỉ chứa sự kiện trong trạng thái cuối trận, **không phải replay toàn trận**.
+
+### Bot của người chơi
+
+- Trang **Bot của tôi** quản lý danh sách bot lưu trên trình duyệt, chọn bot và tải file lên server.
+- Hỗ trợ **Python `.py`, C++ `.cpp`, Java `.java` và `.jar`**.
+- Chọn ngôn ngữ, xem trạng thái Docker, nhật ký tải lên và dùng bot ở trang Vào trận.
+- **Đấu thử với bot** tạo một trận thật với bot chiến thuật của game.
+- Bot được tự xếp 18 quân, tự sẵn sàng và tự chọn nước đi; chủ bot theo dõi trận.
+- Bot sai giao thức, trả nước đi không hợp lệ, lỗi tiến trình hoặc quá thời gian sẽ bị xử thua.
+- Bot riêng chạy trong container Docker; chơi tay và bot chiến thuật có sẵn **không cần Docker**.
+- ZIP, tải manifest riêng, sửa mã nguồn, build độc lập và replay toàn trận trên web chưa được hỗ trợ.
+
+### Giao diện
+
+- Trang chủ có Bắt đầu chơi, Bot của tôi, Cách chơi và Cài đặt.
+- Trang Vào trận có chọn chế độ, chọn người/bot điều khiển, tạo phòng; phần nhập mã phòng nằm dưới khung Kết nối với đối thủ ở cột phải.
+- Phong cách đấu trường với nền lâu đài, khung vàng, màu Xanh/Đỏ; bố cục thích ứng điện thoại.
+- Cài đặt âm thanh, nhạc nền và hiệu ứng lưu trên trình duyệt.
+- Hướng dẫn bot và giao thức có cả bản Markdown và trang web.
+
+## Luật chơi
+
+1. Mỗi bên có **6 Búa, 6 Bao, 6 Kéo**; đặt trong ba hàng của mình. Trận bắt đầu khi cả hai bên đủ quân và sẵn sàng.
+2. Mỗi lượt di chuyển một quân **một ô lên/xuống/trái/phải**; không đi chéo, ra ngoài bàn hoặc vào ô có quân cùng bên.
+3. Đi vào quân đối thủ để giao chiến: **Búa thắng Kéo, Kéo thắng Bao, Bao thắng Búa**. Cùng loại thì cả hai bị loại.
+4. Loại hết quân đối thủ để thắng; cả hai hết quân thì hòa. Đầu hàng thì đối thủ thắng.
+5. Giới hạn mặc định **200 lượt**: bên còn nhiều quân hơn thắng, bằng nhau thì hòa.
+6. Thời gian lượt online mặc định **30 giây**; hết giờ server tự bỏ lượt. Đây là cấu hình server, không phải lựa chọn trên client.
+
+## Công nghệ và yêu cầu
+
+- **Server**: Java 21, Spring Boot 3.5.16, Gradle Wrapper 8.14.3, REST và Spring WebSocket; Jackson xử lý JSON.
+- **Client**: HTML/CSS và JavaScript ES modules, không cần framework hay npm để chơi.
+- **Kiểm thử**: JUnit/Spring Boot Test và Node.js test runner.
+- **Bot riêng**: Docker Engine Linux hoặc Docker Desktop ở chế độ Linux containers.
+- Dùng **JDK 21 hoặc JDK 24** để chạy Gradle hiện tại; không dùng JDK 25 với wrapper 8.x. Mã được biên dịch cho Java 21.
+- Node.js dùng để chạy test client; script kiểm thử upload cần bản có `fetch`, `File` và `WebSocket` toàn cục, ví dụ Node.js 24.
+
+## Chạy trong VS Code / Windows
+
+Mở thư mục repository trong VS Code, mở terminal PowerShell tại thư mục gốc:
 
 ```powershell
 cd server
-# Đặt JAVA_HOME tới JDK phù hợp nếu PATH đang trỏ tới Java cũ.
+# Nếu Java mặc định chưa phù hợp, đặt đường dẫn JDK thực tế trên máy:
+$env:JAVA_HOME = 'C:\Program Files\Java\jdk-21'
 .\gradlew.bat bootRun --console=plain
 ```
 
-Server mặc định ở `http://localhost:8080`. Kiểm tra từ terminal khác:
+Nếu đang dùng JDK 24 đã cài trên máy phát triển hiện tại, có thể thay dòng JAVA_HOME bằng:
+
+```powershell
+$env:JAVA_HOME = 'C:\Users\hi\.jdks\openjdk-24.0.2+12-54'
+```
+
+Mở [http://localhost:8080](http://localhost:8080). Server phục vụ cả client và API, không cần Live Server hoặc chạy frontend riêng. Giữ terminal server mở; **Ctrl+C** để dừng.
+
+Sau khi sửa code: dừng server, chạy lại `bootRun`, rồi **Ctrl+F5** trên trình duyệt. Tài nguyên client được copy vào server khi build/chạy.
+
+Đổi cổng nếu 8080 đang được sử dụng:
+
+```powershell
+.\gradlew.bat bootRun --console=plain --args="--server.port=8081"
+```
+
+Kiểm tra sức khỏe server từ terminal khác:
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/api/health
 ```
 
-`GET /api/health` trả HTTP 200, JSON `{"status":"UP"}` và không yêu cầu
-đăng nhập. WebSocket `/ws/game` phục vụ cả demo cũ và phòng 2B.
-REST có `POST /api/matches`, `POST /api/matches/{id}/join`,
-`GET /api/matches/{id}`. Phòng, quota, Ready, bot và timeout do server quản lý.
-Chưa thêm Spring Security, JPA hay database.
-Các starter Web, WebSocket, Test và Jackson đã được khai báo. Bỏ starter
-Validation chưa dùng để giữ phần demo tối thiểu. `/api/v1/health` vẫn là alias
-tương thích cho endpoint đã push trước khi đổi lộ trình.
-GameEngine/RuleSet giữ nguyên. `application.yml` đặt port 8080; có thể override
-bằng `--args="--server.port=8081"` khi chạy bootRun.
+Kết quả mong đợi: `status` là `UP`.
 
-```powershell
-.\gradlew.bat test
-.\gradlew.bat bootJar
-# In thư mục build để tìm libs/rps-battle-1.0-SNAPSHOT.jar:
-.\gradlew.bat -q printBuildDir
-```
+### Linux / macOS
 
-`bootRun`/`bootJar` dùng RpsBattleApplication; `run` vẫn dùng LocalGameApplication
-cho human/bot/replay local của Chặng 1. Đừng dùng plain jar để chạy server online.
-
-Trên Windows, output build mặc định nằm trong
-`GRADLE_USER_HOME/rps-battle-builds/<checkout-key>` (thường dưới
-`C:\Users\<user>\.gradle`), tránh OneDrive khóa các file class trong repo.
-Các checkout có thư mục output riêng; Linux/macOS vẫn dùng `server/build`.
-In đường dẫn bằng `printBuildDir`; executable jar nằm trong `libs/` của thư mục đó.
-Nếu gặp `Unable to delete directory ... server\build\classes`, cập nhật code
-bằng `git pull`, dừng terminal server cũ bằng Ctrl+C rồi chạy lại bootRun.
-Không cần xóa thư mục build cũ hoặc tắt đồng bộ OneDrive.
-
-Cây thư mục sau Bước 1 (phần Chặng 1 giữ nguyên, xem cây đầy đủ trong
-[báo cáo Chặng 1](docs/CHANG-1-REVIEW.md)):
-
-```text
-server/
-├── build.gradle
-├── settings.gradle
-├── gradlew, gradlew.bat
-├── gradle/wrapper/
-│   ├── gradle-wrapper.jar
-│   └── gradle-wrapper.properties
-└── src/
-    ├── main/
-    │   ├── java/com/rpsbattle/
-    │   │   ├── RpsBattleApplication.java
-    │   │   ├── api/controller/HealthController.java
-    │   │   ├── game/{board,piece,player,action,state,engine}/
-    │   │   ├── rule/
-    │   │   ├── rules/classic/
-    │   │   ├── agent/
-    │   │   ├── match/
-    │   │   ├── bot/
-    │   │   ├── replay/
-    │   │   └── app/
-    │   └── resources/application.yml
-    └── test/java/com/rpsbattle/
-        ├── api/controller/HealthControllerTest.java
-        ├── architecture/
-        └── (các test Chặng 1 giữ nguyên)
-```
-
-### Tiến độ Chặng 2 — Demo First
-
-- [x] 2A / Bước 1 — Spring Boot tối thiểu, `/api/health`, regression Chặng 1
-- [x] 2A / Bước 2 — DemoMatchService: `demo-match`, P1/P2, layout cố định
-- [x] 2A / Bước 3 — DTO tối thiểu và GameStateMapper
-- [x] 2A / Bước 4 — WebSocket `/ws/game`, protocol tối thiểu
-- [x] 2A / Bước 5 — JOIN P1/P2 và gửi STATE
-- [x] 2A / Bước 6 — ACTION qua engine, broadcast STATE/reject
-- [x] 2A / Bước 7 — Client HTML/CSS/JS thuần, board 9×9
-- [x] 2A / Bước 8 — Click quân/ô, highlight legalActions từ server
-- [x] 2A / Bước 9 — Combat demo
-- [x] 2A / Bước 10 — GAME_OVER; xác nhận demo hai browser tab
-
-**Mốc bắt buộc trước 2B:** hai tab join P1/P2, cùng thấy board, MOVE được đồng
-bộ, combat và kết quả do GameEngine quyết định. Client chỉ render, highlight
-legalActions và gửi Action. GameEngine/RuleSet không biết HTTP/WebSocket/Spring.
-
-- [x] 2B / 1–5 — ES modules, Home, lobby, Create/Join, waiting room
-- [x] 2B / 6–10 — Placement 18 quân, board, SVG, legal highlights, player panels
-- [x] 2B / 11–14 — Timer server, animation queue, event log, kết quả
-- [x] 2B / 15–18 — Bot dễ, surrender/leave, connection status, reconnect
-- [x] 2B / 19–20 — Responsive, settings/sound, polish, kiểm thử tổng hợp
-
-Phạm vi 2B mới tập trung vào trải nghiệm chơi, không có database/login/ranking.
-
-Kết quả cuối 2B: **270 backend tests + 1 client transport test pass**,
-`test bootJar` thành công. Browser đã kiểm tra hai tab chơi/combat đồng bộ,
-Human vs Bot có combat, kết quả/rematch, reload, Settings và desktop/mobile.
-Chi tiết và cách chạy VS Code ở [hướng dẫn 2B](docs/CHANG-2B-CLIENT.md).
-
-Kết quả cuối 2A: **260 tests pass, 0 failures, 0 errors, 0 skipped**, bao gồm
-249 tests Chặng 1, 2 health cases, 4 DemoMatchService tests, 2 DTO tests và
-3 integration tests với hai WebSocket client thật. `test bootJar` thành công
-trên JDK 24.0.2, biên dịch `--release 21`, build riêng
-`build-step3-verification-stage2a-final-a`. Chưa chạy trực tiếp trên JDK 21.
-Hai browser tab cũng đã được kiểm tra click/highlight, combat, đồng bộ board
-và thắng do hết quân ở sequence 15. Không sửa source GameEngine/RuleSet.
-
-Kết quả Bước 1 trước khi đổi lộ trình: **250 tests pass, 0 failures, 0 errors, 0 skipped**,
-gồm toàn bộ 249 tests Chặng 1 và 1 integration test health qua HTTP với full Spring context
-và embedded Tomcat trên port ngẫu nhiên. Đã chạy bootRun trên cổng 8080,
-gọi GET health thực tế nhận HTTP 200, `Content-Type: application/json`,
-`{"status":"UP"}`. bootJar build thành công, manifest Start-Class là
-`com.rpsbattle.RpsBattleApplication`. Task run vẫn dùng CLI Chặng 1.
-
-Lần kiểm tra dùng JDK 24.0.2 với `--release 21` và thư mục build riêng
-`build-step3-verification-stage2-step1-a` do thư mục kết quả cũ bị Windows khóa.
-Chưa xác nhận runtime trực tiếp JDK 21. Server smoke test đã được dừng sau kiểm tra.
-
-Sau điều chỉnh Demo First: **251 tests pass, 0 failures, 0 errors, 0 skipped**
-(249 tests Chặng 1 và 2 HTTP health cases cho đường dẫn mới/alias cũ).
-`test bootJar` thành công trên JDK 24.0.2 với `--release 21`, build riêng
-`build-step3-verification-stage2-demo-first-step1-a`. Nội dung GameEngine/RuleSet
-không thay đổi.
-
-## Chạy nhanh
+Từ thư mục gốc repository, dùng JDK 21:
 
 ```bash
 cd server
-./gradlew test        # Chạy unit tests
-./gradlew run --console=plain --args=human-vs-human  # Hai người chơi local
+chmod +x gradlew
+./gradlew bootRun --console=plain
 ```
 
-## Cấu trúc
+### Build file JAR
 
-```
-server/
-├── build.gradle
-├── settings.gradle
-└── src/
-    ├── main/java/com/rpsbattle/
-    │   ├── game/
-    │   │   ├── board/     # Position, Board
-    │   │   ├── piece/     # PieceType, PieceStatus, Piece
-    │   │   ├── player/    # PlayerId, Player
-    │   │   ├── action/    # Action, MoveAction, PlaceAction...
-    │   │   ├── state/     # GamePhase, GameOutcome, GameResult, GameState
-    │   │   └── engine/    # GameEngine, GameTransition, GameEvent
-    │   ├── rule/          # Interfaces: MovementRule, CombatRule...
-    │   ├── rules/classic/ # ClassicRuleSet implementation
-    │   ├── match/         # Match, MatchStatus
-    │   ├── agent/         # PlayerAgent interface, PlayerView
-    │   ├── bot/           # BotAgent, BotProcess, protocol
-    │   ├── replay/        # MatchLog, ReplayService, ReplayJson
-    │   └── app/           # LocalGameApplication
-    └── test/java/com/rpsbattle/
-```
-
-## Bước hoàn thành
-
-- [x] Bước 1 — Domain Model (Position, Board, Piece, Player, GameResult)
-- [x] Bước 2 — Action & GameState
-- [x] Bước 3 — Rule Engine
-- [x] Bước 4 — Game Engine
-- [x] Bước 5 — Legal Action Generator
-- [x] Bước 6 — Match Engine
-- [x] Bước 7 — Human vs Human local
-- [x] Bước 8 — Bot Protocol
-- [x] Bước 9 — Bot vs Bot
-- [x] Bước 10 — Event Log & Replay
-- [x] Bước 11 — Cleanup & Kiểm tra kiến trúc
-
-## Trạng thái sau Bước 3
-
-`rule/` định nghĩa MovementRule, CombatRule, PlacementRule, VictoryRule,
-TurnRule và RuleSet. `rules/classic/` hiện thực luật di chuyển ngang/dọc một ô,
-combat RPS, vùng triển khai, thắng do hết quân hoặc giới hạn 200 lượt và đổi lượt.
-RuleSet tập hợp các luật; các interface không phụ thuộc implementation Classic.
-GameEngine được bổ sung ở Bước 4 bên dưới.
-
-Kiểm tra: 128 tests pass, 0 failures, 0 errors. Chạy bằng JDK 25 hiện có trên máy,
-biên dịch với `--release 21`; chưa xác nhận chạy trực tiếp trên JDK 21.
-Do Windows khóa thư mục kết quả cũ, lượt kiểm tra dùng thư mục build riêng:
+Trong thư mục `server`:
 
 ```powershell
-# Tạo init script dùng một thư mục mới nếu build cũ đang bị khóa.
-Set-Content .verify-step3.gradle "allprojects { layout.buildDirectory.set(file('build-step3-verification-final')) }"
-.\gradlew.bat test --no-daemon --console=plain --init-script .verify-step3.gradle
+.\gradlew.bat bootJar --no-daemon --console=plain
+.\gradlew.bat -q printBuildDir
 ```
 
-## Bước 4 — Game Engine
+Lệnh cuối in thư mục output. File chạy server nằm tại `<build-dir>/libs/rps-battle-1.0-SNAPSHOT.jar`:
 
-`GameEngine(RuleSet).applyAction(GameState, PlayerId, Action)` trả về
-`GameTransition(newState, events)`. Action sai bị từ chối bằng
-`InvalidActionException` với nguyên nhân cụ thể và không sửa trạng thái đầu vào.
-GameState sao chép Board cả khi nhận dữ liệu và khi trả qua `board()`;
-để cập nhật board, sửa bản sao rồi gọi `withBoard()`.
+```powershell
+java -jar "<build-dir>/libs/rps-battle-1.0-SNAPSHOT.jar"
+```
+
+Trên Windows, build output nằm dưới `%USERPROFILE%\.gradle\rps-battle-builds\<checkout-key>` để tránh OneDrive khóa file class. Linux/macOS mặc định dùng `server/build`. Dùng `bootJar` cho server online; task `run` là chương trình console riêng.
+
+## Bật Docker để dùng bot riêng
+
+1. Mở Docker Desktop, chờ Engine sẵn sàng và giữ Docker chạy.
+2. Kiểm tra `docker info --format '{{.OSType}}'` trả về `linux`.
+3. Chuẩn bị image một lần:
+
+```powershell
+docker pull python:3.12-slim
+docker pull gcc:14
+docker pull eclipse-temurin:21-jdk
+```
+
+Server cần tìm được lệnh `docker` trong PATH. Nếu vừa cài Docker, mở lại VS Code/terminal rồi khởi động lại server. Không cần bấm Run từng image: server tự tạo và dọn container cho bot.
+
+Vào **Bot của tôi**, tải file, chọn bot rồi bấm **Dùng trong trận**. Ở Vào trận, chọn chế độ và kiểm tra mục Người chơi của bạn trước khi tạo/vào phòng. Chọn Tôi tự chơi nếu muốn điều khiển bằng tay.
+
+- Source tối đa **512 KiB**, JAR tối đa **5 MiB**; kho server tối đa 100 bot.
+- Python: Python 3.12, thư viện chuẩn.
+- C++: GCC 14, C++17; một file `.cpp`.
+- Java source: `public class Main`, không `package`; Java 21.
+- JAR: có `Main-Class`, tương thích Java 21.
+- Container không mạng, root filesystem chỉ đọc, user không phải root, CPU 0.5, RAM 384 MB, giới hạn tiến trình và thư mục tạm. C++/Java được biên dịch khi trận bắt đầu.
+- Danh sách/quyền sử dụng bot lưu trong `localStorage`; file và metadata lưu tại `server/data/bots` khi chạy từ thư mục server. Đổi trình duyệt hoặc xóa storage không tự phục hồi danh sách bot.
+
+Bot nhận một dòng JSON `YOUR_TURN` qua stdin, tính toán từ trạng thái và `legalActions`, rồi trả một dòng JSON `ACTION` qua stdout với đúng `sequence`; phải flush và chỉ trả nước đi hợp lệ. Đọc chi tiết trong [BOT-PROTOCOL.md](docs/BOT-PROTOCOL.md), [BOT-UPLOAD.md](docs/BOT-UPLOAD.md) hoặc trang `/bot-protocol.html` và `/bot-guide.html`.
+
+Mẫu tải trực tiếp từ trang hướng dẫn, source ở `client/assets/bot-examples/`: `main.py`, `tactical.py`, `main.cpp`, `Main.java`.
+
+## Cấu hình server
+
+Cấu hình mặc định nằm trong `server/src/main/resources/application.yml`. Có thể ghi đè bằng tham số Spring Boot:
+
+- `server.port`: mặc định 8080.
+- `rps.turn-seconds`: mặc định 30 giây.
+- `rps.bots.enabled`: mặc định `true`; đặt `false` để tắt runner bot riêng.
+- `rps.bots.directory`: mặc định `data/bots`, tính từ thư mục làm việc server.
+
+Ví dụ chạy JAR với thời gian 60 giây:
+
+```powershell
+java -jar "<build-dir>/libs/rps-battle-1.0-SNAPSHOT.jar" --server.port=8080 --rps.turn-seconds=60
+```
+
+## API và WebSocket
+
+REST hiện có:
+
+- `GET /api/health` (alias `/api/v1/health`): sức khỏe server.
+- `POST /api/matches`: tạo phòng với `mode` là `HUMAN_VS_HUMAN` hoặc `HUMAN_VS_BOT`; tùy chọn `seed`, `botId`, `botToken`.
+- `GET /api/matches/{id}`: thông tin phòng.
+- `POST /api/matches/{id}/join`: tham gia, tùy chọn `botId`, `botToken`.
+- `POST /api/bots`: tải multipart với `name` và `file`, trả metadata/quyền sử dụng bot.
+- `GET /api/bots/capabilities`: trạng thái Docker/image từng ngôn ngữ và giới hạn kích thước file.
+
+WebSocket `/ws/game` nhận JSON với thông tin vị trí/token. Các thông điệp chính: `JOIN_MATCH`, `RESUME_MATCH`, `PLACE`, `RANDOM_PLACEMENT`, `RESET_PLACEMENT`, `READY`, `UNREADY`, `ACTION`, `STATE_REQUEST`, `LEAVE`, `PING`. Server trả `GAME_STATE`, `ACTION_REJECTED`, `LEFT_ROOM`, `PONG`. Snapshot server là nguồn trạng thái chính; client không tự quyết định kết quả nước đi.
+
+Client tự dùng `ws://` với HTTP và `wss://` với HTTPS, cùng host với trang web.
+
+## Cấu trúc project
 
 ```text
-game/engine/
-├── GameEngine.java
-├── GameTransition.java
-├── GameEvent.java
-└── InvalidActionException.java
-test/java/com/rpsbattle/game/engine/
-└── GameEngineTest.java
+oantuti/
+├── README.md
+├── client/                         # Client web, được server phục vụ cùng host
+│   ├── index.html                  # Trang chủ
+│   ├── lobby.html                  # Chế độ, chọn bot, tạo/vào phòng
+│   ├── bots.html                   # Quản lý, tải và đấu thử bot
+│   ├── game.html                   # Xếp quân và chơi online
+│   ├── result.html                 # Kết quả và sự kiện cuối trận
+│   ├── bot-guide.html              # Hướng dẫn upload, bot mẫu
+│   ├── bot-protocol.html           # Giao thức stdin/stdout
+│   ├── css/                        # Theme, layout từng trang, hiệu ứng
+│   ├── assets/
+│   │   ├── pieces/                 # SVG Búa/Bao/Kéo cho hai bên
+│   │   ├── bot-examples/           # Bot mẫu Python/C++/Java
+│   │   └── castle-courtyard.png    # Nền đấu trường
+│   ├── js/
+│   │   ├── pages/                  # Khởi tạo và thao tác từng màn hình
+│   │   ├── api/                    # REST phòng và upload bot
+│   │   ├── socket/                 # Kết nối, reconnect WebSocket
+│   │   ├── game/                   # Client state, board, input, animation
+│   │   └── ui/                     # Dialog, thông báo, timer, âm thanh
+│   ├── tests/                      # Node test runner
+│   ├── demo/                       # Demo cố định của chặng 2A
+│   └── package.json                # Script test; không cần npm để chạy game
+├── server/
+│   ├── build.gradle                # Java, Spring Boot, test, copy client
+│   ├── settings.gradle
+│   ├── gradlew / gradlew.bat        # Gradle Wrapper
+│   ├── gradle/wrapper/
+│   └── src/
+│       ├── main/
+│       │   ├── resources/application.yml
+│       │   └── java/com/rpsbattle/
+│       │       ├── RpsBattleApplication.java  # Entry point server online
+│       │       ├── game/            # Action, board, piece, player, state, engine
+│       │       ├── rule/            # Các interface luật độc lập
+│       │       ├── rules/           # Luật classic và biến thể online
+│       │       ├── match/           # Điều phối trận ở tầng game
+│       │       ├── agent/           # Human, random bot, tactical bot
+│       │       ├── bot/             # Giao thức bot và process runner
+│       │       │   └── upload/      # Lưu file, quyền bot, Docker sandbox
+│       │       ├── online/          # Registry phòng, placement, ready, timeout
+│       │       ├── api/             # Controller, DTO, mapper, lỗi HTTP
+│       │       ├── websocket/       # Gateway, handler, message, cấu hình
+│       │       ├── config/          # Cấu hình online
+│       │       ├── replay/          # Log và replay cho CLI
+│       │       └── app/             # Entry point console và CLI bot
+│       └── test/                    # Unit, architecture, API/WS, Docker tests
+├── tools/                          # Kiểm tra bot mẫu/upload, sinh hướng dẫn
+└── docs/                           # Đặc tả, hướng dẫn, báo cáo các chặng
 ```
 
-GameEngine điều phối action; GameTransition giữ snapshot mới và danh sách event
-không thể sửa. GameEvent chứa PiecePlaced, PieceMoved, CombatOccurred,
-PieceRemoved, TurnChanged và GameFinished. Các event được sắp theo thứ tự xử lý,
-cùng sequence của action và chứa payload phục vụ replay sau này.
+Các file client cũ `client/game.js`, `client/style.css` được giữ từ demo trước. Client chính hiện tải module trong `client/js/`; demo cố định được giữ riêng trong `client/demo/`.
 
-MovementRule và CombatRule quyết định di chuyển/combat. ClassicTurnRule kiểm tra
-phase, lượt và việc action có tính vào giới hạn lượt không. ClassicVictoryRule
-xử lý surrender và chỉ kiểm tra hết quân khi PLAYING. Placement tăng sequence
-và đổi người nhưng không tăng số lượt thi đấu; Move/Pass tăng lượt trước khi
-kiểm tra victory để kết thúc đúng lượt 200. Trận kết thúc giữ người vừa hành động.
-Việc thiết lập READY/PLAYING sẽ do tầng điều khiển match ở các bước sau.
+Luồng chính: **trình duyệt → REST/WebSocket → dịch vụ phòng → GameEngine/RuleSet → snapshot → trình duyệt**. Với bot riêng, server gửi trạng thái qua BotProtocol cho Docker runner, kiểm tra action rồi áp dụng qua engine như nước đi của người chơi.
 
-Test tích hợp bao gồm cả 7 scenario yêu cầu, action sai, placement/pass/surrender,
-giới hạn lượt, cô lập snapshot và một RuleSet khác để xác nhận engine không chứa
-luật Classic. Legal Action Generator được bổ sung ở Bước 5 bên dưới.
+## Kiểm thử
 
-Kết quả kiểm tra Bước 4: **155 tests pass, 0 failures, 0 errors**, trong đó 27
-test tích hợp GameEngine. Chạy trên JDK 25 với `--release 21`; thư mục build
-kiểm tra riêng là `build-step3-verification-step4-b` để tránh khóa file kết quả
-trong thư mục OneDrive. Chưa kiểm tra runtime trực tiếp trên JDK 21.
-
-## Bước 5 — Legal Action Generator
-
-`new LegalActionGenerator(ruleSet).getLegalActions(state, player)` trả về
-`List<Action>` không thể sửa, gồm các MoveAction hợp lệ và nước tấn công.
-Generator nằm trong `game/engine/`; test ở
-`src/test/java/com/rpsbattle/game/engine/LegalActionGeneratorTest.java`.
-
-Generator xét mỗi ô trong kích thước Board rồi dùng MovementRule và TurnRule
-để lọc. Không hard-code bốn hướng Classic, do đó RuleSet khác có thể cho phép
-đi chéo hoặc đi xa. Chi phí là O(số quân × số ô), phù hợp bàn 9×9 hiện tại.
-Quân được duyệt theo hàng, cột, id; đích theo hàng, cột để kết quả deterministic,
-không phụ thuộc thứ tự chèn quân vào Board.
-
-Không có action trùng, đi ra ngoài bàn hay vào quân cùng đội. Quân chết và quân
-của đối phương không sinh nước đi. Người không còn nước đi nhận danh sách rỗng;
-với Classic, người sai lượt hoặc game ngoài PLAYING cũng nhận danh sách rỗng.
-API này sinh nước di chuyển, không sinh Place/Pass/Surrender. GameEngine vẫn
-validate cuối cùng khi nhận action. Snapshot không bị thay đổi khi sinh nước đi.
-
-Các test bao gồm giữa bàn, hai góc, đồng đội chặn, tấn công (kể cả trận combat
-sẽ thua), hết nước đi, board chữ nhật, thứ tự deterministic và RuleSet khác.
-Một test đối chiếu danh sách sinh ra với mọi MoveAction GameEngine chấp nhận.
-Match Engine được bổ sung ở Bước 6 bên dưới.
-
-Kết quả Bước 5: **172 tests pass, 0 failures, 0 errors**, gồm 17 test cho
-LegalActionGenerator. Test chạy trên JDK 25 với `--release 21`, dùng thư mục
-build riêng `build-step3-verification-step5-a`; chưa kiểm tra runtime JDK 21.
-
-## Bước 6 — Match Engine
-
-```text
-main/java/com/rpsbattle/
-├── match/
-│   ├── Match.java
-│   └── MatchStatus.java
-└── agent/
-    ├── PlayerAgent.java
-    ├── PlayerView.java
-    ├── ConsoleHumanAgent.java
-    └── RandomBotAgent.java
-```
-
-`Match(initialState, ruleSet, player1, player2)` nhận trạng thái READY hoặc
-PLAYING đã triển khai quân, với đúng hai player khác nhau. Hai agent tương ứng
-thứ tự `players` trong GameState. `start()` chuyển sang PLAYING;
-`playTurn()` gọi agent hiện tại với PlayerView và legalActions, rồi chuyển action
-qua GameEngine. `runToCompletion()` tự start và lặp đến FINISHED.
-MatchStatus gồm CREATED, RUNNING, FINISHED. Match không chứa luật combat hoặc
-di chuyển, không phụ thuộc console và không tự tạo randomness.
-
-Nếu hết nước di chuyển, Match cung cấp PassAction khi TurnRule cho phép; nếu
-không được pass thì báo lỗi rõ ràng. Action sai/null hoặc lỗi của agent được
-trả về caller và không cập nhật GameState, caller có thể gọi lại `playTurn()`.
-Trạng thái đã thắng/hòa ngay từ đầu được kết thúc trước khi hỏi agent.
-
-PlayerView cung cấp snapshot và playerId; agent không thể sửa Board của match.
-RandomBotAgent nhận `RandomGenerator` hoặc seed qua constructor, chọn một phần
-tử của legalActions và không gọi GameEngine. Cùng seed và cùng thứ tự action
-sẽ cho cùng lịch sử trận đấu.
-
-ConsoleHumanAgent nhận Reader/Writer từ bên ngoài, chọn số thứ tự nước đi hoặc
-nhập `pass`/`surrender`. Khi hai người dùng chung console, truyền cùng một
-BufferedReader cho hai agent. Input sai định dạng được hỏi lại, EOF báo lỗi;
-luật vẫn do GameEngine validate. Chưa làm giao diện bàn cờ, nhập tọa độ hay
-entry point Human vs Human của Bước 7.
-
-Kết quả Bước 6: **189 tests pass, 0 failures, 0 errors**, gồm 10 Match tests
-và 7 PlayerAgent tests. Kiểm tra hai seeded bot cho cùng lịch sử action, kết thúc
-trận, đổi lượt, pass khi bị chặn, surrender, action sai không sửa state,
-snapshot của agent, Human/Bot cùng Match và input console dùng chung.
-Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
-`build-step3-verification-step6-b`; chưa kiểm tra runtime trực tiếp trên JDK 21.
-
-## Bước 7 — Human vs Human local
-
-Chạy trong thư mục `server` (cần JDK 21 trở lên):
+Từ thư mục `server`:
 
 ```powershell
-.\gradlew.bat run --console=plain --args=human-vs-human
+.\gradlew.bat test --no-daemon --console=plain
 ```
 
-Linux/macOS: `./gradlew run --console=plain --args=human-vs-human`.
-Không truyền args cũng chạy Human vs Human. Gradle run chuyển stdin đến ứng dụng.
-
-LocalGameApplication thiết lập hai ConsoleHumanAgent trên cùng Match và dùng
-ConsoleBoardRenderer hiển thị bàn 9×9, cột A–I, hàng 1–9; `R1/P1/S1` là quân
-Player 1, `R2/P2/S2` là quân Player 2. ClassicGameSetup triển khai cố định mỗi
-người 6 ROCK, 6 PAPER, 6 SCISSORS trong vùng hợp lệ, qua PlaceAction và GameEngine.
-
-Nhập `move A7 A6` hoặc `A7 A6` (không phân biệt hoa/thường), số thứ tự action
-trong danh sách, `pass` hoặc `surrender`. Player 1 đi trước; ví dụ hai lượt đầu:
-`A7 A6`, rồi `A2 A3`. Console chỉ đọc tọa độ, tìm pieceId và tạo MoveAction;
-luật di chuyển/combat vẫn do GameEngine kiểm tra. Nước sai báo lỗi và cho nhập
-lại mà không mất lượt. EOF dừng ứng dụng với thông báo rõ ràng.
-
-Khi kết thúc, in bàn cuối, kết quả thắng/hòa và số quân còn lại. Phần console
-nằm ở `app/` và ConsoleHumanAgent; GameEngine không phụ thuộc console.
-
-Kết quả Bước 7: **195 tests pass, 0 failures, 0 errors**, gồm 6 test ứng dụng:
-quota/vùng triển khai, hai dạng tọa độ, retry action sai, lỗi định dạng,
-trận hòa sau 200 lượt và EOF. Đã chạy thử Gradle CLI với `human-vs-human`,
-stdin `surrender`, nhận `Result: WIN(P2)` và BUILD SUCCESSFUL.
-Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
-`build-step3-verification-step7-a`; chưa kiểm tra runtime trực tiếp JDK 21.
-Bot Protocol Local được bổ sung ở Bước 8 bên dưới.
-
-## Bước 8 — Bot Protocol Local
-
-```text
-bot/
-├── BotAgent.java
-├── BotProcess.java
-├── LocalProcessRunner.java
-├── BotProtocol.java
-├── BotProtocolMessage.java
-├── BotTurnRequest.java
-├── BotActionResponse.java
-└── BotProtocolException.java
-```
-
-BotAgent implement PlayerAgent và AutoCloseable, nhận BotProcess và Duration
-timeout. LocalProcessRunner nhận danh sách executable/arguments (không chạy
-qua shell), khởi động một process dùng lại qua nhiều lượt. Ví dụ cấu hình:
-
-```java
-try (BotAgent bot = new BotAgent(
-        new LocalProcessRunner(List.of("python", "bot.py")), Duration.ofSeconds(2))) {
-    // Truyền bot vào Match như mọi PlayerAgent khác.
-}
-```
-
-Runner giao tiếp UTF-8 stdin/stdout theo JSON Lines: ghi request rồi flush,
-đọc đến newline. Timeout bao gồm ghi và đọc; response tối đa 65.536 ký tự.
-EOF giữa dòng, process thoát, lỗi I/O hoặc timeout báo BotProtocolException và
-dừng process. Stderr được discard riêng để log không lẫn JSON hoặc chặn stdout.
-`close()` dừng process và các descendant hiện có, đóng pipe, dừng executor;
-caller sở hữu vòng đời agent và nên dùng try-with-resources. Chưa có sandbox.
-
-Request chứa `type=YOUR_TURN`, matchId, turn, sequence, player (`P1`/`P2`),
-state và legalActions. State gồm phase, currentPlayer, players và board
-(rows, cols, pieces); mỗi piece có id, ownerId, type, position, status.
-legalActions có type, pieceId, from, to cho MOVE hoặc type=PASS khi hết nước đi.
-Tọa độ JSON là 0-indexed, khác tọa độ hiển thị console.
-
-Bot phải flush một response trên một dòng, ví dụ:
-
-```json
-{"type":"ACTION","sequence":36,"action":{"type":"MOVE","pieceId":"P1-1","from":{"row":6,"col":0},"to":{"row":5,"col":0}}}
-```
-
-BotProtocol dùng Jackson, xác nhận type/sequence, trường bắt buộc và số nguyên
-tọa độ, hỗ trợ MOVE/PASS/SURRENDER. Server gán playerId từ PlayerView; playerId
-khác nếu được gửi trong action sẽ bị reject. JSON lỗi hoặc sequence cũ đóng bot.
-Action đúng định dạng vẫn được Match đưa qua GameEngine kiểm tra luật.
-Game Core không import Jackson; BotAgent không gọi GameEngine.
-
-BotProcess là interface transport; sau này có thể thay LocalProcessRunner bằng
-DockerSandboxRunner mà không đổi BotAgent. CLI Bot vs Bot được bổ sung ở Bước 9.
-
-Dependency: Jackson databind 2.18.6 ([release notes chính thức](https://github.com/FasterXML/jackson/wiki/Jackson-Release-2.18.6)).
-
-Kết quả Bước 8: **220 tests pass, 0 failures, 0 errors**, gồm 25 test protocol/process.
-Các test dùng JVM bot riêng để kiểm tra nhiều lượt, stderr lớn, timeout/terminate,
-EOF giữa dòng, response quá dài, JSON lỗi, sequence sai và nước đi sai luật được
-GameEngine reject. Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
-`build-step3-verification-step8-b`; chưa kiểm tra runtime trực tiếp trên JDK 21.
-
-## Bước 9 — Bot vs Bot local
-
-Trong thư mục `server`, chạy hai bot mẫu ở hai JVM riêng:
+Từ thư mục gốc repository:
 
 ```powershell
-.\gradlew.bat run --console=plain --args="bot-vs-bot demo:1 demo:2 --timeout-ms 5000"
+node --test client/tests/*.test.js
 ```
 
-Linux/macOS dùng `./gradlew` thay `gradlew.bat`. `demo:1` và `demo:2` truyền seed
-cho DemoBotApplication; bot chỉ chọn từ legalActions nhận qua JSON Lines và
-không import GameEngine. Không có randomness ẩn trong runner.
-
-CLI tổng quát: `bot-vs-bot <botA> <botB> [--timeout-ms 2000]`.
-Mỗi bot có thể là executable không cần argument (ví dụ `botA.exe`), hoặc file
-`.json` chứa mảng command/arguments để giữ nguyên đường dẫn có dấu cách.
-Ví dụ nội dung `botA.json`:
-
-```json
-["python", "bots/bot A.py", "--seed", "42"]
-```
-
-Chạy `--args="bot-vs-bot botA.json botB.json"`. Command và đường dẫn tương đối
-được tính từ thư mục `server`; chương trình không chạy command qua shell.
-Mỗi bot phải thực hiện protocol của Bước 8, flush response và giữ stdout chỉ
-cho JSON Lines. Timeout mặc định là 2.000 ms mỗi lượt ghi/đọc.
-
-LocalMatchRunner sở hữu hai BotProcess và đóng cả hai khi trận kết thúc hoặc
-có lỗi. Luồng là LocalMatchRunner → Match → BotAgent A/B → LocalProcessRunner A/B.
-Match vẫn dùng GameEngine giống Human vs Human. Khi thành công, in Match ID,
-Winner (hoặc DRAW), Total turns, Remaining pieces và Execution time (gồm khởi
-động, thi đấu, cleanup). Khi bot lỗi hoặc trả action sai luật, CLI báo lỗi và
-thoát mã 1, không tự gán kết quả thắng/thua; cú pháp CLI sai trả mã 2.
-
-Kết quả Bước 9: **228 tests pass, 0 failures, 0 errors**, gồm 8 test mới cho
-runner/CLI/command files. Kiểm tra bot process thật, cùng seed cho cùng trạng
-thái cuối, cleanup khi lỗi và đường dẫn có dấu cách. CLI demo:1 vs demo:2 chạy
-thành công: P1 thắng ở lượt 200, còn P1=15 và P2=13 quân.
-Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
-`build-step3-verification-step9-a`; chưa kiểm tra runtime trực tiếp trên JDK 21.
-Event Log và Replay được bổ sung ở Bước 10 bên dưới.
-
-## Bước 10 — Event Log và Replay
-
-Match giữ initialState và danh sách GameEvent không thể sửa từ bên ngoài.
-Các event lifecycle mới gồm MATCH_STARTED, TURN_STARTED, TURN_ENDED,
-MATCH_FINISHED; cùng với PIECE_MOVED, COMBAT_OCCURRED, PIECE_REMOVED và các
-event GameEngine hiện có. Mỗi event JSON có `sequence`, `type`, `payload`.
-Các event trong cùng action chia sẻ sequence; TURN_ENDED hoàn tất sequence đó.
-Action bị reject không thêm event. Match kết thúc ngay lúc start cũng có log.
-
-ReplayService nằm trong `replay/`, cùng MatchLog và codec ReplayJson.
-`write(path, match)` xuất trận đã FINISHED; `read(path)` trả MatchLog;
-`replay(path)` hoặc `replay(initialState, events)` dựng lại trạng thái cuối.
-Replay áp dụng các fact đã ghi, không gọi agent, randomness hay tính lại luật
-combat. Kiểm tra lifecycle, thứ tự sequence, piece payload và kết quả lưu trong
-file; log thiếu MATCH_FINISHED hoặc sai thứ tự bị từ chối.
-
-File chứa matchId, ruleSet, seed, initialState, events và result. Snapshot chứa
-kích thước board, mọi thuộc tính piece/player, currentPlayer, phase, turnNumber,
-sequence và result. Truyền seed qua constructor Match khi caller có seed gốc;
-nếu không được cung cấp thì `seed: null` (ví dụ CLI dùng hai seed bot độc lập).
-Replay chỉ cần initialState + events nên không cần chạy lại các bot.
-
-Xuất log Human vs Human:
+Kiểm tra mẫu tin cậy bằng compiler/interpreter local, nếu Python/C++/Java đã cài:
 
 ```powershell
-.\gradlew.bat run --console=plain --args="human-vs-human --export match-human.json"
+python tools/verify-bot-examples.py
 ```
 
-Xuất log Bot vs Bot và đọc replay:
+Kiểm tra upload và chạy bot thật qua REST/WebSocket: bật Docker, tải image, khởi động server kiểm thử cổng 8081 rồi chạy từ thư mục gốc:
 
 ```powershell
-.\gradlew.bat run --console=plain --args="bot-vs-bot demo:1 demo:2 --timeout-ms 5000 --export match-demo.json"
-.\gradlew.bat run --console=plain --args="replay match-demo.json"
+node tools/verify-uploaded-bots.mjs
 ```
 
-Log chỉ được xuất khi có `--export`; đường dẫn tương đối tính từ `server`.
-Các file `match-*.json` được ignore trong Git. Core vẫn không phụ thuộc JSON.
+Script tạo bot và phòng thử trên server đích; mặc định `http://127.0.0.1:8081`, đổi bằng biến `RPS_TEST_URL`. Chỉ dùng với server kiểm thử. Test Docker trong Gradle có thể **SKIPPED** nếu thiếu Engine/image; skipped không có nghĩa đã kiểm chứng sandbox.
 
-Kết quả Bước 10: **239 tests pass, 0 failures, 0 errors**, gồm 11 replay tests.
-So sánh cấu trúc đầy đủ original final state với replay final state, kiểm tra
-JSON round-trip, cả ba outcome combat, pass/surrender, kết thúc ngay lúc start,
-log action sai, log thiếu/sai sequence, metadata result và CLI human export/replay.
-CLI bot export/replay cũng chạy thành công: lượt 200, WIN(P1), còn quân 15–13.
-Test chạy trên JDK 25 với `--release 21`, thư mục build riêng
-`build-step3-verification-step10-b`; chưa kiểm tra runtime trực tiếp JDK 21.
-## Bước 11 — Cleanup và kiểm tra kiến trúc
+## Chương trình console và replay
 
-Chặng 1 hoàn thành. **249 tests pass, 0 failures, 0 errors, 0 skipped**.
-Sửa invariant/index của Board, bảo đảm allPieces trả snapshot độc lập,
-báo lỗi replay thiếu snapshot rõ ràng và từ chối command JSON có dữ liệu thừa.
-Thêm 6 kiểm tra kiến trúc để giữ core độc lập với adapter/infrastructure,
-engine độc lập luật Classic, bot không gọi engine và randomness có seed/injection.
+Chặng 1 được giữ độc lập với server web. Trong thư mục `server`:
 
-[Báo cáo cuối Chặng 1](docs/CHANG-1-REVIEW.md) ghi cây thư mục đầy đủ,
-dependency giữa các package, circular dependency và kết quả từng nhóm test.
-Kiểm tra CLI human, bot và replay thành công trên JDK 25 với `--release 21`;
-chưa kiểm tra runtime trực tiếp trên JDK 21.
+```powershell
+.\gradlew.bat run --args="human-vs-human"
+.\gradlew.bat run --args="human-vs-human --export match-local.json"
+.\gradlew.bat run --args="bot-vs-bot demo:1 demo:2 --export match-bots.json"
+.\gradlew.bat run --args="replay match-bots.json"
+```
+
+CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng console, không phải một chế độ bổ sung trên trang Vào trận. Bot CLI có thể chỉ định executable hoặc file JSON mảng lệnh; chỉ chạy local code bạn tin cậy.
+
+## Giới hạn hiện tại
+
+- Phòng và trận lưu trong RAM: restart server làm mất phòng/trận. File bot có thể còn trên ổ đĩa, nhưng danh sách và token phía client phụ thuộc storage trình duyệt.
+- Chưa có tài khoản, database, bảng xếp hạng, matchmaking tự động hoặc replay đầy đủ trên web.
+- Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng.
+- Hosting chỉ chạy một container ứng dụng không tự cung cấp Docker Engine cho runner bot riêng. Muốn giữ tính năng upload bot, cần môi trường phù hợp hoặc worker Docker riêng.
+- Bản hiện tại phù hợp demo/kiểm thử; public với người dùng không tin cậy cần bổ sung kiểm soát truy cập, quota/rate limit và cách ly worker.
+
+## Tài liệu liên quan
+
+- [Giao diện và các màn hình](docs/CLIENT-BATTLE-UI.md).
+- [Upload bot và Docker](docs/BOT-UPLOAD.md).
+- [Giao thức bot chi tiết](docs/BOT-PROTOCOL.md).
+- [Hướng dẫn chặng 2B](docs/CHANG-2B-CLIENT.md), [đặc tả client](docs/CHANG-2B-CLIENT-SPEC.md).
+- [Demo chặng 2A](docs/CHANG-2A-DEMO.md), [lộ trình Demo First](docs/CHANG-2-DEMO-FIRST.md).
+- [Báo cáo kiến trúc chặng 1](docs/CHANG-1-REVIEW.md).
+
+Tài liệu các chặng mô tả mốc phát triển và có thể chứa giao diện cũ; README và hướng dẫn giao diện hiện tại phản ánh cách sử dụng mới nhất.

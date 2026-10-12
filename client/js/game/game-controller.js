@@ -117,6 +117,8 @@ export class GameController {
       });
   }
   bind() {
+    document.querySelector("#clear-log").onclick = () =>
+      document.querySelector("#event-log").replaceChildren();
     document.querySelector(".brand").onclick = (event) => {
       event.preventDefault();
       if (this.state.connected) document.querySelector("#leave").click();
@@ -187,7 +189,7 @@ export class GameController {
       document.querySelector("#opponent-army").append(opponentArmy);
     document.querySelector("#room-code").textContent = this.seat.matchId;
     document.querySelector("#identity").textContent =
-      `Bạn: ${s.playerId === "P1" ? "Xanh" : "Đỏ"} · ${s.mode === "HUMAN_VS_BOT" ? "Bot chiến thuật" : "Hai người"}`;
+      `Bạn: ${s.playerId === "P1" ? "Xanh" : "Đỏ"} · ${s.players.every((player) => player.bot) ? "Bot đấu bot" : s.mode === "HUMAN_VS_BOT" ? "Đấu với bot" : "Hai người"}`;
     document.querySelector("#phase").textContent =
       s.status === "WAITING"
         ? "Đang chờ người thứ hai"

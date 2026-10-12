@@ -1,4 +1,5 @@
 const errors = {
+  BOT_REQUIRED: "Hãy chọn bot của bạn trước khi tạo trận bot đấu bot.",
   BOT_SANDBOX_UNAVAILABLE:
     "Chưa có Docker Linux hoặc image cho ngôn ngữ này. Xem hướng dẫn bot để thiết lập.",
   BOT_CONTROLLED: "Bot đang điều khiển đội quân này.",

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bot của tôi · RPS Battle</title>
+    <link rel="stylesheet" href="/css/global.css" />
+    <link rel="stylesheet" href="/css/bots.css" />
+    <link rel="stylesheet" href="/css/battle-theme.css" />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">◈ RPS BATTLE</a>
+      <nav class="header-links">
+        <a href="/lobby.html">Vào trận</a><button id="settings">Cài đặt</button>
+      </nav>
+    </header>
+    <main class="bot-workshop">
+      <p class="eyebrow">XƯỞNG CHIẾN THUẬT</p>
+      <h1 class="page-title">Bot của tôi</h1>
+      <p class="workshop-intro">
+        Tải chiến thuật của bạn lên và đưa bot ra đấu trường.
+      </p>
+      <div class="workshop-grid">
+        <aside class="panel bot-library">
+          <h2>Đội hình bot</h2>
+          <button id="new-bot" class="primary wide">＋ Bot mới</button>
+          <p class="muted">Danh sách lưu trên trình duyệt này.</p>
+          <div id="bot-list" aria-label="Danh sách bot"></div>
+        </aside>
+        <section class="panel upload-workbench">
+          <h2>Tải bot lên</h2>
+          <p id="bot-runtime" class="muted" role="status">
+            Đang kiểm tra Docker trên server…
+          </p>
+          <form id="bot-upload-form">
+            <label for="bot-name">Tên bot</label
+            ><input
+              id="bot-name"
+              required
+              maxlength="60"
+              placeholder="VD: AlphaBot"
+            />
+            <fieldset class="language-choices">
+              <legend>Ngôn ngữ</legend>
+              <label
+                ><input type="radio" name="language" value="PYTHON" checked />
+                Python</label
+              ><label
+                ><input type="radio" name="language" value="JAVA" /> Java /
+                JAR</label
+              ><label
+                ><input type="radio" name="language" value="CPP" /> C++</label
+              >
+            </fieldset>
+            <label for="bot-file">File mã nguồn</label
+            ><input id="bot-file" type="file" accept=".py" required />
+            <p id="file-help" class="muted">Python: file .py, tối đa 512 KB.</p>
+            <button id="upload-bot" class="primary wide" type="submit">
+              ↑ Tải bot lên
+            </button>
+          </form>
+          <div class="actions bot-tools">
+            <button id="test-bot" disabled>▶ Đấu thử với bot</button
+            ><button id="use-bot" class="gold-button" disabled>
+              ⚔ Dùng trong trận
+            </button>
+          </div>
+          <p class="muted">
+            Đấu thử tạo một trận thật với bot chiến thuật. Server tự xếp quân và
+            chạy bot trong Docker khi trận bắt đầu.
+          </p>
+          <a href="/bot-guide.html">Hướng dẫn và bot mẫu →</a
+          ><a href="/bot-protocol.html">Dữ liệu bot nhận và trả về →</a>
+        </section>
+        <section class="panel workshop-log">
+          <div class="history-heading">
+            <h2>Nhật ký thao tác</h2>
+            <button id="clear-log">Xóa</button>
+          </div>
+          <ol id="upload-log" aria-live="polite">
+            <li>Chọn bot hoặc tải file mới để bắt đầu.</li>
+          </ol>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/js/pages/bots.js"></script>
+  </body>
+</html>

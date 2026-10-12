@@ -1,0 +1,451 @@
+/* Shared fantasy treatment; gameplay selectors stay in their existing stylesheets. */
+:root {
+  --bg: #142434;
+  --panel: #142638;
+  --line: #987343;
+  --muted: #bbc8d6;
+  --text: #fff5dc;
+  --blue: #77c8ff;
+  --red: #ff9690;
+  --accent: #f0c870;
+}
+body {
+  background:
+    linear-gradient(#10223468, #102234bd),
+    url("/assets/castle-courtyard.png") center/cover fixed;
+}
+header {
+  background: linear-gradient(#14283eee, #0c1c2aee);
+  border-bottom: 2px solid #bb9253;
+  height: 70px;
+  box-shadow: 0 4px 18px #07122066;
+}
+header .brand {
+  color: #f7d78a;
+  text-shadow: 0 2px #000;
+}
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-links a {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+}
+button,
+.button {
+  background: linear-gradient(#274d70, #142b43);
+  border: 2px solid #bc955a;
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 2px #0a1b2a,
+    inset 0 4px 0 #ffffff18,
+    0 3px 0 #06111b;
+  text-shadow: 0 1px 2px #0008;
+}
+button:hover,
+.button:hover {
+  background: linear-gradient(#37668e, #1d3b57);
+  transform: translateY(-1px);
+}
+button:disabled {
+  transform: none;
+}
+.primary {
+  background: linear-gradient(#218cea, #0753a7);
+  border-color: #f2c976;
+  color: white;
+}
+.primary:hover {
+  background: linear-gradient(#45a9ff, #1263b9);
+}
+.gold-button {
+  background: linear-gradient(#b87817, #69420a);
+}
+.gold-button:hover {
+  background: linear-gradient(#cf932c, #865915);
+}
+.danger {
+  background: linear-gradient(#b94441, #802c31);
+  color: #fff;
+}
+.danger:hover {
+  background: linear-gradient(#d85b53, #97363b);
+}
+.panel,
+dialog {
+  border: 3px solid #c09b5d;
+  border-radius: 12px;
+  background: linear-gradient(130deg, #223b50f5, #0d2031f8);
+  box-shadow:
+    inset 0 0 0 2px #081723,
+    inset 0 0 0 5px #d2a96133,
+    0 8px 25px #06111b66;
+}
+.panel h2,
+dialog h2 {
+  font-family: "Segoe UI", sans-serif;
+  color: #ffe2a0;
+  text-shadow: 0 2px #000;
+}
+.eyebrow {
+  color: #f4d38f;
+}
+input,
+select {
+  background: #f9edd5;
+  color: #203249;
+  border: 2px solid #b8a484;
+  border-radius: 7px;
+}
+input::placeholder {
+  color: #6b7581;
+}
+select {
+  font: inherit;
+  padding: 12px;
+}
+.page-title {
+  font-family: "Segoe UI", sans-serif;
+  letter-spacing: -1px;
+  color: #ffe3a0;
+  text-shadow: 0 3px #122231;
+}
+.hero h1 {
+  font-family: Georgia, serif;
+  color: #ffda72;
+  text-shadow:
+    2px 3px #803b13,
+    -2px -2px #fff0af,
+    0 6px 0 #061628,
+    0 9px 18px #000;
+}
+.hero .intro {
+  color: #fff0d3;
+  text-shadow: 0 2px 4px #000;
+}
+.hero-pieces img {
+  background: linear-gradient(#253c52, #101e30);
+  border: 3px solid #ebbc65;
+  filter: none;
+  box-shadow: 0 5px 0 #061525;
+  border-radius: 18px;
+}
+.hero-size {
+  color: #ffe2a0;
+}
+.hero .actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 580px;
+  margin: 30px auto;
+  gap: 18px;
+}
+.hero .actions .button,
+.hero .actions button {
+  font-size: 20px;
+  min-height: 66px;
+}
+.hero .muted {
+  color: #e5e5d6;
+  text-shadow: 0 2px 4px #000;
+}
+.home-rules {
+  background: #0e2137c9;
+  border: 1px solid #c49b5d;
+  border-radius: 8px;
+  padding: 18px;
+  color: #e9dbbe;
+}
+.hero-mark {
+  display: block;
+  width: 65px;
+  height: 70px;
+  margin: auto;
+  font-size: 40px;
+  line-height: 65px;
+  color: #f5cf71;
+  background: linear-gradient(#287cbe, #11497b);
+  border: 3px solid #f1ca79;
+  border-radius: 8px 8px 28px 28px;
+  box-shadow: 0 4px 0 #0a1c2c;
+}
+.lobby {
+  margin: 30px auto;
+}
+.lobby > .muted {
+  color: #f5eedc;
+  text-shadow: 0 1px 3px #000;
+}
+.lobby-columns {
+  gap: 20px;
+}
+.match-setup {
+  color: #223349;
+  background: linear-gradient(#fff2d8, #e9d7b8);
+}
+.match-setup > h2,
+.lobby-room h2 {
+  color: #ffdf96;
+  background: linear-gradient(#253b4e, #0e2336);
+  text-align: center;
+  padding: 15px;
+  margin: -22px -22px 22px;
+  border-bottom: 3px solid #bf9857;
+  border-radius: 7px 7px 0 0;
+}
+.match-setup .muted,
+.match-setup label,
+.match-setup small {
+  color: #586477;
+}
+.mode-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.mode {
+  align-items: center;
+  text-align: center;
+  padding: 18px 10px;
+  background: linear-gradient(#e1e5e8, #bfc7cf);
+  color: #203249;
+  border-color: #9aa7b6;
+  box-shadow:
+    inset 0 0 0 2px #fff8,
+    0 3px 0 #8e99a6;
+  text-shadow: none;
+  min-height: 150px;
+}
+.mode strong {
+  font-size: 17px;
+}
+.mode span {
+  font-size: 12px;
+  color: inherit;
+}
+.mode-icon {
+  font-size: 33px;
+  line-height: 1;
+}
+.mode:hover,
+.mode.chosen {
+  background: linear-gradient(#1b9eec, #0854a6);
+  color: #fff;
+  border-color: #49c6ff;
+}
+.bot-panel {
+  background: #fffbef70;
+  border: 1px solid #c9b18a;
+  box-shadow: none;
+  color: #203249;
+}
+.bot-panel h2 {
+  color: #26394f;
+  font-family: inherit;
+  text-shadow: none;
+}
+.bot-panel select {
+  background: #fffaf0;
+  color: #203249;
+  border-color: #baa788;
+}
+.bot-panel a {
+  color: #235e99;
+}
+.match-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid #ceb992;
+  border-radius: 7px;
+}
+.match-settings strong {
+  display: block;
+  margin-top: 6px;
+}
+.join-panel {
+  border-color: #c9b18a;
+}
+.join-panel h2 {
+  color: #26394f;
+  text-shadow: none;
+  font-family: inherit;
+}
+.lobby-room {
+  background: linear-gradient(#fff1d5, #e9d8b9);
+  color: #203249;
+}
+.lobby-room > .eyebrow {
+  display: none;
+}
+.lobby-room .eyebrow,
+.lobby-room .muted,
+.lobby-seat p {
+  color: #5c6676;
+}
+.room-placeholder {
+  background: #fff6df;
+  color: #24384e;
+  border: 2px solid #c69c5e;
+}
+.room-placeholder small {
+  color: #6c7380;
+}
+.lobby-seat {
+  border-color: #cdb990;
+}
+.seat-emblem {
+  border: 2px solid #e4bb68;
+  background: linear-gradient(#258de0, #164a8f);
+  color: #ffe4a0;
+  font-size: 23px;
+}
+.seat-emblem.red {
+  background: linear-gradient(#d6534a, #8c2a35);
+}
+.lobby-room > a {
+  color: #245b8d;
+}
+.board-frame {
+  background: linear-gradient(135deg, #d1ae66, #64502e, #e0c387);
+  padding: 14px;
+  border: 3px solid #f7d185;
+  box-shadow:
+    inset 0 0 0 3px #172636,
+    0 10px 30px #0007;
+}
+.coordinate {
+  background: linear-gradient(#243d55, #102337);
+  border: 1px solid #bb9557;
+  border-radius: 4px;
+  color: #ffe3a0;
+  font-weight: 800;
+}
+.cell {
+  background: linear-gradient(135deg, #c7c4aa, #8e9489);
+  border-color: #788175;
+  box-shadow: inset 1px 1px 0 #fff4;
+}
+.cell.blue-zone {
+  background: linear-gradient(135deg, #3286bf, #23577c);
+  border-color: #4e98bf;
+}
+.cell.red-zone {
+  background: linear-gradient(135deg, #b65d53, #85443e);
+  border-color: #cb8270;
+}
+.piece,
+.army-pieces img {
+  filter: drop-shadow(0 3px 2px #0005);
+}
+.army-pieces > div {
+  background: linear-gradient(#213b53, #0e243a);
+  border-color: #68839d;
+}
+.cell.selected {
+  background: #deac44;
+  outline-color: #ffe494;
+}
+.cell.legal {
+  background: #428e57;
+  border-color: #9cf09b;
+}
+.cell.attack {
+  background: #bb4d4d;
+  border-color: #ffbd80;
+}
+.palette .chosen {
+  background: linear-gradient(#3877a2, #214d72);
+}
+.turn-bar {
+  background: #10283dea;
+  border: 2px solid #bd9557;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.turn-bar h2 {
+  color: #fff0cc;
+}
+.board-note {
+  color: #eef0dc;
+  text-shadow: 0 1px 3px #000;
+}
+.history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+.history-heading h2 {
+  margin: 0;
+}
+.history li {
+  padding: 8px 0;
+  border-bottom: 1px solid #56708b55;
+}
+.clock-panel {
+  border-color: #e1bb69;
+}
+#timer {
+  color: #ffe195;
+}
+.hint {
+  background: #142d43ef;
+  border-color: #c8a35f;
+}
+.result-emblem {
+  font-size: 100px;
+  text-shadow: 0 5px #513b17;
+}
+.result-screen .actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: none;
+  gap: 10px;
+}
+.result-screen .actions button,
+.result-screen .actions .button {
+  font-size: 14px;
+  padding: 12px;
+}
+.result-stats {
+  background: #0b1d2f;
+  padding: 8px 18px;
+  border: 1px solid #8a7452;
+  border-radius: 8px;
+}
+.event-summary {
+  max-height: 350px;
+  overflow: auto;
+  padding-left: 20px;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .hero .actions {
+    gap: 10px;
+  }
+  .hero .actions button,
+  .hero .actions .button {
+    font-size: 16px;
+    padding: 12px;
+  }
+  .mode-grid {
+    grid-template-columns: 1fr;
+  }
+  .mode {
+    min-height: 90px;
+  }
+  .match-settings {
+    grid-template-columns: 1fr 1fr;
+  }
+  .result-screen .actions {
+    grid-template-columns: 1fr;
+  }
+  .header-links a {
+    font-size: 11px;
+  }
+}

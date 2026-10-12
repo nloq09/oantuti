@@ -1,6 +1,7 @@
 import { createMatch } from "../api/match-api.js";
 import { seatKey } from "../config.js";
 import { toast } from "../ui/toast.js";
+import { modal } from "../ui/modal.js";
 let snapshot;
 try {
   snapshot = JSON.parse(sessionStorage.getItem("rps-result"));
@@ -8,6 +9,28 @@ try {
 if (!snapshot) location.replace("/");
 else {
   const g = snapshot.gameState;
+  document.querySelector("#match-log").onclick = () => {
+    const list = document.createElement("ol");
+    list.className = "event-summary";
+    const names = {
+      PIECE_MOVED: "Di chuyển",
+      COMBAT_OCCURRED: "Giao chiến",
+      PIECE_REMOVED: "Quân bị loại",
+      TURN_CHANGED: "Đổi lượt",
+      MATCH_STARTED: "Bắt đầu trận",
+      GAME_FINISHED: "Kết thúc trận",
+    };
+    for (const event of g.events || []) {
+      const item = document.createElement("li");
+      item.textContent = `#${event.sequence} · ${names[event.type] || event.type}`;
+      list.append(item);
+    }
+    if (!list.children.length)
+      list.textContent = "Không có sự kiện trong trạng thái cuối trận.";
+    modal("Sự kiện trong trạng thái cuối trận", list, [
+      { label: "Đóng", primary: true },
+    ]);
+  };
   document.querySelector("#result-turns").textContent = g.turn;
   for (const owner of ["P1", "P2"])
     document.querySelector("#result-" + owner.toLowerCase()).textContent =

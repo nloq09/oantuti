@@ -4,8 +4,8 @@
 
 ## Sử dụng
 
-Khởi động server như README, mở `/lobby.html`, chọn **Tải bot của tôi lên**.
-Đặt tên, chọn `.cpp`, `.py`, `.java` hoặc `.jar`, rồi chọn bot trong **Người chơi của bạn**.
+Khởi động server như README, mở `/bots.html` từ **Bot của tôi**, rồi tải bot lên.
+Đặt tên, chọn `.cpp`, `.py`, `.java` hoặc `.jar`, bấm **Dùng trong trận** rồi chọn bot trong **Người chơi của bạn** tại `/lobby.html`.
 
 - **Hai người**: tạo phòng hoặc tham gia mã phòng. Mỗi bên có thể dùng bot riêng hoặc chơi tay.
 - **Đấu với bot**: bot riêng của bạn đấu với bot chiến thuật có sẵn.

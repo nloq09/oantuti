@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/css/global.css" />
     <link rel="stylesheet" href="/css/game.css" />
     <link rel="stylesheet" href="/css/animations.css" />
+    <link rel="stylesheet" href="/css/battle-theme.css" />
   </head>
   <body>
     <header>
@@ -155,7 +156,12 @@
           </div>
         </section>
         <section class="panel history">
-          <h2>Diễn biến trận</h2>
+          <div class="history-heading">
+            <h2>Diễn biến trận</h2>
+            <button id="clear-log" aria-label="Xóa diễn biến đang hiển thị">
+              Xóa
+            </button>
+          </div>
           <ol id="event-log" aria-live="polite"></ol>
         </section>
         <section class="panel rule-note">

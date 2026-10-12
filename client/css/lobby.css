@@ -102,6 +102,14 @@
   margin: 28px 0;
   align-items: start;
 }
+.lobby-right {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.lobby-join .actions input {
+  width: 100%;
+}
 .match-setup > h2,
 .lobby-room h2 {
   font-size: 22px;

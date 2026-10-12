@@ -1,6 +1,5 @@
 import { modal } from "../ui/modal.js";
 import { openSettings } from "../ui/sound.js";
-document.querySelector("#settings").onclick = openSettings;
 document.querySelector("#help").onclick = () =>
   modal(
     "Cách chơi",

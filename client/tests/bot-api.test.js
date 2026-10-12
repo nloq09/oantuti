@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { savedBots, uploadBot } from "../js/api/bot-api.js";
-import { createMatch, joinMatch } from "../js/api/match-api.js";
+import {
+  createMatch,
+  joinMatch,
+  createBotBattle,
+} from "../js/api/match-api.js";
 import { ClientState } from "../js/game/game-state.js";
 
 test("upload capability persists and create/join send only bot credentials", async () => {
@@ -74,4 +78,51 @@ test("owners observe uploaded bots without manual move controls", () => {
   assert.equal(state.ownTurn, true);
   state.snapshot.gameState.currentPlayer = "P2";
   assert.equal(state.ownTurn, false);
+});
+
+test("bot battles create a real room and attach the second bot through join", async () => {
+  const original = globalThis.fetch;
+  const requests = [];
+  const bot = { id: "first", token: "first-token" },
+    opponent = { id: "second", token: "second-token" };
+  try {
+    globalThis.fetch = async (url, options) => {
+      requests.push({ url, body: JSON.parse(options.body) });
+      return {
+        ok: true,
+        json: async () => ({
+          matchId: "ROOM",
+          playerId: url.endsWith("join") ? "P2" : "P1",
+          token: "seat-token",
+        }),
+      };
+    };
+    await assert.rejects(createBotBattle(), /BOT_REQUIRED/);
+    assert.equal(requests.length, 0);
+    const seat = await createBotBattle(bot, opponent);
+    assert.equal(seat.playerId, "P1");
+    assert.deepEqual(requests, [
+      {
+        url: "/api/matches",
+        body: {
+          mode: "HUMAN_VS_HUMAN",
+          botId: "first",
+          botToken: "first-token",
+        },
+      },
+      {
+        url: "/api/matches/ROOM/join",
+        body: { botId: "second", botToken: "second-token" },
+      },
+    ]);
+    requests.length = 0;
+    await createBotBattle(bot);
+    assert.deepEqual(requests[0].body, {
+      mode: "HUMAN_VS_BOT",
+      botId: "first",
+      botToken: "first-token",
+    });
+  } finally {
+    globalThis.fetch = original;
+  }
 });
