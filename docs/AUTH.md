@@ -1,127 +1,43 @@
-# Account authentication — Chặng 4 Nhóm 2–3
+# Tài khoản và phân quyền
 
-Project dùng **HTTP session cookie HttpOnly**, không dùng JWT. Tài khoản được lưu trong bảng PostgreSQL `users`; session hiện ở RAM của server, hết hạn sau 30 phút không hoạt động và mất sau khi server restart. Người dùng đăng nhập lại, tài khoản không mất. Không có tài khoản/password ADMIN mặc định.
+## Đăng ký, đăng nhập và session
 
-## Chính sách input
+Client có login.html, register.html, profile.html, history.html. Khách vẫn chơi tay hoặc bot có sẵn; quản lý bot riêng, tạo/tham gia giải và lịch sử cá nhân cần đăng nhập. Home chuyển Bot của tôi/Giải đấu qua login và giữ đường dẫn quay lại cùng origin.
 
-- Username: 3–32 ký tự ASCII `a-z`, `0-9`, `_`; strip khoảng trắng ngoài, normalize lowercase với `Locale.ROOT`, unique không phân biệt hoa/thường.
-- Email: strip và lowercase toàn bộ, tối đa 254 ký tự, kiểm tra cấu trúc email cơ bản, unique. Chưa có xác minh email hoặc chức năng quên mật khẩu.
-- Display name: 1–60 ký tự sau strip, không chứa control characters.
-- Password: tối thiểu 12 Unicode code points, tối đa 72 **UTF-8 bytes**, không được toàn khoảng trắng. Giữ nguyên password, không strip/normalize. Giới hạn bytes tránh BCrypt cắt/trùng password dài; chưa bắt buộc mẫu chữ hoa/ký tự đặc biệt.
-- Mật khẩu băm bằng BCrypt cost 12 với salt ngẫu nhiên. DTO không trả password/hash, session ID hoặc internal token. Các request DTO và domain User có `toString` redacted.
-- Register luôn tạo role USER/status ACTIVE, không nhận role/status từ client. Login sai username/password, disabled account đều trả chung `401 INVALID_CREDENTIALS`.
+REST:
 
-## API và CSRF
+- GET `/api/auth/csrf`: lấy token/headerName, giữ cookie cùng phiên.
+- POST `/api/auth/register`: username/email/password/displayName, tạo USER/ACTIVE. Không nhận role/owner từ browser.
+- POST `/api/auth/login`: username/password, đổi session ID khi thành công, trả account an toàn.
+- GET `/api/auth/me`: trạng thái authenticated và user; không trả hash/session ID.
+- POST `/api/auth/logout`: vô hiệu session và xóa cookie; không xóa account/bot/history.
 
-Client cùng host với server. Trước mỗi POST auth, gọi:
+POST/PATCH/DELETE tài khoản, bot và giải dùng header CSRF từ GET csrf. Cookie JSESSIONID do server quản lý; production Secure/HttpOnly/SameSite=Lax, timeout 30 phút. Không lưu mật khẩu hoặc auth token vào localStorage. Same-origin deployment giúp cookie/CSRF hoạt động thống nhất.
 
-```http
-GET /api/auth/csrf
-```
+Username 3–32 chữ thường a–z, chữ số hoặc gạch dưới; strip/lowercase khi tìm. Email chuẩn hóa và unique. Password không trim, tối thiểu 12 Unicode code points, tối đa 72 byte UTF-8, BCrypt cost 12/salt riêng. Đăng nhập sai trả INVALID_CREDENTIALS chung; quota/brute force có thể trả RATE_LIMITED. Xem [WORKER-OPERATIONS.md](WORKER-OPERATIONS.md).
 
-Response có `token`, `headerName` (mặc định `X-CSRF-TOKEN`); browser giữ session cookie. Gửi token trong header tương ứng, không đưa token/password vào URL. Phải lấy token mới sau login/logout vì session/CSRF được đổi hoặc hủy. Responses auth dùng `Cache-Control: no-store`.
+## USER, ADMIN và ownership
 
-```http
-POST /api/auth/register
-Content-Type: application/json
-X-CSRF-TOKEN: <token vừa lấy>
-```
+USER được quản lý source/metadata bot của mình và xem profile/history của mình. Chủ giải hoặc ADMIN được start/cancel giải; người khác đăng ký/rút bot của chính họ khi giải DRAFT. Giải hiện PUBLIC, mọi người xem được ranking/spectator/replay công khai. Quyền tính từ DB và session đã xác thực, không từ userId/role/token browser gửi.
 
-```json
-{
-  "username": "player_a",
-  "email": "player_a@example.com",
-  "password": "Replace with your own password",
-  "displayName": "Player A"
-}
-```
-
-Trả 201 với `id`, `username`, `displayName`, `role`; **không tự đăng nhập**. Input sai trả 400, trùng username/email trả 409 `ACCOUNT_ALREADY_EXISTS`. DB unique constraint bảo vệ cả đăng ký đồng thời, không chỉ pre-check.
-
-```http
-POST /api/auth/login
-```
-
-Body `username`, `password`; header CSRF như trên. Trả 200 với thông tin tài khoản an toàn, ghi `lastLoginAt`, đổi session ID chống session fixation, lưu SecurityContext server-side. Không trả bearer token.
-
-```http
-GET /api/auth/me
-```
-
-Anonymous trả `{"authenticated":false}`. Session hợp lệ trả `authenticated:true` và `user` với 4 field DTO trên. Identity lấy từ Spring Security principal, không dùng userId tự khai ở request. Nhóm 3 kiểm tra status, authVersion và role DB trên mỗi request có account session: account disabled/mất hoặc session version cũ sẽ bị hủy; role được cập nhật từ DB trước khi kiểm tra quyền. Principal lưu trong session không chứa password/hash.
-
-```http
-POST /api/auth/logout
-```
-
-Body `{}`, cần CSRF. Hủy session và SecurityContext, hết hạn cookie JSESSIONID; replay cookie cũ không đăng nhập được. GET logout không được hỗ trợ.
-
-## Cookie và production
-
-- `HttpOnly`, `SameSite=Lax`, cookie-only session tracking; không truyền session ID qua URL.
-- Profile prod bật `Secure`; browser chỉ gửi cookie qua HTTPS. Reverse proxy/forwarded headers và HTTPS sẽ được hoàn thiện ở nhóm deployment. Không chạy profile prod qua HTTP rồi coi login thất bại là lỗi mật khẩu.
-- CSRF bật cho mọi mutation POST/PATCH/DELETE `/api/auth/**`, `/api/account/**`, `/api/admin/**`; thiếu/sai token trả 403 `CSRF_INVALID`.
-- CORS không mở wildcard hoặc cho phép frontend cross-origin. Giữ client/server cùng origin.
-- Chưa có brute-force rate limit; phải thêm ở Nhóm 9 trước khi coi hệ thống đã harden production.
-
-## Account/Profile và Admin — Nhóm 3
-
-- `GET /api/account` hoặc `/api/account/profile`: profile của session hiện tại, gồm ID, username, email, displayName, role/status và timestamps; không có hash/authVersion/token. Chưa có stats/history vì chúng được làm ở Nhóm 5.
-- `PATCH /api/account/profile` body `{"displayName":"Tên mới"}`: chỉ đổi display name; gửi thêm id/username/email/role/passwordHash không thay đổi các field đó. Không nhận userId để chọn profile.
-- `POST /api/account/change-password` body `currentPassword`, `newPassword`: kiểm tra password hiện tại, policy mới, không cho giữ nguyên password. Thành công tăng authVersion trong DB, hủy phiên hiện tại và trả `changed:true, authenticated:false`; **mọi phiên khác phải đăng nhập lại** khi gửi request tiếp theo. Password cũ không đăng nhập được nữa.
-- `GET /api/admin/users?page=0&size=20`: ADMIN, page >=0, size 1–100; danh sách DTO không lộ hash/version. `total` là tổng số tài khoản.
-- `POST /api/admin/users/{id}/disable` và `/enable`: ADMIN, cần CSRF. Chỉ đổi status và tăng authVersion khi status đổi; không xóa account/history. Bật lại không làm cookie cũ hợp lệ. Không cho admin tự disable chính mình; ID không tồn tại trả 404 `USER_NOT_FOUND`.
-- `GET /api/admin/system`: ADMIN; trả số users, phòng đang hoạt động, giải RUNNING và thời điểm kiểm tra; không trả secrets/command/path. Metrics sâu và bot failure counters ở Nhóm 9.
-- Authorization ở application service kiểm tra role/status DB, không dựa vào role/userId do client khai. Row lock trong transaction bảo vệ cập nhật profile/password/status khỏi ghi đè trạng thái bảo mật mới.
-- Nếu DB lỗi khi xác minh session, filter trả 503 `DATABASE_UNAVAILABLE`, không cho request đi tiếp với quyền cache.
-
-Nhóm 4 đã chuyển bot upload/dùng bot riêng sang account ownership: owner hoặc ADMIN, danh sách từ PostgreSQL, CSRF cho upload/account mutations và mọi request match/tournament có session đăng nhập. Token bot client chỉ dùng nhập artifact cũ, không cấp quyền chơi. Guest vẫn chơi tay/đấu bot sẵn bằng seat token. Nhóm 6 đã chuyển creator/control của giải sang owner account/ADMIN; mọi mutation giải cần CSRF, đọc giải PUBLIC vẫn public. WebSocket game đang mở chưa gắn account với ghế hay tự đóng khi đổi password/disable; phần đó thuộc các nhóm tiếp theo. Xem [BOT-OWNERSHIP.md](BOT-OWNERSHIP.md).
-
-## Tạo ADMIN đầu tiên
-
-Đăng ký tài khoản bình thường, sau đó người quản trị DB chủ động chạy SQL sau qua kết nối PostgreSQL có quyền quản trị, thay username bằng tài khoản đã chọn:
+ADMIN có `/api/admin/users`, `/api/admin/users/{id}/disable`, `/enable`, `/api/admin/system` và Actuator metrics/info. Không có admin mặc định hoặc password mặc định. Nếu cần bootstrap admin: đăng ký account bình thường, rồi người quản trị DB mở psql riêng và đổi đúng account đã xác minh:
 
 ```sql
-UPDATE users SET role = 'ADMIN', auth_version = auth_version + 1,
-    updated_at = CURRENT_TIMESTAMP
-WHERE username = 'your_admin_username' AND status = 'ACTIVE';
+UPDATE users SET role='ADMIN' WHERE username='ten_admin_da_xac_minh';
 ```
 
-Kiểm tra đúng một row được cập nhật rồi đăng nhập lại. Không có endpoint public nâng role, không có admin password mặc định hoặc secret bootstrap được commit. Chỉ người có quyền DB dùng thao tác này; API profile không thể nâng quyền.
+Lệnh này chỉ là hướng dẫn, không được tự chạy cho account của người dùng. Kiểm tra đúng một row, đăng xuất/đăng nhập lại. Không cấp ADMIN bằng API đăng ký, không chia sẻ account quản trị hoặc secrets env. Disable giữ lịch sử/bot metadata; không hard-delete user. Admin không được disable chính mình qua API.
 
-Account session xác định **ai là user**. Seat token xác định **quyền điều khiển ghế P1/P2**. Session không thay thế seat token; WebSocket account binding sẽ thực hiện ở nhóm authorization.
+Đổi mật khẩu cần currentPassword/newPassword; tăng authVersion và thu hồi các session cũ. SessionAccountFilter kiểm tra account ACTIVE/version/role từ DB trước mutation; DB lỗi trả 503, không mở quyền mặc định. Session ở RAM servlet không được giữ qua restart, nên phải login lại; account trong DB vẫn còn.
 
-## Client helper và kiểm tra
+## Account session và seat token
 
-`client/js/api/auth-api.js` có `register`, `login`, `currentUser`, `logout`. Helper gửi cookie same-origin, tự lấy CSRF mới cho từng mutation, không ghi password/session/token vào localStorage. Chưa nối vào home/navbar hay thêm trang login/register/profile; đó là Nhóm 8.
+Account session xác định danh tính/ownership. Seat token chỉ cho phép điều khiển một ghế trong một phòng RAM, dùng cho JOIN/RESUME/ACTION qua WebSocket. Token ghế không cấp quyền sửa bot, đọc lịch sử account khác hoặc quản lý giải. Bot capability cũ được giữ nội bộ server; DTO mới không trả token/path.
 
-Khởi động DB/server theo `CHANG-4-NHOM-1-DATABASE.md`. Với PowerShell, thử API mà không cần giao diện:
+Ghế được bind user/bot tại server khi REST create/join hoặc worker tạo trận giải; history/stats theo danh tính đó. Khách không có userId để gán tự động. Hai ghế có thể được bot của mỗi chủ ghế điều khiển; không thêm chế độ Bot đấu bot riêng vào lobby.
 
-```powershell
-$base = 'http://localhost:8080'
-$csrf = Invoke-RestMethod "$base/api/auth/csrf" -SessionVariable authSession
-$headers = @{ $csrf.headerName = $csrf.token }
-# Dùng mật khẩu riêng, không ghi thông tin thật vào repository hoặc log.
-$account = @{ username='player_a'; email='player_a@example.com'; displayName='Player A'; password='<your password, 12+ characters>' }
-Invoke-RestMethod "$base/api/auth/register" -Method Post -WebSession $authSession -Headers $headers -ContentType 'application/json' -Body ($account | ConvertTo-Json)
-$csrf = Invoke-RestMethod "$base/api/auth/csrf" -WebSession $authSession
-$headers = @{ $csrf.headerName = $csrf.token }
-$credentials = @{ username=$account.username; password=$account.password }
-Invoke-RestMethod "$base/api/auth/login" -Method Post -WebSession $authSession -Headers $headers -ContentType 'application/json' -Body ($credentials | ConvertTo-Json)
-Invoke-RestMethod "$base/api/auth/me" -WebSession $authSession
-$csrf = Invoke-RestMethod "$base/api/auth/csrf" -WebSession $authSession
-$headers = @{ $csrf.headerName = $csrf.token }
-Invoke-RestMethod "$base/api/auth/logout" -Method Post -WebSession $authSession -Headers $headers -ContentType 'application/json' -Body '{}'
-```
+Logout/đổi mật khẩu chưa tự đóng tất cả socket hoặc xóa seat capability của một trận đang mở ở tab khác. WSS same-origin và seat capability vẫn quyết định quyền trong phòng; người chơi nên rời phòng nếu muốn dừng điều khiển. Không gửi password/token trong URL hoặc chia sẻ log/fixture có credential.
 
-Tests backend thực hiện flow HTTP thật với CookieManager, verify cookie flags/session rotation/logout replay, CSRF, duplicate input, disabled login, hash và PostgreSQL JPA.
+Bot cũ chưa có owner chỉ nhập qua `/api/account/bots/import` với proof token hợp lệ; không được dùng token để chiếm bot đã thuộc account khác. Soft-delete bot giữ source cho audit/replay, không tự xóa artifact đã tham gia giải.
 
-
-## Lịch sử và thống kê (Nhóm 5)
-
-`GET /api/account/matches?filter=all&page=0&size=20`, `GET /api/account/matches/{historyId}`, `GET /api/account/stats` chỉ dùng principal hiện tại. Client không thể chọn account khác bằng body/query. Owner ghế được gắn khi tạo/join bằng session; bot là controller riêng. Xem [MATCH-HISTORY.md](MATCH-HISTORY.md) cho filters, tỷ lệ thắng và giới hạn phục hồi trạng thái.
-
-
-## Quyền giải đấu (Nhóm 6)
-
-Tạo/start/cancel/edit roster dùng principal và CSRF; owner giải/ADMIN quản lý, người khác đăng ký bot của họ khi DRAFT. Không sử dụng X-Tournament-Token/X-Bot-Token. Chỉ hỗ trợ PUBLIC trong bản đầu; dữ liệu PRIVATE cũ không công bố. Xem [TOURNAMENT-OWNERSHIP.md](TOURNAMENT-OWNERSHIP.md).
+Hướng dẫn giao diện: [ACCOUNT-UI.md](ACCOUNT-UI.md). Deployment/HTTPS: [DEPLOYMENT.md](DEPLOYMENT.md).

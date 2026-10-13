@@ -30,5 +30,8 @@ match-*.json
 .env
 .env.*
 !.env.example
+!infra/.env.production.example
 **/data/replays/
 backups/
+__pycache__/
+*.py[cod]

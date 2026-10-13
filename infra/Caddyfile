@@ -1,0 +1,20 @@
+{
+    email {$ACME_EMAIL}
+}
+{$RPS_DOMAIN} {
+    request_body {
+        max_size 6MiB
+    }
+    encode zstd gzip
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy same-origin
+        -Server
+    }
+    reverse_proxy rps-server:8080 {
+        header_up -Forwarded
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Port {http.request.port}
+    }
+}

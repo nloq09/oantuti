@@ -37,4 +37,5 @@ public final class BotAgent implements PlayerAgent, AutoCloseable {
     public void close() {
         process.close();
     }
+    public void bindMatch(String matchId){process.bindMatch(matchId);}
 }

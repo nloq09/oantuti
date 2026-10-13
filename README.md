@@ -105,6 +105,16 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Nhóm 9:** thêm MatchWorker/LocalMatchWorker, FIFO có giới hạn và giữ chỗ toàn lịch giải; mặc định 4 trận giải chạy/256 trận chờ. Quá tải trả SERVER_BUSY, rate limit HTTP/WS trả RATE_LIMITED; chống đăng nhập sai liên tục, Actuator metrics chỉ ADMIN xem và checkpoint trước khi đóng server. [Cấu hình, monitoring và giới hạn](docs/WORKER-OPERATIONS.md), [báo cáo](docs/CHANG-4-NHOM-9-WORKER.md).
 
+**Nhóm 10:** Dockerfile Java 21, Compose PostgreSQL/server/Caddy HTTPS với volume bền vững và role DB ứng dụng riêng; runner bot opt-in socket, source mount một file và label cleanup. Công cụ backup/restore DB + source + replay có checksum, restore chỉ vào target trống. [Triển khai](docs/DEPLOYMENT.md), [vận hành](docs/OPERATIONS.md), [tài khoản/quyền](docs/AUTH.md), [báo cáo](docs/CHANG-4-NHOM-10-DEPLOYMENT.md).
+
+Để chạy bộ production, copy `infra/.env.production.example` sang `.env.production`, điền domain và hai mật khẩu DB riêng, tải image bot nếu cần, rồi:
+
+```bash
+docker compose --env-file .env.production -f infra/docker-compose.yml -f infra/docker-compose.bots.yml up -d --build --wait --wait-timeout 180
+```
+
+Client/API/WebSocket cùng `https://<RPS_DOMAIN>/`. Chạy không cần bot upload thì bỏ override `docker-compose.bots.yml`; bot chiến thuật có sẵn vẫn hoạt động. Hướng dẫn HTTPS/domain, quyền Docker socket, backup/restore và giới hạn nằm trong DEPLOYMENT.md.
+
 
 
 
@@ -243,6 +253,8 @@ Khán giả gửi `SPECTATE_MATCH` với `matchId`, nhận snapshot `GAME_STATE`
 ```text
 oantuti/
 ├── README.md
+├── Dockerfile / .dockerignore      # Build Java 21 image, không đưa secrets/data vào image
+├── infra/                         # Compose prod/DB dev, Caddy HTTPS, DB init và env mẫu
 ├── client/                         # Client web, được server phục vụ cùng host
 │   ├── index.html                  # Trang chủ
 │   ├── lobby.html                  # Chế độ, chọn bot, tạo/vào phòng
@@ -354,13 +366,14 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 
 - Bàn cờ/phòng đang chơi lưu trong RAM: restart không tiếp tục ván cũ. Metadata trận và lịch sử đã commit được giữ trong PostgreSQL theo account. Metadata bot theo tài khoản lưu bền vững trong PostgreSQL; source cần ổ lưu trữ bền vững và bản sao lưu.
 - Đã có tài khoản/session/PostgreSQL, history/stats và ownership bot/giải. UI Login/Register/Profile/History đã có ở Nhóm 8; chưa có ranking người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
-- Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng.
+- Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng. Bộ Compose là một deployment/host; account cần đăng nhập lại sau restart vì servlet session vẫn ở RAM.
 - Hosting chỉ chạy một container ứng dụng không tự cung cấp Docker Engine cho runner bot riêng. Muốn giữ tính năng upload bot, cần môi trường phù hợp hoặc worker Docker riêng.
 - Đã có ownership, CSRF/session, rate limit một instance và giới hạn lịch giải. Public với người dùng không tin cậy vẫn cần quota tài nguyên theo account, reverse proxy đáng tin, backup, cleanup container sau crash và cách ly worker vận hành; queue/phòng chưa chia sẻ giữa nhiều instance.
 
 ## Tài liệu liên quan
 
 - [Giao diện và các màn hình](docs/CLIENT-BATTLE-UI.md).
+- [Production deployment](docs/DEPLOYMENT.md), [vận hành và backup/restore](docs/OPERATIONS.md), [tài khoản và phân quyền](docs/AUTH.md).
 - [Chặng 3: Tournament, Ranking, Spectator và Replay](docs/CHANG-3.md).
 - [Upload bot và Docker](docs/BOT-UPLOAD.md).
 - [Giao thức bot chi tiết](docs/BOT-PROTOCOL.md).

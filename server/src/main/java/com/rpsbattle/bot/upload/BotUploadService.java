@@ -18,11 +18,22 @@ public class BotUploadService {
     private final Path root;
     private final ObjectMapper json;
     private final boolean enabled;
+    private final DockerArtifactPaths dockerPaths;
+    private final String instanceKey;
+    private final String bootId=UUID.randomUUID().toString();
     public BotUploadService(ObjectMapper json, @Value("${rps.bots.directory:data/bots}") String directory,
                             @Value("${rps.bots.enabled:true}") boolean enabled) {
+        this(json,directory,enabled,"","local");
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public BotUploadService(ObjectMapper json,@Value("${rps.bots.directory:data/bots}") String directory,
+            @Value("${rps.bots.enabled:true}") boolean enabled,@Value("${rps.bots.docker-volume:}") String volume,
+            @Value("${rps.bots.instance-key:local}") String instanceKey) {
+        if(!instanceKey.matches("[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}"))throw new IllegalArgumentException("Invalid instance key");
         this.json = json;
         this.root = Path.of(directory).toAbsolutePath().normalize();
         this.enabled = enabled;
+        this.dockerPaths=new DockerArtifactPaths(volume);this.instanceKey=instanceKey;
     }
 
     public synchronized Upload upload(String name, MultipartFile file) {
@@ -86,7 +97,8 @@ public class BotUploadService {
     public BotAgent agent(String id, String token) {
         Upload upload = authorize(id, token);
         if (!available(upload.language())) throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE");
-        return new BotAgent(new DockerBotProcess(root.resolve(id).resolve(upload.language().filename), upload.language()), Duration.ofSeconds(2));
+        var source=root.resolve(id).resolve(upload.language().filename);
+        return new BotAgent(new DockerBotProcess(dockerPaths.source(root,source),upload.language(),instanceKey,bootId,id),Duration.ofSeconds(2));
     }
 
     public boolean available(BotLanguage language) {

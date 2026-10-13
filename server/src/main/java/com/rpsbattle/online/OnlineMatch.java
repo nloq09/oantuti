@@ -138,6 +138,7 @@ public final class OnlineMatch {
         if (match != null) fail("INVALID_PHASE");
         var seat = seats.get(player);
         if (seat == null) fail("PLAYER_NOT_FOUND");
+        if(agent instanceof com.rpsbattle.bot.BotAgent bot)bot.bindMatch(archiveId());
         uploadedAgents.put(player, agent);
         botNames.put(player, name);
         seats.put(player, new Seat(player, seat.token(), true));

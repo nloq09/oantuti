@@ -1,0 +1,13 @@
+.git
+.gradle
+**/build
+**/build-*
+**/data
+**/node_modules
+.env
+.env.*
+infra/.env*
+backups
+.codex
+.agents
+*.log

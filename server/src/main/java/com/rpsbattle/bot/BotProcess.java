@@ -11,6 +11,7 @@ public interface BotProcess extends AutoCloseable {
     String exchange(String request, Duration timeout);
 
     boolean isAlive();
+    default void bindMatch(String matchId) { /* Optional transport lifecycle context. */ }
 
     @Override
     void close();

@@ -1,0 +1,9 @@
+# Opt-in: only the trusted server gets Docker socket access; bot containers never do.
+services:
+  rps-server:
+    environment:
+      BOTS_ENABLED: "true"
+    group_add:
+      - "${DOCKER_GID:-0}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
