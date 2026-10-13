@@ -1,13 +1,10 @@
 import { GameController } from "../game/game-controller.js?v=diagonal";
-import { openSettings } from "../ui/sound.js";
 import { toast } from "../ui/toast.js";
 export class SpectatorController extends GameController {
   constructor(matchId) {
     super({ matchId, playerId: "P1", role: "SPECTATOR" });
   }
   bind() {
-    document.querySelector(".brand").href = "/tournaments.html";
-    document.querySelector("#settings").onclick = openSettings;
     document.querySelector("#clear-log").onclick = () =>
       document.querySelector("#event-log").replaceChildren();
     document.querySelector("#leave").textContent = "Về giải đấu";

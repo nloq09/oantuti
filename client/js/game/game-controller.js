@@ -6,7 +6,7 @@ import { GameSocket } from "../socket/game-socket.js?v=stage3";
 import { TurnTimer } from "../ui/timer.js";
 import { toast } from "../ui/toast.js";
 import { modal, confirmAction } from "../ui/modal.js";
-import { sound, openSettings } from "../ui/sound.js";
+import { sound } from "../ui/sound.js";
 import { labels, seatKey, icon } from "../config.js";
 import { createMatch } from "../api/match-api.js";
 export class GameController {
@@ -129,12 +129,12 @@ export class GameController {
   bind() {
     document.querySelector("#clear-log").onclick = () =>
       document.querySelector("#event-log").replaceChildren();
-    document.querySelector(".brand").onclick = (event) => {
+    document.querySelector("[data-account-nav]").addEventListener("click", (event) => {
+      if (event.target.closest("a")?.getAttribute("href") !== "/") return;
       event.preventDefault();
       if (this.state.connected) document.querySelector("#leave").click();
       else location.href = "/";
-    };
-    document.querySelector("#settings").onclick = openSettings;
+    });
     document.querySelector("#random").onclick = () =>
       this.send("RANDOM_PLACEMENT");
     document.querySelector("#reset").onclick = () =>
