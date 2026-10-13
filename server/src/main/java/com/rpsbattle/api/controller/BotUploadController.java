@@ -11,9 +11,11 @@ import java.util.Map;
 @RequestMapping("/api/bots")
 public class BotUploadController {
     private final BotUploadService service;
+    private final com.rpsbattle.bot.ownership.OwnedBotService owned;
 
-    public BotUploadController(BotUploadService service) {
+    public BotUploadController(BotUploadService service, com.rpsbattle.bot.ownership.OwnedBotService owned) {
         this.service = service;
+        this.owned = owned;
     }
 
     @GetMapping("/capabilities")
@@ -23,7 +25,7 @@ public class BotUploadController {
 
     @PostMapping(consumes = "multipart/form-data")
     @ResponseStatus(HttpStatus.CREATED)
-    public BotUploadService.Upload upload(@RequestParam String name, @RequestParam MultipartFile file) {
-        return service.upload(name, file);
+    public AccountBotController.View upload(org.springframework.security.core.Authentication auth,@RequestParam String name, @RequestParam MultipartFile file) {
+        return AccountBotController.View.of(owned.upload(auth,name, file));
     }
 }

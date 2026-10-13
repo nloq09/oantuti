@@ -12,6 +12,7 @@ test("tournament requests preserve authorization credentials and use correct met
   const calls = [];
   try {
     globalThis.fetch = async (url, options) => {
+      if(url.endsWith("csrf")) return {ok:true,json:async()=>({headerName:"X-CSRF-TOKEN",token:"csrf"})};
       calls.push({ url, ...options });
       return { ok: true, json: async () => ({ id: "T" }) };
     };
@@ -25,7 +26,6 @@ test("tournament requests preserve authorization credentials and use correct met
     });
     assert.deepEqual(JSON.parse(calls[1].body), {
       botId: "B",
-      botToken: "secret",
       displayName: "Bot",
     });
     assert.equal(calls[3].method, "DELETE");
@@ -39,11 +39,12 @@ test("tournament requests preserve authorization credentials and use correct met
   }
 });
 
-test("owner capability is stored locally and sent only to its tournament; withdrawal uses bot capability", async () => {
+test("owner capability is stored locally and sent only to its tournament; withdrawal uses session authorization", async () => {
   const originalFetch = globalThis.fetch, originalStorage = globalThis.localStorage;
   const entries = new Map(), calls = [];
   globalThis.localStorage = { getItem: key => entries.get(key), setItem: (key, value) => entries.set(key, value) };
   globalThis.fetch = async (url, options) => {
+    if(url.endsWith("csrf")) return {ok:true,json:async()=>({headerName:"X-CSRF-TOKEN",token:"csrf"})};
     calls.push({ url, ...options });
     return { ok: true, json: async () => ({ id: "T", ownerToken: "owner-secret" }) };
   };
@@ -56,7 +57,8 @@ test("owner capability is stored locally and sent only to its tournament; withdr
     assert.equal(calls[2].headers["X-Tournament-Token"], undefined);
     entries.clear();
     await removeParticipant("T", "P", { token: "bot-secret" });
-    assert.equal(calls[3].headers["X-Bot-Token"], "bot-secret");
+    assert.equal(calls[3].headers["X-Bot-Token"], undefined);
+    assert.equal(calls[3].headers["X-CSRF-TOKEN"], "csrf");
     assert.equal(calls[3].headers["X-Tournament-Token"], undefined);
     assert.ok(!calls[3].url.includes("secret"));
   } finally {

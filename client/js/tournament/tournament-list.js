@@ -1,4 +1,4 @@
-import { savedBots } from "../api/bot-api.js";
+import { refreshBots, savedBots } from "../api/bot-api.js";
 import {
   tournamentRequest,
   createTournament,
@@ -6,6 +6,7 @@ import {
 } from "./tournament-api.js?v=open-registration";
 import { statusLabels } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
+await refreshBots().catch(error => toast(error.message, true));
 const bots = savedBots();
 const options = document.querySelector("#bot-options");
 for (const bot of bots) {

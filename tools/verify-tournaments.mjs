@@ -1,5 +1,6 @@
 // Real Docker/end-to-end tournament stress check. Use only a dedicated test server.
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { replayFrames, replayState } from "../client/js/replay/replay-state.js";
 const base = process.env.RPS_TEST_URL || "http://127.0.0.1:8081";
@@ -14,10 +15,24 @@ const containers = () =>
     .split(/\r?\n/)
     .filter(Boolean);
 const baseline = new Set(containers());
+const cookies = new Map();
+async function sessionFetch(path, options = {}) {
+  const response = await fetch(base + path, {...options, headers: {...options.headers, Cookie: [...cookies].map(([name, value]) => name + "=" + value).join("; ")}});
+  for(const cookie of response.headers.getSetCookie()) {
+    const pair = cookie.split(";")[0], equal = pair.indexOf("=");
+    cookies.set(pair.slice(0, equal), pair.slice(equal + 1));
+  }
+  return response;
+}
+async function csrfHeaders() {
+  const response = await sessionFetch("/api/auth/csrf");
+  assert.equal(response.status, 200);const csrf = await response.json();
+  return {[csrf.headerName]: csrf.token};
+}
 async function request(path, body, expected = 200, extraHeaders = {}) {
-  const response = await fetch(base + path, {
+  const response = await sessionFetch(path, {
     method: body === undefined ? "GET" : "POST",
-    headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...extraHeaders },
+    headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...(body === undefined ? {} : await csrfHeaders()), ...extraHeaders },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   assert.equal(response.status, expected, await response.clone().text());
@@ -36,7 +51,7 @@ async function upload(name, source) {
   const body = new FormData();
   body.append("name", name);
   body.append("file", new File([source], "main.py"));
-  const response = await fetch(base + "/api/bots", { method: "POST", body });
+  const response = await sessionFetch("/api/bots", { method: "POST", headers: await csrfHeaders(), body });
   assert.equal(response.status, 201);
   return response.json();
 }
@@ -49,7 +64,6 @@ async function run(name, bots) {
   for (const bot of bots)
     await request(`/api/tournaments/${t.id}/participants`, {
       botId: bot.id,
-      botToken: bot.token,
       displayName: bot.name,
     });
   await request(`/api/tournaments/${t.id}/start`, {}, 200, { "X-Tournament-Token": t.ownerToken });
@@ -156,6 +170,9 @@ async function observe(id) {
     socket.onerror = reject;
   });
 }
+const accountName = "stress_" + randomUUID().slice(0, 8), password = randomUUID() + randomUUID();
+await request("/api/auth/register", {username: accountName, email: accountName + "@example.com", displayName: "Stress test", password}, 201);
+await request("/api/auth/login", {username: accountName, password});
 const bots = [];
 for (let i = 0; i < 10; i++)
   bots.push(await upload(`Stress Bot ${i + 1}`, aggressive));

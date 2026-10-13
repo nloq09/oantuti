@@ -1,7 +1,8 @@
 import { createMatch, joinMatch, getMatch } from "../api/match-api.js";
 import { seatKey } from "../config.js";
 import { toast } from "../ui/toast.js";
-import { savedBots, botCapabilities } from "../api/bot-api.js";
+import { refreshBots, savedBots, botCapabilities } from "../api/bot-api.js";
+await refreshBots().catch(error => toast(error.message, true));
 
 const controller = document.querySelector("#player-controller");
 for (const bot of savedBots())

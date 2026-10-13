@@ -53,13 +53,33 @@ public class BotUploadService {
     }
 
     public Upload authorize(String id, String token) {
+        Upload upload = stored(id);
+        if (token == null || !upload.token().equals(token)) throw new DemoRequestException("BOT_ACCESS_DENIED");
+        return upload;
+    }
+
+    public Upload stored(String id) {
         if (id == null || !id.matches("[a-f0-9-]{36}")) throw new DemoRequestException("BOT_NOT_FOUND");
         try {
             Upload upload = json.readValue(Files.readString(root.resolve(id).resolve("metadata.json")), Upload.class);
-            if (token == null || !upload.token().equals(token)) throw new DemoRequestException("BOT_ACCESS_DENIED");
+            if (!id.equals(upload.id())) throw new DemoRequestException("BOT_NOT_FOUND");
             return upload;
         } catch (java.io.IOException error) {
             throw new DemoRequestException("BOT_NOT_FOUND");
+        }
+    }
+
+    public Path source(Upload upload) {return root.resolve(upload.id()).resolve(upload.language().filename);}
+
+    public void discardNew(Upload upload) {
+        Path directory=root.resolve(upload.id()).normalize();
+        if(!directory.getParent().equals(root) || !upload.id().matches("[a-f0-9-]{36}") || Files.isSymbolicLink(directory)) return;
+        try {
+            Files.deleteIfExists(directory.resolve(upload.language().filename));
+            Files.deleteIfExists(directory.resolve("metadata.json"));
+            Files.deleteIfExists(directory);
+        } catch(java.io.IOException error) {
+            org.slf4j.LoggerFactory.getLogger(BotUploadService.class).warn("Cannot compensate newly uploaded bot {}",upload.id());
         }
     }
 
@@ -95,5 +115,6 @@ public class BotUploadService {
     }
 
     public record Upload(String id, String name, BotLanguage language, String token) {
+        @Override public String toString() {return "Upload[id="+id+", language="+language+", token=[redacted]]";}
     }
 }

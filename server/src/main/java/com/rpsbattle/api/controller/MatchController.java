@@ -6,40 +6,40 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-import com.rpsbattle.bot.upload.BotUploadService;
+import com.rpsbattle.bot.ownership.OwnedBotService;
 import com.rpsbattle.bot.BotAgent;
 
 @RestController
 @RequestMapping("/api/matches")
 public class MatchController {
     private final OnlineMatchService service;
-    private final BotUploadService uploads;
+    private final OwnedBotService uploads;
 
-    public MatchController(OnlineMatchService service, BotUploadService uploads) {
+    public MatchController(OnlineMatchService service, OwnedBotService uploads) {
         this.service = service;
         this.uploads = uploads;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Object> create(@RequestBody CreateRequest request) {
-        BotAgent agent = request.botId() == null ? null : uploads.agent(request.botId(), request.botToken());
+    public Map<String, Object> create(org.springframework.security.core.Authentication auth,@RequestBody CreateRequest request) {
+        BotAgent agent = request.botId() == null ? null : uploads.agent(auth,request.botId());
         var room = service.create(MatchMode.valueOf(request.mode()), request.seed());
         if (agent != null) {
-            room.attachBot(room.creator().id(), agent, uploads.authorize(request.botId(), request.botToken()).name());
+            room.attachBot(room.creator().id(), agent, uploads.require(auth,request.botId()).name());
             room.prepareBots();
         }
         return credentials(room, room.creator());
     }
 
     @PostMapping("/{id}/join")
-    public Map<String, Object> join(@PathVariable String id, @RequestBody(required = false) JoinRequest request) {
-        BotAgent agent = request == null || request.botId() == null ? null : uploads.agent(request.botId(), request.botToken());
+    public Map<String, Object> join(org.springframework.security.core.Authentication auth,@PathVariable String id, @RequestBody(required = false) JoinRequest request) {
+        BotAgent agent = request == null || request.botId() == null ? null : uploads.agent(auth,request.botId());
         var room = service.find(id);
         synchronized (room) {
             var seat = room.join();
             if (agent != null)
-                room.attachBot(seat.id(), agent, uploads.authorize(request.botId(), request.botToken()).name());
+                room.attachBot(seat.id(), agent, uploads.require(auth,request.botId()).name());
             var events = room.prepareBots();
             service.publish(room, events);
             return credentials(room, seat);

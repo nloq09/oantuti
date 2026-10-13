@@ -20,18 +20,39 @@ abstract class StageThreeWebFixture {
     @Autowired OnlineMatchService online;
     @Autowired BotUploadService uploads;
     @Autowired TournamentService tournaments;
+    final HttpClient accountHttp=HttpClient.newBuilder().cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL)).build();
+    @Autowired com.rpsbattle.auth.RegistrationService registration;
+    @Autowired com.rpsbattle.bot.ownership.OwnedBotService owned;
+    com.rpsbattle.account.domain.User account;
     JsonNode request(String path,String method,Object body,int expected) throws Exception {
         return request(path,method,body,expected,Map.of());
     }
     JsonNode request(String path,String method,Object body,int expected,Map<String,String> headers) throws Exception {
-        try(var http=HttpClient.newHttpClient()) {
+        {
+            var http=accountHttp;
             var builder=HttpRequest.newBuilder(URI.create("http://localhost:"+port+path)).header("Content-Type","application/json");
             headers.forEach(builder::header);
+            if(!method.equals("GET")) {
+                var csrf=request("/api/auth/csrf","GET",null,200);
+                builder.header(csrf.path("headerName").asText(),csrf.path("token").asText());
+            }
             builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
             var response=http.send(builder.build(),HttpResponse.BodyHandlers.ofString());assertThat(response.statusCode()).as(response.body()).isEqualTo(expected);return json.readTree(response.body());
         }
     }
-    BotUploadService.Upload upload(String name){return uploads.upload(name,new MockMultipartFile("file","main.py","text/plain","print('test')".getBytes(StandardCharsets.UTF_8)));}
+    BotUploadService.Upload upload(String name) {
+        try {
+            if(account==null) {
+                var username="cup_"+UUID.randomUUID().toString().substring(0,8);
+                account=registration.register(username,username+"@example.com","Tournament Test Password","Cup player");
+                request("/api/auth/login","POST",Map.of("username",username,"password","Tournament Test Password"),200);
+            }
+            var authentication=com.rpsbattle.auth.AuthService.sessionAuthentication(account);
+            var bot=owned.upload(authentication,name,new MockMultipartFile("file","main.py","text/plain","print('test')".getBytes(StandardCharsets.UTF_8)));
+            return owned.execution(authentication,bot.id().toString());
+        } catch(Exception error) {throw new RuntimeException(error);}
+    }
+    @org.junit.jupiter.api.AfterEach void closeAccountClient() {accountHttp.close();}
     OnlineMatch playing(){var room=online.create(MatchMode.HUMAN_VS_HUMAN,42L);room.join();for(var id:List.of(OnlineMatch.P1,OnlineMatch.P2)){room.randomize(id);room.markReady(id);}return room;}
     class Peer implements WebSocket.Listener,AutoCloseable {
         final LinkedBlockingQueue<JsonNode> messages=new LinkedBlockingQueue<>();

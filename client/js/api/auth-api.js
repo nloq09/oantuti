@@ -1,13 +1,17 @@
 async function read(response) {
+  if (response.status === 204) return undefined;
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "SERVER_ERROR");
   return data;
 }
+export async function csrfHeaders() {
+  const csrf = await read(await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" }));
+  return { [csrf.headerName]: csrf.token };
+}
 export async function sessionRequest(path, body, method) {
   const headers = { "Content-Type": "application/json" };
   if (body !== undefined) {
-    const csrf = await read(await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" }));
-    headers[csrf.headerName] = csrf.token;
+    Object.assign(headers, await csrfHeaders());
   }
   return read(await fetch(path, {
     method: method || (body === undefined ? "GET" : "POST"),

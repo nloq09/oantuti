@@ -17,8 +17,9 @@
         <aside class="panel bot-library">
           <h2>Đội hình bot</h2>
           <button id="new-bot" class="primary wide">＋ Bot mới</button>
-          <p class="muted">Danh sách lưu trên trình duyệt này.</p>
-          <div id="bot-list" aria-label="Danh sách bot"></div>
+          <p class="muted">Bot gắn với tài khoản của bạn, dùng được trên các thiết bị sau khi đăng nhập.</p>
+          <button id="import-legacy" class="wide" hidden>Nhập bot cũ từ trình duyệt</button>
+            <div id="bot-list" aria-label="Danh sách bot"></div>
         </aside>
         <section class="panel upload-workbench">
           <h2>Tải bot lên</h2>
@@ -53,6 +54,7 @@
             </button>
           </form>
           <div class="actions bot-tools">
+            <button id="rename-bot" disabled>Đổi tên</button><button id="delete-bot" disabled>Xóa bot</button>
             <button id="test-bot" disabled>▶ Đấu thử với bot</button
             ><button id="use-bot" class="gold-button" disabled>
               ⚔ Dùng trong trận

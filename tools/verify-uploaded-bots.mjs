@@ -1,15 +1,32 @@
 // Smoke-test repository-owned source bots through the real upload/room/WebSocket APIs.
 // Start a test server first, then: node tools/verify-uploaded-bots.mjs
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 const base = process.env.RPS_TEST_URL || "http://127.0.0.1:8081";
-async function request(path, options) {
-  const response = await fetch(base + path, options);
+const cookies = new Map();
+async function sessionFetch(path, options = {}) {
+  const response = await fetch(base + path, {...options, headers: {...options.headers, Cookie: [...cookies].map(([name, value]) => name + "=" + value).join("; ")}});
+  for(const cookie of response.headers.getSetCookie()) {
+    const pair = cookie.split(";")[0], equal = pair.indexOf("=");cookies.set(pair.slice(0, equal), pair.slice(equal + 1));
+  }
+  return response;
+}
+async function request(path, options = {}) {
+  if(options.method && options.method !== "GET") {
+    const response = await sessionFetch("/api/auth/csrf"), csrf = await response.json();
+    assert.equal(response.status, 200);
+    options = {...options, headers: {...options.headers, [csrf.headerName]: csrf.token}};
+  }
+  const response = await sessionFetch(path, options);
   const data = await response.json();
   assert.ok(response.ok, `${path}: HTTP ${response.status} ${data.error || ""}`);
   return data;
 }
+const username = "verify_" + randomUUID().slice(0, 8), password = randomUUID() + randomUUID();
+await request("/api/auth/register", {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({username, email: username + "@example.com", displayName: "Verification", password})});
+await request("/api/auth/login", {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({username, password})});
 const capabilities = await request("/api/bots/capabilities");
 for (const [language, filename] of [["PYTHON", "main.py"], ["CPP", "main.cpp"], ["JAVA", "Main.java"]]) {
   assert.equal(capabilities.languages[language], true, `${language}: Docker/image not ready`);
@@ -19,7 +36,7 @@ for (const [language, filename] of [["PYTHON", "main.py"], ["CPP", "main.cpp"], 
   const bot = await request("/api/bots", { method: "POST", body });
   const seat = await request("/api/matches", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mode: "HUMAN_VS_BOT", seed: 42, botId: bot.id, botToken: bot.token }),
+    body: JSON.stringify({ mode: "HUMAN_VS_BOT", seed: 42, botId: bot.id }),
   });
   const socket = new WebSocket(base.replace(/^http/, "ws") + "/ws/game");
   const states = [], waiters = [];

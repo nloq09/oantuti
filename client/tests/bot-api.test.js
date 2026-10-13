@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { savedBots, uploadBot } from "../js/api/bot-api.js";
+import { savedBots, uploadBot, refreshBots, legacyBots, importLegacyBot, deleteBot } from "../js/api/bot-api.js";
 import {
   createMatch,
   joinMatch,
@@ -8,61 +8,75 @@ import {
 } from "../js/api/match-api.js";
 import { ClientState } from "../js/game/game-state.js";
 
-test("upload capability persists and create/join send only bot credentials", async () => {
-  const originals = {
-    localStorage: globalThis.localStorage,
-    fetch: globalThis.fetch,
-  };
-  const bot = {
-    id: "bot-id",
-    token: "private-bot-token",
-    name: "My bot",
-    language: "CPP",
-  };
-  let stored = "[]";
-  const requests = [];
+test("account list replaces local capabilities; upload and match use cookie and CSRF", async () => {
+  const originals = { localStorage: globalThis.localStorage, fetch: globalThis.fetch };
+  const bot = { id: "bot-id", name: "My bot", language: "CPP", status: "UPLOADED" };
+  let stored = JSON.stringify([{...bot, token: "legacy-secret"}]);
+  let owned = [], calls = [];
   try {
-    globalThis.localStorage = {
-      getItem: () => stored,
-      setItem: (_, value) => {
-        stored = value;
-      },
-    };
+    globalThis.localStorage = { getItem: () => stored, setItem: (_, value) => stored = value };
     globalThis.fetch = async (url, options) => {
-      requests.push({ url, options });
-      return {
-        ok: true,
-        json: async () =>
-          url === "/api/bots" ? bot : { matchId: "ROOM", token: "seat-token" },
-      };
+      if(url === "/api/auth/csrf") return { ok: true, json: async () => ({ headerName: "X-CSRF-TOKEN", token: "csrf" }) };
+      calls.push({ url, options });
+      if(url === "/api/bots") owned = [bot];
+      return { ok: true, json: async () => url === "/api/account/bots" ? owned : url === "/api/bots" ? bot : {matchId: "ROOM", token: "seat-token"} };
     };
+    assert.deepEqual(await refreshBots(), []);
+    assert.equal(legacyBots()[0].token, "legacy-secret");
+    const before = stored;
     await uploadBot("My bot", new Blob(["source"]));
     assert.deepEqual(savedBots(), [bot]);
-    assert.equal(requests[0].options.body.get("name"), "My bot");
-    assert.equal((await createMatch("HUMAN_VS_HUMAN", bot)).bot, bot);
-    assert.deepEqual(JSON.parse(requests[1].options.body), {
-      mode: "HUMAN_VS_HUMAN",
-      botId: bot.id,
-      botToken: bot.token,
-    });
-    await joinMatch("ROOM", bot);
-    assert.deepEqual(JSON.parse(requests[2].options.body), {
-      botId: bot.id,
-      botToken: bot.token,
-    });
-    stored = "{}";
-    assert.deepEqual(savedBots(), []);
-    stored = "invalid json";
-    assert.deepEqual(savedBots(), []);
-    globalThis.fetch = async () => ({
-      ok: false,
-      json: async () => ({ error: "BOT_FILE_SIZE" }),
-    });
-    await assert.rejects(uploadBot("bot", new Blob()), /BOT_FILE_SIZE/);
-    assert.equal(stored, "invalid json");
-  } finally {
-    Object.assign(globalThis, originals);
-  }
+    assert.equal(stored, before);
+    const upload = calls.find(c => c.url === "/api/bots");
+    assert.equal(upload.options.body.get("name"), "My bot");
+    assert.equal(upload.options.headers["X-CSRF-TOKEN"], "csrf");
+    assert.equal(upload.options.credentials, "same-origin");
+    await createMatch("HUMAN_VS_HUMAN", {...bot, token: "ignored"});
+    await joinMatch("ROOM", {...bot, token: "ignored"});
+    const games = calls.filter(c => c.url.startsWith("/api/matches"));
+    assert.deepEqual(JSON.parse(games[0].options.body), {mode: "HUMAN_VS_HUMAN", botId: bot.id});
+    assert.deepEqual(JSON.parse(games[1].options.body), {botId: bot.id});
+    assert.equal(games[0].options.headers["X-CSRF-TOKEN"], "csrf");
+    owned = []; await refreshBots(); assert.deepEqual(savedBots(), []);
+  } finally { Object.assign(globalThis, originals); }
+});
+
+test("legacy claims remove local proof only after successful account import", async () => {
+  const originals = { localStorage: globalThis.localStorage, fetch: globalThis.fetch };
+  const legacy = {id: "old", name: "Old bot", token: "proof"};
+  let stored = JSON.stringify([legacy]), denied = true;
+  try {
+    globalThis.localStorage = {getItem: () => stored, setItem: (_, value) => stored = value};
+    globalThis.fetch = async (url, options) => {
+      if(url.endsWith("csrf")) return {ok: true, json: async () => ({headerName: "X-CSRF-TOKEN", token: "csrf"})};
+      if(url.endsWith("/import")) {
+        assert.deepEqual(JSON.parse(options.body), {botId: "old", botToken: "proof"});
+        return {ok: !denied, json: async () => denied ? {error: "BOT_ALREADY_OWNED"} : {id: "old", name: "Old bot"}};
+      }
+      return {ok: true, json: async () => [{id: "old", name: "Old bot"}]};
+    };
+    await assert.rejects(importLegacyBot(legacy), /BOT_ALREADY_OWNED/);
+    assert.deepEqual(legacyBots(), [legacy]);
+    denied = false; await importLegacyBot(legacy);
+    assert.deepEqual(legacyBots(), []); assert.equal(savedBots()[0].id, "old");
+    globalThis.fetch = async () => ({ok: false, json: async () => ({error: "UNAUTHENTICATED"})});
+    assert.deepEqual(await refreshBots(), []);
+  } finally { Object.assign(globalThis, originals); }
+});
+
+test("soft deletion accepts 204 and refreshes authoritative bot list", async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url, options) => {
+      if(url.endsWith("csrf")) return {ok: true, json: async () => ({headerName: "X-CSRF-TOKEN", token: "csrf"})};
+      if(options.method === "DELETE") {
+        assert.equal(options.headers["X-CSRF-TOKEN"], "csrf");
+        return {ok: true, status: 204};
+      }
+      return {ok: true, json: async () => []};
+    };
+    await deleteBot("old"); assert.deepEqual(savedBots(), []);
+  } finally { globalThis.fetch = original; }
 });
 
 test("owners observe uploaded bots without manual move controls", () => {
@@ -87,6 +101,7 @@ test("bot battles create a real room and attach the second bot through join", as
     opponent = { id: "second", token: "second-token" };
   try {
     globalThis.fetch = async (url, options) => {
+      if(url.endsWith("csrf")) return {ok:true,json:async()=>({headerName:"X-CSRF-TOKEN",token:"csrf"})};
       requests.push({ url, body: JSON.parse(options.body) });
       return {
         ok: true,
@@ -107,12 +122,11 @@ test("bot battles create a real room and attach the second bot through join", as
         body: {
           mode: "HUMAN_VS_HUMAN",
           botId: "first",
-          botToken: "first-token",
         },
       },
       {
         url: "/api/matches/ROOM/join",
-        body: { botId: "second", botToken: "second-token" },
+        body: { botId: "second" },
       },
     ]);
     requests.length = 0;
@@ -120,7 +134,6 @@ test("bot battles create a real room and attach the second bot through join", as
     assert.deepEqual(requests[0].body, {
       mode: "HUMAN_VS_BOT",
       botId: "first",
-      botToken: "first-token",
     });
   } finally {
     globalThis.fetch = original;

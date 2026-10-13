@@ -45,14 +45,17 @@ public class SecurityConfig {
         http.securityContext(context -> context.securityContextRepository(contexts).requireExplicitSave(true));
         http.addFilterAfter(new SessionAccountFilter(authService,contexts),SecurityContextHolderFilter.class);
         http.csrf(csrf -> csrf.csrfTokenRepository(tokens)
-                // Legacy game mutations still use seat/bot capabilities. Account ownership and their
-                // same-origin CSRF migration are intentionally deferred to Groups 3–6.
+                // Guest seat mutations remain capabilities. Authenticated game/tournament requests
+                // can exercise account-owned bots and therefore require CSRF as well.
                 .ignoringRequestMatchers(request -> {
                     var path=request.getServletPath();
-                    return !path.startsWith("/api/auth/") && !path.startsWith("/api/account/") && !path.startsWith("/api/admin/");
+                    if(path.isEmpty()) path=request.getRequestURI().substring(request.getContextPath().length());
+                    if(path.equals("/api/bots") || path.startsWith("/api/auth/") || path.startsWith("/api/account/") || path.startsWith("/api/admin/")) return false;
+                    var session=request.getSession(false);
+                    return !((path.startsWith("/api/matches") || path.startsWith("/api/tournaments")) && session!=null && session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)!=null);
                 }));
         http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/account/**").authenticated().anyRequest().permitAll());
+                .requestMatchers("/api/account/**","/api/bots").authenticated().anyRequest().permitAll());
         http.exceptionHandling(errors -> errors
                 .authenticationEntryPoint((request,response,error)-> {
                     response.setStatus(401);response.setContentType("application/json");

@@ -30,7 +30,7 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 ### Giải đấu, xếp hạng và khán giả — Chặng 3
 
 - Home → **Giải đấu**: tạo giải Round Robin ngay cả khi chưa có bot; chia sẻ mã/link để người khác tham gia và đăng ký bot đã lưu hoặc tải bot mới ngay trong giải. Chủ giải bắt đầu khi đủ 2–10 bot. Mỗi cặp gặp nhau một lần, tổng `n × (n − 1) / 2` trận.
-- Bản nháp cho phép thêm/gỡ bot; Bắt đầu kiểm tra lại token và Docker rồi khóa danh sách.
+- Bản nháp cho phép thêm/gỡ bot; Bắt đầu kiểm tra artifact nội bộ và Docker rồi khóa danh sách.
 - Server tự cấu hình hai seat trong chế độ `HUMAN_VS_HUMAN`, xếp quân, sẵn sàng và chạy qua Match/GameEngine hiện có. Không tạo game mode hoặc engine mới.
 - Hàng đợi giới hạn mặc định 4 trận đồng thời trên toàn bộ giải đấu trong một server. Một trận lỗi không làm dừng các trận còn lại; có thể hủy giải.
 - Cập nhật trực tiếp tiến độ, LIVE, kết quả và bảng xếp hạng qua WebSocket.
@@ -82,7 +82,10 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Nhóm 2:** đã có API tài khoản `/api/auth/register`, `/login`, `/logout`, `/me`, `/csrf`; session HttpOnly và BCrypt, tài khoản lưu PostgreSQL. [Cách gọi API và chính sách auth](docs/AUTH.md), [báo cáo Nhóm 2](docs/CHANG-4-NHOM-2-AUTH.md). Chưa thêm trang login/profile; game và quyền bot/giải đấu hiện vẫn giữ flow cũ, sẽ migrate theo account ở các nhóm sau.
 
-**Nhóm 3:** thêm API profile, đổi mật khẩu, quản trị users và session revalidation theo DB. Đổi password/disable account làm phiên cũ mất hiệu lực; profile chỉ sửa displayName; admin API cần role ADMIN. [Báo cáo Nhóm 3](docs/CHANG-4-NHOM-3-ACCOUNT.md). Chưa chuyển bot/giải đấu sang account ownership và chưa có UI profile/login.
+**Nhóm 3:** thêm API profile, đổi mật khẩu, quản trị users và session revalidation theo DB. Đổi password/disable account làm phiên cũ mất hiệu lực; profile chỉ sửa displayName; admin API cần role ADMIN. [Báo cáo Nhóm 3](docs/CHANG-4-NHOM-3-ACCOUNT.md). Giải đấu chuyển ownership ở Nhóm 6; UI profile/login ở Nhóm 8.
+
+**Nhóm 4:** metadata bot lưu PostgreSQL theo chủ tài khoản; upload/dùng bot riêng cần đăng nhập và CSRF. Có My Bots API, đổi tên, xóa mềm, nhập bot cũ bằng token chứng minh. Client lấy danh sách từ server; token trong trình duyệt không còn là quyền dùng bot. [Báo cáo Nhóm 4](docs/CHANG-4-NHOM-4-BOTS.md), [hướng dẫn tài khoản và nhập bot](docs/BOT-OWNERSHIP.md). Chưa có trang login: đăng nhập qua API/helper theo hướng dẫn cho tới Nhóm 8.
+
 
 Mở thư mục repository trong VS Code, mở terminal PowerShell tại thư mục gốc:
 
@@ -158,7 +161,7 @@ docker pull eclipse-temurin:21-jdk
 
 Server cần tìm được lệnh `docker` trong PATH. Nếu vừa cài Docker, mở lại VS Code/terminal rồi khởi động lại server. Không cần bấm Run từng image: server tự tạo và dọn container cho bot.
 
-Vào **Bot của tôi**, tải file, chọn bot rồi bấm **Dùng trong trận**. Ở Vào trận, chọn chế độ và kiểm tra mục Người chơi của bạn trước khi tạo/vào phòng. Chọn Tôi tự chơi nếu muốn điều khiển bằng tay.
+Đăng nhập tài khoản theo [AUTH.md](docs/AUTH.md), vào **Bot của tôi**, tải file, chọn bot rồi bấm **Dùng trong trận**. Ở Vào trận, chọn chế độ và kiểm tra mục Người chơi của bạn trước khi tạo/vào phòng. Chọn Tôi tự chơi nếu muốn điều khiển bằng tay.
 
 - Source tối đa **512 KiB**, JAR tối đa **5 MiB**; kho server tối đa 100 bot.
 - Python: Python 3.12, thư viện chuẩn.
@@ -166,7 +169,7 @@ Vào **Bot của tôi**, tải file, chọn bot rồi bấm **Dùng trong trận
 - Java source: `public class Main`, không `package`; Java 21.
 - JAR: có `Main-Class`, tương thích Java 21.
 - Container không mạng, root filesystem chỉ đọc, user không phải root, CPU 0.5, RAM 384 MB, giới hạn tiến trình và thư mục tạm. C++/Java được biên dịch khi trận bắt đầu.
-- Danh sách/quyền sử dụng bot lưu trong `localStorage`; file và metadata lưu tại `server/data/bots` khi chạy từ thư mục server. Đổi trình duyệt hoặc xóa storage không tự phục hồi danh sách bot.
+- Metadata và quyền sở hữu bot lưu PostgreSQL; danh sách phục hồi khi đăng nhập cùng tài khoản. Source và metadata nội bộ nằm tại `server/data/bots`; cần sao lưu cả DB và thư mục này. Bot cũ chưa có owner được nhập bằng token chứng minh.
 
 Bot nhận một dòng JSON `YOUR_TURN` qua stdin, tính toán từ trạng thái và `legalActions`, rồi trả một dòng JSON `ACTION` qua stdout với đúng `sequence`; phải flush và chỉ trả nước đi hợp lệ. Đọc chi tiết trong [BOT-PROTOCOL.md](docs/BOT-PROTOCOL.md), [BOT-UPLOAD.md](docs/BOT-UPLOAD.md) hoặc trang `/bot-protocol.html` và `/bot-guide.html`.
 
@@ -326,7 +329,7 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 
 ## Giới hạn hiện tại
 
-- Phòng và trận lưu trong RAM: restart server làm mất phòng/trận. File bot có thể còn trên ổ đĩa, nhưng danh sách và token phía client phụ thuộc storage trình duyệt.
+- Phòng và trận lưu trong RAM: restart server làm mất phòng/trận. Metadata bot theo tài khoản lưu bền vững trong PostgreSQL; source cần ổ lưu trữ bền vững và bản sao lưu.
 - Chưa có tài khoản, database, xếp hạng người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
 - Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng.
 - Hosting chỉ chạy một container ứng dụng không tự cung cấp Docker Engine cho runner bot riêng. Muốn giữ tính năng upload bot, cần môi trường phù hợp hoặc worker Docker riêng.

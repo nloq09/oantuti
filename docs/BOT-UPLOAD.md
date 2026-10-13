@@ -4,7 +4,7 @@
 
 ## Sử dụng
 
-Khởi động server như README, mở `/bots.html` từ **Bot của tôi**, rồi tải bot lên.
+Đăng nhập tài khoản theo [BOT-OWNERSHIP.md](BOT-OWNERSHIP.md), khởi động server như README, mở `/bots.html` từ **Bot của tôi**, rồi tải bot lên.
 Đặt tên, chọn `.cpp`, `.py`, `.java` hoặc `.jar`, bấm **Dùng trong trận** rồi chọn bot trong **Người chơi của bạn** tại `/lobby.html`.
 
 - **Hai người**: tạo phòng hoặc tham gia mã phòng. Mỗi bên có thể dùng bot riêng hoặc chơi tay.
@@ -36,7 +36,7 @@ user 65534, bỏ capabilities, no-new-privileges, CPU 0.5, RAM/swap tối đa 38
 Compiler ghi vào tmpfs `/tmp` 64 MB. C++ cho phép thực thi binary trong tmpfs này;
 Python/Java/JAR dùng tmpfs noexec. Container bị dừng/xóa khi bot lỗi, trận kết thúc hoặc server shutdown.
 Các tùy chọn theo [Docker run reference](https://docs.docker.com/reference/cli/docker/container/run/).
-Đây là runner cho demo trên máy chủ có Docker; triển khai công khai với người dùng không tin cậy cần vận hành sandbox trên worker riêng và thêm tài khoản, quota/rate limit, quản trị upload. Docker chia sẻ kernel nên không thay thế một môi trường cách ly máy ảo chuyên dụng.
+Đây là runner cho demo trên máy chủ có Docker; triển khai công khai với người dùng không tin cậy cần vận hành sandbox trên worker riêng và bổ sung quota/rate limit, quản trị vận hành upload. Docker chia sẻ kernel nên không thay thế một môi trường cách ly máy ảo chuyên dụng.
 
 ## File và giao thức
 
@@ -66,7 +66,7 @@ Trả đúng `sequence` và một object trong `legalActions`:
 ```
 
 PASS chỉ gửi khi có trong danh sách. Không gửi lệnh đặt quân. Tọa độ server row/col từ 0:
-P1 xuất phát hàng 6–8, P2 hàng 0–2; góc nhìn xoay trên UI không đổi tọa độ giao thức.
+P1 xuất phát phía row > col, P2 phía row < col của đường chéo A1–I9; không đặt trên đường chéo hoặc cứ điểm; góc nhìn xoay trên UI không đổi tọa độ giao thức.
 Không in banner hoặc debug trên stdout; flush sau mỗi dòng. Stderr không trộn vào JSON và không được hiển thị cho người chơi.
 Lượt đầu tối đa 25 giây gồm biên dịch/khởi động, các lượt tiếp theo 2 giây, phản hồi tối đa 65.536 ký tự.
 Server vẫn kiểm tra nước đi bằng rule/engine. Tối đa 4 bot tính nước đi đồng thời; I/O bot chạy ngoài khóa phòng/scheduler.
@@ -77,12 +77,10 @@ Source/metadata lưu mặc định `data/bots/` tương đối với thư mục 
 Thư mục bị Git ignore và không nằm trong static HTTP. Override bằng `rps.bots.directory`;
 tắt runner bằng `rps.bots.enabled=false`.
 Tên file do người chơi gửi không dùng làm đường dẫn; server tạo UUID và tên cố định.
-Upload trả `{id,name,language,token}`. Token cấp quyền dùng bot; client lưu trong localStorage.
-Không có endpoint liệt kê bot người khác hoặc tải source của họ. Không chia sẻ token; xóa dữ liệu trình duyệt sẽ mất quyền truy cập nếu chưa giữ token.
-Bot giữ lại qua restart server; phòng vẫn chỉ lưu trong bộ nhớ. Bản demo chưa có tài khoản/khôi phục token/xóa bot qua UI.
+Upload trả metadata `{id,name,language,status,createdAt,updatedAt}`, không trả token/path. Metadata và owner lưu trong PostgreSQL; source và `metadata.json` nội bộ nằm trên ổ đĩa. Owner hoặc ADMIN mới dùng/đổi tên/xóa bot; danh sách lấy từ `GET /api/account/bots`. Xóa mềm giữ file và metadata cho các giải đã đăng ký. Bot cũ dùng token để nhập vào tài khoản, xem [BOT-OWNERSHIP.md](BOT-OWNERSHIP.md).
 
-REST multipart: `POST /api/bots` với `name`, `file`.
-`POST /api/matches` nhận thêm `botId`, `botToken`; endpoint join cũng nhận hai trường này.
+REST multipart: `POST /api/bots` với `name`, `file`, cookie session và header CSRF.
+`POST /api/matches` và join nhận `botId`; `botToken` từ client bị bỏ qua. Request match/tournament có session đăng nhập cần header CSRF; guest chơi tay/bot có sẵn không cần tài khoản.
 Bot không có quyền thao tác engine hay gửi action qua WebSocket; worker chuyển JSON response thành action và engine xác thực.
 
 ## Kiểm tra
@@ -108,5 +106,5 @@ node tools/verify-uploaded-bots.mjs
 
 Script tải các source mẫu tin cậy trong repo lên server, tạo phòng đấu bot chiến thuật,
 kiểm tra tự xếp quân, nước đi thật trong container và chủ bot rời trận qua WebSocket.
-Nó tạo ba bot trong kho của server được kiểm thử, nên dùng thư mục `rps.bots.directory`
+Nó đăng ký tài khoản kiểm thử riêng, đăng nhập bằng cookie/CSRF và tạo ba bot trong kho của server được kiểm thử, nên dùng thư mục `rps.bots.directory`
 riêng cho kiểm thử. Nếu server ở URL khác, đặt biến môi trường `RPS_TEST_URL`.

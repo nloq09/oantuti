@@ -1,4 +1,4 @@
-import { savedBots, uploadBot } from "../api/bot-api.js";
+import { refreshBots, savedBots, uploadBot } from "../api/bot-api.js";
 import {
   getTournament,
   addParticipant,
@@ -11,6 +11,7 @@ import {
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 import { confirmAction } from "../ui/modal.js";
+await refreshBots().catch(error => toast(error.message, true));
 const id = new URLSearchParams(location.search).get("id");
 const owner = !!tournamentOwnerToken(id);
 let latest = -1,

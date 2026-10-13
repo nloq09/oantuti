@@ -1,12 +1,15 @@
+import { csrfHeaders } from "../api/auth-api.js";
 export function tournamentOwnerToken(id) {
   return globalThis.localStorage?.getItem("rps-tournament-owner:" + id) || "";
 }
 export async function tournamentRequest(path = "", body, method, extraHeaders = {}) {
   const id = path.split("/")[1];
   const ownerToken = id ? tournamentOwnerToken(decodeURIComponent(id)) : "";
+  const mutation = (method || (body === undefined ? "GET" : "POST")) !== "GET";
   const response = await fetch("/api/tournaments" + path, {
     method: method || (body === undefined ? "GET" : "POST"),
-    headers: { "Content-Type": "application/json", ...(ownerToken ? { "X-Tournament-Token": ownerToken } : {}), ...extraHeaders },
+    credentials: "same-origin", cache: "no-store",
+    headers: { "Content-Type": "application/json", ...(mutation ? await csrfHeaders() : {}), ...(ownerToken ? { "X-Tournament-Token": ownerToken } : {}), ...extraHeaders },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await response.json();
@@ -23,7 +26,6 @@ export async function createTournament(name) {
 export const addParticipant = (id, bot) =>
   tournamentRequest("/" + encodeURIComponent(id) + "/participants", {
     botId: bot.id,
-    botToken: bot.token,
     displayName: bot.name,
   });
 export const removeParticipant = (id, participantId, bot) =>
@@ -34,7 +36,7 @@ export const removeParticipant = (id, participantId, bot) =>
       encodeURIComponent(participantId),
     undefined,
     "DELETE",
-    bot ? { "X-Bot-Token": bot.token } : {},
+    {},
   );
 export const startTournament = (id) =>
   tournamentRequest("/" + encodeURIComponent(id) + "/start", {});

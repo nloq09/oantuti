@@ -1,15 +1,7 @@
-async function request(path, body) {
-  const response = await fetch("/api/matches" + path, {
-    method: body === undefined ? "GET" : "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "SERVER_ERROR");
-  return data;
-}
+import { sessionRequest } from "./auth-api.js";
+const request = (path, body) => sessionRequest("/api/matches" + path, body);
 const botCredentials = (bot) =>
-  bot ? { botId: bot.id, botToken: bot.token } : {};
+  bot ? { botId: bot.id } : {};
 export const createMatch = async (mode, bot) => ({
   ...(await request("", { mode, ...botCredentials(bot) })),
   bot,

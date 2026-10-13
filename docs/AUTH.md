@@ -75,7 +75,7 @@ Body `{}`, cần CSRF. Hủy session và SecurityContext, hết hạn cookie JSE
 - Authorization ở application service kiểm tra role/status DB, không dựa vào role/userId do client khai. Row lock trong transaction bảo vệ cập nhật profile/password/status khỏi ghi đè trạng thái bảo mật mới.
 - Nếu DB lỗi khi xác minh session, filter trả 503 `DATABASE_UNAVAILABLE`, không cho request đi tiếp với quyền cache.
 
-Để không phá regression trước khi migrate ownership, bot/tournament/match API và WebSocket hiện tiếp tục dùng capability/seat token cũ, không bắt login, không chuyển sang account ownership ở nhóm này. Legacy mutations vẫn giữ flow cũ; Nhóm 4–6 phải migrate resource ownership và CSRF đồng bộ với client. WebSocket handshake có principal do Spring Security, nhưng các connection game đang mở chưa có account ownership hay cơ chế đóng socket khi đổi password/disable; đó là phần authorization WebSocket tiếp theo. Không gọi đây là toàn bộ authorization production đã hoàn tất.
+Nhóm 4 đã chuyển bot upload/dùng bot riêng sang account ownership: owner hoặc ADMIN, danh sách từ PostgreSQL, CSRF cho upload/account mutations và mọi request match/tournament có session đăng nhập. Token bot client chỉ dùng nhập artifact cũ, không cấp quyền chơi. Guest vẫn chơi tay/đấu bot sẵn bằng seat token. Tournament creator còn dùng capability tới Nhóm 6. WebSocket game đang mở chưa gắn account với ghế hay tự đóng khi đổi password/disable; phần đó thuộc các nhóm tiếp theo. Xem [BOT-OWNERSHIP.md](BOT-OWNERSHIP.md).
 
 ## Tạo ADMIN đầu tiên
 

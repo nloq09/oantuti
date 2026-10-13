@@ -1,7 +1,8 @@
-import { savedBots, uploadBot, botCapabilities } from "../api/bot-api.js";
+import { refreshBots, legacyBots, importLegacyBot, renameBot, deleteBot, savedBots, uploadBot, botCapabilities } from "../api/bot-api.js";
 import { createMatch } from "../api/match-api.js";
 import { seatKey } from "../config.js";
 import { toast } from "../ui/toast.js";
+await refreshBots().catch(error => toast(error.message, true));
 
 let selected =
   savedBots().find(
@@ -39,9 +40,13 @@ function render() {
   if (!list.children.length) {
     const empty = document.createElement("p");
     empty.className = "empty-bots";
-    empty.textContent = "Chưa có bot. Tải chiến thuật đầu tiên của bạn lên.";
+    empty.textContent = "Đăng nhập để xem và quản lý bot của tài khoản.";
     list.append(empty);
   }
+  document.querySelector("#rename-bot").disabled = !selected || busy;
+  document.querySelector("#delete-bot").disabled = !selected || busy;
+  document.querySelector("#import-legacy").hidden = !legacyBots().length;
+  document.querySelector("#import-legacy").disabled = busy;
   document.querySelector("#test-bot").disabled = !selected || busy;
   document.querySelector("#use-bot").disabled = !selected || busy;
   document.querySelector("#upload-bot").disabled = busy;
@@ -128,3 +133,23 @@ document.querySelector("#test-bot").onclick = async () => {
 };
 render();
 refresh();
+
+async function manageBot(task) {
+  if(busy) return;
+  busy = true; render();
+  try { await task(); selected = savedBots().find(bot => bot.id === selected?.id) || savedBots()[0]; }
+  catch(error) { toast(error.message, true); }
+  finally { busy = false; render(); }
+}
+document.querySelector("#import-legacy").onclick = () => manageBot(async () => {
+  for(const bot of legacyBots()) await importLegacyBot(bot);
+  toast("Đã nhập bot cũ vào tài khoản.");
+});
+document.querySelector("#rename-bot").onclick = () => {
+  if(!selected) return;
+  const name = prompt("Tên mới của bot", selected.name);
+  if(name !== null) manageBot(() => renameBot(selected.id, name));
+};
+document.querySelector("#delete-bot").onclick = () => {
+  if(selected && confirm("Xóa bot khỏi danh sách? File của giải đã đăng ký vẫn được giữ.")) manageBot(() => deleteBot(selected.id));
+};
