@@ -77,7 +77,7 @@ public class TournamentService {
         data.put("participants",List.copyOf(t.participants));
         // Copy mutable matches while holding the monitor; never expose internal tokens or mutable objects.
         data.put("matches",t.matches.stream().map(m->{var row=new LinkedHashMap<String,Object>();
-            row.put("id",m.id);row.put("participantA",m.participantA);row.put("participantB",m.participantB);row.put("onlineMatchId",m.onlineMatchId);
+            row.put("id",m.id);row.put("participantA",m.participantA);row.put("participantB",m.participantB);row.put("onlineMatchId",m.onlineMatchId);row.put("historyMatchId",m.historyMatchId);
             row.put("status",m.status);row.put("winnerParticipantId",m.winnerParticipantId);row.put("result",m.result);row.put("failure",m.failure);
             row.put("startedAt",m.startedAt);row.put("finishedAt",m.finishedAt);row.put("remainingA",m.remainingA);row.put("remainingB",m.remainingB);return row;}).toList());
         int pending=0,running=0,finished=0,failed=0;

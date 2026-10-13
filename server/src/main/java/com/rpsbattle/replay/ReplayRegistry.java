@@ -1,40 +1,36 @@
 package com.rpsbattle.replay;
 import com.rpsbattle.api.dto.OnlineSnapshot;
 import com.rpsbattle.api.mapper.GameStateMapper;
+import com.rpsbattle.history.MatchMetadataMapper;
 import com.rpsbattle.online.*;
 import org.springframework.stereotype.Component;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-/** Retains the existing MatchLog model; web DTOs are projections, not a second replay engine. */
+/** Public web projections use the same MatchLog and recorded-facts replay engine. */
 @Component
 public class ReplayRegistry {
-    private final Map<String,MatchLog> logs=new ConcurrentHashMap<>();
-    private final Map<String,OnlineSnapshot> finals=new ConcurrentHashMap<>();
+    private final ReplayArchiveStore archives;
     private final GameStateMapper mapper;
-    public ReplayRegistry(OnlineMatchService online,GameStateMapper mapper) {
-        this.mapper=mapper;
-        online.listen(update->{ if(update.match().state().isFinished()) save(update.match(),online); });
+    private final Map<OnlineMatch,Boolean> captured=Collections.synchronizedMap(new WeakHashMap<>());
+    public ReplayRegistry(OnlineMatchService online,GameStateMapper mapper,ReplayArchiveStore archives) {
+        this.mapper=mapper;this.archives=archives;
+        online.listen(update->{if(update.match().state().isFinished()) save(update.match(),online);});
     }
     public void save(OnlineMatch room,OnlineMatchService online) {
-        if(logs.containsKey(room.id()))return;
-        var log=room.replayLog();
-        var snapshot=online.snapshot(room,OnlineMatch.P1,List.of());
-        // A bounded in-memory archive; oldest insertion is not required for demo retention.
-        synchronized(logs) {
-            if(logs.containsKey(room.id()))return;
-            if(logs.size()>=1000) { var old=logs.keySet().iterator().next();logs.remove(old);finals.remove(old); }
-            finals.put(room.id(),snapshot); logs.put(room.id(),log);
+        synchronized(room) {
+            if(captured.containsKey(room)) return;
+            archives.capture(MatchMetadataMapper.capture(room),room.replayLog(),online.snapshot(room,OnlineMatch.P1,List.of()));
+            captured.put(room,true);
         }
     }
-    public OnlineSnapshot finalSnapshot(String id) {
-        var value=finals.get(id); if(value==null)throw new DemoRequestException("MATCH_NOT_FOUND");return value;
-    }
+    public OnlineSnapshot finalSnapshot(String id) {return archives.load(id).snapshot();}
     public Map<String,Object> view(String id) {
-        var log=logs.get(id); if(log==null)throw new DemoRequestException("REPLAY_NOT_READY");
-        return Map.of("matchId",id,"ruleSet",log.ruleSet(),"seed",log.seed(),
-            "initialState",mapper.toDto(log.initialState(),List.of(),List.of()),
-            "events",mapper.toDto(log.initialState(),List.of(),log.events()).events(),
-            "result",Map.of("outcome",log.result().outcome().name(),"winner",log.result().winner().map(p->p.value()).orElse("DRAW")),
-            "finalState",finalSnapshot(id).gameState(),"players",finalSnapshot(id).players());
+        var archive=archives.load(id);var log=archive.log();
+        var view=new LinkedHashMap<String,Object>();
+        view.put("matchId",log.matchId());view.put("ruleSet",log.ruleSet());view.put("seed",log.seed());
+        view.put("initialState",mapper.toDto(log.initialState(),List.of(),List.of()));
+        view.put("events",mapper.toDto(log.initialState(),List.of(),log.events()).events());
+        view.put("result",Map.of("outcome",log.result().outcome().name(),"winner",log.result().winner().map(p->p.value()).orElse("DRAW")));
+        view.put("finalState",archive.snapshot().gameState());view.put("players",archive.snapshot().players());
+        return view;
     }
 }

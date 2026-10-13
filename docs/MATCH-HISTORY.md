@@ -73,4 +73,4 @@ Helper dùng cookie same-origin, GET cache no-store, không gửi account id ho�
 
 Giữ nguyên V1–V7. V8 thêm room_id và winner_seat, backfill dữ liệu cũ có thể xác định được từ winner_user_id/player1_user_id/player2_user_id, bổ sung index history theo account/time. Không xóa bảng, dữ liệu hoặc dùng Hibernate ddl-auto update. Backfill room_id bằng id cũ để giữ correlation cho dữ liệu đã có.
 
-Tournament ownership/persistence ở Nhóm 6, replay persistence ở Nhóm 7. Replay Web API hiện vẫn dùng roomId/cache hiện tại; nhóm này không biến metadata lịch sử thành replay có thể xem lại sau restart. Session/seat binding lưu owner cho history nhưng chưa thay thế capability token hoặc cơ chế đóng WebSocket đang mở khi disable/đổi password.
+Tournament ownership/persistence đã có ở Nhóm 6; [replay persistence](REPLAY-PERSISTENCE.md) ở Nhóm 7 lưu file và metadata DB, đọc bằng archive UUID trong lịch sử sau restart. Metadata trận chưa kết thúc không chứa replay hoàn chỉnh. Session/seat binding lưu owner cho history nhưng chưa thay thế capability token hoặc cơ chế đóng WebSocket đang mở khi disable/đổi password.

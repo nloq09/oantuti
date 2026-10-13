@@ -19,7 +19,7 @@ Account phải đăng nhập trước khi tạo/tham gia, theo [AUTH.md](AUTH.md
 
 `tournament_participants`: UUID, tournamentId, botId, ownerUserId của bot, displayName snapshot và seed. Roster sắp theo participant UUID để không phụ thuộc thứ tự đọc DB sau restart.
 
-`tournament_matches`: UUID ổn định theo tournament/cặp participant, FK tới archive UUID của Nhóm 5, hai participant, winner, outcome, failure, số quân còn và timestamps. Mã phòng ngắn phục vụ live/replay được đọc từ metadata match; không dùng nó làm FK lịch sử.
+`tournament_matches`: UUID ổn định theo tournament/cặp participant, FK tới archive UUID của Nhóm 5, hai participant, winner, outcome, failure, số quân còn và timestamps. Mã phòng ngắn phục vụ live được đọc từ metadata match; link replay dùng historyMatchId (archive UUID), không dùng mã phòng làm FK lịch sử.
 
 Schema V4 đã có các bảng/constraints cần thiết. Nhóm này dùng schema tới V8, **không thêm hoặc sửa migration đã áp dụng**.
 
@@ -33,7 +33,7 @@ Sau restart:
 - **FINISHED/CANCELLED:** nạp lại lịch, kết quả và ranking, không chạy lại trận đã hoàn tất.
 - **RUNNING/READY:** chuyển thành **RECOVERY_REQUIRED**, giữ kết quả đã commit; cặp RUNNING cũ đánh dấu FAILED/SERVER_RESTART. Các cặp PENDING không tự được chạy. Owner/ADMIN có thể cancel và tạo giải mới; chưa có endpoint resume trong nhóm này.
 
-Không đoán thắng/thua cho trận gián đoạn, không tự cộng điểm hoặc chạy lại để bù. Metadata/account history đã commit giữ nguyên. Replay cache/live room không tồn tại qua restart; lưu file/metadata replay thuộc Nhóm 7.
+Không đoán thắng/thua cho trận gián đoạn, không tự cộng điểm hoặc chạy lại để bù. Metadata/account history đã commit giữ nguyên. Live room không tồn tại qua restart. Nhóm 7 đã lưu replay trận kết thúc bằng file/metadata; xem [REPLAY-PERSISTENCE.md](REPLAY-PERSISTENCE.md).
 
 Token chạy bot chỉ được lấy từ artifact metadata trên server khi nạp roster; không lưu trong bảng giải, không trả qua list/detail/export/WebSocket. Thiếu artifact vẫn đọc được metadata/ranking; start thất bại với lỗi bot phù hợp. Không tự xóa roster, bot hoặc các kết quả cũ.
 

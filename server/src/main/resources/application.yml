@@ -30,6 +30,9 @@ server:
         same-site: lax
 
 rps:
+  replays:
+    directory: ${REPLAY_DIRECTORY:data/replays}
+    flush-millis: 500
   tournament:
     max-concurrent-matches: 4
     match-timeout-seconds: 900

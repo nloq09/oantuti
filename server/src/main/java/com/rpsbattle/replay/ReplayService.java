@@ -26,6 +26,10 @@ public final class ReplayService {
         if (match.status() != MatchStatus.FINISHED) throw new IllegalStateException("Export requires a finished match");
         MatchLog log = new MatchLog(match.matchId(), match.ruleSet().name(), match.seed(), match.initialState(),
                 match.events(), match.state().result().orElseThrow());
+        write(path, log);
+    }
+
+    public void write(Path path, MatchLog log) {
         var node = json.mapper.createObjectNode();
         node.put("matchId", log.matchId());
         node.put("ruleSet", log.ruleSet());
@@ -43,8 +47,13 @@ public final class ReplayService {
     }
 
     public MatchLog read(Path path) {
+        try {return read(java.nio.file.Files.readAllBytes(path));}
+        catch(IOException e) {throw new UncheckedIOException("Cannot read replay: " + path,e);}
+    }
+
+    public MatchLog read(byte[] bytes) {
         try {
-            var node = json.mapper.readTree(path.toFile());
+            var node = json.mapper.readTree(bytes);
             if (node == null || !node.isObject() || !node.path("matchId").isTextual()
                     || !node.path("ruleSet").isTextual() || !node.path("events").isArray() || !node.has("seed")) {
                 throw new IllegalArgumentException("Invalid match log schema");
@@ -57,7 +66,7 @@ public final class ReplayService {
             return new MatchLog(node.get("matchId").asText(), node.get("ruleSet").asText(),
                     seed.isNull() ? null : seed.longValue(), json.state(node.get("initialState")), events, json.result(node.get("result")));
         } catch (IOException e) {
-            throw new UncheckedIOException("Cannot read replay: " + path, e);
+            throw new UncheckedIOException("Cannot read replay payload", e);
         } catch (NullPointerException | java.util.NoSuchElementException e) {
             throw new IllegalArgumentException("Missing replay payload fields", e);
         }
@@ -78,6 +87,7 @@ public final class ReplayService {
         GameState state = initialState;
         boolean started = false, active = false, finished = false, hadTurn = false;
         long pending = state.sequence();
+        boolean offTurnFinish = false;
         for (GameEvent event : events) {
             if (finished) invalid("Events after MATCH_FINISHED");
             if (event instanceof GameEvent.MatchStarted) {
@@ -89,7 +99,8 @@ public final class ReplayService {
             if (!started) invalid("Missing MATCH_STARTED");
             if (event instanceof GameEvent.TurnStarted turn) {
                 if (active || state.isFinished() || turn.sequence() != Math.addExact(state.sequence(), 1)
-                        || !turn.player().equals(state.currentPlayerId())) invalid("Invalid TURN_STARTED");
+                        || state.findPlayer(turn.player()).isEmpty()) invalid("Invalid TURN_STARTED");
+                offTurnFinish = !turn.player().equals(state.currentPlayerId());
                 active = true;
                 hadTurn = true;
                 pending = turn.sequence();
@@ -105,6 +116,9 @@ public final class ReplayService {
                 continue;
             }
             if (!active || event.sequence() != pending) invalid("Event outside its turn or sequence");
+            // Online surrender is allowed outside one's turn. Its only state fact is GAME_FINISHED.
+            if (offTurnFinish && !(event instanceof GameEvent.GameFinished) && !(event instanceof GameEvent.TurnEnded))
+                invalid("Non-terminal action outside turn");
             if (state.isFinished() && !(event instanceof GameEvent.TurnEnded)) invalid("Event after GAME_FINISHED");
             var board = state.board();
             switch (event) {
@@ -136,6 +150,8 @@ public final class ReplayService {
                     state = state.withCurrentPlayer(e.currentPlayer()).withTurnNumber(e.turnNumber());
                 }
                 case GameEvent.GameFinished e -> {
+                    if (offTurnFinish && !e.result().equals(GameResult.win(state.currentPlayerId())))
+                        invalid("Invalid off-turn surrender result");
                     if (e.turnNumber() < state.turnNumber()) invalid("Invalid final turn");
                     state = state.withResult(e.result()).withPhase(GamePhase.FINISHED).withTurnNumber(e.turnNumber());
                 }

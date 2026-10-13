@@ -306,7 +306,7 @@ export class GameController {
     while (list.children.length > 20) list.lastChild.remove();
   }
   result(snapshot) {
-    sessionStorage.setItem("rps-result", JSON.stringify(snapshot));
+    sessionStorage.setItem("rps-result", JSON.stringify({ ...snapshot, historyId: this.seat.historyId }));
     if (this.finished) return;
     this.finished = true;
     const won = snapshot.gameState.winner === snapshot.playerId,

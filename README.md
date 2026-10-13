@@ -37,11 +37,11 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 - Thắng 3, hòa 1, thua 0 điểm; ưu tiên điểm → số thắng → tổng quân còn lại → participant ID. Trận lỗi hạ tầng `FAILED` không tính điểm.
 - Xem LIVE trong `game.html` ở chế độ khán giả chỉ đọc, không chiếm seat; server từ chối thao tác chơi từ spectator.
 - Giải hoàn tất hiển thị vô địch; replay đầy đủ và xuất JSON metadata/participants/matches/ranking. Token bot không xuất trong JSON công khai.
-- Giải đấu và replay lưu trong RAM, không có login/database. Chi tiết ở [CHANG-3.md](docs/CHANG-3.md).
+- Giải đấu lưu PostgreSQL; replay trận kết thúc lưu JSON + metadata PostgreSQL, đọc được sau restart. Chặng 3 là nền tảng ban đầu: [CHANG-3.md](docs/CHANG-3.md); hành vi hiện tại: [lưu giải đấu](docs/TOURNAMENT-OWNERSHIP.md), [lưu replay](docs/REPLAY-PERSISTENCE.md).
 
 ### Bot của người chơi
 
-- Trang **Bot của tôi** quản lý danh sách bot lưu trên trình duyệt, chọn bot và tải file lên server.
+- Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.
 - Hỗ trợ **Python `.py`, C++ `.cpp`, Java `.java` và `.jar`**.
 - Chọn ngôn ngữ, xem trạng thái Docker, nhật ký tải lên và dùng bot ở trang Vào trận.
 - **Đấu thử với bot** tạo một trận thật với bot chiến thuật của game.
@@ -89,6 +89,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 **Nhóm 5:** metadata trận/ghế lưu PostgreSQL với archive UUID riêng; thêm `GET /api/account/matches`, detail và `GET /api/account/stats`, filter/phân trang và thống kê theo chủ ghế kể cả bot chơi thay. Không cộng lại khi nhận thông báo kết thúc lặp. [Hướng dẫn lịch sử](docs/MATCH-HISTORY.md), [báo cáo Nhóm 5](docs/CHANG-4-NHOM-5-HISTORY.md). Bàn cờ đang chơi vẫn ở RAM; UI History ở Nhóm 8.
 
 **Nhóm 6:** giải/roster/lịch/kết quả lưu PostgreSQL; quyền quản lý dùng owner account/ADMIN, bỏ capability client. Người khác vẫn join bằng bot của họ khi DRAFT. Restart giữ ranking/kết quả và đánh dấu RECOVERY_REQUIRED cho giải đang chạy, không tự chạy lại. [Hướng dẫn giải đấu](docs/TOURNAMENT-OWNERSHIP.md), [báo cáo Nhóm 6](docs/CHANG-4-NHOM-6-TOURNAMENT.md). Bản đầu chỉ hỗ trợ PUBLIC.
+
+**Nhóm 7:** replay trận thường/giải đấu lưu JSON trên ổ bền vững và metadata PostgreSQL; kiểm tra SHA-256 và kết quả dựng từ events khi đọc, xử lý file thiếu/hỏng, dùng archive UUID cho link giải đấu. [Hướng dẫn replay](docs/REPLAY-PERSISTENCE.md), [báo cáo Nhóm 7](docs/CHANG-4-NHOM-7-REPLAY.md). Cấu hình thư mục bằng REPLAY_DIRECTORY; backup cả DB và thư mục này.
 
 
 
@@ -215,7 +217,7 @@ REST hiện có:
 - `DELETE /api/tournaments/{id}/participants/{participantId}`: owner giải/ADMIN gỡ participant, hoặc owner bot rút bot của mình khi DRAFT; dùng session/CSRF.
 - `POST /api/tournaments/{id}/start`, `POST /api/tournaments/{id}/cancel`: owner giải/ADMIN được bắt đầu/hủy qua session/CSRF; không dùng token trong trình duyệt.
 - `GET /api/tournaments/{id}/ranking`, `GET /api/tournaments/{id}/export`: xếp hạng và xuất JSON.
-- `GET /api/matches/{id}/replay`: initialState, full events, result, finalState và tên hai bên.
+- `GET /api/matches/{id}/replay`: nhận archive UUID hoặc mã phòng; initialState, full events, result, finalState và tên hai bên.
 
 WebSocket `/ws/game` nhận JSON với thông tin vị trí/token. Các thông điệp chính: `JOIN_MATCH`, `RESUME_MATCH`, `PLACE`, `RANDOM_PLACEMENT`, `RESET_PLACEMENT`, `READY`, `UNREADY`, `ACTION`, `STATE_REQUEST`, `LEAVE`, `PING`. Server trả `GAME_STATE`, `ACTION_REJECTED`, `LEFT_ROOM`, `PONG`. Snapshot server là nguồn trạng thái chính; client không tự quyết định kết quả nước đi.
 
@@ -277,7 +279,7 @@ oantuti/
 │       │       ├── api/             # Controller, DTO, mapper, lỗi HTTP
 │       │       ├── websocket/       # Gateway, handler, message, cấu hình
 │       │       ├── config/          # Cấu hình online
-│       │       ├── replay/          # Log và replay cho CLI
+│       │       ├── replay/          # MatchLog, CLI/web replay, lưu file + metadata DB
 │       │       ├── tournament/      # Domain, registry, scheduler, execution, ranking
 │       │       ├── spectator/       # Subscription chỉ đọc và snapshot live
 │       │       └── app/             # Entry point console và CLI bot
@@ -336,7 +338,7 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 ## Giới hạn hiện tại
 
 - Bàn cờ/phòng đang chơi lưu trong RAM: restart không tiếp tục ván cũ. Metadata trận và lịch sử đã commit được giữ trong PostgreSQL theo account. Metadata bot theo tài khoản lưu bền vững trong PostgreSQL; source cần ổ lưu trữ bền vững và bản sao lưu.
-- Chưa có tài khoản, database, xếp hạng người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
+- Đã có tài khoản/session/PostgreSQL, history/stats và ownership bot/giải. UI Login/Profile/History thuộc Nhóm 8; chưa có ranking người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
 - Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng.
 - Hosting chỉ chạy một container ứng dụng không tự cung cấp Docker Engine cho runner bot riêng. Muốn giữ tính năng upload bot, cần môi trường phù hợp hoặc worker Docker riêng.
 - Bản hiện tại phù hợp demo/kiểm thử; public với người dùng không tin cậy cần bổ sung kiểm soát truy cập, quota/rate limit và cách ly worker.

@@ -40,6 +40,7 @@ class DockerTournamentPersistenceTest {
     @Autowired MatchPersistenceCoordinator historyCoordinator;
     @Autowired MatchHistoryRepository history;
     @Autowired UserStatsService stats;
+    @Autowired com.rpsbattle.replay.ReplayRegistry replays;
     User user() {var id=UserId.random();var now=Instant.now();var name="docker_"+id.value().toString().substring(0,8);return users.save(new User(id,name,name+"@example.com","unused","Player",UserRole.USER,AccountStatus.ACTIVE,now,now,null));}
     @Test void realDockerBotForfeitCommitsTournamentResultHistoryRankingAndAccountStats() throws Exception {
         assumeTrue(artifacts.available(BotLanguage.PYTHON),"Docker Linux/python image unavailable");
@@ -57,5 +58,8 @@ class DockerTournamentPersistenceTest {
         assertThat(stats.account(a.id().value()).matchesPlayed()).isEqualTo(1);assertThat(stats.account(b.id().value()).matchesPlayed()).isEqualTo(1);
         assertThat(stats.account(a.id().value()).wins()+stats.account(b.id().value()).wins()).isEqualTo(1);
         assertThat(tournaments.view(archive).get("champion")).isNotNull();
+        var replay=replays.view(archive.matches.getFirst().historyMatchId);
+        assertThat(replay.get("matchId")).isEqualTo(archive.matches.getFirst().onlineMatchId);
+        assertThat(replay.get("result")).isEqualTo(Map.of("outcome","WIN","winner",history.find(archive.matches.getFirst().historyMatchId).orElseThrow().winnerSeat()));
     }
 }

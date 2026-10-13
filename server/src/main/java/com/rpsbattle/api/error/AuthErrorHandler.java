@@ -8,13 +8,14 @@ import com.rpsbattle.api.controller.BotUploadController;
 import com.rpsbattle.api.controller.MatchController;
 import com.rpsbattle.api.controller.TournamentController;
 import com.rpsbattle.api.controller.AccountHistoryController;
+import com.rpsbattle.api.controller.ReplayWebController;
 import com.rpsbattle.auth.AuthException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
-@RestControllerAdvice(assignableTypes={AuthController.class,AccountController.class,AdminController.class,AccountBotController.class,BotUploadController.class,MatchController.class,TournamentController.class,AccountHistoryController.class})
+@RestControllerAdvice(assignableTypes={AuthController.class,AccountController.class,AdminController.class,AccountBotController.class,BotUploadController.class,MatchController.class,TournamentController.class,AccountHistoryController.class,ReplayWebController.class})
 public class AuthErrorHandler {
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<Map<String,String>> auth(AuthException error) {

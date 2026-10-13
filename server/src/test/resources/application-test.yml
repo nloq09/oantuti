@@ -8,3 +8,6 @@ spring:
       maximum-pool-size: 2
 server:
   address: 127.0.0.1
+rps:
+  replays:
+    directory: ${java.io.tmpdir}/rps-replays-${random.uuid}

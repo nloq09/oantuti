@@ -13,6 +13,9 @@ const errors = {
   PARTICIPANT_LIMIT: "Mỗi giải có tối đa 10 bot.",
   INVALID_TOURNAMENT_NAME: "Tên giải cần từ 1 đến 80 ký tự.",
   REPLAY_NOT_READY: "Replay chỉ sẵn sàng sau khi trận kết thúc.",
+  REPLAY_FILE_MISSING: "Thiếu file replay trên server. Cần khôi phục từ bản sao lưu.",
+  REPLAY_INVALID: "Replay không hợp lệ hoặc đã bị hỏng; không thể phát lại.",
+  REPLAY_PERSISTENCE_UNAVAILABLE: "Chưa lưu được replay. Hãy thử lại khi server hoạt động ổn định.",
   SPECTATOR_READ_ONLY: "Khán giả chỉ được xem trận.",
   BOT_REQUIRED: "Hãy chọn bot của bạn trước khi tạo trận bot đấu bot.",
   BOT_SANDBOX_UNAVAILABLE:

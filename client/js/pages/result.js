@@ -10,7 +10,7 @@ if (!snapshot) location.replace("/");
 else {
   const g = snapshot.gameState;
   document.querySelector("#replay-link").href =
-    "/replay.html?match=" + encodeURIComponent(g.matchId);
+    "/replay.html?match=" + encodeURIComponent(snapshot.historyId || g.matchId);
   document.querySelector("#match-log").onclick = () => {
     const list = document.createElement("ol");
     list.className = "event-summary";

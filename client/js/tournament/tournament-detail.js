@@ -143,7 +143,7 @@ function render(t) {
       link.href =
         (m.status === "RUNNING"
           ? "/game.html?v=stage3&spectate="
-          : "/replay.html?match=") + encodeURIComponent(m.onlineMatchId);
+          : "/replay.html?match=") + encodeURIComponent(m.status === "RUNNING" ? m.onlineMatchId : (m.historyMatchId || m.onlineMatchId));
       card.append(document.createElement("br"), link);
     }
     matches.append(card);

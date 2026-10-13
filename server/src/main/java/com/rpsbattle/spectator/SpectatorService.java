@@ -43,6 +43,7 @@ public class SpectatorService {
                 subscriptions.put(session.getId(),s);send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",tournaments.view(t)));
             } else send(session,"ACTION_REJECTED",Map.of("error","SPECTATOR_READ_ONLY"));
         }catch(DemoRequestException error){send(session,"ACTION_REJECTED",Map.of("error",error.code()));}
+        catch(com.rpsbattle.auth.AuthException error){send(session,"ACTION_REJECTED",Map.of("error",error.code()));}
         catch(RuntimeException error){send(session,"ACTION_REJECTED",Map.of("error","INVALID_MESSAGE"));}
     }
     private void state(MatchSubscription s,OnlineSnapshot snapshot) {
