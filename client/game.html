@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="/css/game.css" />
     <link rel="stylesheet" href="/css/animations.css" />
     <link rel="stylesheet" href="/css/battle-theme.css?v=diagonal" />
+  <link rel="stylesheet" href="/css/account.css">
   </head>
   <body>
+    <nav class="account-nav site-account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/">Trang chủ</a><div class="account-actions"><a class="button" href="/login.html">Đăng nhập</a><a class="button" href="/register.html">Đăng ký</a></div></nav>
     <header>
       <a class="brand" href="/">◈ RPS BATTLE</a>
       <div id="connection" role="status">Đang kết nối…</div>
@@ -174,5 +176,6 @@
     </main>
     <div id="toasts" role="status"></div>
     <script type="module" src="/js/pages/game.js?v=diagonal"></script>
+  <script type="module" src="/js/pages/account-nav.js"></script>
   </body>
 </html>

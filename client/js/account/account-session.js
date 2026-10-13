@@ -38,11 +38,14 @@ export async function initAccountNav() {
     if (account) links.push(["Lịch sử", "/history.html"], ["Hồ sơ", "/profile.html"]);
     else links.push(["Đăng nhập", loginLink()], ["Đăng ký", "/register.html?next=" + encodeURIComponent(safeNext(returnDestination(), location.origin))]);
     nav.replaceChildren();
+    const actions = document.createElement("div"); actions.className = "account-actions";
     for (const [label, href] of links) {
       const a = document.createElement("a"); a.className = "button"; a.textContent = label; a.href = href;
       if (new URL(href, location.origin).pathname === location.pathname) a.setAttribute("aria-current", "page");
-      nav.append(a);
+      if (["Đăng nhập", "Đăng ký", "Lịch sử", "Hồ sơ"].includes(label)) actions.append(a);
+      else nav.append(a);
     }
+    nav.append(actions);
     if (account) {
       const name = document.createElement("span"), button = document.createElement("button");
       name.className = "account-name"; name.textContent = account.displayName; button.textContent = "Đăng xuất";
@@ -51,7 +54,7 @@ export async function initAccountNav() {
         try { await logout(); clearAccountState(); location.assign("/"); }
         catch (error) { toast(error.message, true); button.disabled = false; }
       };
-      nav.append(name, button);
+      actions.append(name, button);
     }
   } catch (error) {
     const message = document.createElement("span"); message.textContent = "Chưa kiểm tra được phiên đăng nhập."; nav.append(message); toast(error.message, true);

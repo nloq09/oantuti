@@ -1,6 +1,9 @@
 .account-nav {display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 26px;}
 .account-nav .button, .account-nav button {font-size:14px; padding:8px 12px;}
-.home-account-nav {justify-content:flex-end; padding:16px clamp(16px,4vw,48px); margin:0; min-height:72px; position:relative; top:24px;}
+.site-account-nav {padding:16px clamp(16px,4vw,48px); margin:0; min-height:72px;}
+.account-actions {display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:10px; margin-left:auto; max-width:100%;}
+.home-account-nav {justify-content:flex-end; padding:16px clamp(16px,4vw,48px); margin:0; min-height:72px; position:relative; top:132px;}
+.account-actions .account-name {margin-left:0;}
 .home-account-nav .account-name {margin-left:0;}
 .account-nav [aria-current=page] {border-color:#fff1bc; background:linear-gradient(#31668e,#193d5d);}
 .account-name {margin-left:auto; max-width:220px; overflow-wrap:anywhere; color:#ffe3a1;}
@@ -32,5 +35,8 @@
 .match-outcome.WIN {color:#286944;} .match-outcome.LOSS {color:#a53232;}
 .pagination {display:flex; flex-wrap:wrap; gap:14px; justify-content:center; align-items:center; margin-top:24px;}
 [hidden] {display:none!important;}
+@media(max-width:1100px) {.home-account-nav:has(.account-name) {top:24px;} }
+@media(max-width:600px) {.home-account-nav {top:110px;} }
+@media(max-width:520px) {.home-account-nav {top:24px;} }
 @media(max-width:900px) {.account-columns {grid-template-columns:1fr;} }
 @media(max-width:700px) {.account-page {padding:0 14px 30px; margin-top:20px;} .account-columns {grid-template-columns:1fr;} .account-stats {grid-template-columns:repeat(2,1fr);} .account-name {margin-left:0;} .account-details {grid-template-columns:1fr; gap:6px;} .account-details dd {margin-bottom:12px;} .auth-panel {margin:20px auto;} }
