@@ -7,10 +7,11 @@
     <link rel="stylesheet" href="/css/global.css" />
     <link rel="stylesheet" href="/css/battle-theme.css" />
     <link rel="stylesheet" href="/css/tournament.css" />
+    <link rel="stylesheet" href="/css/account.css">
   </head>
   <body>
     <main class="tournament-page">
-      <nav class="actions">
+      <nav class="account-nav" data-account-nav aria-label="Điều hướng">
         <a class="button" href="/">Trang chủ</a
         ><a class="button" href="/bots.html">Bot của tôi</a>
       </nav>
@@ -21,7 +22,7 @@
       <div class="tournament-grid">
         <section class="panel">
           <h2>Tạo giải đấu</h2>
-          <form id="create-tournament">
+          <p id="tournament-account-notice" role="status"></p><form id="create-tournament">
             <label for="tournament-name">Tên giải đấu</label
             ><input
               id="tournament-name"
@@ -52,5 +53,6 @@
       </div>
     </main>
     <script type="module" src="/js/tournament/tournament-list.js?v=open-registration"></script>
+    <script type="module" src="/js/pages/account-nav.js"></script>
   </body>
 </html>

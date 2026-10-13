@@ -2,6 +2,12 @@ import { createMatch, joinMatch, getMatch } from "../api/match-api.js";
 import { seatKey } from "../config.js";
 import { toast } from "../ui/toast.js";
 import { refreshBots, savedBots, botCapabilities } from "../api/bot-api.js";
+import { getAccount, loginLink } from "../account/account-session.js";
+const account = await getAccount().catch(error => { toast(error.message, true); return undefined; });
+if (account === null) {
+  const notice = document.querySelector("#guest-notice"), link = document.createElement("a");
+  notice.textContent = "Bạn đang chơi với tư cách khách. "; link.href = loginLink(); link.textContent = "Đăng nhập để dùng bot riêng và lưu lịch sử của bạn."; notice.append(link);
+}
 await refreshBots().catch(error => toast(error.message, true));
 
 const controller = document.querySelector("#player-controller");

@@ -1,0 +1,34 @@
+.account-nav {display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 26px;}
+.account-nav .button, .account-nav button {font-size:14px; padding:8px 12px;}
+.account-nav [aria-current=page] {border-color:#fff1bc; background:linear-gradient(#31668e,#193d5d);}
+.account-name {margin-left:auto; max-width:220px; overflow-wrap:anywhere; color:#ffe3a1;}
+.account-page {max-width:1150px; margin:32px auto; padding:0 24px 48px;}
+.account-page h1 {color:#ffe09b; text-shadow:0 2px #152434; margin-bottom:12px;}
+.account-page .panel {background:linear-gradient(125deg,#fff3d8,#eedebd); color:#263f53; padding:26px;}
+.account-page .panel h2, .account-page .auth-panel h1 {color:#263f53; text-shadow:none;}
+.account-page .panel a:not(.button) {color:#1a6091;}
+.auth-panel {max-width:500px; margin:32px auto;}
+.auth-panel h1 {text-align:center; font-size:30px;}
+.account-form {display:grid; gap:12px;}
+.account-form label {display:grid; gap:7px; color:#263f53; font-weight:600;}
+.account-form input {width:100%; min-width:0; margin:0;}
+.account-form small {color:#536b7c; font-weight:400;}
+.form-message {color:#ad2828; min-height:24px; margin:4px 0; overflow-wrap:anywhere;}
+.form-notice {color:#396248;}
+.account-columns {display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+.account-details {display:grid; grid-template-columns:auto 1fr; gap:12px 20px; margin-bottom:28px;}
+.account-details dt {font-weight:650;} .account-details dd {margin:0; overflow-wrap:anywhere;}
+.account-stats {display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin:22px 0;}
+.stat-card {background:#173048e8; border:1px solid #ad8850; border-radius:10px; padding:18px 12px; text-align:center;}
+.stat-card strong {display:block; color:#ffe09b; font-size:28px;} .stat-card span {display:block; margin-top:8px;}
+.history-toolbar {display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:22px;}
+.history-toolbar select {width:auto; min-width:180px; margin:0;}
+.history-list {display:grid; gap:16px;}
+.history-card h2 {margin:0 0 12px!important; font-size:20px!important;}
+.history-card p {margin:10px 0; overflow-wrap:anywhere;}
+.match-outcome {display:inline-block; border:1px solid currentColor; border-radius:6px; padding:4px 10px; font-weight:650;}
+.match-outcome.WIN {color:#286944;} .match-outcome.LOSS {color:#a53232;}
+.pagination {display:flex; flex-wrap:wrap; gap:14px; justify-content:center; align-items:center; margin-top:24px;}
+[hidden] {display:none!important;}
+@media(max-width:900px) {.account-columns {grid-template-columns:1fr;} }
+@media(max-width:700px) {.account-page {padding:0 14px 30px; margin-top:20px;} .account-columns {grid-template-columns:1fr;} .account-stats {grid-template-columns:repeat(2,1fr);} .account-name {margin-left:0;} .account-details {grid-template-columns:1fr; gap:6px;} .account-details dd {margin-bottom:12px;} .auth-panel {margin:20px auto;} }

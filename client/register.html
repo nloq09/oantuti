@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng ký · RPS Battle</title><link rel="stylesheet" href="/css/global.css"><link rel="stylesheet" href="/css/battle-theme.css"><link rel="stylesheet" href="/css/account.css"></head>
+<body><main class="account-page"><nav class="account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/">Trang chủ</a></nav>
+<section class="panel auth-panel"><h1>Tạo tài khoản</h1><p>Lưu bot, tham gia giải đấu và theo dõi lịch sử của bạn.</p>
+<form id="auth-form" class="account-form" data-mode="register">
+<label>Tên đăng nhập<input name="username" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_]{3,32}" autocomplete="username" autocapitalize="none" spellcheck="false"><small>3–32 chữ cái, chữ số hoặc dấu gạch dưới.</small></label>
+<label>Tên hiển thị<input name="displayName" required maxlength="60" autocomplete="nickname"></label>
+<label>Email<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+<label>Mật khẩu<input name="password" type="password" required autocomplete="new-password"><small>Ít nhất 12 ký tự, tối đa 72 byte UTF-8.</small></label>
+<label>Xác nhận mật khẩu<input name="confirmation" type="password" required autocomplete="new-password"></label>
+<p id="form-message" class="form-message" role="status" aria-live="polite"></p><button type="submit" class="primary">Tạo tài khoản</button></form>
+<p>Đã có tài khoản? <a id="alternate-auth" href="/login.html">Đăng nhập</a></p></section>
+</main><script type="module" src="/js/pages/account-nav.js"></script><script type="module" src="/js/pages/auth.js"></script></body></html>

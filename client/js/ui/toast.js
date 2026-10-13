@@ -1,4 +1,15 @@
 const errors = {
+  INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
+  INVALID_USERNAME: "Tên đăng nhập gồm 3–32 chữ cái, chữ số hoặc dấu gạch dưới.",
+  INVALID_EMAIL: "Email không hợp lệ.",
+  INVALID_DISPLAY_NAME: "Tên hiển thị cần từ 1 đến 60 ký tự.",
+  INVALID_PASSWORD: "Mật khẩu cần ít nhất 12 ký tự, tối đa 72 byte UTF-8.",
+  PASSWORD_MISMATCH: "Mật khẩu xác nhận không khớp.",
+  ACCOUNT_ALREADY_EXISTS: "Tên đăng nhập hoặc email đã được sử dụng.",
+  CURRENT_PASSWORD_INVALID: "Mật khẩu hiện tại không đúng.",
+  PASSWORD_UNCHANGED: "Mật khẩu mới phải khác mật khẩu hiện tại.",
+  DATABASE_UNAVAILABLE: "Chưa kết nối được database. Hãy thử lại sau.",
+  MATCH_PERSISTENCE_UNAVAILABLE: "Chưa lưu được lịch sử trận. Hãy thử lại sau.",
   TOURNAMENT_PERSISTENCE_UNAVAILABLE: "Chưa lưu được dữ liệu giải đấu. Hãy thử lại khi database hoạt động.",
   UNSUPPORTED_TOURNAMENT_VISIBILITY: "Hiện chỉ hỗ trợ giải đấu công khai.",
   UNAUTHENTICATED: "Hãy đăng nhập để quản lý bot hoặc tạo/tham gia giải đấu.",
@@ -46,6 +57,7 @@ const errors = {
   INVALID_PHASE: "Thao tác chưa khả dụng.",
   INVALID_MESSAGE: "Dữ liệu gửi không hợp lệ.",
 };
+export const errorText = message => errors[message] || (message === "Failed to fetch" ? "Không kết nối được server." : "Không thể thực hiện thao tác. Hãy thử lại.");
 export function toast(message, error = false) {
   let box = document.querySelector("#toasts");
   if (!box) {

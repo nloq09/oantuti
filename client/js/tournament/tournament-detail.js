@@ -10,11 +10,16 @@ import {
 } from "./tournament-api.js?v=open-registration";
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
-import { currentUser } from "../api/auth-api.js";
+import { getAccount, loginLink } from "../account/account-session.js";
 import { confirmAction } from "../ui/modal.js";
 await refreshBots().catch(error => toast(error.message, true));
 const id = new URLSearchParams(location.search).get("id");
-const account = (await currentUser().catch(() => ({}))).user;
+const account = await getAccount().catch(() => null);
+if (!account) {
+  const notice = document.createElement("p"), link = document.createElement("a");
+  link.href = loginLink(); link.textContent = "Đăng nhập để đăng ký bot của bạn vào giải."; notice.append(link);
+  document.querySelector("#registration").before(notice);
+}
 let latest = -1,
   busy = false;
 document.querySelector("#export").href =
@@ -41,7 +46,7 @@ function render(t) {
   const draft = t.status === "DRAFT";
   document.querySelector("#invite-link").value = location.origin + "/tournament.html?id=" + encodeURIComponent(id);
   document.querySelector("#invite-code").textContent = id;
-  document.querySelector("#registration").hidden = !draft || t.participants.length >= 10;
+  document.querySelector("#registration").hidden = !account || !draft || t.participants.length >= 10;
   document.querySelector("#registration-help").textContent = draft
     ? "Đăng ký bot trước khi chủ giải bắt đầu. Giải cần ít nhất 2 và tối đa 10 bot."
     : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";

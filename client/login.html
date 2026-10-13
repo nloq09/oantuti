@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng nhập · RPS Battle</title><link rel="stylesheet" href="/css/global.css"><link rel="stylesheet" href="/css/battle-theme.css"><link rel="stylesheet" href="/css/account.css"></head>
+<body><main class="account-page"><nav class="account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/">Trang chủ</a></nav>
+<section class="panel auth-panel"><h1>Đăng nhập</h1><p>Chào mừng trở lại RPS Battle.</p>
+<p id="auth-notice" class="form-notice" role="status"></p><form id="auth-form" class="account-form" data-mode="login">
+<label>Tên đăng nhập<input name="username" required maxlength="32" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+<label>Mật khẩu<input name="password" type="password" required autocomplete="current-password"></label>
+<p id="form-message" class="form-message" role="status" aria-live="polite"></p><button type="submit" class="primary">Đăng nhập</button></form>
+<p>Chưa có tài khoản? <a id="alternate-auth" href="/register.html">Đăng ký</a></p><p><a href="/lobby.html">Chơi với tư cách khách →</a></p></section>
+</main><script type="module" src="/js/pages/account-nav.js"></script><script type="module" src="/js/pages/auth.js"></script></body></html>

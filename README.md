@@ -6,6 +6,15 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 ## Chức năng hiện tại
 
+### Tài khoản và lịch sử
+
+- Đăng ký/đăng nhập/đăng xuất bằng session cookie, thanh điều hướng theo phiên.
+- Hồ sơ: xem thông tin và thống kê, sửa tên hiển thị, đổi mật khẩu rồi đăng nhập lại.
+- Lịch sử trận theo tài khoản, filter/phân trang 20 trận và mở replay bằng archive UUID.
+- Khách vẫn chơi tay/đấu với bot của game và xem giải công khai; bot riêng, hồ sơ, lịch sử và quản lý giải cần đăng nhập.
+- [Hướng dẫn giao diện tài khoản](docs/ACCOUNT-UI.md).
+
+
 ### Chế độ và phòng chơi
 
 - **Hai người**: tạo phòng, sao chép/chia sẻ mã và tham gia phòng từ trình duyệt khác.
@@ -86,11 +95,13 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Nhóm 4:** metadata bot lưu PostgreSQL theo chủ tài khoản; upload/dùng bot riêng cần đăng nhập và CSRF. Có My Bots API, đổi tên, xóa mềm, nhập bot cũ bằng token chứng minh. Client lấy danh sách từ server; token trong trình duyệt không còn là quyền dùng bot. [Báo cáo Nhóm 4](docs/CHANG-4-NHOM-4-BOTS.md), [hướng dẫn tài khoản và nhập bot](docs/BOT-OWNERSHIP.md). Chưa có trang login: đăng nhập qua API/helper theo hướng dẫn cho tới Nhóm 8.
 
-**Nhóm 5:** metadata trận/ghế lưu PostgreSQL với archive UUID riêng; thêm `GET /api/account/matches`, detail và `GET /api/account/stats`, filter/phân trang và thống kê theo chủ ghế kể cả bot chơi thay. Không cộng lại khi nhận thông báo kết thúc lặp. [Hướng dẫn lịch sử](docs/MATCH-HISTORY.md), [báo cáo Nhóm 5](docs/CHANG-4-NHOM-5-HISTORY.md). Bàn cờ đang chơi vẫn ở RAM; UI History ở Nhóm 8.
+**Nhóm 5:** metadata trận/ghế lưu PostgreSQL với archive UUID riêng; thêm `GET /api/account/matches`, detail và `GET /api/account/stats`, filter/phân trang và thống kê theo chủ ghế kể cả bot chơi thay. Không cộng lại khi nhận thông báo kết thúc lặp. [Hướng dẫn lịch sử](docs/MATCH-HISTORY.md), [báo cáo Nhóm 5](docs/CHANG-4-NHOM-5-HISTORY.md). Bàn cờ đang chơi vẫn ở RAM; UI History đã có ở Nhóm 8.
 
 **Nhóm 6:** giải/roster/lịch/kết quả lưu PostgreSQL; quyền quản lý dùng owner account/ADMIN, bỏ capability client. Người khác vẫn join bằng bot của họ khi DRAFT. Restart giữ ranking/kết quả và đánh dấu RECOVERY_REQUIRED cho giải đang chạy, không tự chạy lại. [Hướng dẫn giải đấu](docs/TOURNAMENT-OWNERSHIP.md), [báo cáo Nhóm 6](docs/CHANG-4-NHOM-6-TOURNAMENT.md). Bản đầu chỉ hỗ trợ PUBLIC.
 
 **Nhóm 7:** replay trận thường/giải đấu lưu JSON trên ổ bền vững và metadata PostgreSQL; kiểm tra SHA-256 và kết quả dựng từ events khi đọc, xử lý file thiếu/hỏng, dùng archive UUID cho link giải đấu. [Hướng dẫn replay](docs/REPLAY-PERSISTENCE.md), [báo cáo Nhóm 7](docs/CHANG-4-NHOM-7-REPLAY.md). Cấu hình thư mục bằng REPLAY_DIRECTORY; backup cả DB và thư mục này.
+
+**Nhóm 8:** thêm login.html, register.html, profile.html, history.html; navbar theo session, guest policy rõ, profile/password/history nối API có sẵn. [Hướng dẫn](docs/ACCOUNT-UI.md), [báo cáo](docs/CHANG-4-NHOM-8-ACCOUNT-UI.md).
 
 
 
@@ -338,7 +349,7 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 ## Giới hạn hiện tại
 
 - Bàn cờ/phòng đang chơi lưu trong RAM: restart không tiếp tục ván cũ. Metadata trận và lịch sử đã commit được giữ trong PostgreSQL theo account. Metadata bot theo tài khoản lưu bền vững trong PostgreSQL; source cần ổ lưu trữ bền vững và bản sao lưu.
-- Đã có tài khoản/session/PostgreSQL, history/stats và ownership bot/giải. UI Login/Profile/History thuộc Nhóm 8; chưa có ranking người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
+- Đã có tài khoản/session/PostgreSQL, history/stats và ownership bot/giải. UI Login/Register/Profile/History đã có ở Nhóm 8; chưa có ranking người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
 - Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng.
 - Hosting chỉ chạy một container ứng dụng không tự cung cấp Docker Engine cho runner bot riêng. Muốn giữ tính năng upload bot, cần môi trường phù hợp hoặc worker Docker riêng.
 - Bản hiện tại phù hợp demo/kiểm thử; public với người dùng không tin cậy cần bổ sung kiểm soát truy cập, quota/rate limit và cách ly worker.

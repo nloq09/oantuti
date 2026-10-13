@@ -6,6 +6,13 @@ import {
 } from "./tournament-api.js?v=open-registration";
 import { statusLabels } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
+import { getAccount, loginLink } from "../account/account-session.js";
+const account = await getAccount().catch(error => { toast(error.message, true); return null; });
+if (!account) {
+  document.querySelectorAll("#create-tournament input,#create-tournament button").forEach(element => element.disabled = true);
+  const link = document.createElement("a"); link.href = loginLink(); link.textContent = "Đăng nhập để tạo giải và đăng ký bot của bạn.";
+  document.querySelector("#tournament-account-notice").append(link);
+}
 await refreshBots().catch(error => toast(error.message, true));
 const bots = savedBots();
 const options = document.querySelector("#bot-options");

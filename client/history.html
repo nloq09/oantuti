@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lịch sử trận đấu · RPS Battle</title><link rel="stylesheet" href="/css/global.css"><link rel="stylesheet" href="/css/battle-theme.css"><link rel="stylesheet" href="/css/account.css"></head>
+<body><main class="account-page"><nav class="account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/">Trang chủ</a></nav>
+<h1>Lịch sử trận đấu</h1><p>Trận của bạn, kể cả khi bot riêng chơi thay.</p><p id="account-load-status" role="status">Đang tải tài khoản…</p>
+<div data-protected-content hidden><div id="account-stats" class="account-stats" aria-label="Thống kê tài khoản"></div><p id="stats-status" role="status"></p>
+<p>Thống kê tính các trận đã kết thúc; không tính trận hai bên cùng tài khoản hoặc trận lỗi hạ tầng.</p>
+<div class="history-toolbar"><label for="history-filter">Lọc trận</label><select id="history-filter"><option value="all">Tất cả</option><option value="win">Thắng</option><option value="loss">Thua</option><option value="draw">Hòa</option><option value="human">Hai người tự chơi</option><option value="bot">Có bot tham gia</option></select><button id="refresh-history">Tải lại</button></div>
+<p id="history-status" role="status" aria-live="polite"></p><div id="history-list" class="history-list" aria-label="Danh sách trận"></div>
+<nav class="pagination" aria-label="Phân trang lịch sử"><button id="previous-page" disabled>← Trước</button><span id="page-label"></span><button id="next-page" disabled>Sau →</button></nav></div>
+</main><script type="module" src="/js/pages/account-nav.js"></script><script type="module" src="/js/pages/history.js"></script></body></html>
