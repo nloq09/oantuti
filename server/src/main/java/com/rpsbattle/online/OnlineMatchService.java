@@ -31,6 +31,10 @@ public class OnlineMatchService {
     private final Semaphore permits = new Semaphore(4);
     private final Map<String, Future<?>> jobs = new ConcurrentHashMap<>();
     private final Set<String> cleaned = ConcurrentHashMap.newKeySet();
+    private volatile boolean draining;
+    private com.rpsbattle.operations.RuntimeMetrics metrics;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void metrics(com.rpsbattle.operations.RuntimeMetrics metrics){this.metrics=metrics;}
     public OnlineMatchService(MatchRegistry registry, GameStateMapper mapper, Clock clock,
                               @Value("${rps.turn-seconds:30}") long seconds) {
         if (seconds < 1) throw new IllegalArgumentException("turn-seconds must be positive");
@@ -41,6 +45,7 @@ public class OnlineMatchService {
     }
 
     public OnlineMatch create(MatchMode mode, Long seed) {
+        if(draining)throw new DemoRequestException("SERVER_BUSY");
         var match = new OnlineMatch(UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT),
                 mode, seed == null ? UUID.randomUUID().getMostSignificantBits() : seed, clock, turnTime);
         registry.register(match);
@@ -53,6 +58,7 @@ public class OnlineMatchService {
     }
 
     public OnlineMatch.Seat join(String id) {
+        if(draining)throw new DemoRequestException("SERVER_BUSY");
         var room = find(id);
         synchronized (room) {
             var seat = room.join();
@@ -85,7 +91,8 @@ public class OnlineMatchService {
     }
 
     @Scheduled(fixedDelayString = "${rps.bot-tick-millis:200}")
-    public void tick() {
+    public synchronized void tick() {
+        if(draining)return;
         for (var room : registry.getActiveMatches()) {
             if(room.infrastructureError()!=null)continue;
             try {
@@ -112,9 +119,11 @@ public class OnlineMatchService {
                         try {
                             action = turn.agent().chooseAction(new PlayerView(turn.state(), turn.player()), turn.actions());
                         } catch (RuntimeException error) {
+                            if(metrics!=null)metrics.botFailure(error);
                             failed = true;
                         }
                         synchronized (room) {
+                            if(draining)return null;
                             try {
                                 var result = room.completeBot(turn, action, failed);
                                 if (!result.isEmpty()) publish(room, result);
@@ -170,9 +179,13 @@ public class OnlineMatchService {
 
     @PreDestroy
     public void shutdown() {
-        for (var room : registry.getActiveMatches()) closeAgents(room);
+        draining=true;
+        for (var room : registry.getActiveMatches()) for(var agent:room.uploadedAgents())
+            if(agent instanceof AutoCloseable closeable) try {closeable.close();}catch(Exception ignored){}
         bots.shutdownNow();
+        try {bots.awaitTermination(5,TimeUnit.SECONDS);}catch(InterruptedException error){Thread.currentThread().interrupt();}
     }
+    public synchronized void stopAccepting(){draining=true;}
 
     public record Update(OnlineMatch match, List<GameEvent> events) {
     }

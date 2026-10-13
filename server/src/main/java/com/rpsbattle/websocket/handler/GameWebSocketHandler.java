@@ -29,6 +29,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final com.rpsbattle.spectator.SpectatorService spectators;
     private final Map<PlayerId, WebSocketSession> seats = new HashMap<>();
     private final Map<String, PlayerId> players = new HashMap<>();
+    private com.rpsbattle.operations.RequestLimits limits;
+    private com.rpsbattle.operations.RuntimeMetrics metrics;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void operations(com.rpsbattle.operations.RequestLimits limits,com.rpsbattle.operations.RuntimeMetrics metrics){this.limits=limits;this.metrics=metrics;}
+    @Override public void afterConnectionEstablished(WebSocketSession session) {
+        session.setTextMessageSizeLimit(16384);
+        if(metrics!=null)metrics.socketOpened(session.getId());
+    }
 
     public GameWebSocketHandler(ObjectMapper json, DemoMatchService service, GameStateMapper mapper, OnlineGameGateway online, com.rpsbattle.spectator.SpectatorService spectators) {
         this.json = json.copy().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
@@ -43,7 +51,15 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected synchronized void handleTextMessage(WebSocketSession session, TextMessage text) throws IOException {
         try {
+            if(text.getPayloadLength()>16384){reject(session,"INVALID_MESSAGE");return;}
+            if(limits!=null && !limits.take("ws-all:"+remote(session),60,1).allowed()){reject(session,"RATE_LIMITED");return;}
             var envelope = json.readTree(text.getPayload());
+            if(limits!=null && envelope!=null) {
+                String type=envelope.path("type").asText();
+                int quota=switch(type){case "PING"->2;case "STATE_REQUEST"->5;default->30;};
+                String bucket=switch(type){case "PING","STATE_REQUEST"->type;default->"ACTION";};
+                if(!limits.take("ws:"+remote(session)+":"+bucket,quota,1).allowed()){reject(session,"RATE_LIMITED");return;}
+            }
             if (envelope != null && (spectators.owns(session) || envelope.path("type").asText().equals("SPECTATE_MATCH") || envelope.path("type").asText().equals("WATCH_TOURNAMENT"))) {
                 online.closed(session);
                 spectators.handle(session,envelope);
@@ -134,9 +150,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         PlayerId player = players.remove(session.getId());
         if (player != null) seats.remove(player, session);
     }
+    private String remote(WebSocketSession session) {
+        var address=session.getRemoteAddress();
+        return address==null?"unknown":address.getAddress()==null?address.getHostString():address.getAddress().getHostAddress();
+    }
 
     @Override
     public synchronized void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        if(metrics!=null)metrics.socketClosed(session.getId());
         release(session);
         online.closed(session);
         spectators.closed(session);
@@ -144,6 +165,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public synchronized void handleTransportError(WebSocketSession session, Throwable error) throws IOException {
+        if(metrics!=null)metrics.socketClosed(session.getId());
         release(session);
         online.closed(session);
         spectators.closed(session);

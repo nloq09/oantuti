@@ -18,6 +18,9 @@ public class AdminService {
     private final AccountAuthorizationService authorization;
     private final MatchRegistry matches;
     private final TournamentRegistry tournaments;
+    private com.rpsbattle.worker.WorkerManager workers;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void workers(com.rpsbattle.worker.WorkerManager workers){this.workers=workers;}
     public AdminService(UserRepository users,AccountAuthorizationService authorization,MatchRegistry matches,TournamentRegistry tournaments) {
         this.users=users;this.authorization=authorization;this.matches=matches;this.tournaments=tournaments;
     }
@@ -36,6 +39,6 @@ public class AdminService {
     public Map<String,Object> system(Authentication authentication) {
         authorization.requireAdmin(authentication);
         return Map.of("users",users.count(),"activeMatches",matches.getActiveMatches().stream().filter(m->!m.state().isFinished()).count(),
-                "runningTournaments",tournaments.findAll().stream().filter(t->{synchronized(t){return t.status==TournamentStatus.RUNNING;}}).count(),"checkedAt",Instant.now());
+                "runningTournaments",tournaments.findAll().stream().filter(t->{synchronized(t){return t.status==TournamentStatus.RUNNING;}}).count(),"workers",workers==null?Map.of():workers.status(),"checkedAt",Instant.now());
     }
 }

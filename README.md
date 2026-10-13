@@ -103,6 +103,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Nhóm 8:** thêm login.html, register.html, profile.html, history.html; navbar theo session, guest policy rõ, profile/password/history nối API có sẵn. [Hướng dẫn](docs/ACCOUNT-UI.md), [báo cáo](docs/CHANG-4-NHOM-8-ACCOUNT-UI.md).
 
+**Nhóm 9:** thêm MatchWorker/LocalMatchWorker, FIFO có giới hạn và giữ chỗ toàn lịch giải; mặc định 4 trận giải chạy/256 trận chờ. Quá tải trả SERVER_BUSY, rate limit HTTP/WS trả RATE_LIMITED; chống đăng nhập sai liên tục, Actuator metrics chỉ ADMIN xem và checkpoint trước khi đóng server. [Cấu hình, monitoring và giới hạn](docs/WORKER-OPERATIONS.md), [báo cáo](docs/CHANG-4-NHOM-9-WORKER.md).
+
 
 
 
@@ -292,6 +294,8 @@ oantuti/
 │       │       ├── config/          # Cấu hình online
 │       │       ├── replay/          # MatchLog, CLI/web replay, lưu file + metadata DB
 │       │       ├── tournament/      # Domain, registry, scheduler, execution, ranking
+│       │       ├── worker/          # FIFO admission, capacity và local match worker
+│       │       ├── operations/      # Rate limit, metrics, request log, graceful checkpoint
 │       │       ├── spectator/       # Subscription chỉ đọc và snapshot live
 │       │       └── app/             # Entry point console và CLI bot
 │       └── test/                    # Unit, architecture, API/WS, Docker tests
@@ -352,7 +356,7 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 - Đã có tài khoản/session/PostgreSQL, history/stats và ownership bot/giải. UI Login/Register/Profile/History đã có ở Nhóm 8; chưa có ranking người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
 - Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng.
 - Hosting chỉ chạy một container ứng dụng không tự cung cấp Docker Engine cho runner bot riêng. Muốn giữ tính năng upload bot, cần môi trường phù hợp hoặc worker Docker riêng.
-- Bản hiện tại phù hợp demo/kiểm thử; public với người dùng không tin cậy cần bổ sung kiểm soát truy cập, quota/rate limit và cách ly worker.
+- Đã có ownership, CSRF/session, rate limit một instance và giới hạn lịch giải. Public với người dùng không tin cậy vẫn cần quota tài nguyên theo account, reverse proxy đáng tin, backup, cleanup container sau crash và cách ly worker vận hành; queue/phòng chưa chia sẻ giữa nhiều instance.
 
 ## Tài liệu liên quan
 

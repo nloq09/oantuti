@@ -12,4 +12,5 @@ public class BotRepositoryAdapter implements BotRepository {
     public List<BotMetadata> owned(UUID owner) {return repository.findByOwnerUserIdAndStatusNotOrderByCreatedAtDesc(owner,BotMetadata.Status.DELETED).stream().map(BotEntity::domain).toList();}
     public BotMetadata create(BotMetadata bot) {entities.persist(new BotEntity(bot));entities.flush();return bot;}
     public BotMetadata save(BotMetadata bot) {return repository.saveAndFlush(new BotEntity(bot)).domain();}
+    public long countActive(){return repository.countByStatusNot(BotMetadata.Status.DELETED);}
 }

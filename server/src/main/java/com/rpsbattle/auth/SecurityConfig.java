@@ -39,11 +39,13 @@ public class SecurityConfig {
         return new CompositeSessionAuthenticationStrategy(List.of(new ChangeSessionIdAuthenticationStrategy(),new CsrfAuthenticationStrategy(csrfTokens)));
     }
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contexts,
-            CsrfTokenRepository tokens, ObjectMapper json,AuthService authService) throws Exception {
+            CsrfTokenRepository tokens, ObjectMapper json,AuthService authService,com.rpsbattle.operations.RequestLimits limits,com.rpsbattle.operations.RuntimeMetrics metrics) throws Exception {
         http.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable);
         http.securityContext(context -> context.securityContextRepository(contexts).requireExplicitSave(true));
         http.addFilterAfter(new SessionAccountFilter(authService,contexts),SecurityContextHolderFilter.class);
+        http.addFilterBefore(new com.rpsbattle.operations.RequestLogFilter(),org.springframework.security.web.access.intercept.AuthorizationFilter.class);
+        http.addFilterAfter(new com.rpsbattle.operations.RequestLimitFilter(limits,metrics,json),com.rpsbattle.operations.RequestLogFilter.class);
         http.csrf(csrf -> csrf.csrfTokenRepository(tokens)
                 // Guest seat mutations remain capabilities. Authenticated game/tournament requests
                 // can exercise account-owned bots and therefore require CSRF as well.
@@ -54,7 +56,8 @@ public class SecurityConfig {
                     var session=request.getSession(false);
                     return !((path.startsWith("/api/matches") || path.startsWith("/api/tournaments")) && session!=null && session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)!=null);
                 }));
-        http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/admin/**").hasRole("ADMIN")
+        http.authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health","/actuator/health/**").permitAll()
+                .requestMatchers("/actuator/**","/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/account/**","/api/bots").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.POST,"/api/tournaments","/api/tournaments/**").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE,"/api/tournaments/**").authenticated().anyRequest().permitAll());

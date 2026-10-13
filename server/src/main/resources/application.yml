@@ -19,6 +19,7 @@ spring:
       max-request-size: 6MB
 
 server:
+  shutdown: graceful
   address: 0.0.0.0
   port: ${PORT:8080}
   servlet:
@@ -30,9 +31,26 @@ server:
         same-site: lax
 
 rps:
+  worker:
+    max-concurrent-matches: ${MAX_CONCURRENT_MATCHES:4}
+    max-pending-matches: ${MAX_PENDING_MATCHES:256}
+  rate-limit:
+    max-keys: 10000
+    multiplier: ${RATE_LIMIT_MULTIPLIER:1}
   replays:
     directory: ${REPLAY_DIRECTORY:data/replays}
     flush-millis: 500
   tournament:
     max-concurrent-matches: 4
     match-timeout-seconds: 900
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true

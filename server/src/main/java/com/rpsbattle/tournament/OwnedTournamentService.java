@@ -18,6 +18,9 @@ public class OwnedTournamentService {
     private final AccountAuthorizationService accounts;
     private final TournamentAuthorizationService authorization;
     private final OwnedBotService bots;
+    private com.rpsbattle.worker.ExecutionQueue queue;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void executionQueue(com.rpsbattle.worker.ExecutionQueue queue) {this.queue=queue;}
     public OwnedTournamentService(TournamentService tournaments,TournamentRegistry registry,TournamentPersistenceCoordinator persistence,AccountAuthorizationService accounts,TournamentAuthorizationService authorization,OwnedBotService bots) {this.tournaments=tournaments;this.registry=registry;this.persistence=persistence;this.accounts=accounts;this.authorization=authorization;this.bots=bots;}
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility) {
         var actor=accounts.requireUser(auth);
@@ -63,7 +66,18 @@ public class OwnedTournamentService {
             tournaments.remove(id,participantId);
         });
     }
-    public void start(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,()->tournaments.start(id));}
+    public void start(Authentication auth,String id) {
+        var t=tournaments.find(id);authorization.requireManager(auth,t);
+        synchronized(t) {
+            var reserved=new ArrayList<String>();
+            try {
+                mutate(t,()-> {
+                    tournaments.start(id);
+                    if(queue!=null) {var ids=t.matches.stream().map(m->m.id).toList();queue.reserve(ids);reserved.addAll(ids);}
+                });
+            } catch(RuntimeException failure) {if(queue!=null)queue.release(reserved);throw failure;}
+        }
+    }
     public void cancel(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,()->tournaments.cancel(id));}
     public void flush() {persistence.flushForRead();}
 }

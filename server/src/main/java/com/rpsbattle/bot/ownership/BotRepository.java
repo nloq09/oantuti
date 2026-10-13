@@ -6,4 +6,5 @@ public interface BotRepository {
     List<BotMetadata> owned(UUID owner);
     BotMetadata create(BotMetadata bot);
     BotMetadata save(BotMetadata bot);
+    long countActive();
 }

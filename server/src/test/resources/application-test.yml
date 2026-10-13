@@ -9,5 +9,9 @@ spring:
 server:
   address: 127.0.0.1
 rps:
+  rate-limit:
+    # Shared integration contexts exercise many independent flows from one localhost IP.
+    # OperationsSecurityTest explicitly restores production quotas for rate-limit assertions.
+    multiplier: 100
   replays:
     directory: ${java.io.tmpdir}/rps-replays-${random.uuid}
