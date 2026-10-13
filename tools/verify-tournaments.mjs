@@ -14,11 +14,10 @@ const containers = () =>
     .split(/\r?\n/)
     .filter(Boolean);
 const baseline = new Set(containers());
-async function request(path, body, expected = 200) {
+async function request(path, body, expected = 200, extraHeaders = {}) {
   const response = await fetch(base + path, {
     method: body === undefined ? "GET" : "POST",
-    headers:
-      body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...extraHeaders },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   assert.equal(response.status, expected, await response.clone().text());
@@ -53,7 +52,7 @@ async function run(name, bots) {
       botToken: bot.token,
       displayName: bot.name,
     });
-  await request(`/api/tournaments/${t.id}/start`, {});
+  await request(`/api/tournaments/${t.id}/start`, {}, 200, { "X-Tournament-Token": t.ownerToken });
   let maximum = 0,
     finished,
     observedReplay = false,

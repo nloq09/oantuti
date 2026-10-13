@@ -17,6 +17,16 @@
         ><button id="cancel" class="danger" hidden>Hủy giải</button>
       </nav>
       <h1 id="name" class="page-title">Đang tải giải đấu…</h1>
+      <section class="panel tournament-invite">
+        <h2>Mời người chơi tham gia</h2>
+        <p>Mã giải: <strong id="invite-code"></strong></p>
+        <label for="invite-link">Link mời</label>
+        <div class="actions">
+          <input id="invite-link" readonly />
+          <button id="copy-invite">Sao chép link</button>
+        </div>
+        <p id="registration-help"></p>
+      </section>
       <div id="champion" class="panel champion" hidden></div>
       <nav class="actions tab-bar" aria-label="Nội dung giải đấu">
         <button data-tab="overview" aria-pressed="true">Tổng quan</button
@@ -28,11 +38,25 @@
         <div id="counts" class="stats-grid"></div>
         <h3>Bot tham gia</h3>
         <div id="participants"></div>
+        <div id="registration" hidden>
+        <h3>Đăng ký bot của bạn</h3>
         <form id="add-participant" hidden>
           <label for="available-bot">Thêm bot của bạn</label
           ><select id="available-bot"></select
-          ><button>Thêm bot</button>
+          ><button>Đăng ký bot</button>
         </form>
+        <details>
+          <summary>Tải bot mới và tham gia giải</summary>
+          <form id="upload-participant">
+            <label for="participant-name">Tên bot</label>
+            <input id="participant-name" required maxlength="60" placeholder="Bot của tôi" />
+            <label for="participant-file">File Python, C++ hoặc Java</label>
+            <input id="participant-file" type="file" accept=".py,.cpp,.java,.jar" required />
+            <p>Source tối đa 512 KB; JAR tối đa 5 MB. Java source dùng class Main, không package.</p>
+            <button class="primary">Tải lên và đăng ký</button>
+          </form>
+        </details>
+        </div>
       </section>
       <section id="matches" hidden><div id="match-list"></div></section>
       <section id="ranking" class="panel" hidden>
@@ -61,7 +85,7 @@
     </main>
     <script
       type="module"
-      src="/js/tournament/tournament-detail.js?v=no-live-badge"
+      src="/js/tournament/tournament-detail.js?v=open-registration"
     ></script>
   </body>
 </html>

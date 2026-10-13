@@ -21,8 +21,12 @@ abstract class StageThreeWebFixture {
     @Autowired BotUploadService uploads;
     @Autowired TournamentService tournaments;
     JsonNode request(String path,String method,Object body,int expected) throws Exception {
+        return request(path,method,body,expected,Map.of());
+    }
+    JsonNode request(String path,String method,Object body,int expected,Map<String,String> headers) throws Exception {
         try(var http=HttpClient.newHttpClient()) {
             var builder=HttpRequest.newBuilder(URI.create("http://localhost:"+port+path)).header("Content-Type","application/json");
+            headers.forEach(builder::header);
             builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
             var response=http.send(builder.build(),HttpResponse.BodyHandlers.ofString());assertThat(response.statusCode()).as(response.body()).isEqualTo(expected);return json.readTree(response.body());
         }

@@ -30,13 +30,19 @@
               placeholder="RPS Championship"
             />
             <p>Thể thức: Round Robin</p>
-            <h3>Chọn bot của bạn</h3>
+            <h3>Bot của bạn (không bắt buộc)</h3>
             <div id="bot-options"></div>
             <p id="bot-empty" hidden>
-              Cần ít nhất 2 bot để tạo giải.
+              Bạn có thể tạo giải trước rồi mời mọi người đăng ký bot.
               <a href="/bots.html">Đi tới Bot của tôi →</a>
             </p>
             <button class="primary wide" id="create">Tạo giải đấu</button>
+          </form>
+          <h2>Tham gia giải đấu</h2>
+          <form id="join-tournament">
+            <label for="tournament-code">Mã giải hoặc link mời</label>
+            <input id="tournament-code" required placeholder="Dán mã giải hoặc link mời" />
+            <button class="primary wide">Tham gia</button>
           </form>
         </section>
         <section>
@@ -45,6 +51,6 @@
         </section>
       </div>
     </main>
-    <script type="module" src="/js/tournament/tournament-list.js"></script>
+    <script type="module" src="/js/tournament/tournament-list.js?v=open-registration"></script>
   </body>
 </html>

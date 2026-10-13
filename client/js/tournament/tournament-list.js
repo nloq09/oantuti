@@ -3,7 +3,7 @@ import {
   tournamentRequest,
   createTournament,
   addParticipant,
-} from "./tournament-api.js";
+} from "./tournament-api.js?v=open-registration";
 import { statusLabels } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 const bots = savedBots();
@@ -17,8 +17,7 @@ for (const bot of bots) {
   row.append(input, document.createTextNode(`${bot.name} · ${bot.language}`));
   options.append(row);
 }
-document.querySelector("#bot-empty").hidden = bots.length >= 2;
-document.querySelector("#create").disabled = bots.length < 2;
+document.querySelector("#bot-empty").hidden = bots.length > 0;
 let stopped = false,
   busy = false,
   timer;
@@ -47,7 +46,7 @@ async function load() {
       const link = document.createElement("a");
       link.className = "button primary";
       link.href = "/tournament.html?id=" + encodeURIComponent(t.id);
-      link.textContent = "Xem giải đấu";
+      link.textContent = t.status === "DRAFT" ? "Tham gia giải" : "Xem giải đấu";
       card.append(name, status, info, link);
       list.append(card);
     }
@@ -62,8 +61,8 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
   const chosen = [...options.querySelectorAll("input:checked")].map((input) =>
     bots.find((bot) => bot.id === input.value),
   );
-  if (chosen.length < 2 || chosen.length > 10) {
-    toast("Hãy chọn từ 2 đến 10 bot.", true);
+  if (chosen.length > 10) {
+    toast("Mỗi giải tối đa 10 bot.", true);
     return;
   }
   busy = true;
@@ -83,6 +82,17 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
       document.querySelector("#create").disabled = false;
     }
   }
+};
+document.querySelector("#join-tournament").onsubmit = (event) => {
+  event.preventDefault();
+  const value = document.querySelector("#tournament-code").value.trim();
+  let target = value;
+  try { target = new URL(value).searchParams.get("id") || ""; } catch {}
+  if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(target)) {
+    toast("Nhập mã giải đấu hoặc link mời hợp lệ.", true);
+    return;
+  }
+  location.href = "/tournament.html?id=" + encodeURIComponent(target);
 };
 window.addEventListener("pagehide", () => {
   stopped = true;

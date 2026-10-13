@@ -1,4 +1,4 @@
-import { savedBots } from "../api/bot-api.js";
+import { savedBots, uploadBot } from "../api/bot-api.js";
 import {
   getTournament,
   addParticipant,
@@ -6,11 +6,13 @@ import {
   startTournament,
   cancelTournament,
   TournamentStream,
-} from "./tournament-api.js";
+  tournamentOwnerToken,
+} from "./tournament-api.js?v=open-registration";
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 import { confirmAction } from "../ui/modal.js";
 const id = new URLSearchParams(location.search).get("id");
+const owner = !!tournamentOwnerToken(id);
 let latest = -1,
   busy = false;
 document.querySelector("#export").href =
@@ -18,12 +20,14 @@ document.querySelector("#export").href =
 async function action(operation) {
   if (busy) return;
   busy = true;
+  document.querySelectorAll("#registration button").forEach(button => button.disabled = true);
   try {
     render(await operation());
   } catch (error) {
     toast(error.message, true);
   } finally {
     busy = false;
+    document.querySelectorAll("#registration button").forEach(button => button.disabled = false);
   }
 }
 function render(t) {
@@ -32,9 +36,15 @@ function render(t) {
   document.querySelector("#name").textContent = t.name;
   const p = t.progress;
   const draft = t.status === "DRAFT";
-  document.querySelector("#start").hidden = !draft;
+  document.querySelector("#invite-link").value = location.origin + "/tournament.html?id=" + encodeURIComponent(id);
+  document.querySelector("#invite-code").textContent = id;
+  document.querySelector("#registration").hidden = !draft || t.participants.length >= 10;
+  document.querySelector("#registration-help").textContent = draft
+    ? "Đăng ký bot trước khi chủ giải bắt đầu. Giải cần ít nhất 2 và tối đa 10 bot."
+    : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
+  document.querySelector("#start").hidden = !draft || !owner;
   document.querySelector("#start").disabled = t.participants.length < 2;
-  document.querySelector("#cancel").hidden = ["FINISHED", "CANCELLED"].includes(
+  document.querySelector("#cancel").hidden = !owner || ["FINISHED", "CANCELLED"].includes(
     t.status,
   );
   const champion = document.querySelector("#champion");
@@ -66,11 +76,12 @@ function render(t) {
     const name = document.createElement("span");
     name.textContent = bot.displayName;
     row.append(name);
-    if (draft) {
+    const ownedBot = savedBots().find((p) => p.id === bot.botId);
+    if (draft && (owner || ownedBot)) {
       const remove = document.createElement("button");
       remove.textContent = "Gỡ";
       remove.onclick = () =>
-        action(() => removeParticipant(id, bot.participantId));
+        action(() => removeParticipant(id, bot.participantId, ownedBot));
       row.append(remove);
     }
     participants.append(row);
@@ -160,6 +171,22 @@ document.querySelector("#add-participant").onsubmit = (event) => {
     (bot) => bot.id === document.querySelector("#available-bot").value,
   );
   if (bot) action(() => addParticipant(id, bot));
+};
+document.querySelector("#upload-participant").onsubmit = (event) => {
+  event.preventDefault();
+  action(async () => {
+    const bot = await uploadBot(document.querySelector("#participant-name").value.trim(),
+      document.querySelector("#participant-file").files[0]);
+    const t = await addParticipant(id, bot);
+    document.querySelector("#upload-participant").reset();
+    toast("Bot đã đăng ký vào giải đấu.");
+    return t;
+  });
+};
+document.querySelector("#copy-invite").onclick = async () => {
+  const link = document.querySelector("#invite-link");
+  try { await navigator.clipboard.writeText(link.value); toast("Đã sao chép link mời."); }
+  catch { link.focus(); link.select(); toast("Hãy sao chép link mời trong ô."); }
 };
 if (!id) location.replace("/tournaments.html");
 else {

@@ -125,3 +125,18 @@ th {
     font-size: 12px;
   }
 }
+.tournament-invite {
+  margin: 24px 0;
+  overflow-wrap: anywhere;
+}
+.tournament-invite .actions input {
+  flex: 1;
+  min-width: 0;
+}
+#registration details {
+  margin-top: 20px;
+}
+#registration summary {
+  cursor: pointer;
+  margin-bottom: 16px;
+}

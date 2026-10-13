@@ -4,6 +4,8 @@ import java.util.*;
 /** Mutation and consistent snapshots are guarded by the tournament monitor. */
 public final class Tournament {
     public final String id, name;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public final String ownerToken = UUID.randomUUID().toString();
     public final TournamentFormat format;
     public TournamentStatus status = TournamentStatus.DRAFT;
     public final List<TournamentParticipant> participants = new ArrayList<>();

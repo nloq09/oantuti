@@ -4,8 +4,8 @@
 
 1. Bật server và Docker Linux, chuẩn bị image theo BOT-UPLOAD.md.
 2. Trong Bot của tôi, tải ít nhất 2 bot hợp lệ (mỗi bot là một upload khác nhau).
-3. Home → Giải đấu → nhập tên, chọn 2–10 bot → Tạo giải đấu.
-4. Bản nháp cho phép thêm/gỡ participant; Bắt đầu kiểm tra quyền bot và image rồi tạo toàn bộ lịch Round Robin.
+3. Home → Giải đấu → nhập tên → Tạo giải đấu. Có thể chọn 0–10 bot của mình, không cần đủ 2 bot ngay lúc tạo.
+4. Chia sẻ mã/link mời; người khác vào giải để đăng ký bot đã lưu hoặc tải bot mới ngay trong giải. Chủ bot được rút bot của mình; chủ giải được gỡ bot và bắt đầu/hủy. Chỉ bắt đầu khi đủ 2–10 bot; kiểm tra quyền bot và image rồi tạo toàn bộ lịch Round Robin.
 5. Các trận có PENDING, LIVE, FINISHED hoặc FAILED; Tổng quan cập nhật tiến độ, Xếp hạng cập nhật sau từng trận.
 6. Xem trực tiếp mở game.html với `spectate=<matchId>`: cùng BoardRenderer/GameController, không điều khiển quân.
 7. Sau khi hoàn tất: xem vô địch, bảng xếp hạng, replay từng trận hoặc xuất JSON giải.
@@ -36,7 +36,7 @@ Kết thúc trận tournament: giữ MatchLog/final snapshot trong ReplayRegistr
 
 - POST/GET `/api/tournaments`; GET `/api/tournaments/{id}`.
 - POST `/{id}/participants` với botId, botToken, displayName, seed tùy chọn; DELETE `/{id}/participants/{participantId}` chỉ ở DRAFT.
-- POST `/{id}/start`, POST `/{id}/cancel`.
+- POST `/{id}/start`, POST `/{id}/cancel`: header `X-Tournament-Token` của chủ giải; thiếu/sai trả 403 `TOURNAMENT_FORBIDDEN`. DELETE participant nhận header chủ giải hoặc `X-Bot-Token` của đúng bot cần rút. POST tạo giải trả `ownerToken` duy nhất cho người tạo; GET/list/export/WebSocket không trả token này.
 - GET `/{id}/ranking`, GET `/{id}/export` (JSON download, không token).
 - GET `/api/matches/{id}/replay` chỉ sau kết thúc: initialState, events, result, finalState, players. Replay dùng model MatchLog hiện có và mapper DTO.
 - WS `/ws/game`: WATCH_TOURNAMENT/tournamentId → TOURNAMENT_STATE sau mỗi thay đổi; SPECTATE_MATCH/matchId → GAME_STATE/GAME_OVER.

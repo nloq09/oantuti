@@ -22,6 +22,23 @@ public class TournamentService {
     }
     public Tournament find(String id) { return registry.findById(id).orElseThrow(()->new DemoRequestException("TOURNAMENT_NOT_FOUND")); }
     public Tournament create(String name,TournamentFormat format) { return registry.create(name,format); }
+    public void authorizeOwner(String id, String token) {
+        var t=find(id);
+        if (token == null || !t.ownerToken.equals(token)) throw new DemoRequestException("TOURNAMENT_FORBIDDEN");
+    }
+    public void removeAuthorized(String id, String participantId, String ownerToken, String botToken) {
+        var t = find(id);
+        synchronized (t) {
+            draft(t);
+            var participant = t.participants.stream().filter(p -> p.participantId().equals(participantId))
+                    .findFirst().orElseThrow(() -> new DemoRequestException("PARTICIPANT_NOT_FOUND"));
+            if (!t.ownerToken.equals(ownerToken)) {
+                if (botToken == null || !participant.botToken().equals(botToken)) throw new DemoRequestException("TOURNAMENT_FORBIDDEN");
+                bots.authorize(participant.botId(), botToken);
+            }
+            remove(id, participantId);
+        }
+    }
     private void draft(Tournament t) { if(t.status!=TournamentStatus.DRAFT) throw new DemoRequestException("TOURNAMENT_LOCKED"); }
     public void add(String id,String botId,String token,String name,Long seed) {
         var t=find(id);

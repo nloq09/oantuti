@@ -27,3 +27,8 @@ test-results/
 build-step3-verification-*/
 match-*.json
 **/data/bots/
+.env
+.env.*
+!.env.example
+**/data/replays/
+backups/

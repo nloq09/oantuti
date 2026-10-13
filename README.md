@@ -29,7 +29,7 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 ### Giải đấu, xếp hạng và khán giả — Chặng 3
 
-- Home → **Giải đấu**: tạo giải Round Robin, chọn từ 2 đến 10 bot đã upload. Mỗi cặp gặp nhau một lần, tổng `n × (n − 1) / 2` trận.
+- Home → **Giải đấu**: tạo giải Round Robin ngay cả khi chưa có bot; chia sẻ mã/link để người khác tham gia và đăng ký bot đã lưu hoặc tải bot mới ngay trong giải. Chủ giải bắt đầu khi đủ 2–10 bot. Mỗi cặp gặp nhau một lần, tổng `n × (n − 1) / 2` trận.
 - Bản nháp cho phép thêm/gỡ bot; Bắt đầu kiểm tra lại token và Docker rồi khóa danh sách.
 - Server tự cấu hình hai seat trong chế độ `HUMAN_VS_HUMAN`, xếp quân, sẵn sàng và chạy qua Match/GameEngine hiện có. Không tạo game mode hoặc engine mới.
 - Hàng đợi giới hạn mặc định 4 trận đồng thời trên toàn bộ giải đấu trong một server. Một trận lỗi không làm dừng các trận còn lại; có thể hủy giải.
@@ -77,6 +77,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 - Node.js dùng để chạy test client; script kiểm thử upload cần bản có `fetch`, `File` và `WebSocket` toàn cục, ví dụ Node.js 24.
 
 ## Chạy trong VS Code / Windows
+
+**Chặng 4 — Nhóm 1:** server hiện yêu cầu PostgreSQL trước khi khởi động. Tạo DB và nạp `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` theo [hướng dẫn database](docs/CHANG-4-NHOM-1-DATABASE.md). Database schema đã có nền Flyway/JPA; đăng nhập và lưu các tính năng vào DB sẽ triển khai ở các nhóm tiếp theo.
 
 Mở thư mục repository trong VS Code, mở terminal PowerShell tại thư mục gốc:
 
@@ -196,8 +198,9 @@ REST hiện có:
 - `POST /api/bots`: tải multipart với `name` và `file`, trả metadata/quyền sử dụng bot.
 - `GET /api/bots/capabilities`: trạng thái Docker/image từng ngôn ngữ và giới hạn kích thước file.
 - `POST /api/tournaments`, `GET /api/tournaments`, `GET /api/tournaments/{id}`: tạo/list/detail giải.
-- `POST /api/tournaments/{id}/participants`, `DELETE /api/tournaments/{id}/participants/{participantId}`: thêm/gỡ bot ở bản nháp.
-- `POST /api/tournaments/{id}/start`, `POST /api/tournaments/{id}/cancel`: bắt đầu/hủy.
+- `POST /api/tournaments/{id}/participants`: mọi người đăng ký bot ở bản nháp bằng `botId`, `botToken` của mình.
+- `DELETE /api/tournaments/{id}/participants/{participantId}`: chủ giải dùng header `X-Tournament-Token`, hoặc chủ bot dùng `X-Bot-Token` để rút bot của mình trước khi giải bắt đầu.
+- `POST /api/tournaments/{id}/start`, `POST /api/tournaments/{id}/cancel`: chỉ chủ giải được bắt đầu/hủy, gửi header `X-Tournament-Token`. Token quản lý chỉ được trả khi tạo giải và lưu trong trình duyệt người tạo; không xuất hiện trong link mời, danh sách, WebSocket hay JSON export. Xóa dữ liệu trình duyệt sẽ mất quyền quản lý nếu không giữ token riêng.
 - `GET /api/tournaments/{id}/ranking`, `GET /api/tournaments/{id}/export`: xếp hạng và xuất JSON.
 - `GET /api/matches/{id}/replay`: initialState, full events, result, finalState và tên hai bên.
 
