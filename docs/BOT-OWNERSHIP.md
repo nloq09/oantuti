@@ -59,3 +59,8 @@ Ownership/persistence của bản thân giải đấu sẽ chuyển sang account
 ## Kiểm thử
 
 Backend gồm list theo account, owner/ADMIN, stolen token, guest flow, CSRF qua MockMvc và HTTP thật, legacy proof/idempotency/conflict, soft delete giữ file/roster. `BotRepositoryPostgresTest` dùng PostgreSQL 17 trong Docker kiểm tra commit, claim đồng thời và rollback/missing source. Bộ Flyway V1–V7 và Docker runner C++/Python/Java/JAR tiếp tục chạy trong full suite. Script `verify-uploaded-bots.mjs` và `verify-tournaments.mjs` tự đăng ký account riêng, giữ cookie và CSRF; chỉ dùng server kiểm thử riêng vì tạo dữ liệu thật.
+
+
+## Lịch sử khi bot chơi thay (Nhóm 5)
+
+Metadata ghế lưu riêng userId sở hữu và botId/controllerType điều khiển. Kết quả trận bot chơi thay được tính cho account nhận ghế khi tạo/join. Với trận scheduler của giải, owner ghế lấy từ account sở hữu bot. Self-play cùng account không tăng wins/losses; xóa mềm bot không mất lịch sử đã commit. Xem [MATCH-HISTORY.md](MATCH-HISTORY.md).

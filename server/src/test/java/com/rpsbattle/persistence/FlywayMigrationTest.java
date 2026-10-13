@@ -17,7 +17,7 @@ class FlywayMigrationTest {
 
     private Flyway fresh() {
         var flyway = configured("case_" + UUID.randomUUID().toString().replace("-", ""));
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(7);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(8);
         return flyway;
     }
     private Flyway configured(String schema) {
@@ -38,7 +38,7 @@ class FlywayMigrationTest {
     }
     @Test void migratesEmptyPostgresAndRepeatedStartupDoesNotReapply() throws Exception {
         var flyway = fresh();flyway.validate();
-        assertThat(flyway.info().applied()).filteredOn(info -> info.getVersion() != null).hasSize(7);
+        assertThat(flyway.info().applied()).filteredOn(info -> info.getVersion() != null).hasSize(8);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         try (var c=connect(flyway);var statement=c.createStatement()) {
             for (var table:List.of("users","bots","matches","match_participants","tournaments","tournament_participants","tournament_matches","replays"))
@@ -88,11 +88,25 @@ class FlywayMigrationTest {
         var old=Flyway.configure().configuration(configured(schema).getConfiguration()).target("6").load();
         assertThat(old.migrate().migrationsExecuted).isEqualTo(6);
         var id=UUID.randomUUID();try(var c=connect(old)){user(c,id,"existing_account");}
-        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);latest.validate();
+        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(2);latest.validate();
         try(var c=connect(latest);var statement=c.createStatement();var rows=statement.executeQuery("SELECT id,username,password_hash,auth_version FROM users")) {
             assertThat(rows.next()).isTrue();assertThat(rows.getObject(1,UUID.class)).isEqualTo(id);
             assertThat(rows.getString(2)).isEqualTo("existing_account");
             assertThat(rows.getString(3)).isEqualTo("$2a$12$schema.fixture.hash");assertThat(rows.getLong(4)).isZero();
         }
     }
+    @Test void upgradeV7BackfillsRoomAndWinnerSeatWithoutLosingMatchData() throws Exception {
+        String schema="upgrade_match_"+UUID.randomUUID().toString().replace("-","");
+        var old=Flyway.configure().dataSource(POSTGRES.getJdbcUrl(),POSTGRES.getUsername(),POSTGRES.getPassword()).schemas(schema).locations("classpath:db/migration").target("7").cleanDisabled(true).load();
+        old.migrate();var id=UUID.randomUUID();
+        try(var c=connect(old);var sql=c.createStatement()) {
+            user(c,id,"history_owner");
+            sql.executeUpdate("INSERT INTO matches(id,mode,status,player1_user_id,winner_user_id,outcome,turn_count,rule_set) VALUES('old_room','HUMAN_VS_BOT','FINISHED','"+id+"','"+id+"','WIN',9,'classic-online-v1')");
+        }
+        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);latest.validate();
+        try(var c=connect(latest);var sql=c.createStatement();var rows=sql.executeQuery("SELECT room_id,winner_seat,turn_count FROM matches WHERE id='old_room'")) {
+            assertThat(rows.next()).isTrue();assertThat(rows.getString(1)).isEqualTo("old_room");assertThat(rows.getString(2)).isEqualTo("P1");assertThat(rows.getInt(3)).isEqualTo(9);
+        }
+    }
+
 }

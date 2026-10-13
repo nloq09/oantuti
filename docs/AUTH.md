@@ -115,3 +115,8 @@ Invoke-RestMethod "$base/api/auth/logout" -Method Post -WebSession $authSession 
 ```
 
 Tests backend thực hiện flow HTTP thật với CookieManager, verify cookie flags/session rotation/logout replay, CSRF, duplicate input, disabled login, hash và PostgreSQL JPA.
+
+
+## Lịch sử và thống kê (Nhóm 5)
+
+`GET /api/account/matches?filter=all&page=0&size=20`, `GET /api/account/matches/{historyId}`, `GET /api/account/stats` chỉ dùng principal hiện tại. Client không thể chọn account khác bằng body/query. Owner ghế được gắn khi tạo/join bằng session; bot là controller riêng. Xem [MATCH-HISTORY.md](MATCH-HISTORY.md) cho filters, tỷ lệ thắng và giới hạn phục hồi trạng thái.

@@ -86,6 +86,9 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Nhóm 4:** metadata bot lưu PostgreSQL theo chủ tài khoản; upload/dùng bot riêng cần đăng nhập và CSRF. Có My Bots API, đổi tên, xóa mềm, nhập bot cũ bằng token chứng minh. Client lấy danh sách từ server; token trong trình duyệt không còn là quyền dùng bot. [Báo cáo Nhóm 4](docs/CHANG-4-NHOM-4-BOTS.md), [hướng dẫn tài khoản và nhập bot](docs/BOT-OWNERSHIP.md). Chưa có trang login: đăng nhập qua API/helper theo hướng dẫn cho tới Nhóm 8.
 
+**Nhóm 5:** metadata trận/ghế lưu PostgreSQL với archive UUID riêng; thêm `GET /api/account/matches`, detail và `GET /api/account/stats`, filter/phân trang và thống kê theo chủ ghế kể cả bot chơi thay. Không cộng lại khi nhận thông báo kết thúc lặp. [Hướng dẫn lịch sử](docs/MATCH-HISTORY.md), [báo cáo Nhóm 5](docs/CHANG-4-NHOM-5-HISTORY.md). Bàn cờ đang chơi vẫn ở RAM; UI History ở Nhóm 8.
+
+
 
 Mở thư mục repository trong VS Code, mở terminal PowerShell tại thư mục gốc:
 
@@ -329,7 +332,7 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 
 ## Giới hạn hiện tại
 
-- Phòng và trận lưu trong RAM: restart server làm mất phòng/trận. Metadata bot theo tài khoản lưu bền vững trong PostgreSQL; source cần ổ lưu trữ bền vững và bản sao lưu.
+- Bàn cờ/phòng đang chơi lưu trong RAM: restart không tiếp tục ván cũ. Metadata trận và lịch sử đã commit được giữ trong PostgreSQL theo account. Metadata bot theo tài khoản lưu bền vững trong PostgreSQL; source cần ổ lưu trữ bền vững và bản sao lưu.
 - Chưa có tài khoản, database, xếp hạng người chơi xuyên các giải hoặc matchmaking tự động. Ranking hiện tại tính riêng cho từng giải.
 - Chạy nhiều instance chưa có cơ chế chia sẻ trạng thái phòng.
 - Hosting chỉ chạy một container ứng dụng không tự cung cấp Docker Engine cho runner bot riêng. Muốn giữ tính năng upload bot, cần môi trường phù hợp hoặc worker Docker riêng.

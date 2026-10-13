@@ -10,7 +10,10 @@ public class TournamentMatchExecutor {
     private final OnlineMatchService online;
     private final BotUploadService bots;
     private final long botDelayMillis;
-    public TournamentMatchExecutor(OnlineMatchService online,BotUploadService bots,@org.springframework.beans.factory.annotation.Value("${rps.tournament.bot-delay-millis:600}") long delay){this.online=online;this.bots=bots;this.botDelayMillis=delay;}
+    private final com.rpsbattle.history.MatchSeatService identities;
+    public TournamentMatchExecutor(OnlineMatchService online,BotUploadService bots,long delay){this(online,bots,delay,null);}
+    @org.springframework.beans.factory.annotation.Autowired
+    public TournamentMatchExecutor(OnlineMatchService online,BotUploadService bots,@org.springframework.beans.factory.annotation.Value("${rps.tournament.bot-delay-millis:600}") long delay,com.rpsbattle.history.MatchSeatService identities){this.online=online;this.bots=bots;this.botDelayMillis=delay;this.identities=identities;}
     public OnlineMatch start(TournamentMatch entry) {
         BotAgent a=null,b=null; OnlineMatch room=null;
         try {
@@ -21,6 +24,10 @@ public class TournamentMatchExecutor {
             synchronized(room) {
                 room.attachBot(OnlineMatch.P1,a,entry.participantA.displayName());
                 var other=room.join(); room.attachBot(other.id(),b,entry.participantB.displayName());
+                if(identities!=null) {
+                    identities.bindTournamentBot(room,OnlineMatch.P1,entry.participantA.botId());
+                    identities.bindTournamentBot(room,other.id(),entry.participantB.botId());
+                }
                 online.publish(room,room.prepareBots());
             }
             entry.onlineMatchId=room.id();entry.status=TournamentMatch.Status.RUNNING;entry.startedAt=Instant.now();return room;

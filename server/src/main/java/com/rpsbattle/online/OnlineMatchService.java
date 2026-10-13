@@ -44,6 +44,7 @@ public class OnlineMatchService {
         var match = new OnlineMatch(UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT),
                 mode, seed == null ? UUID.randomUUID().getMostSignificantBits() : seed, clock, turnTime);
         registry.register(match);
+        publish(match,List.of());
         return match;
     }
 
@@ -156,6 +157,8 @@ public class OnlineMatchService {
     /** Tournament ownership ends here; replay and spectator archives must be captured first. */
     public void release(String id) {
         var room = registry.findById(id);
+        // Capture metadata before tournament cleanup removes the in-memory room.
+        publish(room,List.of());
         var running = jobs.remove(id);
         if (running != null) running.cancel(true);
         for (var agent : room.uploadedAgents()) if (agent instanceof AutoCloseable closeable) {

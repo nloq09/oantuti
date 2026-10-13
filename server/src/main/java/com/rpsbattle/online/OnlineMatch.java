@@ -19,6 +19,9 @@ import java.util.*;
 public final class OnlineMatch {
     public static final PlayerId P1 = PlayerId.of("P1"), P2 = PlayerId.of("P2");
     private final String id;
+    private final String archiveId = UUID.randomUUID().toString();
+    private final Instant createdAt;
+    private final Map<PlayerId, SeatIdentity> identities = new HashMap<>();
     private final MatchMode mode;
     private final long seed;
     private final Clock clock;
@@ -39,7 +42,7 @@ public final class OnlineMatch {
     private long botDelayMillis = 600;
     private String infrastructureError;
     public synchronized String infrastructureError() { return infrastructureError; }
-    public synchronized void infrastructureFailure() { infrastructureError="MATCH_INFRASTRUCTURE_ERROR"; }
+    public synchronized void infrastructureFailure() { infrastructureError="MATCH_INFRASTRUCTURE_ERROR"; if(finishedAt==null) finishedAt=clock.instant(); }
     public synchronized void setBotDelayMillis(long millis) {
         if(millis<0||millis>5000)throw new IllegalArgumentException("Invalid bot pacing");
         botDelayMillis=millis;
@@ -49,6 +52,7 @@ public final class OnlineMatch {
         this.mode = mode;
         this.seed = seed;
         this.clock = clock;
+        this.createdAt = clock.instant();
         this.turnTime = turnTime;
         setup = GameState.initial(id, Board.defaultBoard(), List.of(Player.of(P1, "Player 1"), Player.of(P2, "Player 2")));
         drafts.put(P1, new ArrayList<>());
@@ -70,6 +74,17 @@ public final class OnlineMatch {
     public String id() {
         return id;
     }
+    public String archiveId() {return archiveId;}
+    public Instant createdAt() {return createdAt;}
+    public String ruleSetName() {return rules.name();}
+    public synchronized void bindSeat(PlayerId player, UUID userId, UUID botId) {
+        if(!seats.containsKey(player)) fail("PLAYER_NOT_FOUND");
+        var identity=new SeatIdentity(userId,botId);
+        if(identities.containsKey(player) && !identities.get(player).equals(identity)) throw new IllegalStateException("Seat identity is immutable until the seat is released");
+        identities.put(player,identity);
+    }
+    public synchronized SeatIdentity seatIdentity(PlayerId player) {return identities.getOrDefault(player,new SeatIdentity(null,null));}
+    public record SeatIdentity(UUID userId, UUID botId) {}
 
     public MatchMode mode() {
         return mode;
@@ -351,6 +366,7 @@ public final class OnlineMatch {
             return submit(player, match.state().sequence(), SurrenderAction.of(player));
         if (match == null) {
             seats.remove(player);
+            identities.remove(player);
             connected.remove(player);
             ready.remove(player);
             drafts.put(player, new ArrayList<>());

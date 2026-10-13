@@ -14,10 +14,12 @@ import com.rpsbattle.bot.BotAgent;
 public class MatchController {
     private final OnlineMatchService service;
     private final OwnedBotService uploads;
+    private final com.rpsbattle.history.MatchSeatService identities;
 
-    public MatchController(OnlineMatchService service, OwnedBotService uploads) {
+    public MatchController(OnlineMatchService service, OwnedBotService uploads,com.rpsbattle.history.MatchSeatService identities) {
         this.service = service;
         this.uploads = uploads;
+        this.identities = identities;
     }
 
     @PostMapping
@@ -25,9 +27,10 @@ public class MatchController {
     public Map<String, Object> create(org.springframework.security.core.Authentication auth,@RequestBody CreateRequest request) {
         BotAgent agent = request.botId() == null ? null : uploads.agent(auth,request.botId());
         var room = service.create(MatchMode.valueOf(request.mode()), request.seed());
-        if (agent != null) {
-            room.attachBot(room.creator().id(), agent, uploads.require(auth,request.botId()).name());
-            room.prepareBots();
+        synchronized(room) {
+            identities.bind(room,room.creator().id(),auth,request.botId());
+            if (agent != null) room.attachBot(room.creator().id(), agent, uploads.require(auth,request.botId()).name());
+            service.publish(room,room.prepareBots());
         }
         return credentials(room, room.creator());
     }
@@ -38,6 +41,7 @@ public class MatchController {
         var room = service.find(id);
         synchronized (room) {
             var seat = room.join();
+            identities.bind(room,seat.id(),auth,request==null?null:request.botId());
             if (agent != null)
                 room.attachBot(seat.id(), agent, uploads.require(auth,request.botId()).name());
             var events = room.prepareBots();
@@ -55,7 +59,7 @@ public class MatchController {
     }
 
     private Map<String, Object> credentials(OnlineMatch room, OnlineMatch.Seat seat) {
-        return Map.of("matchId", room.id(), "mode", room.mode(), "playerId", seat.id().value(), "token", seat.token(), "seed", room.seed());
+        return Map.of("matchId", room.id(), "historyId",room.archiveId(), "mode", room.mode(), "playerId", seat.id().value(), "token", seat.token(), "seed", room.seed());
     }
 
     public record CreateRequest(String mode, Long seed, String botId, String botToken) {
