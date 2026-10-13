@@ -10,8 +10,11 @@
     <link rel="stylesheet" href="/css/account.css">
   </head>
   <body>
+    <nav class="account-nav home-account-nav" data-account-nav="home" aria-label="Tài khoản">
+      <a class="button" href="/login.html">Đăng nhập</a>
+      <a class="button" href="/register.html">Đăng ký</a>
+    </nav>
     <main class="hero">
-      <nav class="account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/login.html">Đăng nhập</a></nav>
       <span class="hero-mark" aria-hidden="true">♛</span>
       <p class="eyebrow">OẲN TÙ TÌ CHIẾN THUẬT</p>
       <h1>RPS BATTLE<span class="hero-size">9 × 9</span></h1>
@@ -27,8 +30,8 @@
       </div>
       <div class="actions">
         <a class="button primary" href="/lobby.html">Bắt đầu chơi →</a
-        ><a class="button gold-button" href="/bots.html">Bot của tôi</a
-        ><a class="button primary" href="/tournaments.html">Giải đấu</a
+        ><a class="button gold-button" data-account-destination="/bots.html" href="/login.html?next=%2Fbots.html">Bot của tôi</a
+        ><a class="button primary" data-account-destination="/tournaments.html" href="/login.html?next=%2Ftournaments.html">Giải đấu</a
         ><button id="help">Cách chơi</button
         ><button id="hero-settings">Cài đặt</button>
       </div>

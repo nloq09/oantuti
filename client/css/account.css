@@ -1,5 +1,7 @@
 .account-nav {display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 26px;}
 .account-nav .button, .account-nav button {font-size:14px; padding:8px 12px;}
+.home-account-nav {justify-content:flex-end; padding:16px clamp(16px,4vw,48px); margin:0; min-height:72px;}
+.home-account-nav .account-name {margin-left:0;}
 .account-nav [aria-current=page] {border-color:#fff1bc; background:linear-gradient(#31668e,#193d5d);}
 .account-name {margin-left:auto; max-width:220px; overflow-wrap:anywhere; color:#ffe3a1;}
 .account-page {max-width:1150px; margin:32px auto; padding:0 24px 48px;}

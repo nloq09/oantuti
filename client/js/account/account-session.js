@@ -25,9 +25,16 @@ export async function initAccountNav() {
   if (!nav) return;
   try {
     const account = await getAccount();
-    const links = [["Trang chủ", "/"], ["Vào trận", "/lobby.html"]];
-    if (account) links.push(["Bot của tôi", "/bots.html"]);
-    links.push(["Giải đấu", "/tournaments.html"]);
+    const home = nav.dataset.accountNav === "home";
+    const links = home ? [] : [["Trang chủ", "/"], ["Vào trận", "/lobby.html"]];
+    if (!home) {
+      if (account) links.push(["Bot của tôi", "/bots.html"]);
+      links.push(["Giải đấu", "/tournaments.html"]);
+    }
+    for (const link of document.querySelectorAll("[data-account-destination]")) {
+      const destination = safeNext(link.dataset.accountDestination, location.origin);
+      link.href = account ? destination : loginLink(destination);
+    }
     if (account) links.push(["Lịch sử", "/history.html"], ["Hồ sơ", "/profile.html"]);
     else links.push(["Đăng nhập", loginLink()], ["Đăng ký", "/register.html?next=" + encodeURIComponent(safeNext(returnDestination(), location.origin))]);
     nav.replaceChildren();
