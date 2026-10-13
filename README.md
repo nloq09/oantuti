@@ -80,6 +80,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Chặng 4 — Nhóm 1:** server hiện yêu cầu PostgreSQL trước khi khởi động. Tạo DB và nạp `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` theo [hướng dẫn database](docs/CHANG-4-NHOM-1-DATABASE.md). Database schema đã có nền Flyway/JPA; đăng nhập và lưu các tính năng vào DB sẽ triển khai ở các nhóm tiếp theo.
 
+**Nhóm 2:** đã có API tài khoản `/api/auth/register`, `/login`, `/logout`, `/me`, `/csrf`; session HttpOnly và BCrypt, tài khoản lưu PostgreSQL. [Cách gọi API và chính sách auth](docs/AUTH.md), [báo cáo Nhóm 2](docs/CHANG-4-NHOM-2-AUTH.md). Chưa thêm trang login/profile; game và quyền bot/giải đấu hiện vẫn giữ flow cũ, sẽ migrate theo account ở các nhóm sau.
+
 Mở thư mục repository trong VS Code, mở terminal PowerShell tại thư mục gốc:
 
 ```powershell
