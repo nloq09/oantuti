@@ -26,9 +26,9 @@ export async function initAccountNav() {
   try {
     const account = await getAccount();
     const home = nav.dataset.accountNav === "home";
-    const links = home ? [] : [["Trang chủ", "/"], ["Vào trận", "/lobby.html"]];
-    if (!home) {
-      if (account) links.push(["Bot của tôi", "/bots.html"]);
+    const links = home ? [] : [["Trang chủ", "/"]];
+    if (!home && account) {
+      links.push(["Vào trận", "/lobby.html"], ["Bot của tôi", "/bots.html"]);
       links.push(["Giải đấu", "/tournaments.html"]);
     }
     for (const link of document.querySelectorAll("[data-account-destination]")) {
