@@ -1,0 +1,20 @@
+package com.rpsbattle.tournament.persistence;
+import com.rpsbattle.tournament.domain.*;
+import jakarta.persistence.*;
+import java.time.Instant;
+import java.util.UUID;
+@Entity @Table(name="tournaments")
+public class TournamentEntity {
+    @Id UUID id;
+    @Column(name="owner_user_id",nullable=false) UUID ownerUserId;
+    @Column(nullable=false,length=80) String name;
+    @Enumerated(EnumType.STRING) @Column(nullable=false,length=24) TournamentFormat format;
+    @Enumerated(EnumType.STRING) @Column(nullable=false,length=32) TournamentStatus status;
+    @Column(nullable=false,length=16) String visibility="PUBLIC";
+    @Column(nullable=false) long revision;
+    @Column(name="created_at",nullable=false) Instant createdAt;
+    @Column(name="started_at") Instant startedAt;
+    @Column(name="finished_at") Instant finishedAt;
+    protected TournamentEntity() {}
+    void copy(TournamentMetadata t) {id=t.id();ownerUserId=t.ownerUserId();name=t.name();format=t.format();status=t.status();revision=t.revision();createdAt=t.createdAt();startedAt=t.startedAt();finishedAt=t.finishedAt();}
+}

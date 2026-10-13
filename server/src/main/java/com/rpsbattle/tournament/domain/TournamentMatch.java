@@ -5,6 +5,7 @@ public final class TournamentMatch {
     public final String id, tournamentId;
     public final TournamentParticipant participantA, participantB;
     public String onlineMatchId, winnerParticipantId, result, failure;
+    @com.fasterxml.jackson.annotation.JsonIgnore public String historyMatchId;
     public Status status = Status.PENDING;
     public Instant startedAt, finishedAt;
     public int remainingA, remainingB;

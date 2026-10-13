@@ -52,9 +52,9 @@ Hai tài khoản claim cùng artifact đồng thời được bảo vệ bằng 
 
 ## Xóa mềm và giải đấu
 
-Xóa chỉ đặt status `DELETED`, giữ row, owner và source. Bot không xuất hiện trong My Bots và không được dùng để tạo trận/đăng ký giải mới. Bot đã được giải đăng ký trước đó giữ artifact/capability nội bộ và tên snapshot; giải có thể tiếp tục thi đấu. Chủ bot vẫn có thể rút participant của bot đã xóa khỏi giải còn DRAFT bằng account, hoặc chủ giải gỡ bằng capability quản lý giải.
+Xóa chỉ đặt status `DELETED`, giữ row, owner và source. Bot không xuất hiện trong My Bots và không được dùng để tạo trận/đăng ký giải mới. Bot đã được giải đăng ký trước đó giữ artifact/capability nội bộ và tên snapshot; giải có thể tiếp tục thi đấu. Chủ bot vẫn có thể rút participant của bot đã xóa khỏi giải còn DRAFT bằng account, hoặc chủ giải/ADMIN gỡ bằng account và CSRF.
 
-Ownership/persistence của bản thân giải đấu sẽ chuyển sang account ở Nhóm 6. Seat token và WebSocket đang mở chưa gắn account đầy đủ; đổi password/disable thu hồi HTTP session và ngăn dùng bot trong request mới, chưa đóng trận/socket đang chạy. Không thêm Bot vs Bot thành chế độ UI; giữ Hai người và Đấu với bot có sẵn.
+Nhóm 6 đã lưu giải và chuyển quyền quản lý sang owner account/ADMIN, xem [TOURNAMENT-OWNERSHIP.md](TOURNAMENT-OWNERSHIP.md). Seat token và WebSocket đang mở chưa gắn account đầy đủ; đổi password/disable thu hồi HTTP session và ngăn dùng bot trong request mới, chưa đóng trận/socket đang chạy. Không thêm Bot vs Bot thành chế độ UI; giữ Hai người và Đấu với bot có sẵn.
 
 ## Kiểm thử
 

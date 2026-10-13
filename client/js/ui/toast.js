@@ -1,5 +1,7 @@
 const errors = {
-  UNAUTHENTICATED: "Hãy đăng nhập tài khoản để tải lên hoặc sử dụng bot riêng.",
+  TOURNAMENT_PERSISTENCE_UNAVAILABLE: "Chưa lưu được dữ liệu giải đấu. Hãy thử lại khi database hoạt động.",
+  UNSUPPORTED_TOURNAMENT_VISIBILITY: "Hiện chỉ hỗ trợ giải đấu công khai.",
+  UNAUTHENTICATED: "Hãy đăng nhập để quản lý bot hoặc tạo/tham gia giải đấu.",
   CSRF_INVALID: "Phiên thao tác hết hạn. Hãy thử lại.",
   BOT_ALREADY_OWNED: "Bot đã thuộc một tài khoản khác; không thể nhập lại.",
   BOT_ARTIFACT_MISSING: "Thiếu file bot trên server. Liên hệ quản trị viên để khôi phục.",

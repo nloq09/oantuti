@@ -7,6 +7,8 @@ public final class Tournament {
     @com.fasterxml.jackson.annotation.JsonIgnore
     public final String ownerToken = UUID.randomUUID().toString();
     public final TournamentFormat format;
+    public UUID ownerUserId;
+    @com.fasterxml.jackson.annotation.JsonIgnore public boolean deferNotifications;
     public TournamentStatus status = TournamentStatus.DRAFT;
     public final List<TournamentParticipant> participants = new ArrayList<>();
     public final List<TournamentMatch> matches = new ArrayList<>();

@@ -21,6 +21,7 @@ public class TournamentMatchExecutor {
             b=bots.agent(entry.participantB.botId(),entry.participantB.botToken());
             room=online.create(MatchMode.HUMAN_VS_HUMAN,entry.participantA.seed()^entry.participantB.seed());
             room.setBotDelayMillis(botDelayMillis);
+            entry.historyMatchId=room.archiveId();
             synchronized(room) {
                 room.attachBot(OnlineMatch.P1,a,entry.participantA.displayName());
                 var other=room.join(); room.attachBot(other.id(),b,entry.participantB.displayName());

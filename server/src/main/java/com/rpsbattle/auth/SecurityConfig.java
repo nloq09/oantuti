@@ -50,12 +50,14 @@ public class SecurityConfig {
                 .ignoringRequestMatchers(request -> {
                     var path=request.getServletPath();
                     if(path.isEmpty()) path=request.getRequestURI().substring(request.getContextPath().length());
-                    if(path.equals("/api/bots") || path.startsWith("/api/auth/") || path.startsWith("/api/account/") || path.startsWith("/api/admin/")) return false;
+                    if(path.startsWith("/api/tournaments") || path.equals("/api/bots") || path.startsWith("/api/auth/") || path.startsWith("/api/account/") || path.startsWith("/api/admin/")) return false;
                     var session=request.getSession(false);
                     return !((path.startsWith("/api/matches") || path.startsWith("/api/tournaments")) && session!=null && session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)!=null);
                 }));
         http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/account/**","/api/bots").authenticated().anyRequest().permitAll());
+                .requestMatchers("/api/account/**","/api/bots").authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.POST,"/api/tournaments","/api/tournaments/**").authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE,"/api/tournaments/**").authenticated().anyRequest().permitAll());
         http.exceptionHandling(errors -> errors
                 .authenticationEntryPoint((request,response,error)-> {
                     response.setStatus(401);response.setContentType("application/json");

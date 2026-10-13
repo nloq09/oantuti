@@ -88,6 +88,9 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Nhóm 5:** metadata trận/ghế lưu PostgreSQL với archive UUID riêng; thêm `GET /api/account/matches`, detail và `GET /api/account/stats`, filter/phân trang và thống kê theo chủ ghế kể cả bot chơi thay. Không cộng lại khi nhận thông báo kết thúc lặp. [Hướng dẫn lịch sử](docs/MATCH-HISTORY.md), [báo cáo Nhóm 5](docs/CHANG-4-NHOM-5-HISTORY.md). Bàn cờ đang chơi vẫn ở RAM; UI History ở Nhóm 8.
 
+**Nhóm 6:** giải/roster/lịch/kết quả lưu PostgreSQL; quyền quản lý dùng owner account/ADMIN, bỏ capability client. Người khác vẫn join bằng bot của họ khi DRAFT. Restart giữ ranking/kết quả và đánh dấu RECOVERY_REQUIRED cho giải đang chạy, không tự chạy lại. [Hướng dẫn giải đấu](docs/TOURNAMENT-OWNERSHIP.md), [báo cáo Nhóm 6](docs/CHANG-4-NHOM-6-TOURNAMENT.md). Bản đầu chỉ hỗ trợ PUBLIC.
+
+
 
 
 Mở thư mục repository trong VS Code, mở terminal PowerShell tại thư mục gốc:
@@ -202,15 +205,15 @@ java -jar "<build-dir>/libs/rps-battle-1.0-SNAPSHOT.jar" --server.port=8080 --rp
 REST hiện có:
 
 - `GET /api/health` (alias `/api/v1/health`): sức khỏe server.
-- `POST /api/matches`: tạo phòng với `mode` là `HUMAN_VS_HUMAN` hoặc `HUMAN_VS_BOT`; tùy chọn `seed`, `botId`, `botToken`.
+- `POST /api/matches`: tạo phòng với `mode` là `HUMAN_VS_HUMAN` hoặc `HUMAN_VS_BOT`; tùy chọn `seed`, `botId` (bot riêng cần session/CSRF; token bot client không cấp quyền).
 - `GET /api/matches/{id}`: thông tin phòng.
-- `POST /api/matches/{id}/join`: tham gia, tùy chọn `botId`, `botToken`.
+- `POST /api/matches/{id}/join`: tham gia, tùy chọn `botId` theo account.
 - `POST /api/bots`: tải multipart với `name` và `file`, trả metadata/quyền sử dụng bot.
 - `GET /api/bots/capabilities`: trạng thái Docker/image từng ngôn ngữ và giới hạn kích thước file.
 - `POST /api/tournaments`, `GET /api/tournaments`, `GET /api/tournaments/{id}`: tạo/list/detail giải.
-- `POST /api/tournaments/{id}/participants`: mọi người đăng ký bot ở bản nháp bằng `botId`, `botToken` của mình.
-- `DELETE /api/tournaments/{id}/participants/{participantId}`: chủ giải dùng header `X-Tournament-Token`, hoặc chủ bot dùng `X-Bot-Token` để rút bot của mình trước khi giải bắt đầu.
-- `POST /api/tournaments/{id}/start`, `POST /api/tournaments/{id}/cancel`: chỉ chủ giải được bắt đầu/hủy, gửi header `X-Tournament-Token`. Token quản lý chỉ được trả khi tạo giải và lưu trong trình duyệt người tạo; không xuất hiện trong link mời, danh sách, WebSocket hay JSON export. Xóa dữ liệu trình duyệt sẽ mất quyền quản lý nếu không giữ token riêng.
+- `POST /api/tournaments/{id}/participants`: account đăng ký bot của mình ở bản nháp bằng `botId` và session/CSRF.
+- `DELETE /api/tournaments/{id}/participants/{participantId}`: owner giải/ADMIN gỡ participant, hoặc owner bot rút bot của mình khi DRAFT; dùng session/CSRF.
+- `POST /api/tournaments/{id}/start`, `POST /api/tournaments/{id}/cancel`: owner giải/ADMIN được bắt đầu/hủy qua session/CSRF; không dùng token trong trình duyệt.
 - `GET /api/tournaments/{id}/ranking`, `GET /api/tournaments/{id}/export`: xếp hạng và xuất JSON.
 - `GET /api/matches/{id}/replay`: initialState, full events, result, finalState và tên hai bên.
 

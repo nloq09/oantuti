@@ -17,4 +17,7 @@ public class TournamentRegistry {
     public Optional<Tournament> findById(String id) { return Optional.ofNullable(tournaments.get(id)); }
     public Collection<Tournament> findAll() { return List.copyOf(tournaments.values()); }
     public void remove(String id) { tournaments.remove(id); }
+    public void register(Tournament tournament) {
+        if(tournaments.putIfAbsent(tournament.id,tournament)!=null) throw new DemoRequestException("DUPLICATE_TOURNAMENT");
+    }
 }

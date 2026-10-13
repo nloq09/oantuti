@@ -42,15 +42,18 @@ abstract class StageThreeWebFixture {
     }
     BotUploadService.Upload upload(String name) {
         try {
+            loginAccount();
+            var authentication=com.rpsbattle.auth.AuthService.sessionAuthentication(account);
+            var bot=owned.upload(authentication,name,new MockMultipartFile("file","main.py","text/plain","print('test')".getBytes(StandardCharsets.UTF_8)));
+            return owned.execution(authentication,bot.id().toString());
+        } catch(Exception error) {throw new RuntimeException(error);}
+    }
+    void loginAccount() throws Exception {
             if(account==null) {
                 var username="cup_"+UUID.randomUUID().toString().substring(0,8);
                 account=registration.register(username,username+"@example.com","Tournament Test Password","Cup player");
                 request("/api/auth/login","POST",Map.of("username",username,"password","Tournament Test Password"),200);
             }
-            var authentication=com.rpsbattle.auth.AuthService.sessionAuthentication(account);
-            var bot=owned.upload(authentication,name,new MockMultipartFile("file","main.py","text/plain","print('test')".getBytes(StandardCharsets.UTF_8)));
-            return owned.execution(authentication,bot.id().toString());
-        } catch(Exception error) {throw new RuntimeException(error);}
     }
     @org.junit.jupiter.api.AfterEach void closeAccountClient() {accountHttp.close();}
     OnlineMatch playing(){var room=online.create(MatchMode.HUMAN_VS_HUMAN,42L);room.join();for(var id:List.of(OnlineMatch.P1,OnlineMatch.P2)){room.randomize(id);room.markReady(id);}return room;}

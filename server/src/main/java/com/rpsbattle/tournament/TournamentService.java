@@ -66,11 +66,13 @@ public class TournamentService {
         t.status=TournamentStatus.CANCELLED; t.finishedAt=Instant.now(); changed(t);
     } }
     public void listen(Consumer<Tournament> listener){listeners.add(listener);}
-    public void changed(Tournament t){ t.revision++; for(var listener:listeners) { try {listener.accept(t);} catch(RuntimeException ignored){} } }
+    public void changed(Tournament t){t.revision++;if(!t.deferNotifications) notifyChanged(t);}
+    public void notifyChanged(Tournament t){for(var listener:listeners) {try {listener.accept(t);} catch(RuntimeException ignored){}}}
     public List<Map<String,Object>> list(){ return registry.findAll().stream().sorted(Comparator.comparing((Tournament t)->t.createdAt).reversed()).map(this::view).toList(); }
     public Map<String,Object> view(Tournament t) { synchronized(t) {
         var data=new LinkedHashMap<String,Object>();
         data.put("id",t.id);data.put("name",t.name);data.put("format",t.format);data.put("status",t.status);
+        data.put("ownerUserId",t.ownerUserId);data.put("visibility","PUBLIC");
         data.put("createdAt",t.createdAt);data.put("startedAt",t.startedAt);data.put("finishedAt",t.finishedAt);data.put("revision",t.revision);
         data.put("participants",List.copyOf(t.participants));
         // Copy mutable matches while holding the monitor; never expose internal tokens or mutable objects.

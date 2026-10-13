@@ -6,14 +6,15 @@ import {
   startTournament,
   cancelTournament,
   TournamentStream,
-  tournamentOwnerToken,
+  canManageTournament,
 } from "./tournament-api.js?v=open-registration";
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
+import { currentUser } from "../api/auth-api.js";
 import { confirmAction } from "../ui/modal.js";
 await refreshBots().catch(error => toast(error.message, true));
 const id = new URLSearchParams(location.search).get("id");
-const owner = !!tournamentOwnerToken(id);
+const account = (await currentUser().catch(() => ({}))).user;
 let latest = -1,
   busy = false;
 document.querySelector("#export").href =
@@ -34,6 +35,7 @@ async function action(operation) {
 function render(t) {
   if (t.revision < latest) return;
   latest = t.revision;
+  const owner = canManageTournament(t, account);
   document.querySelector("#name").textContent = t.name;
   const p = t.progress;
   const draft = t.status === "DRAFT";
@@ -78,7 +80,7 @@ function render(t) {
     name.textContent = bot.displayName;
     row.append(name);
     const ownedBot = savedBots().find((p) => p.id === bot.botId);
-    if (draft && (owner || ownedBot)) {
+    if (draft && (owner || ownedBot || (account?.id && account.id === bot.ownerUserId))) {
       const remove = document.createElement("button");
       remove.textContent = "Gỡ";
       remove.onclick = () =>

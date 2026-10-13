@@ -5,7 +5,7 @@ import {
   addParticipant,
   startTournament,
   removeParticipant,
-  tournamentOwnerToken,
+  canManageTournament,
 } from "../js/tournament/tournament-api.js";
 test("tournament requests preserve authorization credentials and use correct methods", async () => {
   const original = globalThis.fetch;
@@ -39,31 +39,19 @@ test("tournament requests preserve authorization credentials and use correct met
   }
 });
 
-test("owner capability is stored locally and sent only to its tournament; withdrawal uses session authorization", async () => {
-  const originalFetch = globalThis.fetch, originalStorage = globalThis.localStorage;
-  const entries = new Map(), calls = [];
-  globalThis.localStorage = { getItem: key => entries.get(key), setItem: (key, value) => entries.set(key, value) };
+test("ownership uses account identity; local capability tokens never authorize mutations", async () => {
+  const originalFetch = globalThis.fetch, originalStorage = globalThis.localStorage, calls = [];
+  globalThis.localStorage = {getItem: () => "legacy-owner-secret", setItem: () => {throw new Error("must not store capabilities");}};
   globalThis.fetch = async (url, options) => {
     if(url.endsWith("csrf")) return {ok:true,json:async()=>({headerName:"X-CSRF-TOKEN",token:"csrf"})};
-    calls.push({ url, ...options });
-    return { ok: true, json: async () => ({ id: "T", ownerToken: "owner-secret" }) };
+    calls.push({url,...options});return {ok:true,json:async()=>({id:"T",ownerUserId:"alice"})};
   };
   try {
-    await createTournament("Open Cup");
-    assert.equal(tournamentOwnerToken("T"), "owner-secret");
-    await startTournament("T");
-    assert.equal(calls[1].headers["X-Tournament-Token"], "owner-secret");
-    await startTournament("OTHER");
-    assert.equal(calls[2].headers["X-Tournament-Token"], undefined);
-    entries.clear();
-    await removeParticipant("T", "P", { token: "bot-secret" });
-    assert.equal(calls[3].headers["X-Bot-Token"], undefined);
-    assert.equal(calls[3].headers["X-CSRF-TOKEN"], "csrf");
-    assert.equal(calls[3].headers["X-Tournament-Token"], undefined);
-    assert.ok(!calls[3].url.includes("secret"));
-  } finally {
-    globalThis.fetch = originalFetch;
-    if (originalStorage === undefined) delete globalThis.localStorage;
-    else globalThis.localStorage = originalStorage;
-  }
+    await createTournament("Open Cup");await startTournament("T");await removeParticipant("T","P");
+    for(const call of calls) {assert.equal(call.headers["X-Tournament-Token"],undefined);assert.equal(call.headers["X-CSRF-TOKEN"],"csrf");assert.equal(call.credentials,"same-origin");}
+    assert.equal(canManageTournament({ownerUserId:"alice"},{id:"alice",role:"USER"}),true);
+    assert.equal(canManageTournament({ownerUserId:"alice"},{id:"bob",role:"USER"}),false);
+    assert.equal(canManageTournament({ownerUserId:"alice"},{id:"bob",role:"ADMIN"}),true);
+    assert.equal(canManageTournament({ownerUserId:null},undefined),false);
+  } finally {globalThis.fetch=originalFetch;globalThis.localStorage=originalStorage;}
 });

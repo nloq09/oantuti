@@ -37,6 +37,7 @@ public class MatchPersistenceCoordinator {
     public void flushForRead() {
         try {flush();} catch(RuntimeException failure) {throw new AuthException("MATCH_PERSISTENCE_UNAVAILABLE",503);}
     }
+    public MatchMetadata latest(String id) {return id==null?null:observed.get(id);}
     @Scheduled(fixedDelayString="${rps.history.flush-millis:500}") public void synchronize() {
         for(var room:registry.getActiveMatches()) capture(room);
         try {flush();} catch(RuntimeException failure) {

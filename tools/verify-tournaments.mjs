@@ -66,7 +66,7 @@ async function run(name, bots) {
       botId: bot.id,
       displayName: bot.name,
     });
-  await request(`/api/tournaments/${t.id}/start`, {}, 200, { "X-Tournament-Token": t.ownerToken });
+  await request(`/api/tournaments/${t.id}/start`, {}, 200, {});
   let maximum = 0,
     finished,
     observedReplay = false,

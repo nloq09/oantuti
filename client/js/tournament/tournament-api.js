@@ -1,15 +1,11 @@
 import { csrfHeaders } from "../api/auth-api.js";
-export function tournamentOwnerToken(id) {
-  return globalThis.localStorage?.getItem("rps-tournament-owner:" + id) || "";
-}
+export const canManageTournament = (tournament, account) => Boolean(account && (account.role === "ADMIN" || (tournament.ownerUserId && tournament.ownerUserId === account.id)));
 export async function tournamentRequest(path = "", body, method, extraHeaders = {}) {
-  const id = path.split("/")[1];
-  const ownerToken = id ? tournamentOwnerToken(decodeURIComponent(id)) : "";
   const mutation = (method || (body === undefined ? "GET" : "POST")) !== "GET";
   const response = await fetch("/api/tournaments" + path, {
     method: method || (body === undefined ? "GET" : "POST"),
     credentials: "same-origin", cache: "no-store",
-    headers: { "Content-Type": "application/json", ...(mutation ? await csrfHeaders() : {}), ...(ownerToken ? { "X-Tournament-Token": ownerToken } : {}), ...extraHeaders },
+    headers: { "Content-Type": "application/json", ...(mutation ? await csrfHeaders() : {}), ...extraHeaders },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await response.json();
@@ -20,7 +16,6 @@ export const getTournament = (id) =>
   tournamentRequest("/" + encodeURIComponent(id));
 export async function createTournament(name) {
   const t = await tournamentRequest("", { name, format: "ROUND_ROBIN" });
-  if (t.ownerToken) globalThis.localStorage?.setItem("rps-tournament-owner:" + t.id, t.ownerToken);
   return t;
 }
 export const addParticipant = (id, bot) =>

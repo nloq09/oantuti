@@ -1,4 +1,5 @@
 export const statusLabels = {
+  RECOVERY_REQUIRED: "Cần phục hồi",
   DRAFT: "○ Bản nháp",
   READY: "✓ Sẵn sàng",
   RUNNING: "● Đang chạy",

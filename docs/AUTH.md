@@ -75,7 +75,7 @@ Body `{}`, cần CSRF. Hủy session và SecurityContext, hết hạn cookie JSE
 - Authorization ở application service kiểm tra role/status DB, không dựa vào role/userId do client khai. Row lock trong transaction bảo vệ cập nhật profile/password/status khỏi ghi đè trạng thái bảo mật mới.
 - Nếu DB lỗi khi xác minh session, filter trả 503 `DATABASE_UNAVAILABLE`, không cho request đi tiếp với quyền cache.
 
-Nhóm 4 đã chuyển bot upload/dùng bot riêng sang account ownership: owner hoặc ADMIN, danh sách từ PostgreSQL, CSRF cho upload/account mutations và mọi request match/tournament có session đăng nhập. Token bot client chỉ dùng nhập artifact cũ, không cấp quyền chơi. Guest vẫn chơi tay/đấu bot sẵn bằng seat token. Tournament creator còn dùng capability tới Nhóm 6. WebSocket game đang mở chưa gắn account với ghế hay tự đóng khi đổi password/disable; phần đó thuộc các nhóm tiếp theo. Xem [BOT-OWNERSHIP.md](BOT-OWNERSHIP.md).
+Nhóm 4 đã chuyển bot upload/dùng bot riêng sang account ownership: owner hoặc ADMIN, danh sách từ PostgreSQL, CSRF cho upload/account mutations và mọi request match/tournament có session đăng nhập. Token bot client chỉ dùng nhập artifact cũ, không cấp quyền chơi. Guest vẫn chơi tay/đấu bot sẵn bằng seat token. Nhóm 6 đã chuyển creator/control của giải sang owner account/ADMIN; mọi mutation giải cần CSRF, đọc giải PUBLIC vẫn public. WebSocket game đang mở chưa gắn account với ghế hay tự đóng khi đổi password/disable; phần đó thuộc các nhóm tiếp theo. Xem [BOT-OWNERSHIP.md](BOT-OWNERSHIP.md).
 
 ## Tạo ADMIN đầu tiên
 
@@ -120,3 +120,8 @@ Tests backend thực hiện flow HTTP thật với CookieManager, verify cookie 
 ## Lịch sử và thống kê (Nhóm 5)
 
 `GET /api/account/matches?filter=all&page=0&size=20`, `GET /api/account/matches/{historyId}`, `GET /api/account/stats` chỉ dùng principal hiện tại. Client không thể chọn account khác bằng body/query. Owner ghế được gắn khi tạo/join bằng session; bot là controller riêng. Xem [MATCH-HISTORY.md](MATCH-HISTORY.md) cho filters, tỷ lệ thắng và giới hạn phục hồi trạng thái.
+
+
+## Quyền giải đấu (Nhóm 6)
+
+Tạo/start/cancel/edit roster dùng principal và CSRF; owner giải/ADMIN quản lý, người khác đăng ký bot của họ khi DRAFT. Không sử dụng X-Tournament-Token/X-Bot-Token. Chỉ hỗ trợ PUBLIC trong bản đầu; dữ liệu PRIVATE cũ không công bố. Xem [TOURNAMENT-OWNERSHIP.md](TOURNAMENT-OWNERSHIP.md).
