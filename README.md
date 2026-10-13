@@ -82,6 +82,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Nhóm 2:** đã có API tài khoản `/api/auth/register`, `/login`, `/logout`, `/me`, `/csrf`; session HttpOnly và BCrypt, tài khoản lưu PostgreSQL. [Cách gọi API và chính sách auth](docs/AUTH.md), [báo cáo Nhóm 2](docs/CHANG-4-NHOM-2-AUTH.md). Chưa thêm trang login/profile; game và quyền bot/giải đấu hiện vẫn giữ flow cũ, sẽ migrate theo account ở các nhóm sau.
 
+**Nhóm 3:** thêm API profile, đổi mật khẩu, quản trị users và session revalidation theo DB. Đổi password/disable account làm phiên cũ mất hiệu lực; profile chỉ sửa displayName; admin API cần role ADMIN. [Báo cáo Nhóm 3](docs/CHANG-4-NHOM-3-ACCOUNT.md). Chưa chuyển bot/giải đấu sang account ownership và chưa có UI profile/login.
+
 Mở thư mục repository trong VS Code, mở terminal PowerShell tại thư mục gốc:
 
 ```powershell

@@ -18,13 +18,15 @@ public class UserEntity {
     @Column(name="created_at", nullable=false) private Instant createdAt;
     @Column(name="updated_at", nullable=false) private Instant updatedAt;
     @Column(name="last_login_at") private Instant lastLoginAt;
+    @Column(name="auth_version",nullable=false) private long authVersion;
     protected UserEntity() {}
     static UserEntity from(User user) {
         var entity=new UserEntity();
         entity.id=user.id().value();entity.username=user.username();entity.email=user.email();
         entity.passwordHash=user.passwordHash();entity.displayName=user.displayName();entity.role=user.role();
         entity.status=user.status();entity.createdAt=user.createdAt();entity.updatedAt=user.updatedAt();entity.lastLoginAt=user.lastLoginAt();
+        entity.authVersion=user.authVersion();
         return entity;
     }
-    User toDomain() { return new User(new UserId(id),username,email,passwordHash,displayName,role,status,createdAt,updatedAt,lastLoginAt); }
+    User toDomain() { return new User(new UserId(id),username,email,passwordHash,displayName,role,status,createdAt,updatedAt,lastLoginAt,authVersion); }
 }

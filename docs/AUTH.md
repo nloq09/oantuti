@@ -1,4 +1,4 @@
-# Account authentication — Chặng 4 Nhóm 2
+# Account authentication — Chặng 4 Nhóm 2–3
 
 Project dùng **HTTP session cookie HttpOnly**, không dùng JWT. Tài khoản được lưu trong bảng PostgreSQL `users`; session hiện ở RAM của server, hết hạn sau 30 phút không hoạt động và mất sau khi server restart. Người dùng đăng nhập lại, tài khoản không mất. Không có tài khoản/password ADMIN mặc định.
 
@@ -48,7 +48,7 @@ Body `username`, `password`; header CSRF như trên. Trả 200 với thông tin 
 GET /api/auth/me
 ```
 
-Anonymous trả `{"authenticated":false}`. Session hợp lệ trả `authenticated:true` và `user` với 4 field DTO trên. Identity lấy từ Spring Security principal, không dùng userId tự khai ở request. Endpoint kiểm tra lại status DB; account bị disabled/mất sẽ trở thành anonymous và session bị hủy khi gọi me. Cơ chế thu hồi mọi session trên tất cả request sẽ thuộc phân quyền/hardening ở các nhóm sau.
+Anonymous trả `{"authenticated":false}`. Session hợp lệ trả `authenticated:true` và `user` với 4 field DTO trên. Identity lấy từ Spring Security principal, không dùng userId tự khai ở request. Nhóm 3 kiểm tra status, authVersion và role DB trên mỗi request có account session: account disabled/mất hoặc session version cũ sẽ bị hủy; role được cập nhật từ DB trước khi kiểm tra quyền. Principal lưu trong session không chứa password/hash.
 
 ```http
 POST /api/auth/logout
@@ -60,15 +60,34 @@ Body `{}`, cần CSRF. Hủy session và SecurityContext, hết hạn cookie JSE
 
 - `HttpOnly`, `SameSite=Lax`, cookie-only session tracking; không truyền session ID qua URL.
 - Profile prod bật `Secure`; browser chỉ gửi cookie qua HTTPS. Reverse proxy/forwarded headers và HTTPS sẽ được hoàn thiện ở nhóm deployment. Không chạy profile prod qua HTTP rồi coi login thất bại là lỗi mật khẩu.
-- CSRF bật cho các POST `/api/auth/**`; thiếu/sai token trả 403 `CSRF_INVALID`.
+- CSRF bật cho mọi mutation POST/PATCH/DELETE `/api/auth/**`, `/api/account/**`, `/api/admin/**`; thiếu/sai token trả 403 `CSRF_INVALID`.
 - CORS không mở wildcard hoặc cho phép frontend cross-origin. Giữ client/server cùng origin.
 - Chưa có brute-force rate limit; phải thêm ở Nhóm 9 trước khi coi hệ thống đã harden production.
 
-## Ranh giới Nhóm 2
+## Account/Profile và Admin — Nhóm 3
 
-SecurityFilterChain được thêm để thực thi session/CSRF đúng. `/api/account/**` đã cần login và `/api/admin/**` cần ADMIN, nhưng chưa có các controller này ở Nhóm 2.
+- `GET /api/account` hoặc `/api/account/profile`: profile của session hiện tại, gồm ID, username, email, displayName, role/status và timestamps; không có hash/authVersion/token. Chưa có stats/history vì chúng được làm ở Nhóm 5.
+- `PATCH /api/account/profile` body `{"displayName":"Tên mới"}`: chỉ đổi display name; gửi thêm id/username/email/role/passwordHash không thay đổi các field đó. Không nhận userId để chọn profile.
+- `POST /api/account/change-password` body `currentPassword`, `newPassword`: kiểm tra password hiện tại, policy mới, không cho giữ nguyên password. Thành công tăng authVersion trong DB, hủy phiên hiện tại và trả `changed:true, authenticated:false`; **mọi phiên khác phải đăng nhập lại** khi gửi request tiếp theo. Password cũ không đăng nhập được nữa.
+- `GET /api/admin/users?page=0&size=20`: ADMIN, page >=0, size 1–100; danh sách DTO không lộ hash/version. `total` là tổng số tài khoản.
+- `POST /api/admin/users/{id}/disable` và `/enable`: ADMIN, cần CSRF. Chỉ đổi status và tăng authVersion khi status đổi; không xóa account/history. Bật lại không làm cookie cũ hợp lệ. Không cho admin tự disable chính mình; ID không tồn tại trả 404 `USER_NOT_FOUND`.
+- `GET /api/admin/system`: ADMIN; trả số users, phòng đang hoạt động, giải RUNNING và thời điểm kiểm tra; không trả secrets/command/path. Metrics sâu và bot failure counters ở Nhóm 9.
+- Authorization ở application service kiểm tra role/status DB, không dựa vào role/userId do client khai. Row lock trong transaction bảo vệ cập nhật profile/password/status khỏi ghi đè trạng thái bảo mật mới.
+- Nếu DB lỗi khi xác minh session, filter trả 503 `DATABASE_UNAVAILABLE`, không cho request đi tiếp với quyền cache.
 
-Để không phá regression trước khi migrate ownership, bot/tournament/match API và WebSocket hiện tiếp tục dùng capability/seat token cũ, không bắt login, không chuyển sang account ownership ở nhóm này. Chỉ auth endpoints yêu cầu CSRF mới; legacy mutations vẫn giữ flow cũ. Nhóm 3–6 phải bảo vệ các resource theo account và migrate CSRF đồng bộ với client. Không gọi đây là authorization production đã hoàn tất.
+Để không phá regression trước khi migrate ownership, bot/tournament/match API và WebSocket hiện tiếp tục dùng capability/seat token cũ, không bắt login, không chuyển sang account ownership ở nhóm này. Legacy mutations vẫn giữ flow cũ; Nhóm 4–6 phải migrate resource ownership và CSRF đồng bộ với client. WebSocket handshake có principal do Spring Security, nhưng các connection game đang mở chưa có account ownership hay cơ chế đóng socket khi đổi password/disable; đó là phần authorization WebSocket tiếp theo. Không gọi đây là toàn bộ authorization production đã hoàn tất.
+
+## Tạo ADMIN đầu tiên
+
+Đăng ký tài khoản bình thường, sau đó người quản trị DB chủ động chạy SQL sau qua kết nối PostgreSQL có quyền quản trị, thay username bằng tài khoản đã chọn:
+
+```sql
+UPDATE users SET role = 'ADMIN', auth_version = auth_version + 1,
+    updated_at = CURRENT_TIMESTAMP
+WHERE username = 'your_admin_username' AND status = 'ACTIVE';
+```
+
+Kiểm tra đúng một row được cập nhật rồi đăng nhập lại. Không có endpoint public nâng role, không có admin password mặc định hoặc secret bootstrap được commit. Chỉ người có quyền DB dùng thao tác này; API profile không thể nâng quyền.
 
 Account session xác định **ai là user**. Seat token xác định **quyền điều khiển ghế P1/P2**. Session không thay thế seat token; WebSocket account binding sẽ thực hiện ở nhóm authorization.
 

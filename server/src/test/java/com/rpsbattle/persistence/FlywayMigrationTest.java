@@ -17,7 +17,7 @@ class FlywayMigrationTest {
 
     private Flyway fresh() {
         var flyway = configured("case_" + UUID.randomUUID().toString().replace("-", ""));
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(6);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(7);
         return flyway;
     }
     private Flyway configured(String schema) {
@@ -38,7 +38,7 @@ class FlywayMigrationTest {
     }
     @Test void migratesEmptyPostgresAndRepeatedStartupDoesNotReapply() throws Exception {
         var flyway = fresh();flyway.validate();
-        assertThat(flyway.info().applied()).filteredOn(info -> info.getVersion() != null).hasSize(6);
+        assertThat(flyway.info().applied()).filteredOn(info -> info.getVersion() != null).hasSize(7);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         try (var c=connect(flyway);var statement=c.createStatement()) {
             for (var table:List.of("users","bots","matches","match_participants","tournaments","tournament_participants","tournament_matches","replays"))
@@ -82,5 +82,17 @@ class FlywayMigrationTest {
             statement.executeUpdate("UPDATE flyway_schema_history SET checksum=0 WHERE version='1'");
         }
         assertThatThrownBy(flyway::validate).hasMessageContaining("checksum mismatch");
+    }
+    @Test void upgradesExistingV6AccountsWithoutChangingOwnershipOrPassword() throws Exception {
+        String schema="upgrade_"+UUID.randomUUID().toString().replace("-","");
+        var old=Flyway.configure().configuration(configured(schema).getConfiguration()).target("6").load();
+        assertThat(old.migrate().migrationsExecuted).isEqualTo(6);
+        var id=UUID.randomUUID();try(var c=connect(old)){user(c,id,"existing_account");}
+        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);latest.validate();
+        try(var c=connect(latest);var statement=c.createStatement();var rows=statement.executeQuery("SELECT id,username,password_hash,auth_version FROM users")) {
+            assertThat(rows.next()).isTrue();assertThat(rows.getObject(1,UUID.class)).isEqualTo(id);
+            assertThat(rows.getString(2)).isEqualTo("existing_account");
+            assertThat(rows.getString(3)).isEqualTo("$2a$12$schema.fixture.hash");assertThat(rows.getLong(4)).isZero();
+        }
     }
 }

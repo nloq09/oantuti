@@ -1,13 +1,15 @@
 package com.rpsbattle.api.error;
 
 import com.rpsbattle.api.controller.AuthController;
+import com.rpsbattle.api.controller.AccountController;
+import com.rpsbattle.api.controller.AdminController;
 import com.rpsbattle.auth.AuthException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
-@RestControllerAdvice(assignableTypes=AuthController.class)
+@RestControllerAdvice(assignableTypes={AuthController.class,AccountController.class,AdminController.class})
 public class AuthErrorHandler {
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<Map<String,String>> auth(AuthException error) {

@@ -39,6 +39,7 @@ public class AuthController {
     public ResponseEntity<UserResponse> login(@RequestBody Login body,HttpServletRequest request,HttpServletResponse response) {
         var authentication=auth.authenticate(body.username(),body.password());
         var user=auth.markLogin(authentication);
+        authentication=AuthService.sessionAuthentication(user);
         sessions.onAuthentication(authentication,request,response);
         var context=SecurityContextHolder.createEmptyContext();context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);contexts.saveContext(context,request,response);

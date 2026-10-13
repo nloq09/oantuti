@@ -39,14 +39,18 @@ public class SecurityConfig {
         return new CompositeSessionAuthenticationStrategy(List.of(new ChangeSessionIdAuthenticationStrategy(),new CsrfAuthenticationStrategy(csrfTokens)));
     }
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contexts,
-            CsrfTokenRepository tokens, ObjectMapper json) throws Exception {
+            CsrfTokenRepository tokens, ObjectMapper json,AuthService authService) throws Exception {
         http.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable);
         http.securityContext(context -> context.securityContextRepository(contexts).requireExplicitSave(true));
+        http.addFilterAfter(new SessionAccountFilter(authService,contexts),SecurityContextHolderFilter.class);
         http.csrf(csrf -> csrf.csrfTokenRepository(tokens)
                 // Legacy game mutations still use seat/bot capabilities. Account ownership and their
                 // same-origin CSRF migration are intentionally deferred to Groups 3–6.
-                .ignoringRequestMatchers(request -> !request.getServletPath().startsWith("/api/auth/")));
+                .ignoringRequestMatchers(request -> {
+                    var path=request.getServletPath();
+                    return !path.startsWith("/api/auth/") && !path.startsWith("/api/account/") && !path.startsWith("/api/admin/");
+                }));
         http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/account/**").authenticated().anyRequest().permitAll());
         http.exceptionHandling(errors -> errors
