@@ -37,7 +37,7 @@ public class AdminReadService {
         result.put("webSocketSessions",gauge("websocket_sessions"));
         result.put("dockerContainers",null);
         result.put("checkedAt",Instant.now());
-        result.put("activity",rows("select event_type, target_id, reason, occurred_at, tournament_id from tournament_audit_events order by occurred_at desc limit 15"));
+        result.put("activity",rows("select * from (select event_type,target_id,reason,occurred_at,tournament_id from tournament_audit_events union all select action || ':' || target_type,cast(target_id as varchar(160)),reason,occurred_at,cast(null as uuid) from admin_audit_events) events order by occurred_at desc limit 15"));
         return result;
     }
     private Double gauge(String name){var gauge=metrics.find(name).gauge();return gauge==null?null:gauge.value();}

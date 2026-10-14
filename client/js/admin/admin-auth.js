@@ -1,3 +1,4 @@
 export function adminAccess(account) {
-  return !account ? "LOGIN" : account.role === "ADMIN" && account.status === "ACTIVE" ? "ALLOW" : "DENY";
+  // /auth/me omits account status; the server only returns active authenticated accounts.
+  return !account ? "LOGIN" : account.role === "ADMIN" && account.status !== "DISABLED" ? "ALLOW" : "DENY";
 }

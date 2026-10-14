@@ -117,6 +117,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Chặng 5 — Nhóm 7–10 hoàn tất:** pause/resume, chuyển vòng thủ công, forfeit/DQ, review/override/retry có audit, dashboard/realtime/replay, lịch sử tài khoản và recovery. V14 lưu audit và version lock. Đã kiểm thử 480 backend, 31 client, gồm 12 migration tests; demo 8 tài khoản và Docker RR8/SE16/SE32 đều qua. [Hướng dẫn, chính sách kết quả và tổng kết](docs/CHANG-5-FINAL-TOURNAMENT.md).
 
+**Chặng 7 — Nhóm 1–5:** giao diện ADMIN riêng tại `/admin/index.html`: shell/sidebar, dashboard runtime, tìm/lọc/phân trang và chi tiết user/bot/match. Khóa/mở user/bot và lưu trữ bot yêu cầu lý do, CSRF và audit V15; review/retry dùng workflow giải đấu. ADMIN có liên kết **Quản trị** trên menu tài khoản; USER không truy cập được dữ liệu admin. Đã kiểm thử 486 backend, 34 client, build bootJar và thao tác UI trên PostgreSQL thật. [Hướng dẫn, API, chính sách và giới hạn](docs/CHANG-7-NHOM-1-5-ADMIN.md), [yêu cầu gốc](docs/CHANG-7-ADMIN-UI-PROMPT.md).
+
 Để chạy bộ production, copy `infra/.env.production.example` sang `.env.production`, điền domain và hai mật khẩu DB riêng, tải image bot nếu cần, rồi:
 
 ```bash
@@ -266,6 +268,7 @@ oantuti/
 ├── Dockerfile / .dockerignore      # Build Java 21 image, không đưa secrets/data vào image
 ├── infra/                         # Compose prod/DB dev, Caddy HTTPS, DB init và env mẫu
 ├── client/                         # Client web, được server phục vụ cùng host
+│   ├── admin/                      # Dashboard ADMIN, users/bots/matches và trang chi tiết
 │   ├── index.html                  # Trang chủ
 │   ├── lobby.html                  # Chế độ, chọn bot, tạo/vào phòng
 │   ├── bots.html                   # Quản lý, tải và đấu thử bot
@@ -282,6 +285,7 @@ oantuti/
 │   │   ├── bot-examples/           # Bot mẫu Python/C++/Java
 │   │   └── castle-courtyard.png    # Nền đấu trường
 │   ├── js/
+│   │   ├── admin/                  # Shell, guard, API, bảng, dialog và các view quản trị
 │   │   ├── pages/                  # Khởi tạo và thao tác từng màn hình
 │   │   ├── api/                    # REST phòng và upload bot
 │   │   ├── socket/                 # Kết nối, reconnect WebSocket

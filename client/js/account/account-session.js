@@ -1,5 +1,5 @@
 import { currentUser, logout } from "../api/auth-api.js";
-import { safeNext } from "./account-ui.js";
+import { safeNext, accountLinks } from "./account-ui.js";
 import { seatKey } from "../config.js";
 import { toast } from "../ui/toast.js";
 let accountRequest;
@@ -26,18 +26,11 @@ export async function initAccountNav() {
   try {
     const account = await getAccount();
     const home = nav.dataset.accountNav === "home";
-    const links = home ? [] : [["Trang chủ", "/"]];
-    if (!home && account) {
-      links.push(["Vào trận", "/lobby.html"], ["Bot của tôi", "/bots.html"]);
-      links.push(["Giải đấu", "/tournaments.html"]);
-    }
+    const links = accountLinks(account, home, loginLink(), "/register.html?next=" + encodeURIComponent(safeNext(returnDestination(), location.origin)));
     for (const link of document.querySelectorAll("[data-account-destination]")) {
       const destination = safeNext(link.dataset.accountDestination, location.origin);
       link.href = account ? destination : loginLink(destination);
     }
-    if (account) links.push(["Lịch sử", "/history.html"], ["Hồ sơ", "/profile.html"]);
-    if (account?.role === "ADMIN") links.push(["Quản trị", "/admin/index.html"]);
-    else links.push(["Đăng nhập", loginLink()], ["Đăng ký", "/register.html?next=" + encodeURIComponent(safeNext(returnDestination(), location.origin))]);
     nav.replaceChildren();
     const actions = document.createElement("div"); actions.className = "account-actions";
     for (const [label, href] of links) {

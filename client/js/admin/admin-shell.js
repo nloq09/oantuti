@@ -24,14 +24,14 @@ async function init() {
     const sidebar = node("nav", undefined, "admin-sidebar"); sidebar.setAttribute("aria-label", "Quản trị");
     const current = location.pathname.split("/").pop() || "index.html";
     for (const [label, path] of [["Tổng quan", "index.html"], ["Người dùng", "users.html"], ["Bot", "bots.html"], ["Trận đấu", "matches.html"]]) {
-      const a = link(label, "/admin/" + path); if (current === path || current === path.replace("s.html", "-detail.html")) a.setAttribute("aria-current", "page"); sidebar.append(a);
+      const a = link(label, "/admin/" + path); if (current === path || current === ({"users.html":"user-detail.html","bots.html":"bot-detail.html","matches.html":"match-detail.html"})[path]) a.setAttribute("aria-current", "page"); sidebar.append(a);
     }
     for (const label of ["Giải đấu", "Tranh chấp", "Replay", "Audit", "Hệ thống"]) { const item = node("span", label + " · Sắp có", "muted"); sidebar.append(item); }
     sidebar.append(link("← Về game", "/"));
     const content = node("main", undefined, "admin-content"); content.id = "admin-content"; content.tabIndex = -1;
     const skip = link("Đến nội dung", "#admin-content"); skip.className = "skip-link"; root.append(skip, top, sidebar, content);
     content.append(node("h1", "Tổng quan"), node("p", "Giao diện quản trị đã sẵn sàng."));
-    const module = await import("./views.js").catch(() => null); if (module) await module.mount(current, content);
+    const module = await import("./views.js"); await module.mount(current, content);
   } catch (error) { message(error, root); }
 }
 init();

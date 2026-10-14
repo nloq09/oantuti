@@ -6,6 +6,14 @@ export function safeNext(value, origin = "https://rps.invalid") {
       ? url.pathname + url.search + url.hash : "/";
   } catch { return "/"; }
 }
+export function accountLinks(account,home,loginHref,registerHref) {
+  const links=home?[]:[["Trang chủ","/"]];
+  if(!account)return [...links,["Đăng nhập",loginHref],["Đăng ký",registerHref]];
+  if(!home)links.push(["Vào trận","/lobby.html"],["Bot của tôi","/bots.html"],["Giải đấu","/tournaments.html"]);
+  links.push(["Lịch sử","/history.html"],["Hồ sơ","/profile.html"]);
+  if(account.role==="ADMIN")links.push(["Quản trị","/admin/index.html"]);
+  return links;
+}
 export function validatePassword(password, confirmation) {
   if (password !== confirmation) throw new Error("PASSWORD_MISMATCH");
   if (!password.trim() || [...password].length < 12 || new TextEncoder().encode(password).length > 72) throw new Error("INVALID_PASSWORD");

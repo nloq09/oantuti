@@ -18,6 +18,7 @@ class AdminConsoleApiTest {
     @Autowired com.rpsbattle.bot.ownership.BotRepository bots;
     @Autowired com.rpsbattle.admin.BotAdministrationPolicy botPolicy;
     @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    @Autowired com.rpsbattle.history.MatchPersistenceCoordinator history;
     final String password="Admin Console Test Password";
     class Browser implements AutoCloseable {
         final HttpClient http=HttpClient.newBuilder().cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL)).build();
@@ -81,6 +82,22 @@ class AdminConsoleApiTest {
             admin.call("/api/admin/bots/"+id+"/archive",Map.of("reason","Retired"),true,200);
             assertThat(bots.find(id).orElseThrow().status()).isEqualTo(com.rpsbattle.bot.ownership.BotMetadata.Status.DELETED);
             admin.call("/api/admin/bots/"+id+"/enable",Map.of("reason","Cannot restore"),true,409);
+        }
+    }
+    @Test void matchMetadataIncludesLiveReadOnlyLinksAndRejectsOrdinaryUsers()throws Exception{
+        try(var admin=new Browser();var owner=new Browser();var guest=new Browser()){
+            admin.account(true);var user=owner.account(false);
+            var created=owner.call("/api/matches",Map.of("mode","HUMAN_VS_HUMAN","seed",7),true,201);
+            history.synchronize();
+            String id=created.path("historyId").asText();
+            guest.call("/api/admin/matches",null,false,401);owner.call("/api/admin/matches/"+id,null,false,403);
+            var list=admin.call("/api/admin/matches?user="+user.id(),null,false,200);assertThat(list.path("total").asInt()).isPositive();
+            var detail=admin.call("/api/admin/matches/"+id,null,false,200);
+            assertThat(detail.path("id").asText()).isEqualTo(id);assertThat(detail.path("live_available").asBoolean()).isTrue();
+            assertThat(detail.path("room_id").asText()).isEqualTo(created.path("matchId").asText());
+            assertThat(detail.toString()).doesNotContain(created.path("token").asText(),"password","source_path");
+            admin.call("/api/admin/matches?status=UNKNOWN",null,false,400);admin.call("/api/admin/matches?bot=bad",null,false,400);
+            admin.call("/api/admin/matches/unknown",null,false,404);
         }
     }
 }
