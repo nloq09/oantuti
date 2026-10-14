@@ -37,4 +37,3 @@ class AdminDirectoryPostgresTest {
         var result=directory.botStatus(admin,id,"enable","PostgreSQL review");assertThat(result.get("admin_disabled")).isEqualTo(false);assertThat((List<?>)result.get("audit")).hasSize(2);
     }
 }
-
