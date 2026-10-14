@@ -111,6 +111,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Chặng 5 — Nhóm 2:** đơn đăng ký PENDING, duyệt/từ chối/rút, cấu hình giới hạn và check-in; bot vắng mặt bị loại khỏi roster READY. Source được kiểm tra biên dịch trong Docker trước khi nhận vào giải; V11 giữ roster cũ và lưu quyết định/timestamps qua restart. [Cách dùng, API và kiểm thử](docs/CHANG-5-NHOM-2-REGISTRATION.md). Tiếp theo: khóa phiên bản/hash và seeding.
 
+**Chặng 5 — Nhóm 3:** khóa bot vào bản sao source/JAR theo SHA-256, kiểm tra integrity khi start/launch; thêm RANDOM/MANUAL/RANKING, seed 64-bit và lưu thứ tự qua restart bằng V12. [Cách dùng, giới hạn và kiểm thử](docs/CHANG-5-NHOM-3-BOT-LOCK-SEEDING.md). Tiếp theo: Round Robin nâng cao với vòng đấu và BYE.
+
 Để chạy bộ production, copy `infra/.env.production.example` sang `.env.production`, điền domain và hai mật khẩu DB riêng, tải image bot nếu cần, rồi:
 
 ```bash

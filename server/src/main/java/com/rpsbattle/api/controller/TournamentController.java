@@ -27,6 +27,8 @@ public class TournamentController {
     @PostMapping("/{id}/check-in") public Map<String,Object> checkIn(Authentication auth,@PathVariable String id,@RequestBody(required=false) CheckIn request) {owned.checkIn(auth,id,request==null?null:request.registrationId());return detail(id);}
     @PostMapping("/{id}/close-check-in") public Map<String,Object> closeCheckIn(Authentication auth,@PathVariable String id) {owned.closeCheckIn(auth,id);return detail(id);}
     public record CheckIn(String registrationId) {}
+    @PostMapping("/{id}/seeding") public Map<String,Object> seeding(Authentication auth,@PathVariable String id,@RequestBody Seeds request){owned.configureSeeding(auth,id,request.strategy(),request.seed(),request.manualSeeds());return detail(id);}
+    public record Seeds(SeedingStrategy strategy,Long seed,Map<String,Integer> manualSeeds) {}
     @GetMapping("/{id}/ranking") public Object ranking(@PathVariable String id) {return detail(id).get("ranking");}
     @GetMapping(value="/{id}/export",produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String,Object>> export(@PathVariable String id) {return ResponseEntity.ok().header("Content-Disposition","attachment; filename=tournament-"+id+".json").body(detail(id));}

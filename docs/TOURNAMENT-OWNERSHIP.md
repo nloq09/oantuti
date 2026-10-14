@@ -21,7 +21,7 @@ Account phải đăng nhập trước khi tạo/tham gia, theo [AUTH.md](AUTH.md
 
 `tournament_matches`: UUID ổn định theo tournament/cặp participant, FK tới archive UUID của Nhóm 5, hai participant, winner, outcome, failure, số quân còn và timestamps. Mã phòng ngắn phục vụ live được đọc từ metadata match; link replay dùng historyMatchId (archive UUID), không dùng mã phòng làm FK lịch sử.
 
-Schema hiện tại tới V11. V10 mở rộng lifecycle; V11 thêm cấu hình/check-in và đơn đăng ký, backfill roster cũ thành APPROVED. Không sửa migration đã áp dụng. Xem [vòng đời chặng 5](CHANG-5-NHOM-1-LIFECYCLE.md) và [đăng ký/check-in](CHANG-5-NHOM-2-REGISTRATION.md).
+Schema hiện tại tới V12. V10 mở rộng lifecycle; V11 thêm đăng ký/check-in; V12 lưu hash bot và hạt giống. Không sửa migration đã áp dụng. Xem [vòng đời](CHANG-5-NHOM-1-LIFECYCLE.md), [đăng ký/check-in](CHANG-5-NHOM-2-REGISTRATION.md) và [khóa bot/seeding](CHANG-5-NHOM-3-BOT-LOCK-SEEDING.md).
 
 Create/add/remove/start/cancel ghi transaction trước khi trả thành công hoặc phát notification. Khi commit thất bại, trạng thái quản lý trong RAM được rollback; scheduler không được nhận một lệnh start chưa commit. Transaction snapshot lưu parent/roster/schedule và metadata trận liên quan cùng database transaction; FK composite ngăn participant của giải khác lọt vào cặp đấu.
 

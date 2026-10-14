@@ -1,0 +1,12 @@
+ALTER TABLE tournaments ADD COLUMN seeding_strategy VARCHAR(16) NOT NULL DEFAULT 'RANDOM' CHECK (seeding_strategy IN ('RANDOM','MANUAL','RANKING'));
+ALTER TABLE tournaments ADD COLUMN seeding_seed BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE tournament_registrations ADD COLUMN source_hash VARCHAR(64);
+ALTER TABLE tournament_registrations ADD COLUMN artifact_hash VARCHAR(64);
+ALTER TABLE tournament_registrations ADD COLUMN locked_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE tournament_registrations ADD CONSTRAINT ck_registration_lock CHECK ((artifact_hash IS NULL AND locked_at IS NULL) OR (artifact_hash IS NOT NULL AND source_hash IS NOT NULL AND source_hash=artifact_hash AND locked_at IS NOT NULL));
+ALTER TABLE tournament_registrations ADD CONSTRAINT ck_registration_hash_length CHECK ((source_hash IS NULL OR LENGTH(source_hash)=64) AND (artifact_hash IS NULL OR LENGTH(artifact_hash)=64));
+ALTER TABLE tournament_participants ADD COLUMN artifact_hash VARCHAR(64);
+ALTER TABLE tournament_participants ADD CONSTRAINT ck_participant_hash_length CHECK (artifact_hash IS NULL OR LENGTH(artifact_hash)=64);
+ALTER TABLE tournament_participants ADD COLUMN seed_number INTEGER CHECK (seed_number > 0);
+ALTER TABLE tournament_participants ADD COLUMN manual_seed INTEGER CHECK (manual_seed > 0);
+ALTER TABLE tournament_participants ADD CONSTRAINT uq_tournament_seed_number UNIQUE (tournament_id,seed_number);

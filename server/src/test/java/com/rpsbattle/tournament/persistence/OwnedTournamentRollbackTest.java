@@ -49,5 +49,9 @@ class OwnedTournamentRollbackTest {
         var approved=registration.withStatus(TournamentRegistration.Status.APPROVED,now);tournament.registrations.set(0,approved);
         assertThatThrownBy(()->owned.checkIn(AuthService.sessionAuthentication(user),tournament.id,approved.id().toString())).isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
         assertThat(tournament.registrations).containsExactly(approved);assertThat(tournament.registrations.getFirst().checkedInAt()).isNull();assertThat(tournament.revision).isZero();assertThat(notified.get()).isZero();
+        var previousSeed=tournament.seedingSeed;
+        var manual=new HashMap<String,Integer>();for(int i=0;i<tournament.participants.size();i++)manual.put(tournament.participants.get(i).participantId(),i+1);
+        assertThatThrownBy(()->owned.configureSeeding(AuthService.sessionAuthentication(user),tournament.id,SeedingStrategy.MANUAL,99L,manual)).isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
+        assertThat(tournament.seedingStrategy).isEqualTo(SeedingStrategy.RANDOM);assertThat(tournament.seedingSeed).isEqualTo(previousSeed);assertThat(tournament.participants).allMatch(p->p.manualSeed()==null && p.seedNumber()==null);assertThat(notified.get()).isZero();
     }
 }

@@ -17,8 +17,8 @@ public class TournamentMatchExecutor {
     public OnlineMatch start(TournamentMatch entry) {
         BotAgent a=null,b=null; OnlineMatch room=null;
         try {
-            a=bots.agent(entry.participantA.botId(),entry.participantA.botToken());
-            b=bots.agent(entry.participantB.botId(),entry.participantB.botToken());
+            a=entry.participantA.artifactHash()==null?bots.agent(entry.participantA.botId(),entry.participantA.botToken()):bots.lockedAgent(entry.participantA.botId(),entry.participantA.botToken(),entry.participantA.artifactHash());
+            b=entry.participantB.artifactHash()==null?bots.agent(entry.participantB.botId(),entry.participantB.botToken()):bots.lockedAgent(entry.participantB.botId(),entry.participantB.botToken(),entry.participantB.artifactHash());
             room=online.create(MatchMode.HUMAN_VS_HUMAN,entry.participantA.seed()^entry.participantB.seed());
             room.setBotDelayMillis(botDelayMillis);
             entry.historyMatchId=room.archiveId();

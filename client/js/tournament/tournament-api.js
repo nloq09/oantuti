@@ -46,6 +46,7 @@ export const rejectRegistration = (id, registrationId) => tournamentRequest(regi
 export const withdrawRegistration = (id, registrationId) => tournamentRequest(registrationPath(id,registrationId), undefined, "DELETE");
 export const checkInRegistration = (id, registrationId) => tournamentRequest("/" + encodeURIComponent(id) + "/check-in", {registrationId});
 export const closeCheckIn = id => tournamentRequest("/" + encodeURIComponent(id) + "/close-check-in", {});
+export const configureSeeding = (id, settings) => tournamentRequest("/" + encodeURIComponent(id) + "/seeding", settings);
 export class TournamentStream {
   constructor(id, update, status = () => {}) {
     this.id = id;

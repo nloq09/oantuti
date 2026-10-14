@@ -34,6 +34,12 @@
         <div id="counts" class="stats-grid"></div>
         <h3>Bot tham gia</h3>
         <div id="participants"></div>
+        <section id="seeding" hidden><h3>Xếp hạt giống</h3><form id="seeding-form">
+          <label for="seeding-strategy">Cách xếp</label><select id="seeding-strategy"><option value="RANDOM">Ngẫu nhiên</option><option value="MANUAL">Thủ công</option><option value="RANKING">Theo thành tích</option></select>
+          <label for="seeding-seed">Seed ngẫu nhiên</label><input id="seeding-seed" type="text" inputmode="numeric" maxlength="20" required />
+          <div id="manual-seeds" hidden></div><button id="save-seeding">Lưu hạt giống</button>
+          <p>Thứ tự được khóa khi giải sẵn sàng. Thành tích lấy từ các giải đã kết thúc; bot mới được xếp sau.</p>
+        </form></section>
         <section aria-label="Đăng ký tham gia"><h3>Đơn đăng ký</h3><div id="registration-list"></div></section>
         <div id="registration" hidden>
         <h3>Đăng ký bot của bạn</h3>
@@ -89,7 +95,7 @@
     </main>
     <script
       type="module"
-      src="/js/tournament/tournament-detail.js?v=registration-v2"
+      src="/js/tournament/tournament-detail.js?v=seeding-v3"
     ></script>
     <script type="module" src="/js/pages/account-nav.js"></script>
   </body>

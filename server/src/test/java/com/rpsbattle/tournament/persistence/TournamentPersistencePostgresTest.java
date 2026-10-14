@@ -77,6 +77,17 @@ class TournamentPersistencePostgresTest {
         assertThat(loaded.registrations).containsExactlyInAnyOrder(checked,pending);assertThat(loaded.participants).hasSize(1);assertThat(loaded.matches).isEmpty();
         assertThat(loaded.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.PENDING).findFirst().orElseThrow().approvedAt()).isNull();
     }
+    @Test void botHashesAndManualSeedOrderSurviveDatabaseRestoreAndSeedSwap() {
+        var owner=user();var a=participant(owner,"Alpha");var b=participant(owner,"Beta");var id=UUID.randomUUID();var time=Instant.parse("2026-10-14T01:00:00Z");
+        var hashA=artifacts.freeze(a.botId().toString(),null);var hashB=artifacts.freeze(b.botId().toString(),null);
+        var p=new TournamentMetadata.Participant(a.id(),a.botId(),a.ownerUserId(),a.displayName(),a.seed(),hashA,1,1);var q=new TournamentMetadata.Participant(b.id(),b.botId(),b.ownerUserId(),b.displayName(),b.seed(),hashB,2,2);
+        var registration=new TournamentRegistration(p.id(),id,owner.id().value(),p.botId(),p.botId(),p.displayName(),TournamentRegistration.Status.APPROVED,time,time,null).withLock(hashA,time);
+        repository.save(new TournamentMetadata(id,owner.id().value(),"Locked restore",TournamentFormat.ROUND_ROBIN,TournamentStatus.READY,1,time,null,null,List.of(p,q),List.of(),time,false,10,List.of(registration),SeedingStrategy.MANUAL,Long.MAX_VALUE));
+        p=new TournamentMetadata.Participant(a.id(),a.botId(),a.ownerUserId(),a.displayName(),a.seed(),hashA,2,2);q=new TournamentMetadata.Participant(b.id(),b.botId(),b.ownerUserId(),b.displayName(),b.seed(),hashB,1,1);
+        repository.save(new TournamentMetadata(id,owner.id().value(),"Locked restore",TournamentFormat.ROUND_ROBIN,TournamentStatus.READY,2,time,null,null,List.of(p,q),List.of(),time,false,10,List.of(registration),SeedingStrategy.MANUAL,Long.MAX_VALUE));
+        var loaded=restored().findById(id.toString()).orElseThrow();assertThat(loaded.seedingStrategy).isEqualTo(SeedingStrategy.MANUAL);assertThat(loaded.seedingSeed).isEqualTo(Long.MAX_VALUE);
+        assertThat(loaded.participants).extracting(TournamentParticipant::participantId).containsExactly(b.id().toString(),a.id().toString());assertThat(loaded.participants.getFirst().artifactHash()).isEqualTo(hashB);assertThat(loaded.registrations).containsExactly(registration);artifacts.verifyFrozen(a.botId().toString(),hashA);
+    }
     @Test void finishedScheduleRankingAndLinkedAccountHistorySurviveRestoreAndDuplicateWrites() {
         var a=user();var b=user();var p=participant(a,"A");var q=participant(b,"B");var start=Instant.parse("2026-10-13T00:00:00Z");
         var archive=new MatchMetadata(UUID.randomUUID().toString(),"ROOM", "HUMAN_VS_HUMAN","FINISHED",a.id().value(),b.id().value(),a.id().value(),"P1","WIN",7,start,start.plusSeconds(1),1000L,"classic-online-v1",start,List.of(new MatchMetadata.Participant("P1",a.id().value(),p.botId(),MatchMetadata.ControllerType.UPLOADED_BOT),new MatchMetadata.Participant("P2",b.id().value(),q.botId(),MatchMetadata.ControllerType.UPLOADED_BOT)));

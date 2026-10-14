@@ -7,10 +7,11 @@ import {
   cancelTournament,
   openRegistration,
   closeRegistration,
+  configureSeeding,
   registerBot, approveRegistration, rejectRegistration, withdrawRegistration, checkInRegistration, closeCheckIn,
   TournamentStream,
   canManageTournament,
-} from "./tournament-api.js?v=registration-v2";
+} from "./tournament-api.js?v=seeding-v3";
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 import { getAccount, loginLink } from "../account/account-session.js";
@@ -63,6 +64,7 @@ function render(t) {
   document.querySelector("#close-check-in").hidden = !owner || t.status !== "CHECK_IN";
   document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < 2;
   renderRegistrations(t, owner);
+  renderSeeding(t, owner);
   const champion = document.querySelector("#champion");
   champion.hidden = !t.champion;
   champion.textContent = t.champion
@@ -90,7 +92,7 @@ function render(t) {
     const row = document.createElement("div");
     row.className = "participant-row";
     const name = document.createElement("span");
-    name.textContent = bot.displayName;
+    name.textContent = `${bot.seedNumber ? "#"+bot.seedNumber+" · " : ""}${bot.displayName}${bot.artifactHash ? " · Đã khóa bot" : ""}`;
     row.append(name);
     const ownedBot = savedBots().find((p) => p.id === bot.botId);
     if (draft && (owner || ownedBot || (account?.id && account.id === bot.ownerUserId))) {
@@ -234,3 +236,28 @@ function renderRegistrations(t, owner) {
   }
   if(!list.childElementCount)list.textContent="Chưa có đơn đăng ký.";
 }
+
+function renderSeeding(t, owner) {
+  const section=document.querySelector("#seeding");section.hidden=!owner;
+  const editable=["DRAFT","REGISTRATION","CHECK_IN"].includes(t.status);
+  const strategy=document.querySelector("#seeding-strategy"), seed=document.querySelector("#seeding-seed");
+  if(document.activeElement!==strategy)strategy.value=t.seedingStrategy;
+  if(document.activeElement!==seed)seed.value=t.seedingSeed;
+  document.querySelector("#save-seeding").disabled=!editable;
+  strategy.disabled=!editable;seed.disabled=!editable;
+  const rows=document.querySelector("#manual-seeds");
+  const previous=[...rows.querySelectorAll("input")];
+  if(editable && rows.contains(document.activeElement) && previous.map(input=>input.dataset.participantId).join(",")===t.participants.map(p=>p.participantId).join(","))return;
+  rows.replaceChildren();
+  t.participants.forEach((p,index)=>{const label=document.createElement("label");label.textContent=p.displayName;
+    const input=document.createElement("input");input.type="number";input.min="1";input.max=String(t.participants.length);input.value=String(p.manualSeed ?? index+1);input.dataset.participantId=p.participantId;input.disabled=!editable;label.append(input);rows.append(label);});
+  rows.hidden=strategy.value!=="MANUAL";
+}
+document.querySelector("#seeding-strategy").onchange=()=>document.querySelector("#manual-seeds").hidden=document.querySelector("#seeding-strategy").value!=="MANUAL";
+document.querySelector("#seeding-form").onsubmit=event=>{
+  event.preventDefault();const strategy=document.querySelector("#seeding-strategy").value,seed=document.querySelector("#seeding-seed").value.trim();
+  if(!/^-?[0-9]+$/.test(seed) || BigInt(seed)<-9223372036854775808n || BigInt(seed)>9223372036854775807n){toast("Seed ngẫu nhiên phải là số nguyên 64-bit.",true);return;}
+  const manualSeeds=Object.fromEntries([...document.querySelectorAll("#manual-seeds input")].map(input=>[input.dataset.participantId,Number(input.value)]));
+  if(strategy==="MANUAL" && new Set(Object.values(manualSeeds)).size!==Object.keys(manualSeeds).length){toast("Seed thủ công không được trùng nhau.",true);return;}
+  action(()=>configureSeeding(id,{strategy,seed,manualSeeds:strategy==="MANUAL"?manualSeeds:null}));
+};

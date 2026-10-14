@@ -73,4 +73,13 @@ class DockerBotIntegrationTest {
         }
         return jar;
     }
+
+    @org.junit.jupiter.api.Test void lockedPythonAgentRunsOriginalCopyAfterLiveSourceIsReplaced() throws Exception {
+        var uploads=new BotUploadService(new ObjectMapper(),root.toString(),true);assumeTrue(uploads.available(BotLanguage.PYTHON));
+        var source=Path.of("../client/assets/bot-examples/main.py").toAbsolutePath().normalize();
+        var bot=uploads.upload("Locked",new org.springframework.mock.web.MockMultipartFile("file","main.py","text/plain",Files.readAllBytes(source)));var hash=uploads.freeze(bot.id(),uploads.sourceHash(bot.id()));
+        Files.writeString(uploads.source(bot),"invalid replaced source @@@");
+        var p1=PlayerId.of("P1");var p2=PlayerId.of("P2");var state=ClassicGameSetup.create("LOCKED",p1,p2).withPhase(GamePhase.PLAYING);var actions=new LegalActionGenerator(new ClassicRuleSet(p1,p2)).getLegalActions(state,p1);
+        try(var agent=uploads.lockedAgent(bot.id(),bot.token(),hash)){assertEquals(actions.getFirst(),agent.chooseAction(new PlayerView(state,p1),actions));}
+    }
 }

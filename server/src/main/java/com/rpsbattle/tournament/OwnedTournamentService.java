@@ -43,13 +43,13 @@ public class OwnedTournamentService {
     private void mutate(Tournament t,Runnable mutation) {
         synchronized(t) {
             var status=t.status;var started=t.startedAt;var finished=t.finishedAt;var changedAt=t.statusChangedAt;long revision=t.revision;
-            var registrations=List.copyOf(t.registrations);var checkIn=t.checkInRequired;var capacity=t.maxParticipants;
+            var registrations=List.copyOf(t.registrations);var checkIn=t.checkInRequired;var capacity=t.maxParticipants;var strategy=t.seedingStrategy;var randomSeed=t.seedingSeed;
             var participants=List.copyOf(t.participants);var matches=List.copyOf(t.matches);
             t.deferNotifications=true;
             try {mutation.run();persistence.persistNow(t);}
             catch(RuntimeException failure) {
                 t.status=status;t.startedAt=started;t.finishedAt=finished;t.statusChangedAt=changedAt;t.revision=revision;
-                t.registrations.clear();t.registrations.addAll(registrations);t.checkInRequired=checkIn;t.maxParticipants=capacity;
+                t.registrations.clear();t.registrations.addAll(registrations);t.checkInRequired=checkIn;t.maxParticipants=capacity;t.seedingStrategy=strategy;t.seedingSeed=randomSeed;
                 t.participants.clear();t.participants.addAll(participants);t.matches.clear();t.matches.addAll(matches);throw failure;
             } finally {t.deferNotifications=false;}
             tournaments.notifyChanged(t);
@@ -65,11 +65,12 @@ public class OwnedTournamentService {
             var created=t.participants.getLast();
             String registrationId=t.registrations.stream().filter(r->r.botId().toString().equals(botId)).map(r->r.id().toString()).findFirst().orElse(created.participantId());
             var participant=new TournamentParticipant(registrationId,created.botId(),created.botToken(),created.displayName(),created.seed(),owner);
+            var hash=bots.freeze(botId,null);participant=participant.withHash(hash);
             t.participants.set(t.participants.size()-1,participant);
             t.participants.sort(Comparator.comparing(TournamentParticipant::participantId));
             var now=java.time.Instant.now();
             t.registrations.removeIf(r->r.botId().toString().equals(botId));
-            t.registrations.add(new TournamentRegistration(UUID.fromString(participant.participantId()),UUID.fromString(id),owner,UUID.fromString(botId),UUID.fromString(botId),participant.displayName(),TournamentRegistration.Status.APPROVED,now,now,null));
+            t.registrations.add(new TournamentRegistration(UUID.fromString(participant.participantId()),UUID.fromString(id),owner,UUID.fromString(botId),UUID.fromString(botId),participant.displayName(),TournamentRegistration.Status.APPROVED,now,now,null).withLock(hash,now));
         });
     }
     public void remove(Authentication auth,String id,String participantId) {
@@ -84,13 +85,13 @@ public class OwnedTournamentService {
         });
     }
     public void start(Authentication auth,String id) {
-        var t=tournaments.find(id);authorization.requireManager(auth,t);
+        var t=tournaments.find(id);authorization.requireManager(auth,t);var scores=historicalScores();
         synchronized(t) {
             var reserved=new ArrayList<String>();
             try {
                 mutate(t,()-> {
                     if(t.checkInRequired && t.status!=TournamentStatus.READY)throw new DemoRequestException("CHECK_IN_REQUIRED");
-                    tournaments.start(id);
+                    prepare(t,scores);tournaments.start(id);
                     if(queue!=null) {var ids=t.matches.stream().map(m->m.id).toList();queue.reserve(ids);reserved.addAll(ids);}
                 });
             } catch(RuntimeException failure) {if(queue!=null)queue.release(reserved);throw failure;}
@@ -98,13 +99,48 @@ public class OwnedTournamentService {
     }
     public void cancel(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,()->tournaments.cancel(id));}
     public void openRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,()->tournaments.openRegistration(id));}
-    public void closeRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,()->{
+    public void closeRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);var scores=historicalScores();mutate(t,()->{
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("INVALID_TOURNAMENT_TRANSITION");
         if(t.participants.size()<2)throw new DemoRequestException("NOT_ENOUGH_BOTS");
         for(int i=0;i<t.registrations.size();i++)if(t.registrations.get(i).status()==TournamentRegistration.Status.PENDING)t.registrations.set(i,t.registrations.get(i).withStatus(TournamentRegistration.Status.REJECTED,java.time.Instant.now()));
+        if(!t.checkInRequired)prepare(t,scores);
         TournamentStateMachine.transition(t,t.checkInRequired?TournamentStatus.CHECK_IN:TournamentStatus.READY,java.time.Instant.now());tournaments.changed(t);
     });}
     public void flush() {persistence.flushForRead();}
+
+    private Map<String,com.rpsbattle.tournament.seeding.SeedingService.Score> historicalScores() {
+        var scores=new HashMap<String,com.rpsbattle.tournament.seeding.SeedingService.Score>();
+        // Snapshot completed tournaments one at a time, before taking the target tournament monitor.
+        for(var cup:registry.findAll())synchronized(cup) {if(cup.status!=TournamentStatus.FINISHED)continue;
+            var ranking=tournaments.ranking(cup);
+            for(var row:ranking)cup.participants.stream().filter(p->p.participantId().equals(row.participantId())).findFirst().ifPresent(p->scores.merge(p.botId(),new com.rpsbattle.tournament.seeding.SeedingService.Score(row.points(),row.wins(),row.piecesRemaining()),com.rpsbattle.tournament.seeding.SeedingService.Score::plus));
+        }return Map.copyOf(scores);
+    }
+    private void prepare(Tournament t,Map<String,com.rpsbattle.tournament.seeding.SeedingService.Score> scores) {
+        for(int i=0;i<t.participants.size();i++) {
+            var p=t.participants.get(i);String hash=p.artifactHash();
+            if(hash==null) {hash=bots.freeze(p.botId(),null);t.participants.set(i,p.withHash(hash));
+                for(int j=0;j<t.registrations.size();j++)if(t.registrations.get(j).id().toString().equals(p.participantId()))t.registrations.set(j,t.registrations.get(j).withLock(hash,java.time.Instant.now()));
+            }else bots.verifyFrozen(p.botId(),hash);
+        }
+        if(t.participants.stream().anyMatch(p->p.seedNumber()==null)) {
+            var seeded=com.rpsbattle.tournament.seeding.SeedingService.seed(t.participants,t.seedingStrategy,t.seedingSeed,scores);t.participants.clear();t.participants.addAll(seeded);
+        }
+    }
+    public void configureSeeding(Authentication auth,String id,SeedingStrategy strategy,Long seed,Map<String,Integer> manual) {
+        var t=tournaments.find(id);authorization.requireManager(auth,t);
+        mutate(t,()->{
+            if(!List.of(TournamentStatus.DRAFT,TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN).contains(t.status))throw new DemoRequestException("TOURNAMENT_LOCKED");
+            if(strategy==null)throw new DemoRequestException("INVALID_MANUAL_SEEDS");
+            if(strategy==SeedingStrategy.MANUAL) {
+                if(manual==null || manual.size()!=t.participants.size() || !manual.keySet().equals(t.participants.stream().map(TournamentParticipant::participantId).collect(java.util.stream.Collectors.toSet())))throw new DemoRequestException("INVALID_MANUAL_SEEDS");
+                var used=new HashSet<Integer>();for(var value:manual.values())if(value==null || value<1 || value>t.participants.size() || !used.add(value))throw new DemoRequestException("INVALID_MANUAL_SEEDS");
+            }
+            t.seedingStrategy=strategy;if(seed!=null)t.seedingSeed=seed;
+            for(int i=0;i<t.participants.size();i++){var p=t.participants.get(i);t.participants.set(i,p.withSeeding(null,strategy==SeedingStrategy.MANUAL?manual.get(p.participantId()):null));}
+            tournaments.changed(t);
+        });
+    }
 
     private void registrationPhase(Tournament t) {
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("TOURNAMENT_LOCKED");
@@ -124,7 +160,7 @@ public class OwnedTournamentService {
             if(t.registrations.stream().filter(TournamentRegistration::active).count()>=t.maxParticipants)throw new DemoRequestException("PARTICIPANT_LIMIT");
             var key=previous.map(TournamentRegistration::id).orElseGet(UUID::randomUUID);
             t.registrations.removeIf(r->r.id().equals(key));
-            t.registrations.add(new TournamentRegistration(key,UUID.fromString(id),actor.id().value(),bot.id(),bot.id(),bot.name(),TournamentRegistration.Status.PENDING,java.time.Instant.now(),null,null));
+            t.registrations.add(new TournamentRegistration(key,UUID.fromString(id),actor.id().value(),bot.id(),bot.id(),bot.name(),TournamentRegistration.Status.PENDING,java.time.Instant.now(),null,null).withSourceHash(bots.sourceHash(botId)));
             tournaments.changed(t);
         });
     }
@@ -136,8 +172,9 @@ public class OwnedTournamentService {
             if(approve) {
                 var bot=bots.requireRegistrationBotForManager(auth,r.botId().toString());
                 if(!r.userId().equals(bot.ownerUserId()))throw new DemoRequestException("BOT_ACCESS_DENIED");
+                var hash=bots.freeze(r.botVersionId().toString(),r.sourceHash());r=r.withLock(hash,java.time.Instant.now());
                 var execution=bots.registrationExecution(r.botId().toString());
-                t.participants.add(new TournamentParticipant(r.id().toString(),r.botId().toString(),execution.token(),r.displayName(),UUID.randomUUID().getMostSignificantBits(),r.userId()));
+                t.participants.add(new TournamentParticipant(r.id().toString(),r.botId().toString(),execution.token(),r.displayName(),UUID.randomUUID().getMostSignificantBits(),r.userId()).withHash(hash));
                 t.participants.sort(Comparator.comparing(TournamentParticipant::participantId));
             } else t.participants.removeIf(p->p.participantId().equals(registrationId));
             t.registrations.set(index,r.withStatus(approve?TournamentRegistration.Status.APPROVED:TournamentRegistration.Status.REJECTED,java.time.Instant.now()));tournaments.changed(t);
@@ -174,7 +211,7 @@ public class OwnedTournamentService {
         });
     }
     public void closeCheckIn(Authentication auth,String id) {
-        var t=tournaments.find(id);authorization.requireManager(auth,t);
+        var t=tournaments.find(id);authorization.requireManager(auth,t);var scores=historicalScores();
         mutate(t,()->{
             if(t.status!=TournamentStatus.CHECK_IN)throw new DemoRequestException("CHECK_IN_NOT_OPEN");
             if(t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.CHECKED_IN).count()<2)throw new DemoRequestException("NOT_ENOUGH_CHECKED_IN_BOTS");
@@ -182,7 +219,7 @@ public class OwnedTournamentService {
                 var r=t.registrations.get(i);
                 if(r.status()==TournamentRegistration.Status.APPROVED){t.registrations.set(i,r.withStatus(TournamentRegistration.Status.NOT_CHECKED_IN,java.time.Instant.now()));t.participants.removeIf(p->p.participantId().equals(r.id().toString()));}
             }
-            TournamentStateMachine.transition(t,TournamentStatus.READY,java.time.Instant.now());tournaments.changed(t);
+            prepare(t,scores);TournamentStateMachine.transition(t,TournamentStatus.READY,java.time.Instant.now());tournaments.changed(t);
         });
     }
 }

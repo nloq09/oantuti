@@ -1,4 +1,6 @@
 const errors = {
+  BOT_ARTIFACT_CHANGED: "File bot bị thiếu hoặc không khớp phiên bản đã khóa. Giải chưa thể chạy bot này.",
+  INVALID_MANUAL_SEEDS: "Mỗi bot cần một seed thủ công riêng từ 1 đến số bot đã duyệt.",
   BOT_NOT_READY: "Bot bị lỗi, đã xóa hoặc thiếu file source. Hãy tải lại bot.",
   BOT_BUILD_ERROR: "Bot không qua được kiểm tra cú pháp/biên dịch trong Docker. Hãy sửa source rồi tải lại.",
   REGISTRATION_NOT_FOUND: "Không tìm thấy đơn đăng ký trong giải này.",

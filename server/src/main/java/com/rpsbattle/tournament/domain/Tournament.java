@@ -17,6 +17,8 @@ public final class Tournament {
     public long revision;
     public boolean checkInRequired;
     public int maxParticipants=10;
+    public SeedingStrategy seedingStrategy=SeedingStrategy.RANDOM;
+    public long seedingSeed=java.util.UUID.randomUUID().getMostSignificantBits();
     public final List<TournamentRegistration> registrations=new ArrayList<>();
     public Tournament(String id, String name, TournamentFormat format, Instant createdAt) {
         this.id=id; this.name=name; this.format=format; this.createdAt=createdAt;this.statusChangedAt=createdAt;

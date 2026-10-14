@@ -21,6 +21,7 @@ public class TournamentService {
         this.registry=registry; this.bots=bots; this.scheduler=scheduler; this.ranking=ranking;
     }
     public Tournament find(String id) { return registry.findById(id).orElseThrow(()->new DemoRequestException("TOURNAMENT_NOT_FOUND")); }
+    public List<com.rpsbattle.tournament.ranking.RankingEntry> ranking(Tournament t){return ranking.rank(t);}
     public Tournament create(String name,TournamentFormat format) { return registry.create(name,format); }
     public void authorizeOwner(String id, String token) {
         var t=find(id);
@@ -84,6 +85,7 @@ public class TournamentService {
         data.put("ownerUserId",t.ownerUserId);data.put("visibility","PUBLIC");
         data.put("createdAt",t.createdAt);data.put("startedAt",t.startedAt);data.put("finishedAt",t.finishedAt);data.put("revision",t.revision);
         data.put("statusChangedAt",t.statusChangedAt);
+        data.put("seedingStrategy",t.seedingStrategy);data.put("seedingSeed",Long.toString(t.seedingSeed));
         data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
         data.put("registrations",List.copyOf(t.registrations));
         data.put("participants",List.copyOf(t.participants));

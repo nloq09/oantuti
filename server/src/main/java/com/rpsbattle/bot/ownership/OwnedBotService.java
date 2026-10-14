@@ -78,6 +78,9 @@ public class OwnedBotService {
         return bot;
     }
     @Transactional public BotUploadService.Upload registrationExecution(String id) {registrationMetadata(id);return artifacts.stored(id);}
+    public String sourceHash(String id){return artifacts.sourceHash(id);}
+    public String freeze(String id,String expected){return artifacts.freeze(id,expected);}
+    public void verifyFrozen(String id,String hash){artifacts.verifyFrozen(id,hash);}
     public BotMetadata authorizeWithdrawal(Authentication auth,String id) {
         accounts.requireUser(auth);
         return authorize(auth,bots.find(uuid(id)).orElseThrow(()->new AuthException("BOT_NOT_FOUND",404)),true);

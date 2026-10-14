@@ -91,7 +91,7 @@ Nếu chạy JAR ngoài Docker: build `server/gradlew bootJar` (Windows: `server
 
 Prod mặc định tắt runner; nếu host JAR có Docker Linux/image và muốn dùng bot upload, đặt BOTS_ENABLED=true. Compose dùng override riêng để bật quyền này.
 
-Flyway chạy V1–V11 khi app khởi động; V10 là Java migration cho lifecycle giải đấu, được đóng trong JAR cùng SQL V1–V9 và V11. V11 lưu đăng ký/duyệt/check-in. Hibernate chỉ validate. Không sửa migration đã áp dụng, không clean/baseline tự động trong prod. DB quyền/credential hoặc schema sai sẽ làm startup thất bại. Chờ server healthy trước khi mở traffic.
+Flyway chạy V1–V12 khi app khởi động; V10 là Java migration cho lifecycle giải đấu, được đóng trong JAR cùng SQL V1–V9, V11–V12. V11 lưu đăng ký/duyệt/check-in; V12 lưu hash/version lock và seeding. Backup toàn thư mục bots gồm versions/ cùng DB/replay. Hibernate chỉ validate. Không sửa migration đã áp dụng, không clean/baseline tự động trong prod. DB quyền/credential hoặc schema sai sẽ làm startup thất bại. Chờ server healthy trước khi mở traffic.
 
 ## Backup, restore và upgrade
 

@@ -17,10 +17,13 @@ public class TournamentRegistrationEntity {
     @Column(name="registered_at",nullable=false) Instant registeredAt;
     @Column(name="approved_at") Instant approvedAt;
     @Column(name="checked_in_at") Instant checkedInAt;
+    @Column(name="source_hash",length=64) String sourceHash;
+    @Column(name="artifact_hash",length=64) String artifactHash;
+    @Column(name="locked_at") Instant lockedAt;
     protected TournamentRegistrationEntity() {}
     void copy(TournamentRegistration r) {
         id=r.id();tournamentId=r.tournamentId();userId=r.userId();botId=r.botId();botVersionId=r.botVersionId();
-        displayName=r.displayName();status=r.status();registeredAt=r.registeredAt();approvedAt=r.approvedAt();checkedInAt=r.checkedInAt();
+        displayName=r.displayName();status=r.status();registeredAt=r.registeredAt();approvedAt=r.approvedAt();checkedInAt=r.checkedInAt();sourceHash=r.sourceHash();artifactHash=r.artifactHash();lockedAt=r.lockedAt();
     }
-    TournamentRegistration domain() {return new TournamentRegistration(id,tournamentId,userId,botId,botVersionId,displayName,status,registeredAt,approvedAt,checkedInAt);}
+    TournamentRegistration domain() {return new TournamentRegistration(id,tournamentId,userId,botId,botVersionId,displayName,status,registeredAt,approvedAt,checkedInAt,sourceHash,artifactHash,lockedAt);}
 }

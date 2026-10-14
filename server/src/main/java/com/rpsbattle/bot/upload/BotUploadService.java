@@ -83,6 +83,34 @@ public class BotUploadService {
 
     public Path source(Upload upload) {return root.resolve(upload.id()).resolve(upload.language().filename);}
 
+    private byte[] artifactBytes(Path path,BotLanguage language) {
+        for(Path current=path;current!=null && !current.equals(root);current=current.getParent())if(Files.isSymbolicLink(current))throw new DemoRequestException("BOT_ARTIFACT_CHANGED");
+        try(var stream=Files.newInputStream(path)) {int limit=language==BotLanguage.JAR?5*1024*1024:512*1024;var bytes=stream.readNBytes(limit+1);if(bytes.length>limit)throw new DemoRequestException("BOT_ARTIFACT_CHANGED");return bytes;}
+        catch(java.io.IOException error){throw new DemoRequestException("BOT_ARTIFACT_CHANGED");}
+    }
+    private static String digest(byte[] bytes) {try{return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));}catch(java.security.NoSuchAlgorithmException error){throw new IllegalStateException(error);}}
+    public String sourceHash(String id) {var upload=stored(id);return digest(artifactBytes(source(upload),upload.language()));}
+    public synchronized String freeze(String id,String expected) {
+        var upload=stored(id);var bytes=artifactBytes(source(upload),upload.language());var hash=digest(bytes);
+        if(expected!=null && !expected.equals(hash))throw new DemoRequestException("BOT_ARTIFACT_CHANGED");
+        Path path=frozenSource(upload,hash);
+        try {Files.createDirectories(path.getParent());if(!Files.exists(path,LinkOption.NOFOLLOW_LINKS))Files.write(path,bytes,StandardOpenOption.CREATE_NEW);}
+        catch(java.io.IOException error){throw new DemoRequestException("BOT_STORAGE_ERROR");}
+        verifyFrozen(id,hash);return hash;
+    }
+    private Path frozenSource(Upload upload,String hash) {
+        if(hash==null || !hash.matches("[a-f0-9]{64}"))throw new DemoRequestException("BOT_ARTIFACT_CHANGED");
+        var path=root.resolve(upload.id()).resolve("versions").resolve(hash).resolve(upload.language().filename);
+        for(Path current=path;current!=null && !current.equals(root);current=current.getParent())if(Files.isSymbolicLink(current))throw new DemoRequestException("BOT_ARTIFACT_CHANGED");return path;
+    }
+    public void verifyFrozen(String id,String hash) {var upload=stored(id);if(!digest(artifactBytes(frozenSource(upload,hash),upload.language())).equals(hash))throw new DemoRequestException("BOT_ARTIFACT_CHANGED");}
+    public BotAgent lockedAgent(String id,String token,String hash) {
+        if(hash==null)return agent(id,token); // Internal/legacy fixtures have no tournament lock.
+        var upload=authorize(id,token);verifyFrozen(id,hash);
+        if(!available(upload.language()))throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE");
+        return new BotAgent(new DockerBotProcess(dockerPaths.source(root,frozenSource(upload,hash)),upload.language(),instanceKey,bootId,id),Duration.ofSeconds(2));
+    }
+
     public void discardNew(Upload upload) {
         Path directory=root.resolve(upload.id()).normalize();
         if(!directory.getParent().equals(root) || !upload.id().matches("[a-f0-9-]{36}") || Files.isSymbolicLink(directory)) return;
