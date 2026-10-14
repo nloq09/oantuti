@@ -26,7 +26,7 @@ public final class TieBreakService {
     private static int headToHead(Tournament t,String id,Set<String> group,ScoringRule scoring) {
         int points=0;
         for(var m:t.matches)if(m.status==TournamentMatch.Status.FINISHED && group.contains(m.participantA.participantId()) && group.contains(m.participantB.participantId()) && (id.equals(m.participantA.participantId())||id.equals(m.participantB.participantId())))
-            points+=m.winnerParticipantId==null?scoring.pointsForDraw():id.equals(m.winnerParticipantId)?scoring.pointsForWin():scoring.pointsForLoss();
+            points+="DOUBLE_FORFEIT".equals(m.decisionReason)?scoring.pointsForLoss():m.winnerParticipantId==null?scoring.pointsForDraw():id.equals(m.winnerParticipantId)?scoring.pointsForWin():scoring.pointsForLoss();
         return points;
     }
 }

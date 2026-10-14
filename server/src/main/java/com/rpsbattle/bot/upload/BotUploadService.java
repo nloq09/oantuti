@@ -22,6 +22,7 @@ public class BotUploadService {
     private final String instanceKey;
     private final String bootId=UUID.randomUUID().toString();
     private final java.util.concurrent.Semaphore registrationChecks=new java.util.concurrent.Semaphore(2);
+    private final java.util.concurrent.ConcurrentMap<BotLanguage,Long> healthyUntil=new java.util.concurrent.ConcurrentHashMap<>();
     public BotUploadService(ObjectMapper json, @Value("${rps.bots.directory:data/bots}") String directory,
                             @Value("${rps.bots.enabled:true}") boolean enabled) {
         this(json,directory,enabled,"","local");
@@ -162,14 +163,16 @@ public class BotUploadService {
     }
 
     public boolean available(BotLanguage language) {
-        return enabled && probe(List.of("docker", "info", "--format", "{{.OSType}}"), "linux")
-                && probe(List.of("docker", "image", "inspect", language.image, "--format", "{{.Id}}"), "sha256:");
+        if(!enabled)return false;
+        if(System.nanoTime()<healthyUntil.getOrDefault(language,Long.MIN_VALUE))return true;
+        boolean ready=probe(List.of("docker", "info", "--format", "{{.OSType}}"), "linux") && probe(List.of("docker", "image", "inspect", language.image, "--format", "{{.Id}}"), "sha256:");
+        if(ready)healthyUntil.put(language,System.nanoTime()+TimeUnit.SECONDS.toNanos(5));return ready;
     }
 
     private boolean probe(List<String> command, String expected) {
         try {
             var process = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD).start();
-            if (!process.waitFor(2, TimeUnit.SECONDS)) {
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 return false;
             }

@@ -1,0 +1,2 @@
+export function tournamentGroup(status){if(status==="REGISTRATION"||status==="CHECK_IN")return "Mở đăng ký / Check-in";if(["RUNNING","PAUSED","RECOVERY_REQUIRED"].includes(status))return "Đang diễn ra";if(["FINISHED","CANCELLED"].includes(status))return "Đã kết thúc";return "Sắp diễn ra";}
+export function filterTournaments(cups,{format="",status="",owner=""}={}){return cups.filter(t=>(!format||t.format===format)&&(!status||t.status===status)&&(!owner||t.ownerUserId===owner));}

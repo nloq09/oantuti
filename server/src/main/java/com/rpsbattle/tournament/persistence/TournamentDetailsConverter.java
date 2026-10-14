@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 @Converter
 public class TournamentDetailsConverter implements AttributeConverter<TournamentDetails,String> {
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON=JsonMapper.builder().addModule(new JavaTimeModule()).build();
+    public static boolean equivalent(TournamentDetails a,TournamentDetails b){try{return JSON.readTree(JSON.writeValueAsString(a)).equals(JSON.readTree(JSON.writeValueAsString(b)));}catch(Exception e){throw new IllegalArgumentException(e);}}
     public String convertToDatabaseColumn(TournamentDetails value) {
         if(value==null)return null;
         try{return JSON.writeValueAsString(value);}catch(Exception e){throw new IllegalArgumentException("Cannot encode tournament structure",e);}

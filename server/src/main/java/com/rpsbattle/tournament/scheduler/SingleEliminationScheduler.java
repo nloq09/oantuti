@@ -41,13 +41,15 @@ public final class SingleEliminationScheduler implements TournamentScheduler {
             if(n.sourceA()!=null)a=nodes.get(n.sourceA()).winnerParticipantId();
             if(n.sourceB()!=null)b=nodes.get(n.sourceB()).winnerParticipantId();
             var game=games.get(n.matchId());
-            if(winner==null && game!=null && game.status==TournamentMatch.Status.FINISHED) {
+            if(winner==null && game!=null && game.status==TournamentMatch.Status.FINISHED && !t.operations.reviews().containsKey(game.id)) {
                 winner=game.winnerParticipantId;reason="WIN";
-                if(winner==null) {
+                if("DOUBLE_FORFEIT".equals(game.decisionReason))reason="DOUBLE_FORFEIT";
+                else if(winner==null) {
                     if(game.remainingA!=game.remainingB){winner=game.remainingA>game.remainingB?a:b;reason="DRAW_REMAINING_PIECES";}
                     else {var pa=players.get(a);var pb=players.get(b);int sa=pa.seedNumber()==null?t.participants.indexOf(pa)+1:pa.seedNumber();int sb=pb.seedNumber()==null?t.participants.indexOf(pb)+1:pb.seedNumber();winner=sa<sb?a:b;reason="DRAW_SEED";}
                 }
             }
+            if(n.sourceA()!=null && nodes.get(n.sourceA()).resolution()!=null && nodes.get(n.sourceB()).resolution()!=null && (a==null||b==null)) {winner=a==null?b:a;reason=winner==null?"NO_ELIGIBLE_PARTICIPANT":"WALKOVER";}
             if(n.matchId()!=null && game==null && a!=null && b!=null) {
                 var match=new TournamentMatch(n.matchId(),t.id,players.get(a),players.get(b));match.round=n.round();match.scheduledAt=Instant.now();created.add(match);games.put(match.id,match);
             }
@@ -55,5 +57,5 @@ public final class SingleEliminationScheduler implements TournamentScheduler {
         }
         return List.copyOf(created);
     }
-    public static boolean complete(Tournament t) {return !t.bracket.isEmpty()&&t.bracket.getLast().winnerParticipantId()!=null;}
+    public static boolean complete(Tournament t) {return !t.bracket.isEmpty()&&t.bracket.getLast().resolution()!=null;}
 }

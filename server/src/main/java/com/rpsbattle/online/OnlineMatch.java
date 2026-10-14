@@ -162,6 +162,7 @@ public final class OnlineMatch {
     }
 
     public synchronized Optional<BotTurn> pendingBotTurn() {
+        if(infrastructureError!=null)return Optional.empty();
         if (match == null || match.state().isFinished() || clock.instant().isBefore(nextBotAt)) return Optional.empty();
         var player = match.state().currentPlayerId();
         var agent = uploadedAgents.get(player);

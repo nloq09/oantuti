@@ -11,5 +11,5 @@
 <form id="password-form" class="account-form"><label>Mật khẩu hiện tại<input name="currentPassword" type="password" required autocomplete="current-password"></label>
 <label>Mật khẩu mới<input name="newPassword" type="password" required autocomplete="new-password"><small>Ít nhất 12 ký tự, tối đa 72 byte UTF-8.</small></label>
 <label>Xác nhận mật khẩu mới<input name="confirmation" type="password" required autocomplete="new-password"></label><p class="form-message" role="status" aria-live="polite"></p><button class="primary" type="submit">Đổi mật khẩu</button></form></section></div>
-<p><a class="button" href="/history.html">Xem lịch sử trận đấu →</a></p></div>
-</main><script type="module" src="/js/pages/account-nav.js"></script><script type="module" src="/js/pages/profile.js"></script></body></html>
+<section class="panel"><h2>Giải đấu của tôi</h2><label for="my-tournament-filter">Lọc giải</label><select id="my-tournament-filter"><option value="all">Tất cả</option><option value="created">Đã tạo</option><option value="participated">Đã tham gia</option><option value="won">Đã vô địch</option><option value="finished">Đã kết thúc</option></select><div id="my-tournaments"></div></section><p><a class="button" href="/history.html">Xem lịch sử trận đấu →</a></p></div>
+</main><script type="module" src="/js/pages/account-nav.js"></script><script type="module" src="/js/pages/profile.js"></script><script type="module" src="/js/tournament/my-tournaments.js"></script></body></html>

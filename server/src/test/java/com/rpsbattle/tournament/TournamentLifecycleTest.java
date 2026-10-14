@@ -15,7 +15,7 @@ class TournamentLifecycleTest {
             TournamentStatus.READY,Set.of(TournamentStatus.RUNNING,TournamentStatus.RECOVERY_REQUIRED,TournamentStatus.CANCELLED),
             TournamentStatus.RUNNING,Set.of(TournamentStatus.PAUSED,TournamentStatus.FINISHED,TournamentStatus.RECOVERY_REQUIRED,TournamentStatus.CANCELLED),
             TournamentStatus.PAUSED,Set.of(TournamentStatus.RUNNING,TournamentStatus.FINISHED,TournamentStatus.RECOVERY_REQUIRED,TournamentStatus.CANCELLED),
-            TournamentStatus.RECOVERY_REQUIRED,Set.of(TournamentStatus.CANCELLED,TournamentStatus.FINISHED),
+            TournamentStatus.RECOVERY_REQUIRED,Set.of(TournamentStatus.CANCELLED,TournamentStatus.FINISHED,TournamentStatus.RUNNING),
             TournamentStatus.FINISHED,Set.of(),TournamentStatus.CANCELLED,Set.of());
         for(var from:TournamentStatus.values())for(var to:TournamentStatus.values()) {
             var t=tournament();t.status=from;var before=t.statusChangedAt;

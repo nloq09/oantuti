@@ -12,6 +12,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static com.rpsbattle.online.OnlineMatch.*;
 
 class UploadedBotMatchTest {
+    @Test void infrastructureFailureDoesNotDeclareTheOpponentWinner()throws Exception {
+        var clock=new OnlineMatchTest.MutableClock();var service=new OnlineMatchService(new MatchRegistry(),new GameStateMapper(),clock,30);
+        try {var room=service.create(MatchMode.HUMAN_VS_BOT,42L);room.attachBot(P1,(view,actions)->{throw new com.rpsbattle.bot.BotInfrastructureException();},"Unavailable");room.prepareBots();clock.time=clock.time.plusSeconds(1);service.tick();
+            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);while(room.infrastructureError()==null&&System.nanoTime()<deadline)Thread.sleep(10);
+            assertNotNull(room.infrastructureError());assertFalse(room.state().isFinished());assertNull(room.botError());assertTrue(room.pendingBotTurn().isEmpty());
+        }finally{service.shutdown();}
+    }
     OnlineMatch room(OnlineMatchTest.MutableClock clock) {
         return new OnlineMatch("BOTS", MatchMode.HUMAN_VS_HUMAN, 42, clock, Duration.ofSeconds(30));
     }

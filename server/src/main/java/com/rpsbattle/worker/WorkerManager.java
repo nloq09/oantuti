@@ -44,23 +44,25 @@ public class WorkerManager {
     private void launch(MatchExecutionRequest request) {
         var t=request.tournament(); var m=request.match();
         synchronized(t) {
-            if (t.status!=TournamentStatus.RUNNING || m.status!=TournamentMatch.Status.PENDING || draining()) {
+            if (t.status!=TournamentStatus.RUNNING || m.status!=TournamentMatch.Status.PENDING || t.matches.stream().noneMatch(entry->entry==m) || draining()) {
                 complete(m.id); return;
             }
             if(t.matches.stream().filter(game->game.status==TournamentMatch.Status.RUNNING).count()>=t.maxConcurrentMatches) {complete(m.id);return;}
+            if(!t.operations.active(m.participantA.participantId())||!t.operations.active(m.participantB.participantId())||(!t.operations.autoAdvanceRounds()&&m.round>t.operations.releasedRound())||t.operations.reviews().containsKey(m.id)){complete(m.id);return;}
             try {
                 var result=Objects.requireNonNull(worker.execute(request));
                 m.onlineMatchId=result.roomId();m.historyMatchId=result.historyId();
                 m.status=TournamentMatch.Status.RUNNING;if(m.startedAt==null)m.startedAt=Instant.now();
                 org.slf4j.LoggerFactory.getLogger(getClass()).info("event=match_started tournamentId={} matchId={} botId={} opponentBotId={}",t.id,m.id,m.participantA.botId(),m.participantB.botId());
-                tournaments.changed(t);
+                if(t.operations.audit().stream().noneMatch(e->e.type().equals("ROUND_STARTED")&&Integer.toString(m.round).equals(e.target())))com.rpsbattle.tournament.TournamentAudit.append(t,"ROUND_STARTED",null,Integer.toString(m.round),null,null,null);
+                com.rpsbattle.tournament.TournamentAudit.append(t,"MATCH_STARTED",null,m.id,null,null,com.rpsbattle.tournament.TournamentAudit.result(m));tournaments.changed(t);
             } catch (RuntimeException failure) { fail(request,"MATCH_START_FAILED"); }
         }
     }
     private void fail(MatchExecutionRequest request, String code) {
         synchronized(request.tournament()) {
             var m=request.match(); m.status=TournamentMatch.Status.FAILED; m.failure=code; m.finishedAt=Instant.now();
-            tournaments.changed(request.tournament()); complete(m.id);
+            com.rpsbattle.tournament.TournamentAudit.append(request.tournament(),"MATCH_ERROR",null,m.id,code,null,com.rpsbattle.tournament.TournamentAudit.result(m));tournaments.changed(request.tournament()); complete(m.id);
         }
     }
     public synchronized void complete(String id) { active.remove(id); queue.release(List.of(id)); }

@@ -113,4 +113,5 @@ public final class LocalProcessRunner implements BotProcess {
         }
         io.shutdownNow();
     }
+    public synchronized java.util.OptionalInt exitCode(){return process==null||process.isAlive()?java.util.OptionalInt.empty():java.util.OptionalInt.of(process.exitValue());}
 }

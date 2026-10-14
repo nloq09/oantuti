@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
-@RestControllerAdvice(assignableTypes={AuthController.class,AccountController.class,AdminController.class,AccountBotController.class,BotUploadController.class,MatchController.class,TournamentController.class,AccountHistoryController.class,ReplayWebController.class})
+@RestControllerAdvice(basePackages="com.rpsbattle.api.controller")
 public class AuthErrorHandler {
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<Map<String,String>> auth(AuthException error) {
@@ -29,4 +29,6 @@ public class AuthErrorHandler {
     public ResponseEntity<Map<String,String>> database(org.springframework.dao.DataAccessException error) {
         return ResponseEntity.status(503).body(Map.of("error","DATABASE_UNAVAILABLE"));
     }
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String,String>> conflict(org.springframework.dao.OptimisticLockingFailureException error){return ResponseEntity.status(409).body(Map.of("error","RESOURCE_CONFLICT"));}
 }

@@ -37,6 +37,7 @@ public class ExecutionQueue {
     }
     public synchronized void drain() { accepting = false; pending.clear(); reservations.clear(); offered.clear(); }
     public synchronized boolean accepting() { return accepting; }
+    public synchronized Set<String> reservedIds(){return Set.copyOf(reservations);}
     public synchronized int size() { return reservations.size(); }
     public int capacity() { return capacity; }
 }

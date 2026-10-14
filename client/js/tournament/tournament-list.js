@@ -3,7 +3,8 @@ import {
   tournamentRequest,
   createTournament,
   addParticipant,
-} from "./tournament-api.js?v=rounds-v4";
+} from "./tournament-api.js?v=final-v5";
+import { filterTournaments, tournamentGroup } from "./tournament-list-model.js";
 import { formatLabel } from "./bracket-renderer.js";
 import { statusLabels } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
@@ -27,13 +28,15 @@ for (const bot of bots) {
   options.append(row);
 }
 document.querySelector("#bot-empty").hidden = bots.length > 0;
+let renderVersion=0;
 let stopped = false,
   busy = false,
   timer;
 async function load() {
+  const requestVersion=++renderVersion;clearTimeout(timer);
   try {
     const tournaments = await tournamentRequest();
-    if (stopped) return;
+    if (stopped||requestVersion!==renderVersion) return;
     const list = document.querySelector("#tournament-list");
     list.replaceChildren();
     if (!tournaments.length) {
@@ -42,7 +45,13 @@ async function load() {
       empty.textContent = "Chưa có giải đấu. Hãy tạo giải đấu đầu tiên.";
       list.append(empty);
     }
-    for (const t of tournaments) {
+    const ownerFilter=document.querySelector("#filter-owner"),previous=ownerFilter.value;
+    const owners=[...new Map(tournaments.filter(t=>t.ownerUserId).map(t=>[t.ownerUserId,t.ownerName||t.ownerUserId])).entries()];
+    if(ownerFilter.dataset.owners!==JSON.stringify(owners)){ownerFilter.dataset.owners=JSON.stringify(owners);ownerFilter.replaceChildren(new Option("Tất cả",""),...owners.map(([id,name])=>new Option(name,id)));ownerFilter.value=previous;}
+    const filtered=filterTournaments(tournaments,{format:document.querySelector("#filter-format").value,status:document.querySelector("#filter-status").value,owner:ownerFilter.value});
+    let group;
+    for (const t of filtered.sort((a,b)=>tournamentGroup(a.status).localeCompare(tournamentGroup(b.status),"vi"))) {
+      const groupName=tournamentGroup(t.status);if(group!==groupName){group=groupName;const heading=document.createElement("h3");heading.textContent=groupName;list.append(heading);}
       const card = document.createElement("article");
       card.className = "panel tournament-card";
       const name = document.createElement("h3");
@@ -60,9 +69,9 @@ async function load() {
       list.append(card);
     }
   } catch (error) {
-    if (!stopped) toast(error.message, true);
+    if (!stopped&&requestVersion===renderVersion) toast(error.message, true);
   }
-  if (!stopped) timer = setTimeout(load, 5000);
+  if (!stopped&&requestVersion===renderVersion) timer = setTimeout(load, 5000);
 }
 document.querySelector("#create-tournament").onsubmit = async (event) => {
   event.preventDefault();
@@ -110,3 +119,5 @@ window.addEventListener("pagehide", () => {
   clearTimeout(timer);
 });
 load();
+
+for(const id of ['filter-format','filter-status','filter-owner'])document.querySelector('#'+id).onchange=load;

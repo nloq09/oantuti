@@ -11,7 +11,8 @@ import {
   registerBot, approveRegistration, rejectRegistration, withdrawRegistration, checkInRegistration, closeCheckIn,
   TournamentStream,
   canManageTournament,
-} from "./tournament-api.js?v=rounds-v4";
+} from "./tournament-api.js?v=final-v5";
+import { bindAdministration, renderDashboard, tournamentNotification } from "./tournament-dashboard.js";
 import { formatLabel, roundLabel, tieBreakLabels, renderBracket } from "./bracket-renderer.js";
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
@@ -176,7 +177,7 @@ function render(t) {
     }
     matches.append(card);
   }
-  renderRanking(document.querySelector("#ranking-rows"), t.ranking);
+  renderRanking(document.querySelector("#ranking-rows"), t.ranking);renderDashboard(t,owner);
 }
 document.querySelectorAll("[data-tab]").forEach(
   (button) =>
@@ -229,7 +230,7 @@ else {
   getTournament(id)
     .then(render)
     .catch((error) => toast(error.message, true));
-  const stream = new TournamentStream(id, render);
+  const stream = new TournamentStream(id, render, () => {}, tournamentNotification);
   window.addEventListener("pagehide", () => stream.close());
 }
 
@@ -275,6 +276,7 @@ document.querySelector("#seeding-form").onsubmit=event=>{
   action(()=>configureSeeding(id,{strategy,seed,manualSeeds:strategy==="MANUAL"?manualSeeds:null}));
 };
 
+bindAdministration(()=>currentTournament,action);
 const ruleInputs=document.querySelector("#tie-break-inputs");
 for(let index=0;index<4;index++) {
   const label=document.createElement("label");label.textContent=`Tiêu chí phụ ${index+1}`;

@@ -49,10 +49,10 @@ export const closeCheckIn = id => tournamentRequest("/" + encodeURIComponent(id)
 export const configureRules = (id, settings) => tournamentRequest("/" + encodeURIComponent(id) + "/rules", settings);
 export const configureSeeding = (id, settings) => tournamentRequest("/" + encodeURIComponent(id) + "/seeding", settings);
 export class TournamentStream {
-  constructor(id, update, status = () => {}) {
+  constructor(id, update, status = () => {}, notification = () => {}) {
     this.id = id;
     this.update = update;
-    this.status = status;
+    this.status = status;this.notification=notification;this.lastEvent=0;
     this.stopped = false;
     this.attempt = 0;
     this.connect();
@@ -73,6 +73,8 @@ export class TournamentStream {
           this.attempt = 0;
           this.status("connected");
           this.update(message.payload.tournament);
+        } else if(message.payload?.event) {
+          if(message.payload.event.sequence>this.lastEvent){this.lastEvent=message.payload.event.sequence;this.notification(message.payload.event);}
         } else if (message.type === "ACTION_REJECTED") {
           this.status(message.payload.error);
           this.close();
@@ -98,3 +100,8 @@ export class TournamentStream {
     this.socket?.close();
   }
 }
+
+export const tournamentControl=(id,action,revision,reason)=>tournamentRequest(`/${encodeURIComponent(id)}/control/${encodeURIComponent(action)}`,{revision,reason});
+export const tournamentRoundPolicy=(id,revision,autoAdvanceRounds)=>tournamentRequest(`/${encodeURIComponent(id)}/round-policy`,{revision,autoAdvanceRounds});
+export const tournamentParticipantStatus=(id,participantId,revision,status,reason)=>tournamentRequest(`/${encodeURIComponent(id)}/participants/${encodeURIComponent(participantId)}/status`,{revision,status,reason});
+export const tournamentMatchOperation=(id,matchId,operation,body)=>tournamentRequest(`/${encodeURIComponent(id)}/matches/${encodeURIComponent(matchId)}/${encodeURIComponent(operation)}`,body);

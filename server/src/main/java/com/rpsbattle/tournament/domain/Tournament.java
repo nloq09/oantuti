@@ -15,6 +15,7 @@ public final class Tournament {
     public final List<TournamentRound> rounds = new ArrayList<>();
     public final List<BracketNode> bracket = new ArrayList<>();
     public final List<TournamentStage> stages = new ArrayList<>();
+    public TournamentOperations operations=TournamentOperations.defaults();
     public int maxConcurrentMatches=4;
     public List<com.rpsbattle.tournament.ranking.TieBreak> tieBreakOrder=List.of(
         com.rpsbattle.tournament.ranking.TieBreak.POINTS,com.rpsbattle.tournament.ranking.TieBreak.WINS,

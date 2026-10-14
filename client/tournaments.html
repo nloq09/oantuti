@@ -43,12 +43,12 @@
           </form>
         </section>
         <section>
-          <h2>Các giải đấu</h2>
+          <h2>Các giải đấu</h2><div class="tournament-filters"><label for="filter-format">Thể thức</label><select id="filter-format"><option value="">Tất cả</option><option value="ROUND_ROBIN">Vòng tròn</option><option value="SINGLE_ELIMINATION">Loại trực tiếp</option></select><label for="filter-status">Trạng thái</label><select id="filter-status"><option value="">Tất cả</option><option value="REGISTRATION">Mở đăng ký</option><option value="RUNNING">Đang chạy</option><option value="PAUSED">Tạm dừng</option><option value="RECOVERY_REQUIRED">Cần khôi phục</option><option value="FINISHED">Hoàn thành</option></select><label for="filter-owner">Chủ giải</label><select id="filter-owner"><option value="">Tất cả</option></select></div>
           <div id="tournament-list" aria-live="polite"></div>
         </section>
       </div>
     </main>
-    <script type="module" src="/js/tournament/tournament-list.js?v=rounds-v4"></script>
+    <script type="module" src="/js/tournament/tournament-list.js?v=final-v5"></script>
     <script type="module" src="/js/pages/account-nav.js"></script>
   </body>
 </html>

@@ -44,6 +44,7 @@ public class OnlineMatchService {
         this.turnTime = Duration.ofSeconds(seconds);
     }
 
+    public Map<String,Object> ruleConfiguration(){var rules=new com.rpsbattle.rules.online.OnlineRuleSet(OnlineMatch.P1,OnlineMatch.P2);var board=com.rpsbattle.game.board.Board.defaultBoard();return Map.of("ruleSet",rules.name(),"turnSeconds",turnTime.toSeconds(),"maxTurns",rules.maxTurns(),"pieceQuota",6,"boardRows",board.rows(),"boardColumns",board.cols());}
     public OnlineMatch create(MatchMode mode, Long seed) {
         if(draining)throw new DemoRequestException("SERVER_BUSY");
         var match = new OnlineMatch(UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT),
@@ -119,6 +120,7 @@ public class OnlineMatchService {
                         try {
                             action = turn.agent().chooseAction(new PlayerView(turn.state(), turn.player()), turn.actions());
                         } catch (RuntimeException error) {
+                            if(error instanceof com.rpsbattle.bot.BotInfrastructureException){room.infrastructureFailure();return null;}
                             if(metrics!=null)metrics.botFailure(error);
                             failed = true;
                         }

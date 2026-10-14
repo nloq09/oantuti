@@ -15,7 +15,7 @@ public class RankingService {
                         (m.participantA.participantId().equals(p.participantId())||m.participantB.participantId().equals(p.participantId()))) {
                     boolean a=m.participantA.participantId().equals(p.participantId());
                     played++;pieces+=a?m.remainingA:m.remainingB;moves+=a?m.moveCountA:m.moveCountB;nanos+=a?m.moveNanosA:m.moveNanosB;
-                    if(m.winnerParticipantId==null) draws++;
+                    if("DOUBLE_FORFEIT".equals(m.decisionReason))losses++;else if(m.winnerParticipantId==null) draws++;
                     else if(m.winnerParticipantId.equals(p.participantId())) wins++; else losses++;
                 }
                 rows.add(new RankingEntry(0,p.participantId(),p.displayName(),played,wins,draws,losses,
@@ -32,6 +32,7 @@ public class RankingService {
                 }
                 ordered=ordered.stream().sorted(Comparator.comparingInt((RankingEntry r)->progress.getOrDefault(r.participantId(),0)).reversed()).toList();
             }
+            ordered=ordered.stream().sorted(Comparator.comparing((RankingEntry r)->!t.operations.active(r.participantId()))).toList();
             var result=new ArrayList<RankingEntry>();
             for(var r:ordered) result.add(new RankingEntry(result.size()+1,r.participantId(),r.displayName(),r.played(),r.wins(),r.draws(),r.losses(),r.points(),r.piecesRemaining(),r.averageMoveMillis()));
             return List.copyOf(result);

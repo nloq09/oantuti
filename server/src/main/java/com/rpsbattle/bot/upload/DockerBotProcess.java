@@ -55,12 +55,18 @@ public final class DockerBotProcess implements BotProcess {
     }
 
     public String exchange(String request, Duration timeout) {
+        var current=runner();
         try {
-            return runner().exchange(request, first ? Duration.ofSeconds(25) : timeout);
+            return current.exchange(request, first ? Duration.ofSeconds(25) : timeout);
+        } catch(BotProtocolException failure) {
+            if(infrastructureFailure(current.exitCode().orElse(-1),daemonAvailable()))throw new BotInfrastructureException();
+            throw failure;
         } finally {
             first = false;
         }
     }
+    public static boolean infrastructureFailure(int exitCode,boolean daemonAvailable){return !daemonAvailable||exitCode==125||exitCode==126||exitCode==127;}
+    private static boolean daemonAvailable(){Process process=null;try{process=new ProcessBuilder("docker","info","--format","{{.OSType}}").redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start();return process.waitFor(3,TimeUnit.SECONDS)&&process.exitValue()==0;}catch(Exception e){if(e instanceof InterruptedException)Thread.currentThread().interrupt();return false;}finally{if(process!=null&&process.isAlive())process.destroyForcibly();}}
 
     public synchronized boolean isAlive() {
         return transport!=null && transport.isAlive();

@@ -154,3 +154,13 @@ th {
 #competition-rules input { max-width:12rem; }
 #match-list > h3,.round-bye { grid-column:1/-1; }
 @media(max-width:600px) { .tie-break-inputs { grid-template-columns:1fr; } .bracket-round { flex-basis:220px; } }
+
+.dashboard-cards {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:1rem;margin:1rem 0;}
+.audit-list {max-height:28rem;overflow:auto;padding-left:1.5rem;overflow-wrap:anywhere;}
+.audit-list li {padding:.5rem 0;border-bottom:1px solid #456882;}
+#rules-snapshot {white-space:pre-wrap;overflow-wrap:anywhere;}
+#admin-reason {width:100%;resize:vertical;}
+#admin-tab h3 {margin-top:1.5rem;}
+.participant-row {flex-wrap:wrap;} .participant-row small {flex-basis:100%;}
+.tab-bar {flex-wrap:wrap;gap:.5rem;}
+.tournament-filters {margin-bottom:1rem;}

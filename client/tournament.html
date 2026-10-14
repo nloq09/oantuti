@@ -26,27 +26,21 @@
       <div id="champion" class="panel champion" hidden></div>
       <nav class="actions tab-bar" aria-label="Nội dung giải đấu">
         <button data-tab="overview" aria-pressed="true">Tổng quan</button
+        ><button data-tab="participants-tab" aria-pressed="false">Người tham gia</button
         ><button data-tab="matches" aria-pressed="false">Các trận</button
         ><button data-tab="bracket" aria-pressed="false">Bracket</button
-        ><button data-tab="ranking" aria-pressed="false">Xếp hạng</button>
+        ><button data-tab="ranking" aria-pressed="false">Xếp hạng</button
+        ><button data-tab="replays-tab" aria-pressed="false">Replay</button
+        ><button data-tab="admin-tab" aria-pressed="false" hidden>Quản trị</button>
       </nav>
       <section id="overview" class="panel">
         <h2 id="format-heading">Tổng quan</h2><p id="competition-policy"></p>
         <div id="counts" class="stats-grid"></div>
-        <h3>Bot tham gia</h3>
+        <p id="tournament-phase"></p><div id="live-matches" class="dashboard-cards"></div>
+        <a id="export-tournament" class="button">Xuất JSON</a><button id="load-report">Xem báo cáo giải</button><div id="tournament-report"></div>
+      </section>
+      <section id="participants-tab" class="panel" hidden>        <h3>Bot tham gia</h3>
         <div id="participants"></div>
-        <section id="competition-rules" hidden><h3>Luật giải đấu</h3><form id="rules-form">
-          <label for="rule-concurrency">Số trận chạy đồng thời (1–4)</label><input id="rule-concurrency" type="number" min="1" max="4" required />
-          <p>Điểm luôn được xét trước. Chọn các tiêu chí phụ theo thứ tự ưu tiên; mỗi tiêu chí chỉ dùng một lần.</p>
-          <div id="tie-break-inputs" class="tie-break-inputs"></div><button id="save-rules">Lưu luật giải</button>
-          <p>Thắng 3, hòa 1, thua 0 điểm. BYE và trận lỗi hạ tầng không tính điểm. Luật được khóa khi giải sẵn sàng.</p>
-        </form></section>
-        <section id="seeding" hidden><h3>Xếp hạt giống</h3><form id="seeding-form">
-          <label for="seeding-strategy">Cách xếp</label><select id="seeding-strategy"><option value="RANDOM">Ngẫu nhiên</option><option value="MANUAL">Thủ công</option><option value="RANKING">Theo thành tích</option></select>
-          <label for="seeding-seed">Seed ngẫu nhiên</label><input id="seeding-seed" type="text" inputmode="numeric" maxlength="20" required />
-          <div id="manual-seeds" hidden></div><button id="save-seeding">Lưu hạt giống</button>
-          <p>Thứ tự được khóa khi giải sẵn sàng. Thành tích lấy từ các giải đã kết thúc; bot mới được xếp sau.</p>
-        </form></section>
         <section aria-label="Đăng ký tham gia"><h3>Đơn đăng ký</h3><div id="registration-list"></div></section>
         <div id="registration" hidden>
         <h3>Đăng ký bot của bạn</h3>
@@ -67,14 +61,39 @@
           </form>
         </details>
         </div>
-        <div class="actions" aria-label="Quản lý giải đấu">
+</section>
+      <section id="admin-tab" class="panel" hidden><h2>Quản trị giải đấu</h2>        <div class="actions" aria-label="Quản lý giải đấu">
           <button id="open-registration" hidden>Mở đăng ký</button>
           <button id="close-registration" hidden>Khóa đăng ký</button>
           <button id="close-check-in" hidden>Hoàn tất check-in</button>
           <button id="start" class="primary" hidden>Bắt đầu nhanh</button>
           <button id="cancel" class="danger" hidden>Hủy giải</button>
         </div>
+        <section id="competition-rules" hidden><h3>Luật giải đấu</h3><form id="rules-form">
+          <label for="rule-concurrency">Số trận chạy đồng thời (1–4)</label><input id="rule-concurrency" type="number" min="1" max="4" required />
+          <p>Điểm luôn được xét trước. Chọn các tiêu chí phụ theo thứ tự ưu tiên; mỗi tiêu chí chỉ dùng một lần.</p>
+          <div id="tie-break-inputs" class="tie-break-inputs"></div><button id="save-rules">Lưu luật giải</button>
+          <p>Thắng 3, hòa 1, thua 0 điểm. BYE và trận lỗi hạ tầng không tính điểm. Luật được khóa khi giải sẵn sàng.</p>
+        </form></section>
+        <section id="seeding" hidden><h3>Xếp hạt giống</h3><form id="seeding-form">
+          <label for="seeding-strategy">Cách xếp</label><select id="seeding-strategy"><option value="RANDOM">Ngẫu nhiên</option><option value="MANUAL">Thủ công</option><option value="RANKING">Theo thành tích</option></select>
+          <label for="seeding-seed">Seed ngẫu nhiên</label><input id="seeding-seed" type="text" inputmode="numeric" maxlength="20" required />
+          <div id="manual-seeds" hidden></div><button id="save-seeding">Lưu hạt giống</button>
+          <p>Thứ tự được khóa khi giải sẵn sàng. Thành tích lấy từ các giải đã kết thúc; bot mới được xếp sau.</p>
+        </form></section>
+
+        <section><h3>Điều khiển và xử lý kết quả</h3>
+          <p>Pause dừng mở trận mới, trận đang chạy được kết thúc. Hủy giải dừng các phòng đang chạy. Replay giữ sự kiện gốc; quyết định sửa kết quả được ghi riêng trong audit.</p>
+          <label><input id="auto-rounds" type="checkbox" checked /> Tự chuyển vòng</label><button id="save-round-policy">Lưu cách chuyển vòng</button>
+          <div class="actions"><button data-admin-control="pause">Tạm dừng</button><button data-admin-control="resume">Tiếp tục</button><button data-admin-control="next-round">Mở vòng tiếp</button><button data-admin-control="finish">Hoàn tất giải</button></div>
+          <label for="admin-reason">Lý do (bắt buộc khi xử lý bot hoặc kết quả)</label><textarea id="admin-reason" maxlength="500" rows="2"></textarea>
+          <label for="admin-participant">Bot cần xử lý</label><select id="admin-participant"></select><div class="actions"><button data-participant-status="WITHDRAWN">Xử bỏ cuộc</button><button data-participant-status="DISQUALIFIED" class="danger">Loại bot</button></div>
+          <label for="admin-match">Review trận</label><select id="admin-match"></select><p id="review-details"></p><details><summary>Nhật ký xử lý trận</summary><ol id="match-execution-log"></ol></details>
+          <div class="actions"><button id="request-review">Đánh dấu review</button><button id="keep-result">Giữ kết quả</button><button id="retry-match">Chạy lại trận lỗi</button></div>
+          <label for="override-winner">Quyết định kết quả</label><select id="override-winner"></select><button id="override-result" class="danger">Sửa kết quả có audit</button>
+        </section><h3>Luật đã khóa</h3><pre id="rules-snapshot"></pre><h3>Audit</h3><ol id="tournament-audit" class="audit-list"></ol>
       </section>
+      <section id="replays-tab" hidden><h2>Replay các trận</h2><div id="replay-list" class="dashboard-cards"></div></section>
       <section id="matches" hidden><div id="match-list"></div></section>
       <section id="bracket" hidden><div id="bracket-tree" class="bracket-tree"></div></section>
       <section id="ranking" class="panel" hidden>
@@ -101,7 +120,7 @@
     </main>
     <script
       type="module"
-      src="/js/tournament/tournament-detail.js?v=rounds-v4"
+      src="/js/tournament/tournament-detail.js?v=final-v5"
     ></script>
     <script type="module" src="/js/pages/account-nav.js"></script>
   </body>

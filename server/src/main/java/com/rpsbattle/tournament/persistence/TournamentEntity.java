@@ -6,6 +6,7 @@ import java.util.UUID;
 @Entity @Table(name="tournaments")
 public class TournamentEntity {
     @Id UUID id;
+    @Version @Column(name="lock_version",nullable=false) long lockVersion;
     @Column(name="owner_user_id",nullable=false) UUID ownerUserId;
     @Column(nullable=false,length=80) String name;
     @Enumerated(EnumType.STRING) @Column(nullable=false,length=24) TournamentFormat format;

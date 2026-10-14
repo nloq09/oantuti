@@ -12,7 +12,7 @@ public class TournamentController {
     public TournamentController(TournamentService service,OwnedTournamentService owned) {this.service=service;this.owned=owned;}
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     public Map<String,Object> create(Authentication auth,@RequestBody Create request) {return service.view(owned.create(auth,request.name(),request.format(),request.visibility(),Boolean.TRUE.equals(request.checkInRequired()),request.maxParticipants(),request.maxConcurrentMatches(),request.tieBreakOrder()));}
-    @GetMapping public List<Map<String,Object>> list() {owned.flush();return service.list();}
+    @GetMapping public List<Map<String,Object>> list(@RequestParam(required=false) TournamentFormat format,@RequestParam(required=false) TournamentStatus status,@RequestParam(required=false) UUID owner) {owned.flush();return service.list().stream().filter(t->(format==null||format==t.get("format"))&&(status==null||status==t.get("status"))&&(owner==null||owner.equals(t.get("ownerUserId")))).toList();}
     @GetMapping("/{id}") public Map<String,Object> detail(@PathVariable String id) {owned.flush();return service.view(service.find(id));}
     @PostMapping("/{id}/participants") public Map<String,Object> add(Authentication auth,@PathVariable String id,@RequestBody Participant p) {owned.add(auth,id,p.botId(),p.displayName(),p.seed());return detail(id);}
     @DeleteMapping("/{id}/participants/{participantId}") public Map<String,Object> remove(Authentication auth,@PathVariable String id,@PathVariable String participantId) {owned.remove(auth,id,participantId);return detail(id);}

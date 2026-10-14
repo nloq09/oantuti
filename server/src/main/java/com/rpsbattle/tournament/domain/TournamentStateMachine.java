@@ -13,7 +13,7 @@ public final class TournamentStateMachine {
         TournamentStatus.READY,Set.of(TournamentStatus.RUNNING,TournamentStatus.CANCELLED,TournamentStatus.RECOVERY_REQUIRED),
         TournamentStatus.RUNNING,Set.of(TournamentStatus.PAUSED,TournamentStatus.FINISHED,TournamentStatus.CANCELLED,TournamentStatus.RECOVERY_REQUIRED),
         TournamentStatus.PAUSED,Set.of(TournamentStatus.RUNNING,TournamentStatus.FINISHED,TournamentStatus.CANCELLED,TournamentStatus.RECOVERY_REQUIRED),
-        TournamentStatus.RECOVERY_REQUIRED,Set.of(TournamentStatus.CANCELLED,TournamentStatus.FINISHED),
+        TournamentStatus.RECOVERY_REQUIRED,Set.of(TournamentStatus.CANCELLED,TournamentStatus.FINISHED,TournamentStatus.RUNNING),
         TournamentStatus.FINISHED,Set.of(),TournamentStatus.CANCELLED,Set.of());
     private TournamentStateMachine() {}
     public static Set<TournamentStatus> next(TournamentStatus from){return NEXT.getOrDefault(from,Set.of());}

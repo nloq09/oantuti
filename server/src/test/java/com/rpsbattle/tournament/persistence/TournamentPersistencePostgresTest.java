@@ -124,6 +124,18 @@ class TournamentPersistencePostgresTest {
         for(int i=0;i<2;i++) {var loaded=restored().findById(t.id).orElseThrow();assertThat(loaded.bracket).isEqualTo(t.bracket);assertThat(loaded.rounds).isEqualTo(t.rounds);assertThat(loaded.maxConcurrentMatches).isEqualTo(1);assertThat(loaded.matches).hasSize(2);assertThat(loaded.tieBreakOrder).isEqualTo(t.tieBreakOrder);
             assertThat(loaded.matches).allMatch(m->m.scheduledAt!=null&&m.moveCountA==2&&m.moveNanosA==40000000);assertThat(rankings.rank(loaded)).isEqualTo(rankings.rank(t));}
     }
+    @Test void administrativeStateAndAppendOnlyAuditSurviveRestoreAndRejectConflictingRevision() throws Exception {
+        var owner=user();var p=participant(owner,"Audit A");var q=participant(owner,"Audit B");var t=new Tournament(UUID.randomUUID().toString(),"Audit",TournamentFormat.ROUND_ROBIN,Instant.now());t.ownerUserId=owner.id().value();t.status=TournamentStatus.FINISHED;
+        for(var value:List.of(p,q))t.participants.add(new TournamentParticipant(value.id().toString(),value.botId().toString(),"unused",value.displayName(),value.seed(),value.ownerUserId()));
+        t.operations=t.operations.rounds(false,2).participant(p.id().toString(),ParticipantStatus.DISQUALIFIED).rules(Map.of("ruleSet","classic-online-v1","turnSeconds",30L));
+        TournamentAudit.append(t,"PARTICIPANT_DISQUALIFIED",owner.id().value(),p.id().toString(),"reason","ACTIVE","DISQUALIFIED");t.revision=1;
+        var coordinator=new TournamentPersistenceCoordinator(repository,new TournamentRegistry(),tournaments,historyCoordinator,artifacts);var first=coordinator.snapshot(t);repository.save(first);repository.save(first);
+        TournamentAudit.append(t,"RESULT_OVERRIDDEN",owner.id().value(),"match","reviewed","DRAW","WIN");
+        assertThatThrownBy(()->repository.save(coordinator.snapshot(t))).isInstanceOf(org.springframework.dao.OptimisticLockingFailureException.class);
+        t.revision++;repository.save(coordinator.snapshot(t));var restored=restored().findById(t.id).orElseThrow();assertThat(restored.operations.audit()).hasSize(2);assertThat(restored.operations.participants()).containsEntry(p.id().toString(),ParticipantStatus.DISQUALIFIED);assertThat(restored.operations.autoAdvanceRounds()).isFalse();
+        t.operations=TournamentOperations.defaults();t.revision++;assertThatThrownBy(()->repository.save(coordinator.snapshot(t))).isInstanceOf(RuntimeException.class);assertThat(restored().findById(t.id).orElseThrow().operations.audit()).hasSize(2);
+        try(var c=database.getConnection();var sql=c.createStatement();var rows=sql.executeQuery("SELECT COUNT(*) FROM tournament_audit_events WHERE tournament_id='"+t.id+"'")){rows.next();assertThat(rows.getInt(1)).isEqualTo(2);}
+    }
     @Test void existingPrivateDatabaseRowsAreNeverRestoredAsPublic() throws Exception {
         var owner=user();var id=UUID.randomUUID();
         try(var c=database.getConnection();var sql=c.prepareStatement("INSERT INTO tournaments(id,owner_user_id,name,format,status,visibility) VALUES (?,?,'Private','ROUND_ROBIN','DRAFT','PRIVATE')")) {sql.setObject(1,id);sql.setObject(2,owner.id().value());sql.executeUpdate();}
