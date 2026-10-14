@@ -18,6 +18,10 @@ public class OwnedBotService {
     private final BotRepository bots;
     private final AccountAuthorizationService accounts;
     private final BotUploadService artifacts;
+    private com.rpsbattle.admin.BotAdministrationPolicy adminPolicy;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void adminPolicy(com.rpsbattle.admin.BotAdministrationPolicy policy){this.adminPolicy=policy;}
+    private void enabled(String id){if(adminPolicy!=null)adminPolicy.requireEnabled(id);}
     public OwnedBotService(BotRepository bots,AccountAuthorizationService accounts,BotUploadService artifacts) {
         this.bots=bots;this.accounts=accounts;this.artifacts=artifacts;
     }
@@ -54,7 +58,7 @@ public class OwnedBotService {
     }
     /** Internal capability is retrieved on the server, never accepted from clients as authority. */
     public BotUploadService.Upload execution(Authentication auth,String id) {
-        var bot=require(auth,id);var stored=artifacts.stored(id);
+        var bot=require(auth,id);enabled(id);var stored=artifacts.stored(id);
         return new BotUploadService.Upload(id,bot.name(),bot.language(),stored.token());
     }
     public BotAgent agent(Authentication auth,String id) {var bot=execution(auth,id);return artifacts.agent(id,bot.token());}
@@ -67,6 +71,7 @@ public class OwnedBotService {
         accounts.requireUser(auth);return registrationMetadata(id);
     }
     private BotMetadata registrationMetadata(String id) {
+        enabled(id);
         var bot=bots.lock(uuid(id)).orElseThrow(()->new AuthException("BOT_NOT_FOUND",404));
         if(bot.status()!=BotMetadata.Status.UPLOADED && bot.status()!=BotMetadata.Status.READY)throw new AuthException("BOT_NOT_READY",400);
         var upload=artifacts.stored(id);

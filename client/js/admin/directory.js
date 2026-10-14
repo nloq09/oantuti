@@ -2,19 +2,20 @@ import { node, link, date, message } from "./admin-shell.js";
 import { adminRequest } from "./admin-api.js";
 import { table, badge, details, confirmAction } from "./components.js";
 const userColumns=[["Người dùng","display_name"],["Username","username"],["Email","email"],["Role","role",badge],["Trạng thái","status",badge],["Trận","matches"],["Bot","bots"],["Ngày tạo","created_at",date],["Đăng nhập gần nhất","last_login_at",date]];
+const botColumns=[["Bot","name"],["Chủ sở hữu","owner"],["Ngôn ngữ","language"],["Build","status",badge],["Quản trị","admin_disabled",value=>badge(value?"DISABLED":"ACTIVE")],["Ngày tạo","created_at",date],["Dùng gần nhất","last_used",date],["Trận có lỗi","failures"]];
 function filters(kind,initial){
   const form=node("form",undefined,"filters");
-  const fields=kind==="users"?[["Tìm username, email, tên","q"],["Role","role",["USER","ADMIN"]],["Trạng thái","status",["ACTIVE","DISABLED"]]]:[];
+  const fields=kind==="users"?[["Tìm username, email, tên","q"],["Role","role",["USER","ADMIN"]],["Trạng thái","status",["ACTIVE","DISABLED"]]]:[["Tìm bot / chủ sở hữu","q"],["Ngôn ngữ","language",["PYTHON","CPP","JAVA","JAR"]],["Build state","status",["UPLOADED","READY","BUILD_ERROR","DELETED"]],["Owner ID","owner"],["Có lỗi","errors",["true"]],["Đã khóa","disabled",["true"]]];
   fields.push(["Từ ngày (UTC)","from",null,"date"],["Đến ngày (UTC)","to",null,"date"]);
   for(const [title,key,choices,type] of fields){const label=node("label",title),input=node(choices?"select":"input");input.name=key;if(choices){input.append(new Option("Tất cả",""));for(const choice of choices)input.append(new Option(choice,choice));}else input.type=type??"search";input.value=initial.get(key)??"";label.append(input);form.append(label);}
   const button=node("button","Lọc"),reset=node("button","Xóa bộ lọc");reset.type="reset";form.append(button,reset);return form;
 }
 async function list(kind,root){
   let params=new URLSearchParams(location.search),page=Number(params.get("page"))||0,revision=0;
-  root.replaceChildren(node("h1","Người dùng"));const form=filters(kind,params),result=node("section",undefined,"panel");root.append(form,result);
+  root.replaceChildren(node("h1",kind==="users"?"Người dùng":"Bot"));const form=filters(kind,params),result=node("section",undefined,"panel");root.append(form,result);
   async function load(){const request=++revision;result.setAttribute("aria-busy","true");result.replaceChildren(node("p","Đang tải…","muted"));try{
     const query=new URLSearchParams(params);query.set("page",String(page));query.set("size","20");const data=await adminRequest(kind+"?"+query);if(request!==revision)return;
-    history.replaceState(null,"",location.pathname+"?"+query);result.replaceChildren(table(userColumns,data.items,(cell,row)=>cell.append(link("Chi tiết","/admin/user-detail.html?id="+encodeURIComponent(row.id)))));
+    history.replaceState(null,"",location.pathname+"?"+query);result.replaceChildren(table(kind==="users"?userColumns:botColumns,data.items,(cell,row)=>cell.append(link("Chi tiết","/admin/"+(kind==="users"?"user":"bot")+"-detail.html?id="+encodeURIComponent(row.id)))));
     const footer=node("div",undefined,"pagination"),previous=node("button","← Trước"),next=node("button","Sau →");previous.disabled=page===0;next.disabled=(page+1)*data.size>=data.total;previous.onclick=()=>{page--;load();};next.onclick=()=>{page++;load();};footer.append(node("span",`Trang ${page+1} · ${data.total} kết quả`),previous,next);result.append(footer);
   }catch(error){if(request===revision)message(error,result);}finally{if(request===revision)result.removeAttribute("aria-busy");}}
   form.onsubmit=event=>{event.preventDefault();params=new URLSearchParams(new FormData(form));page=0;load();};form.onreset=()=>{params=new URLSearchParams();page=0;setTimeout(load,0);};await load();
@@ -31,4 +32,14 @@ async function userDetail(root){
   related(root,"20 giải gần đây",data.tournaments,[["Tên","name"],["Trạng thái","status",badge]],row=>"/tournament.html?id="+encodeURIComponent(row.id));
   related(root,"50 thao tác quản trị gần đây",data.audit,[["Thao tác","action"],["Người thực hiện","actor"],["Lý do","reason"],["Trước","before_value"],["Sau","after_value"],["Thời gian","occurred_at",date]]);
 }
-export async function mountDirectory(page,root){if(page==="users.html")return list("users",root);if(page==="user-detail.html")return userDetail(root);root.replaceChildren(node("h1","Trang chưa được triển khai"));}
+async function botDetail(root){
+  const id=new URLSearchParams(location.search).get("id");if(!id)throw new Error("Thiếu mã bot.");const data=await adminRequest("bots/"+encodeURIComponent(id));
+  root.replaceChildren(node("h1","Chi tiết bot"),link("← Danh sách","/admin/bots.html"),details("Metadata",data,botColumns),details("Artifact",data,[["ID","id"],["SHA-256","artifact_hash"],["Storage","storage_status"],["Version policy","version_policy"],["Cập nhật","updated_at",date]]));
+  root.append(link("Chủ sở hữu","/admin/user-detail.html?id="+encodeURIComponent(data.owner_user_id)));
+  const actions=node("div",undefined,"actions");if(data.status!=="DELETED")for(const [label,action] of [[data.admin_disabled?"Mở khóa bot":"Khóa bot",data.admin_disabled?"enable":"disable"],["Lưu trữ bot","archive"]]){const button=node("button",label);button.onclick=()=>confirmAction(label+" · "+data.name,async reason=>{await adminRequest("bots/"+encodeURIComponent(id)+"/"+action,{reason});await botDetail(root);});actions.append(button);}root.append(actions,node("p","Khóa bot chặn chỗ chơi và đăng ký mới. Các phiên bản đã khóa trong giải vẫn được giữ nguyên. Lưu trữ không xóa artifact/replay.","muted"));
+  related(root,"20 trận gần đây",data.recent_matches,[["ID","id"],["Trạng thái","status",badge],["Kết quả","outcome"],["Ngày","created_at",date]],row=>"/admin/match-detail.html?id="+encodeURIComponent(row.id));
+  related(root,"20 trận có lỗi gần đây",data.recent_failures,[["ID","id"],["Mã lỗi","failure"],["Trạng thái","status",badge],["Kết thúc","finished_at",date]],row=>"/admin/match-detail.html?id="+encodeURIComponent(row.id));
+  root.append(node("p","Các mã lỗi trên thuộc trận đấu, chưa quy lỗi cho riêng bot. Backend hiện chưa lưu phân loại TIMEOUT/CRASH/INVALID_OUTPUT hay metrics theo từng lần thực thi.","muted"));
+  related(root,"50 thao tác quản trị gần đây",data.audit,[["Thao tác","action"],["Người thực hiện","actor"],["Lý do","reason"],["Trước","before_value"],["Sau","after_value"],["Thời gian","occurred_at",date]]);
+}
+export async function mountDirectory(page,root){if(page==="users.html")return list("users",root);if(page==="user-detail.html")return userDetail(root);if(page==="bots.html")return list("bots",root);if(page==="bot-detail.html")return botDetail(root);root.replaceChildren(node("h1","Trang chưa được triển khai"));}

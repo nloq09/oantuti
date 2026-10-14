@@ -15,6 +15,9 @@ class AdminConsoleApiTest {
     @LocalServerPort int port;
     @Autowired ObjectMapper json;
     @Autowired UserRepository users;
+    @Autowired com.rpsbattle.bot.ownership.BotRepository bots;
+    @Autowired com.rpsbattle.admin.BotAdministrationPolicy botPolicy;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
     final String password="Admin Console Test Password";
     class Browser implements AutoCloseable {
         final HttpClient http=HttpClient.newBuilder().cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL)).build();
@@ -59,6 +62,25 @@ class AdminConsoleApiTest {
             admin.call("/api/admin/users/"+user.id()+"/enable",Map.of("reason","Review complete"),true,200);
             target.call("/api/account/profile",null,false,401);
             admin.call("/api/admin/users/"+actor.id()+"/disable",Map.of("reason","Self disable"),true,400);
+        }
+    }
+    @Test void botAdministrationIsAuditedAndBlocksNewExecutionWithoutRevealingStoragePaths()throws Exception{
+        try(var admin=new Browser();var owner=new Browser();var guest=new Browser()){
+            admin.account(true);var user=owner.account(false);var id=UUID.randomUUID();var now=java.time.Instant.now();
+            new org.springframework.transaction.support.TransactionTemplate(transactions).execute(status->bots.create(new com.rpsbattle.bot.ownership.BotMetadata(id,user.id().value(),"Console bot",com.rpsbattle.bot.upload.BotLanguage.PYTHON,"secret/source/path",com.rpsbattle.bot.ownership.BotMetadata.Status.UPLOADED,now,now)));
+            guest.call("/api/admin/bots",null,false,401);owner.call("/api/admin/bots/"+id,null,false,403);
+            var page=admin.call("/api/admin/bots?owner="+user.id()+"&language=PYTHON",null,false,200);assertThat(page.path("total").asInt()).isEqualTo(1);
+            admin.call("/api/admin/bots/"+id+"/disable",Map.of("reason","Quarantine"),false,403);
+            admin.call("/api/admin/bots/"+id+"/disable",Map.of("reason"," "),true,400);
+            var disabled=admin.call("/api/admin/bots/"+id+"/disable",Map.of("reason","Quarantine"),true,200);
+            assertThat(disabled.path("admin_disabled").asBoolean()).isTrue();assertThat(disabled.path("audit").get(0).path("reason").asText()).isEqualTo("Quarantine");
+            assertThat(disabled.toString()).doesNotContain("secret/source/path","source_path","token","password");
+            assertThatThrownBy(()->botPolicy.requireEnabled(id.toString())).isInstanceOf(com.rpsbattle.auth.AuthException.class).hasMessage("BOT_DISABLED");
+            owner.call("/api/matches",Map.of("mode","HUMAN_VS_BOT","botId",id.toString()),true,409);
+            admin.call("/api/admin/bots/"+id+"/enable",Map.of("reason","Reviewed"),true,200);botPolicy.requireEnabled(id.toString());
+            admin.call("/api/admin/bots/"+id+"/archive",Map.of("reason","Retired"),true,200);
+            assertThat(bots.find(id).orElseThrow().status()).isEqualTo(com.rpsbattle.bot.ownership.BotMetadata.Status.DELETED);
+            admin.call("/api/admin/bots/"+id+"/enable",Map.of("reason","Cannot restore"),true,409);
         }
     }
 }
