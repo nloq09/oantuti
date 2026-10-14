@@ -119,6 +119,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Chặng 7 — Nhóm 1–5:** giao diện ADMIN riêng tại `/admin/index.html`: shell/sidebar, dashboard runtime, tìm/lọc/phân trang và chi tiết user/bot/match. Khóa/mở user/bot và lưu trữ bot yêu cầu lý do, CSRF và audit V15; review/retry dùng workflow giải đấu. ADMIN có liên kết **Quản trị** trên menu tài khoản; USER không truy cập được dữ liệu admin. Đã kiểm thử 486 backend, 34 client, build bootJar và thao tác UI trên PostgreSQL thật. [Hướng dẫn, API, chính sách và giới hạn](docs/CHANG-7-NHOM-1-5-ADMIN.md), [yêu cầu gốc](docs/CHANG-7-ADMIN-UI-PROMPT.md).
 
+ADMIN đăng nhập vào thẳng khu quản trị, dùng giao diện lâu đài/viền vàng giống game và không có menu vào chơi. Replay và xem trực tiếp chỉ đọc cũng nằm trong shell ADMIN. USER tiếp tục sử dụng giao diện game; bản điều chỉnh này đã qua 35 test client và 11 test hồi quy login/account/admin.
+
 Để chạy bộ production, copy `infra/.env.production.example` sang `.env.production`, điền domain và hai mật khẩu DB riêng, tải image bot nếu cần, rồi:
 
 ```bash

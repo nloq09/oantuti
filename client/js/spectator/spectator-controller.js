@@ -1,15 +1,15 @@
 import { GameController } from "../game/game-controller.js?v=diagonal";
 import { toast } from "../ui/toast.js";
 export class SpectatorController extends GameController {
-  constructor(matchId) {
-    super({ matchId, playerId: "P1", role: "SPECTATOR" });
+  constructor(matchId, { admin = false } = {}) {
+    super({ matchId, playerId: "P1", role: "SPECTATOR", admin });
   }
   bind() {
     document.querySelector("#clear-log").onclick = () =>
       document.querySelector("#event-log").replaceChildren();
-    document.querySelector("#leave").textContent = "Về giải đấu";
+    document.querySelector("#leave").textContent = this.seat.admin ? "Về danh sách trận" : "Về giải đấu";
     document.querySelector("#leave").onclick = () =>
-      (location.href = "/tournaments.html");
+      (location.href = this.seat.admin ? "/admin/matches.html" : "/tournaments.html");
     document.querySelector("#copy").onclick = () =>
       toast("Mã trận: " + this.seat.matchId);
   }
@@ -34,7 +34,7 @@ export class SpectatorController extends GameController {
     const link = document.createElement("a");
     link.className = "button primary";
     link.href =
-      "/replay.html?match=" + encodeURIComponent(snapshot.gameState.matchId);
+      (this.seat.admin ? "/admin/replay.html?match=" : "/replay.html?match=") + encodeURIComponent(snapshot.gameState.matchId);
     link.textContent = "Xem replay đầy đủ";
     const note = document.querySelector(".board-note");
     note.replaceChildren(link);

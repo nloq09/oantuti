@@ -4,8 +4,8 @@ import { sessionRequest } from "../api/auth-api.js";
 import { table, badge, details, confirmAction } from "./components.js";
 const columns=[["ID","id"],["Chế độ","mode"],["P1","player1"],["P2","player2"],["Trạng thái","status",badge],["Lượt","turn_count"],["Bắt đầu","started_at",date],["Thời lượng (ms)","duration_ms"],["Giải đấu","tournament_id"]];
 function links(cell,row){
-  if(row.live_available&&row.room_id)cell.append(link("Xem trực tiếp","/game.html?spectate="+encodeURIComponent(row.room_id)));
-  if(row.replay_available)cell.append(link("Replay","/replay.html?match="+encodeURIComponent(row.id)));
+  if(row.live_available&&row.room_id)cell.append(link("Xem trực tiếp","/admin/spectator.html?spectate="+encodeURIComponent(row.room_id)));
+  if(row.replay_available)cell.append(link("Replay","/admin/replay.html?match="+encodeURIComponent(row.id)));
 }
 async function list(root){
   root.replaceChildren(node("h1","Trận đấu"));const form=node("form",undefined,"filters"),result=node("section",undefined,"panel");let params=new URLSearchParams(location.search),page=Math.max(0,Number(params.get("page"))||0),version=0;
@@ -22,7 +22,7 @@ async function list(root){
 async function detail(root){
   const id=new URLSearchParams(location.search).get("id");if(!id)throw new Error("Thiếu mã trận đấu.");const data=await adminRequest("matches/"+encodeURIComponent(id));
   root.replaceChildren(node("h1","Chi tiết trận đấu"),link("← Danh sách","/admin/matches.html"),details("Trận đấu",data,columns),details("Kết quả / trạng thái",data,[["Kết quả","outcome"],["Bên thắng","winner_seat"],["Rule set","rule_set"],["Kết thúc","finished_at",date],["Lượt hiện tại","current_player"],["Sequence","sequence"],["Lỗi bot (mã an toàn)","bot_error"],["Lỗi hạ tầng","infrastructure_error"],["Lỗi giải đấu","failure"]]));
-  const actions=node("div",undefined,"actions"),refresh=node("button","Cập nhật trạng thái");refresh.onclick=()=>detail(root).catch(error=>message(error,root));actions.append(refresh);links(actions,data);if(data.tournament_id)actions.append(link("Giải đấu","/tournament.html?id="+encodeURIComponent(data.tournament_id)));root.append(actions);
+  const actions=node("div",undefined,"actions"),refresh=node("button","Cập nhật trạng thái");refresh.onclick=()=>detail(root).catch(error=>message(error,root));actions.append(refresh);links(actions,data);if(data.tournament_id)actions.append(link("Các trận cùng giải","/admin/matches.html?tournament="+encodeURIComponent(data.tournament_id)));root.append(actions);
   root.append(node("p","Xem trực tiếp sử dụng spectator chỉ đọc. Quản trị không điều khiển bàn cờ hoặc sửa kết quả game.","muted"));
   const participants=node("section",undefined,"panel");participants.append(node("h2","Người chơi / Bot"),table([["Bên","seat"],["Username","username"],["Controller","controller_type"],["Bot","bot_name"]],data.participants,(cell,row)=>{if(row.seat_user_id)cell.append(link("User","/admin/user-detail.html?id="+encodeURIComponent(row.seat_user_id)));if(row.seat_bot_id)cell.append(link("Bot","/admin/bot-detail.html?id="+encodeURIComponent(row.seat_bot_id)));}));root.append(participants);
   root.append(details("Thực thi · Chỉ phiên server hiện tại",data,[["P1 số nước bot","move_count_p1"],["P1 thời gian bot (ns)","move_nanos_p1"],["P2 số nước bot","move_count_p2"],["P2 thời gian bot (ns)","move_nanos_p2"]]));

@@ -1,4 +1,4 @@
-const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html"]);
+const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html"]);
 export function safeNext(value, origin = "https://rps.invalid") {
   try {
     const url = new URL(value || "/", origin);
@@ -7,12 +7,25 @@ export function safeNext(value, origin = "https://rps.invalid") {
   } catch { return "/"; }
 }
 export function accountLinks(account,home,loginHref,registerHref) {
+  if(account?.role==="ADMIN")return [["Quản trị","/admin/index.html"]];
   const links=home?[]:[["Trang chủ","/"]];
   if(!account)return [...links,["Đăng nhập",loginHref],["Đăng ký",registerHref]];
   if(!home)links.push(["Vào trận","/lobby.html"],["Bot của tôi","/bots.html"],["Giải đấu","/tournaments.html"]);
   links.push(["Lịch sử","/history.html"],["Hồ sơ","/profile.html"]);
-  if(account.role==="ADMIN")links.push(["Quản trị","/admin/index.html"]);
   return links;
+}
+export function adminDestination(account,pathname,search="") {
+  if(account?.role!=="ADMIN"||pathname.startsWith("/admin/"))return null;
+  const query=new URLSearchParams(search);
+  if(pathname==="/replay.html")return "/admin/replay.html"+search;
+  if(pathname==="/game.html"&&query.get("spectate"))return "/admin/spectator.html?spectate="+encodeURIComponent(query.get("spectate"));
+  if(pathname==="/tournament.html"&&query.get("id"))return "/admin/matches.html?tournament="+encodeURIComponent(query.get("id"));
+  if(pathname==="/profile.html")return "/admin/user-detail.html?id="+encodeURIComponent(account.id);
+  return "/admin/index.html";
+}
+export function accountLanding(account,next,origin="https://rps.invalid") {
+  const safe=safeNext(next,origin),url=new URL(safe,origin);
+  return adminDestination(account,url.pathname,url.search)??safe;
 }
 export function validatePassword(password, confirmation) {
   if (password !== confirmation) throw new Error("PASSWORD_MISMATCH");

@@ -17,17 +17,17 @@ async function init() {
     root.replaceChildren(); root.className = "admin-shell";
     const top = node("header", undefined, "admin-topbar"), toggle = node("button", "☰"); toggle.setAttribute("aria-label", "Đóng hoặc mở thanh điều hướng"); toggle.setAttribute("aria-expanded", "true");
     toggle.onclick = () => { root.classList.toggle("sidebar-collapsed"); toggle.setAttribute("aria-expanded", String(!root.classList.contains("sidebar-collapsed"))); };
-    const identity = node("details"), summary = node("summary", account.displayName + " · ADMIN"), menu = node("div", undefined, "account-menu"), exit = node("button", "Đăng xuất");
+    const identity = node("div",undefined,"admin-account"), summary = node("span", account.displayName + " · ADMIN"), exit = node("button", "Đăng xuất");
     exit.onclick = async () => { exit.disabled = true; try { await logout(); location.assign("/"); } catch (error) { exit.disabled = false; message(error, content); } };
-    menu.append(link("Hồ sơ", "/profile.html"), link("Về game", "/"), exit); identity.append(summary, menu);
-    top.append(toggle, node("strong", "RPS BATTLE ADMIN"), identity);
+    identity.append(summary, exit);
+    const brand=node("a",undefined,"admin-brand");brand.href="/admin/index.html";brand.append(node("span","♛","admin-crest"),node("strong", "RPS BATTLE · QUẢN TRỊ"));
+    top.append(toggle, brand, identity);
     const sidebar = node("nav", undefined, "admin-sidebar"); sidebar.setAttribute("aria-label", "Quản trị");
     const current = location.pathname.split("/").pop() || "index.html";
     for (const [label, path] of [["Tổng quan", "index.html"], ["Người dùng", "users.html"], ["Bot", "bots.html"], ["Trận đấu", "matches.html"]]) {
-      const a = link(label, "/admin/" + path); if (current === path || current === ({"users.html":"user-detail.html","bots.html":"bot-detail.html","matches.html":"match-detail.html"})[path]) a.setAttribute("aria-current", "page"); sidebar.append(a);
+      const a = link(label, "/admin/" + path); if (current === path || current === ({"users.html":"user-detail.html","bots.html":"bot-detail.html","matches.html":"match-detail.html"})[path] || (path === "matches.html" && ["replay.html","spectator.html"].includes(current))) a.setAttribute("aria-current", "page"); sidebar.append(a);
     }
     for (const label of ["Giải đấu", "Tranh chấp", "Replay", "Audit", "Hệ thống"]) { const item = node("span", label + " · Sắp có", "muted"); sidebar.append(item); }
-    sidebar.append(link("← Về game", "/"));
     const content = node("main", undefined, "admin-content"); content.id = "admin-content"; content.tabIndex = -1;
     const skip = link("Đến nội dung", "#admin-content"); skip.className = "skip-link"; root.append(skip, top, sidebar, content);
     content.append(node("h1", "Tổng quan"), node("p", "Giao diện quản trị đã sẵn sàng."));

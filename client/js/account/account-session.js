@@ -1,5 +1,5 @@
 import { currentUser, logout } from "../api/auth-api.js";
-import { safeNext, accountLinks } from "./account-ui.js";
+import { safeNext, accountLinks, adminDestination } from "./account-ui.js";
 import { seatKey } from "../config.js";
 import { toast } from "../ui/toast.js";
 let accountRequest;
@@ -15,6 +15,8 @@ export function loginLink(path = returnDestination()) {
 export async function requireAccount() {
   const account = await getAccount();
   if (!account) location.replace(loginLink());
+  const destination=adminDestination(account,location.pathname,location.search);
+  if(destination){location.replace(destination);return null;}
   return account;
 }
 export function clearAccountState() {
@@ -25,6 +27,8 @@ export async function initAccountNav() {
   if (!nav) return;
   try {
     const account = await getAccount();
+    const destination=adminDestination(account,location.pathname,location.search);
+    if(destination&&!['/login.html','/register.html'].includes(location.pathname)){location.replace(destination);return;}
     const home = nav.dataset.accountNav === "home";
     const links = accountLinks(account, home, loginLink(), "/register.html?next=" + encodeURIComponent(safeNext(returnDestination(), location.origin)));
     for (const link of document.querySelectorAll("[data-account-destination]")) {

@@ -1,12 +1,12 @@
 import { register, login } from "../api/auth-api.js";
 import { getAccount, clearAccountState } from "../account/account-session.js";
-import { safeNext, validatePassword } from "../account/account-ui.js";
+import { safeNext, validatePassword, accountLanding } from "../account/account-ui.js";
 import { errorText } from "../ui/toast.js";
 const form = document.querySelector("#auth-form"), message = document.querySelector("#form-message");
 const mode = form.dataset.mode;
 const next = safeNext(new URLSearchParams(location.search).get("next"), location.origin);
 document.querySelector("#alternate-auth").href = (mode === "register" ? "/login.html" : "/register.html") + "?next=" + encodeURIComponent(next);
-getAccount().then(account => { if (account) location.replace(next); }).catch(error => { message.textContent = errorText(error.message); });
+getAccount().then(account => { if (account) location.replace(accountLanding(account,next,location.origin)); }).catch(error => { message.textContent = errorText(error.message); });
 form.onsubmit = async event => {
   event.preventDefault(); if (form.dataset.busy) return;
   const button = form.querySelector('[type="submit"]'), original = button.textContent;
@@ -19,7 +19,7 @@ form.onsubmit = async event => {
       // Registration does not create a session; make the next action explicit.
       location.assign("/login.html?registered=1&next=" + encodeURIComponent(next));
     } else {
-      await login(fields.get("username"), password); clearAccountState(); location.assign(next);
+      const account=await login(fields.get("username"), password); clearAccountState(); location.assign(accountLanding(account,next,location.origin));
     }
   } catch (error) { message.textContent = errorText(error.message); }
   finally { delete form.dataset.busy; button.disabled = false; button.textContent = original; form.querySelector('[name="password"]').value = ""; const confirm = form.querySelector('[name="confirmation"]'); if (confirm) confirm.value = ""; }

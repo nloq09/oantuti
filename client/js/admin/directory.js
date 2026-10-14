@@ -29,7 +29,7 @@ async function userDetail(root){
   button.onclick=()=>confirmAction(button.textContent+" · "+data.username,async reason=>{await adminRequest("users/"+encodeURIComponent(id)+"/"+(data.status==="ACTIVE"?"disable":"enable"),{reason});await userDetail(root);});actions.append(button);root.append(actions,node("p","Đổi role chưa được backend hỗ trợ. Mở khóa không khôi phục phiên đăng nhập cũ.","muted"));
   related(root,"20 trận gần đây",data.recent_matches,[["ID","id"],["Mode","mode"],["Trạng thái","status",badge],["Kết quả","outcome"],["Ngày","created_at",date]],row=>"/admin/match-detail.html?id="+encodeURIComponent(row.id));
   related(root,"20 bot gần đây",data.owned_bots,[["Tên","name"],["Ngôn ngữ","language"],["Trạng thái","status",badge]],row=>"/admin/bot-detail.html?id="+encodeURIComponent(row.id));
-  related(root,"20 giải gần đây",data.tournaments,[["Tên","name"],["Trạng thái","status",badge]],row=>"/tournament.html?id="+encodeURIComponent(row.id));
+  related(root,"20 giải gần đây",data.tournaments,[["Tên","name"],["Trạng thái","status",badge]],row=>"/admin/matches.html?tournament="+encodeURIComponent(row.id));
   related(root,"50 thao tác quản trị gần đây",data.audit,[["Thao tác","action"],["Người thực hiện","actor"],["Lý do","reason"],["Trước","before_value"],["Sau","after_value"],["Thời gian","occurred_at",date]]);
 }
 async function botDetail(root){
