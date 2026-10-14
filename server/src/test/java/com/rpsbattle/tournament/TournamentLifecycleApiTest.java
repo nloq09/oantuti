@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.*;
 
 class TournamentLifecycleApiTest extends StageThreeWebFixture {
     @Test void registrationCanOpenCloseAndLockRosterWithoutStartingAnyMatch() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(uploads.available(com.rpsbattle.bot.upload.BotLanguage.PYTHON));
         loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Lifecycle API"),201);
         String path="/api/tournaments/"+created.path("id").asText();
         var opened=request(path+"/open-registration","POST",Map.of(),200);
@@ -14,6 +15,7 @@ class TournamentLifecycleApiTest extends StageThreeWebFixture {
         request(path+"/open-registration","POST",Map.of(),400);request(path+"/close-registration","POST",Map.of(),400);
         var a=upload("Lifecycle A");var b=upload("Lifecycle B");
         request(path+"/participants","POST",Map.of("botId",a.id()),200);request(path+"/participants","POST",Map.of("botId",b.id()),200);
+        for(var r:request(path,"GET",null,200).path("registrations"))request(path+"/registrations/"+r.path("id").asText()+"/approve","POST",Map.of(),200);
         request(path+"/start","POST",Map.of(),400);
         var ready=request(path+"/close-registration","POST",Map.of(),200);
         assertThat(ready.path("status").asText()).isEqualTo("READY");assertThat(ready.path("matches").size()).isZero();assertThat(ready.path("startedAt").isNull()).isTrue();

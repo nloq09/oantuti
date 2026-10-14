@@ -14,8 +14,14 @@ public class MatchHistoryRepositoryAdapter implements MatchHistoryRepository {
     private final JpaMatchRepository matches;
     private final JpaParticipantRepository participants;
     @PersistenceContext EntityManager entities;
+    private final MatchWriteLocks writeLocks=new MatchWriteLocks();
     public MatchHistoryRepositoryAdapter(JpaMatchRepository matches,JpaParticipantRepository participants) {this.matches=matches;this.participants=participants;}
     @Transactional public MatchMetadata save(MatchMetadata metadata) {
+        try(var lock=writeLocks.acquire(metadata.id())) {return saveLocked(metadata);}
+        catch(RuntimeException error){throw error;}
+        catch(Exception error){throw new IllegalStateException("Cannot release match write lock",error);}
+    }
+    private MatchMetadata saveLocked(MatchMetadata metadata) {
         var stored=entities.find(MatchEntity.class,metadata.id(),LockModeType.PESSIMISTIC_WRITE);
         // Terminal results are immutable: repeated notifications cannot inflate stats or erase a result.
         if(stored!=null && stored.status.equals("FINISHED")) return domain(stored,participants.findByIdMatchIdOrderByIdSeat(stored.id));

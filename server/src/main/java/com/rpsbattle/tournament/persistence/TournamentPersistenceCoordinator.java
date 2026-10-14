@@ -27,7 +27,7 @@ public class TournamentPersistenceCoordinator {
             if(t.ownerUserId==null) return null; // Unmanaged internal/demo fixtures have no account to assign.
             var roster=t.participants.stream().map(p->new TournamentMetadata.Participant(UUID.fromString(p.participantId()),UUID.fromString(p.botId()),p.ownerUserId(),p.displayName(),p.seed())).toList();
             var entries=t.matches.stream().map(m->new TournamentMetadata.Entry(UUID.fromString(m.id),UUID.fromString(m.participantA.participantId()),UUID.fromString(m.participantB.participantId()),m.historyMatchId,m.onlineMatchId,m.status,m.winnerParticipantId==null?null:UUID.fromString(m.winnerParticipantId),m.result,m.failure,m.remainingA,m.remainingB,m.startedAt,m.finishedAt,history.latest(m.historyMatchId))).toList();
-            return new TournamentMetadata(UUID.fromString(t.id),t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,entries,t.statusChangedAt);
+            return new TournamentMetadata(UUID.fromString(t.id),t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,entries,t.statusChangedAt,t.checkInRequired,t.maxParticipants,List.copyOf(t.registrations));
         }
     }
     public void capture(Tournament t) {
@@ -59,7 +59,7 @@ public class TournamentPersistenceCoordinator {
     /** DRAFT is editable again; live matches are deliberately never resumed automatically. */
     public void restore() {
         for(var data:repository.all()) {
-            var t=new Tournament(data.id().toString(),data.name(),data.format(),data.createdAt());t.ownerUserId=data.ownerUserId();t.status=data.status();t.revision=data.revision();t.startedAt=data.startedAt();t.finishedAt=data.finishedAt();t.statusChangedAt=data.statusChangedAt();
+            var t=new Tournament(data.id().toString(),data.name(),data.format(),data.createdAt());t.ownerUserId=data.ownerUserId();t.status=data.status();t.revision=data.revision();t.startedAt=data.startedAt();t.finishedAt=data.finishedAt();t.statusChangedAt=data.statusChangedAt();t.checkInRequired=data.checkInRequired();t.maxParticipants=data.maxParticipants();t.registrations.addAll(data.registrations());
             var byId=new HashMap<UUID,TournamentParticipant>();
             for(var p:data.participants()) {
                 String token="";try {token=artifacts.stored(p.botId().toString()).token();} catch(com.rpsbattle.online.DemoRequestException missing) { /* Readable even if an artifact is unavailable. */ }

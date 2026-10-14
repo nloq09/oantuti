@@ -34,6 +34,7 @@
         <div id="counts" class="stats-grid"></div>
         <h3>Bot tham gia</h3>
         <div id="participants"></div>
+        <section aria-label="Đăng ký tham gia"><h3>Đơn đăng ký</h3><div id="registration-list"></div></section>
         <div id="registration" hidden>
         <h3>Đăng ký bot của bạn</h3>
         <form id="add-participant" hidden>
@@ -56,6 +57,7 @@
         <div class="actions" aria-label="Quản lý giải đấu">
           <button id="open-registration" hidden>Mở đăng ký</button>
           <button id="close-registration" hidden>Khóa đăng ký</button>
+          <button id="close-check-in" hidden>Hoàn tất check-in</button>
           <button id="start" class="primary" hidden>Bắt đầu nhanh</button>
           <button id="cancel" class="danger" hidden>Hủy giải</button>
         </div>
@@ -87,7 +89,7 @@
     </main>
     <script
       type="module"
-      src="/js/tournament/tournament-detail.js?v=lifecycle-v1"
+      src="/js/tournament/tournament-detail.js?v=registration-v2"
     ></script>
     <script type="module" src="/js/pages/account-nav.js"></script>
   </body>

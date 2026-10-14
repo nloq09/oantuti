@@ -34,6 +34,14 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
         }
         entries.values().forEach(entities::remove);entities.flush();
         roster.values().forEach(entities::remove);entities.flush();
+        var registrations=entities.createQuery("select r from TournamentRegistrationEntity r where r.tournamentId=:id",TournamentRegistrationEntity.class).setParameter("id",metadata.id()).getResultList().stream().collect(Collectors.toMap(r->r.id,r->r));
+        for(var registration:metadata.registrations()) {
+            if(!registration.tournamentId().equals(metadata.id()))throw new IllegalArgumentException("Registration tournament mismatch");
+            var existing=registrations.remove(registration.id());
+            if(existing==null){existing=new TournamentRegistrationEntity();existing.copy(registration);entities.persist(existing);}
+            else {if(!existing.userId.equals(registration.userId()) || !existing.botId.equals(registration.botId()) || !existing.botVersionId.equals(registration.botVersionId()))throw new IllegalStateException("Registration identity cannot change");existing.copy(registration);}
+        }
+        registrations.values().forEach(entities::remove);entities.flush();
     }
     @Transactional(readOnly=true) public List<TournamentMetadata> all() {
         // PRIVATE is intentionally unsupported in this version; never publish existing private rows.
@@ -43,7 +51,7 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
                 String room=m.historyId==null?null:history.find(m.historyId).map(h->h.roomId()).orElse(null);
                 return new TournamentMetadata.Entry(m.id,m.a,m.b,m.historyId,room,m.status,m.winner,m.result,m.failure,m.remainingA==null?0:m.remainingA,m.remainingB==null?0:m.remainingB,m.startedAt,m.finishedAt,null);
             }).toList();
-            return new TournamentMetadata(t.id,t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,schedule,t.statusChangedAt);
+            return new TournamentMetadata(t.id,t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,schedule,t.statusChangedAt,t.checkInRequired,t.maxParticipants,entities.createQuery("select r from TournamentRegistrationEntity r where r.tournamentId=:id order by r.registeredAt,r.id",TournamentRegistrationEntity.class).setParameter("id",t.id).getResultList().stream().map(TournamentRegistrationEntity::domain).toList());
         }).toList();
     }
 }

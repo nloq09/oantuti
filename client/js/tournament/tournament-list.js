@@ -3,7 +3,7 @@ import {
   tournamentRequest,
   createTournament,
   addParticipant,
-} from "./tournament-api.js?v=open-registration";
+} from "./tournament-api.js?v=registration-v2";
 import { statusLabels } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 import { getAccount, loginLink } from "../account/account-session.js";
@@ -69,8 +69,9 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
   const chosen = [...options.querySelectorAll("input:checked")].map((input) =>
     bots.find((bot) => bot.id === input.value),
   );
-  if (chosen.length > 10) {
-    toast("Mỗi giải tối đa 10 bot.", true);
+  const maxParticipants = Number(document.querySelector("#max-participants").value);
+  if (chosen.length > maxParticipants) {
+    toast(`Giải này tối đa ${maxParticipants} bot.`, true);
     return;
   }
   busy = true;
@@ -79,6 +80,7 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
   try {
     t = await createTournament(
       document.querySelector("#tournament-name").value.trim(),
+      {maxParticipants, checkInRequired: document.querySelector("#check-in-required").checked},
     );
     for (const bot of chosen) await addParticipant(t.id, bot);
     location.href = "/tournament.html?id=" + encodeURIComponent(t.id);

@@ -67,6 +67,16 @@ class TournamentPersistencePostgresTest {
         assertThat(tournaments.view(loaded).toString()).doesNotContain(loaded.participants.getFirst().botToken(),"sourcePath","ownerToken");
         try(var c=database.getConnection();var sql=c.createStatement();var rows=sql.executeQuery("SELECT column_name FROM information_schema.columns WHERE table_name IN ('tournaments','tournament_participants','tournament_matches')")) {while(rows.next()) assertThat(rows.getString(1)).doesNotContain("token","password");}
     }
+    @Test void registrationDecisionsCheckInSettingsAndTimestampsSurviveRestoreWithoutScheduling() {
+        var owner=user();var p=participant(owner,"Checked");var q=participant(owner,"Pending");var time=Instant.parse("2026-10-14T02:00:00Z");var cupId=UUID.randomUUID();
+        var checked=new TournamentRegistration(p.id(),cupId,owner.id().value(),p.botId(),p.botId(),p.displayName(),TournamentRegistration.Status.CHECKED_IN,time,time.plusSeconds(1),time.plusSeconds(2));
+        var pending=new TournamentRegistration(q.id(),cupId,owner.id().value(),q.botId(),q.botId(),q.displayName(),TournamentRegistration.Status.PENDING,time,null,null);
+        var cup=new TournamentMetadata(cupId,owner.id().value(),"Check-in restore",TournamentFormat.ROUND_ROBIN,TournamentStatus.CHECK_IN,5,time,null,null,List.of(p),List.of(),time,true,4,List.of(checked,pending));
+        repository.save(cup);repository.save(cup);var loaded=restored().findById(cupId.toString()).orElseThrow();
+        assertThat(loaded.status).isEqualTo(TournamentStatus.CHECK_IN);assertThat(loaded.checkInRequired).isTrue();assertThat(loaded.maxParticipants).isEqualTo(4);
+        assertThat(loaded.registrations).containsExactlyInAnyOrder(checked,pending);assertThat(loaded.participants).hasSize(1);assertThat(loaded.matches).isEmpty();
+        assertThat(loaded.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.PENDING).findFirst().orElseThrow().approvedAt()).isNull();
+    }
     @Test void finishedScheduleRankingAndLinkedAccountHistorySurviveRestoreAndDuplicateWrites() {
         var a=user();var b=user();var p=participant(a,"A");var q=participant(b,"B");var start=Instant.parse("2026-10-13T00:00:00Z");
         var archive=new MatchMetadata(UUID.randomUUID().toString(),"ROOM", "HUMAN_VS_HUMAN","FINISHED",a.id().value(),b.id().value(),a.id().value(),"P1","WIN",7,start,start.plusSeconds(1),1000L,"classic-online-v1",start,List.of(new MatchMetadata.Participant("P1",a.id().value(),p.botId(),MatchMetadata.ControllerType.UPLOADED_BOT),new MatchMetadata.Participant("P2",b.id().value(),q.botId(),MatchMetadata.ControllerType.UPLOADED_BOT)));

@@ -6,7 +6,7 @@ Giải đấu, roster, lịch đấu và kết quả lưu trong PostgreSQL. Tài
 
 - Khách được xem/list/export giải PUBLIC, xem ranking và theo dõi WebSocket/spectator.
 - Tạo giải cần tài khoản đăng nhập và CSRF. Owner lấy từ principal, không nhận ownerUserId/role từ body.
-- Khi DRAFT hoặc REGISTRATION, người dùng khác được đăng ký **bot của họ** vào giải. Owner không được tự dùng bot private của người khác; ADMIN có quyền dùng bot theo chính sách bot ownership.
+- Trong REGISTRATION, người dùng gửi đơn cho **bot của họ**; owner/ADMIN duyệt để thêm vào roster. DRAFT giữ luồng thêm bot trực tiếp cũ. Chi tiết [đăng ký và check-in](CHANG-5-NHOM-2-REGISTRATION.md).
 - Chủ bot có thể rút bot của mình khi DRAFT/REGISTRATION, kể cả bot đã soft-delete hoặc artifact bị mất. Chủ giải hoặc ADMIN có thể gỡ bất kỳ participant trước khi khóa đăng ký.
 - Chỉ chủ giải hoặc ADMIN được start/cancel. Các header `X-Tournament-Token`, `X-Bot-Token` và capability cũ không cấp quyền tại API.
 - Bản này chỉ hỗ trợ PUBLIC. Yêu cầu tạo PRIVATE bị từ chối rõ ràng; những row PRIVATE có sẵn trong DB không bị nạp thành PUBLIC hoặc lộ qua API/registry. Quyền private đầy đủ có thể bổ sung sau.
@@ -21,7 +21,7 @@ Account phải đăng nhập trước khi tạo/tham gia, theo [AUTH.md](AUTH.md
 
 `tournament_matches`: UUID ổn định theo tournament/cặp participant, FK tới archive UUID của Nhóm 5, hai participant, winner, outcome, failure, số quân còn và timestamps. Mã phòng ngắn phục vụ live được đọc từ metadata match; link replay dùng historyMatchId (archive UUID), không dùng mã phòng làm FK lịch sử.
 
-Schema hiện tại tới V10. V10 mở rộng lifecycle và thêm status_changed_at; không sửa migration V1–V9 đã áp dụng. Xem [vòng đời chặng 5](CHANG-5-NHOM-1-LIFECYCLE.md).
+Schema hiện tại tới V11. V10 mở rộng lifecycle; V11 thêm cấu hình/check-in và đơn đăng ký, backfill roster cũ thành APPROVED. Không sửa migration đã áp dụng. Xem [vòng đời chặng 5](CHANG-5-NHOM-1-LIFECYCLE.md) và [đăng ký/check-in](CHANG-5-NHOM-2-REGISTRATION.md).
 
 Create/add/remove/start/cancel ghi transaction trước khi trả thành công hoặc phát notification. Khi commit thất bại, trạng thái quản lý trong RAM được rollback; scheduler không được nhận một lệnh start chưa commit. Transaction snapshot lưu parent/roster/schedule và metadata trận liên quan cùng database transaction; FK composite ngăn participant của giải khác lọt vào cặp đấu.
 
@@ -43,7 +43,7 @@ Giới hạn hiện có: mỗi giải 2–10 bot để start, tối đa 100 gi�
 
 - `POST /api/tournaments`: `{name, format:"ROUND_ROBIN", visibility:"PUBLIC"}`; format/visibility có thể bỏ qua để dùng mặc định. Trả 201 với ownerUserId, không trả ownerToken.
 - `GET /api/tournaments`, `GET /api/tournaments/{id}`: public metadata, roster, schedule, progress, ranking/champion.
-- `POST /api/tournaments/{id}/participants`: `{botId, displayName?, seed?}`; account sở hữu bot hoặc ADMIN, DRAFT/REGISTRATION.
+- `POST /api/tournaments/{id}/participants`: `{botId, displayName?, seed?}`; DRAFT thêm trực tiếp theo quyền cũ; REGISTRATION gửi đơn PENDING cho bot của account, chưa thêm participant.
 - `DELETE /api/tournaments/{id}/participants/{participantId}`: owner giải/ADMIN hoặc account sở hữu bot, DRAFT/REGISTRATION.
 - `POST /api/tournaments/{id}/open-registration`, `/close-registration`: owner/ADMIN; mở đăng ký rồi khóa roster thành READY khi có ít nhất hai bot.
 - `POST /api/tournaments/{id}/start`, `POST /api/tournaments/{id}/cancel`: owner giải/ADMIN.

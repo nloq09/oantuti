@@ -24,6 +24,8 @@
               placeholder="RPS Championship"
             />
             <p>Thể thức: Round Robin</p>
+            <label for="max-participants">Số bot tối đa</label><input id="max-participants" type="number" min="2" max="10" value="10" required />
+            <label><input id="check-in-required" type="checkbox" /> Yêu cầu người tham gia check-in trước khi bắt đầu</label>
             <h3>Bot của bạn (không bắt buộc)</h3>
             <div id="bot-options"></div>
             <p id="bot-empty" hidden>
@@ -45,7 +47,7 @@
         </section>
       </div>
     </main>
-    <script type="module" src="/js/tournament/tournament-list.js?v=open-registration"></script>
+    <script type="module" src="/js/tournament/tournament-list.js?v=registration-v2"></script>
     <script type="module" src="/js/pages/account-nav.js"></script>
   </body>
 </html>

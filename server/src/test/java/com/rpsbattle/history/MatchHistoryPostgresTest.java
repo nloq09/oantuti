@@ -30,6 +30,22 @@ class MatchHistoryPostgresTest {
     @Autowired UserStatsService stats;
     @Autowired UserRepository users;
     @Autowired OwnedBotService bots;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void firstInsertWritersSerializeThroughCommitAndRollbackWithoutDuplicateHistory(boolean rollback) throws Exception {
+        var a=user().id().value();var b=user().id().value();var metadata=record(a,b,"P1",8,null,"FINISHED");
+        var inserted=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);var secondStarted=new java.util.concurrent.CountDownLatch(1);
+        var template=new org.springframework.transaction.support.TransactionTemplate(transactions);
+        try(var executor=java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var first=executor.submit(()->template.execute(status->{matches.save(metadata);inserted.countDown();try{if(!release.await(10,java.util.concurrent.TimeUnit.SECONDS))throw new IllegalStateException("Commit release timeout");}catch(InterruptedException error){Thread.currentThread().interrupt();throw new IllegalStateException(error);}if(rollback)status.setRollbackOnly();return null;}));
+            assertThat(inserted.await(10,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            var second=executor.submit(()->{secondStarted.countDown();return matches.save(metadata);});
+            try {assertThat(secondStarted.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();assertThatThrownBy(()->second.get(200,java.util.concurrent.TimeUnit.MILLISECONDS)).isInstanceOf(java.util.concurrent.TimeoutException.class);}
+            finally {release.countDown();}
+            first.get(10,java.util.concurrent.TimeUnit.SECONDS);assertThat(second.get(10,java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(metadata);
+        } finally {release.countDown();}
+        assertThat(matches.find(metadata.id())).contains(metadata);assertThat(stats.account(a).matchesPlayed()).isEqualTo(1);assertThat(stats.account(a).wins()).isEqualTo(1);
+    }
     User user() {var now=Instant.now();var id=UserId.random();var name="history_"+id.value().toString().substring(0,8);return users.save(new User(id,name,name+"@example.com","unused","Player",UserRole.USER,AccountStatus.ACTIVE,now,now,null));}
     MatchMetadata record(UUID a,UUID b,String winner,int turns,UUID bot,String status) {
         var start=Instant.parse("2026-10-13T00:00:00Z");var roster=List.of(new MatchMetadata.Participant("P1",a,bot,bot==null?MatchMetadata.ControllerType.HUMAN:MatchMetadata.ControllerType.UPLOADED_BOT),new MatchMetadata.Participant("P2",b,null,b==null?MatchMetadata.ControllerType.BUILTIN_BOT:MatchMetadata.ControllerType.HUMAN));

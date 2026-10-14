@@ -51,7 +51,7 @@ public class TournamentService {
         var bot=bots.authorize(botId,token);
         synchronized(t) {
             rosterOpen(t);
-            if(t.participants.size()>=10) throw new DemoRequestException("PARTICIPANT_LIMIT");
+            if(t.participants.size()>=t.maxParticipants) throw new DemoRequestException("PARTICIPANT_LIMIT");
             if(t.participants.stream().anyMatch(p->p.botId().equals(botId))) throw new DemoRequestException("DUPLICATE_PARTICIPANT");
             if(name!=null && (name.isBlank()||name.length()>60)) throw new DemoRequestException("INVALID_BOT_NAME");
             t.participants.add(new TournamentParticipant(UUID.randomUUID().toString(),botId,token,name==null?bot.name():name.trim(),seed==null?UUID.randomUUID().getMostSignificantBits():seed));
@@ -84,6 +84,8 @@ public class TournamentService {
         data.put("ownerUserId",t.ownerUserId);data.put("visibility","PUBLIC");
         data.put("createdAt",t.createdAt);data.put("startedAt",t.startedAt);data.put("finishedAt",t.finishedAt);data.put("revision",t.revision);
         data.put("statusChangedAt",t.statusChangedAt);
+        data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
+        data.put("registrations",List.copyOf(t.registrations));
         data.put("participants",List.copyOf(t.participants));
         // Copy mutable matches while holding the monitor; never expose internal tokens or mutable objects.
         data.put("matches",t.matches.stream().map(m->{var row=new LinkedHashMap<String,Object>();

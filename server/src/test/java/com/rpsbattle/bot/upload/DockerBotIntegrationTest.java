@@ -32,6 +32,8 @@ class DockerBotIntegrationTest {
         var uploads = new BotUploadService(new ObjectMapper(), root.toString(), true);
         assumeTrue(uploads.available(language), "Docker Linux/image not provisioned for " + language);
         Path source = language == BotLanguage.JAR ? sampleJar() : Path.of("../client/assets/bot-examples").resolve(language.filename).toAbsolutePath().normalize();
+        var upload=uploads.upload("Ready check",new org.springframework.mock.web.MockMultipartFile("file",language.filename,"application/octet-stream",Files.readAllBytes(source)));
+        uploads.validateRegistration(upload);
         var p1 = PlayerId.of("P1");
         var p2 = PlayerId.of("P2");
         var state = ClassicGameSetup.create("DOCKER", p1, p2).withPhase(GamePhase.PLAYING);
@@ -43,6 +45,17 @@ class DockerBotIntegrationTest {
                 var response = process.exchange(protocol.encodeTurn(new PlayerView(turn, p1), actions), Duration.ofSeconds(2));
                 assertEquals(actions.getFirst(), protocol.decodeResponse(response, turn.sequence(), p1));
             }
+        }
+    }
+
+    @ParameterizedTest @EnumSource(value=BotLanguage.class,names={"PYTHON","CPP","JAVA"})
+    void readinessRejectsSyntaxErrorsAndPythonValidationDoesNotExecuteUserCode(BotLanguage language) {
+        var uploads=new BotUploadService(new ObjectMapper(),root.toString(),true);assumeTrue(uploads.available(language));
+        var invalid=uploads.upload("Broken",new org.springframework.mock.web.MockMultipartFile("file",language.filename,"text/plain","this is invalid source @@@".getBytes()));
+        assertEquals("BOT_BUILD_ERROR",assertThrows(com.rpsbattle.online.DemoRequestException.class,()->uploads.validateRegistration(invalid)).getMessage());
+        if(language==BotLanguage.PYTHON) {
+            var valid=uploads.upload("Parse only",new org.springframework.mock.web.MockMultipartFile("file","main.py","text/plain","raise RuntimeError('must not execute during readiness')".getBytes()));
+            assertDoesNotThrow(()->uploads.validateRegistration(valid));
         }
     }
 

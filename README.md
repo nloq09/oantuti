@@ -107,7 +107,9 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Nhóm 10:** Dockerfile Java 21, Compose PostgreSQL/server/Caddy HTTPS với volume bền vững và role DB ứng dụng riêng; runner bot opt-in socket, source mount một file và label cleanup. Công cụ backup/restore DB + source + replay có checksum, restore chỉ vào target trống. [Triển khai](docs/DEPLOYMENT.md), [vận hành](docs/OPERATIONS.md), [tài khoản/quyền](docs/AUTH.md), [báo cáo](docs/CHANG-4-NHOM-10-DEPLOYMENT.md).
 
-**Chặng 5 — Nhóm 1:** chuẩn hóa vòng đời giải bằng state machine, migration V10 giữ dữ liệu cũ và lưu thời điểm đổi trạng thái. Chủ giải có thể mở đăng ký, khóa roster rồi bắt đầu; READY chưa có lịch đấu giữ nguyên qua restart. [Phạm vi, API và kết quả kiểm thử](docs/CHANG-5-NHOM-1-LIFECYCLE.md), [kế hoạch chặng 5](docs/CHANG-5-TOURNAMENT-PROMPT.md). Nhóm tiếp theo triển khai đăng ký, duyệt và check-in; toàn bộ chặng 5 chưa hoàn tất.
+**Chặng 5 — Nhóm 1:** chuẩn hóa vòng đời giải bằng state machine, migration V10 giữ dữ liệu cũ và lưu thời điểm đổi trạng thái. Chủ giải có thể mở đăng ký, khóa roster rồi bắt đầu; READY chưa có lịch đấu giữ nguyên qua restart. [Phạm vi, API và kết quả kiểm thử](docs/CHANG-5-NHOM-1-LIFECYCLE.md), [kế hoạch chặng 5](docs/CHANG-5-TOURNAMENT-PROMPT.md). Toàn bộ chặng 5 chưa hoàn tất.
+
+**Chặng 5 — Nhóm 2:** đơn đăng ký PENDING, duyệt/từ chối/rút, cấu hình giới hạn và check-in; bot vắng mặt bị loại khỏi roster READY. Source được kiểm tra biên dịch trong Docker trước khi nhận vào giải; V11 giữ roster cũ và lưu quyết định/timestamps qua restart. [Cách dùng, API và kiểm thử](docs/CHANG-5-NHOM-2-REGISTRATION.md). Tiếp theo: khóa phiên bản/hash và seeding.
 
 Để chạy bộ production, copy `infra/.env.production.example` sang `.env.production`, điền domain và hai mật khẩu DB riêng, tải image bot nếu cần, rồi:
 

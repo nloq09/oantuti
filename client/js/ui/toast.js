@@ -1,4 +1,13 @@
 const errors = {
+  BOT_NOT_READY: "Bot bị lỗi, đã xóa hoặc thiếu file source. Hãy tải lại bot.",
+  BOT_BUILD_ERROR: "Bot không qua được kiểm tra cú pháp/biên dịch trong Docker. Hãy sửa source rồi tải lại.",
+  REGISTRATION_NOT_FOUND: "Không tìm thấy đơn đăng ký trong giải này.",
+  INVALID_REGISTRATION_TRANSITION: "Đơn đăng ký đã thay đổi trạng thái. Hãy tải lại giải.",
+  CHECK_IN_NOT_OPEN: "Giải chưa mở check-in hoặc đã khóa check-in.",
+  CHECK_IN_REQUIRED: "Cần mở đăng ký và hoàn tất check-in trước khi bắt đầu giải.",
+  NO_APPROVED_REGISTRATION: "Bạn chưa có bot được duyệt để check-in.",
+  NOT_ENOUGH_CHECKED_IN_BOTS: "Cần ít nhất hai bot đã check-in để hoàn tất.",
+  INVALID_PARTICIPANT_LIMIT: "Số bot tối đa phải từ 2 đến 10.",
   INVALID_TOURNAMENT_TRANSITION: "Trạng thái giải đã thay đổi hoặc không cho phép thao tác này. Hãy tải lại giải.",
   SERVER_BUSY: "Server đang bận hoặc đang dừng. Hãy thử lại sau; giải đấu chưa được bắt đầu nếu hàng đợi đã đầy.",
   RATE_LIMITED: "Bạn thao tác quá nhanh hoặc đã đăng nhập sai nhiều lần. Hãy chờ rồi thử lại.",

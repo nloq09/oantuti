@@ -16,6 +16,8 @@ public class TournamentEntity {
     @Column(name="started_at") Instant startedAt;
     @Column(name="finished_at") Instant finishedAt;
     @Column(name="status_changed_at",nullable=false) Instant statusChangedAt;
+    @Column(name="check_in_required",nullable=false) boolean checkInRequired;
+    @Column(name="max_participants",nullable=false) int maxParticipants;
     protected TournamentEntity() {}
-    void copy(TournamentMetadata t) {id=t.id();ownerUserId=t.ownerUserId();name=t.name();format=t.format();status=t.status();revision=t.revision();createdAt=t.createdAt();startedAt=t.startedAt();finishedAt=t.finishedAt();statusChangedAt=t.statusChangedAt();}
+    void copy(TournamentMetadata t) {id=t.id();ownerUserId=t.ownerUserId();name=t.name();format=t.format();status=t.status();revision=t.revision();createdAt=t.createdAt();startedAt=t.startedAt();finishedAt=t.finishedAt();statusChangedAt=t.statusChangedAt();checkInRequired=t.checkInRequired();maxParticipants=t.maxParticipants();}
 }

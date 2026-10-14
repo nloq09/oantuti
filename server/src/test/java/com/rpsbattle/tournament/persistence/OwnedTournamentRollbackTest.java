@@ -1,6 +1,7 @@
 package com.rpsbattle.tournament.persistence;
 import com.rpsbattle.account.*;
 import com.rpsbattle.account.domain.*;
+import com.rpsbattle.auth.AuthService;
 import com.rpsbattle.bot.ownership.OwnedBotService;
 import com.rpsbattle.bot.upload.*;
 import com.rpsbattle.history.MatchPersistenceCoordinator;
@@ -35,5 +36,18 @@ class OwnedTournamentRollbackTest {
         assertThat(tournament.status).isEqualTo(TournamentStatus.DRAFT);assertThat(tournament.matches).isEmpty();assertThat(tournament.startedAt).isNull();assertThat(tournament.revision).isZero();assertThat(notified.get()).isZero();assertThat(tournament.deferNotifications).isFalse();
         assertThat(queue.size()).isZero();
         assertThat(tournament.statusChangedAt).isEqualTo(originalChangedAt);
+        tournament.status=TournamentStatus.REGISTRATION;tournament.checkInRequired=true;
+        var participant=tournament.participants.getFirst();
+        var registration=new TournamentRegistration(UUID.fromString(participant.participantId()),UUID.fromString(tournament.id),user.id().value(),UUID.fromString(participant.botId()),UUID.fromString(participant.botId()),participant.displayName(),TournamentRegistration.Status.PENDING,now,null,null);
+        tournament.registrations.add(registration);
+        assertThatThrownBy(()->owned.review(AuthService.sessionAuthentication(user),tournament.id,registration.id().toString(),false)).isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
+        assertThat(tournament.registrations).containsExactly(registration);assertThat(tournament.participants).hasSize(2);assertThat(tournament.revision).isZero();
+        assertThatThrownBy(()->owned.closeRegistration(AuthService.sessionAuthentication(user),tournament.id)).isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
+        assertThat(tournament.status).isEqualTo(TournamentStatus.REGISTRATION);assertThat(tournament.registrations).containsExactly(registration);assertThat(tournament.statusChangedAt).isEqualTo(originalChangedAt);
+        assertThat(notified.get()).isZero();
+        tournament.status=TournamentStatus.CHECK_IN;
+        var approved=registration.withStatus(TournamentRegistration.Status.APPROVED,now);tournament.registrations.set(0,approved);
+        assertThatThrownBy(()->owned.checkIn(AuthService.sessionAuthentication(user),tournament.id,approved.id().toString())).isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
+        assertThat(tournament.registrations).containsExactly(approved);assertThat(tournament.registrations.getFirst().checkedInAt()).isNull();assertThat(tournament.revision).isZero();assertThat(notified.get()).isZero();
     }
 }

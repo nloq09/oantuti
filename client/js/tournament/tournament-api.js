@@ -14,8 +14,8 @@ export async function tournamentRequest(path = "", body, method, extraHeaders = 
 }
 export const getTournament = (id) =>
   tournamentRequest("/" + encodeURIComponent(id));
-export async function createTournament(name) {
-  const t = await tournamentRequest("", { name, format: "ROUND_ROBIN" });
+export async function createTournament(name, settings = {}) {
+  const t = await tournamentRequest("", { name, format: "ROUND_ROBIN", ...settings });
   return t;
 }
 export const addParticipant = (id, bot) =>
@@ -39,6 +39,13 @@ export const cancelTournament = (id) =>
   tournamentRequest("/" + encodeURIComponent(id) + "/cancel", {});
 export const openRegistration = id => tournamentRequest("/" + encodeURIComponent(id) + "/open-registration", {});
 export const closeRegistration = id => tournamentRequest("/" + encodeURIComponent(id) + "/close-registration", {});
+const registrationPath = (id, registrationId) => "/" + encodeURIComponent(id) + "/registrations/" + encodeURIComponent(registrationId);
+export const registerBot = (id, bot) => tournamentRequest("/" + encodeURIComponent(id) + "/registrations", {botId:bot.id});
+export const approveRegistration = (id, registrationId) => tournamentRequest(registrationPath(id,registrationId) + "/approve", {});
+export const rejectRegistration = (id, registrationId) => tournamentRequest(registrationPath(id,registrationId) + "/reject", {});
+export const withdrawRegistration = (id, registrationId) => tournamentRequest(registrationPath(id,registrationId), undefined, "DELETE");
+export const checkInRegistration = (id, registrationId) => tournamentRequest("/" + encodeURIComponent(id) + "/check-in", {registrationId});
+export const closeCheckIn = id => tournamentRequest("/" + encodeURIComponent(id) + "/close-check-in", {});
 export class TournamentStream {
   constructor(id, update, status = () => {}) {
     this.id = id;

@@ -7,9 +7,10 @@ import {
   cancelTournament,
   openRegistration,
   closeRegistration,
+  registerBot, approveRegistration, rejectRegistration, withdrawRegistration, checkInRegistration, closeCheckIn,
   TournamentStream,
   canManageTournament,
-} from "./tournament-api.js?v=lifecycle-v1";
+} from "./tournament-api.js?v=registration-v2";
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 import { getAccount, loginLink } from "../account/account-session.js";
@@ -23,7 +24,7 @@ if (!account) {
   document.querySelector("#registration").before(notice);
 }
 let latest = -1,
-  busy = false;
+  busy = false, currentTournament;
 async function action(operation) {
   if (busy) return;
   busy = true;
@@ -33,32 +34,35 @@ async function action(operation) {
   } catch (error) {
     toast(error.message, true);
   } finally {
-    busy = false;
+    busy = false, currentTournament;
     document.querySelectorAll("#registration button").forEach(button => button.disabled = false);
   }
 }
 function render(t) {
   if (t.revision < latest) return;
-  latest = t.revision;
+  latest = t.revision;currentTournament = t;
   const owner = canManageTournament(t, account);
   document.querySelector("#name").textContent = t.name;
   const p = t.progress;
   const draft = ["DRAFT", "REGISTRATION"].includes(t.status);
   document.querySelector("#invite-link").value = location.origin + "/tournament.html?id=" + encodeURIComponent(id);
   document.querySelector("#invite-code").textContent = id;
-  document.querySelector("#registration").hidden = !account || !draft || t.participants.length >= 10;
+  document.querySelector("#registration").hidden = !account || !draft || (t.registrations || []).filter(r => ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)).length >= t.maxParticipants;
   document.querySelector("#registration-help").textContent = draft
-    ? "Đăng ký bot trước khi chủ giải bắt đầu. Giải cần ít nhất 2 và tối đa 10 bot."
-    : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
+    ? `Giải tối đa ${t.maxParticipants} bot. Đăng ký trong giai đoạn mở sẽ chờ chủ giải duyệt.`
+    : t.status === "CHECK_IN" ? "Check-in đã mở. Chủ bot cần xác nhận có mặt trước khi chủ giải hoàn tất." : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
   document.querySelector("#open-registration").hidden = !owner || t.status !== "DRAFT";
   document.querySelector("#close-registration").hidden = !owner || t.status !== "REGISTRATION";
   document.querySelector("#close-registration").disabled = t.participants.length < 2;
-  document.querySelector("#start").hidden = !owner || !["DRAFT", "READY"].includes(t.status);
+  document.querySelector("#start").hidden = !owner || !(["DRAFT", "READY"].includes(t.status) && !(t.status === "DRAFT" && t.checkInRequired));
   document.querySelector("#start").textContent = t.status === "DRAFT" ? "Bắt đầu nhanh" : "Bắt đầu giải";
   document.querySelector("#start").disabled = t.participants.length < 2;
   document.querySelector("#cancel").hidden = !owner || ["FINISHED", "CANCELLED"].includes(
     t.status,
   );
+  document.querySelector("#close-check-in").hidden = !owner || t.status !== "CHECK_IN";
+  document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < 2;
+  renderRegistrations(t, owner);
   const champion = document.querySelector("#champion");
   champion.hidden = !t.champion;
   champion.textContent = t.champion
@@ -102,13 +106,13 @@ function render(t) {
     selected = available.value;
   available.replaceChildren();
   for (const bot of savedBots().filter(
-    (bot) => !t.participants.some((p) => p.botId === bot.id),
+    (bot) => !t.participants.some((p) => p.botId === bot.id) && !(t.registrations || []).some(r => r.botId === bot.id && ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)),
   ))
     available.append(new Option(`${bot.name} · ${bot.language}`, bot.id));
   if ([...available.options].some((o) => o.value === selected))
     available.value = selected;
   document.querySelector("#add-participant").hidden =
-    !draft || !available.options.length || t.participants.length >= 10;
+    !draft || !available.options.length || (t.registrations || []).filter(r => ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)).length >= t.maxParticipants;
   const matches = document.querySelector("#match-list");
   matches.replaceChildren();
   if (!t.matches.length) {
@@ -173,7 +177,9 @@ document.querySelector("#start").onclick = () =>
   action(() => startTournament(id));
 document.querySelector("#open-registration").onclick = () => action(() => openRegistration(id));
 document.querySelector("#close-registration").onclick = () =>
-  confirmAction("Khóa đăng ký?", "Sau khi khóa, danh sách bot không thể thay đổi. Bạn có thể bắt đầu giải khi đã sẵn sàng.", () => action(() => closeRegistration(id)));
+  confirmAction("Khóa đăng ký?", "Đơn chưa duyệt sẽ bị từ chối. Không thể đăng ký bot mới. Nếu giải yêu cầu check-in, chủ bot phải xác nhận có mặt trước khi bắt đầu.", () => action(() => closeRegistration(id)));
+document.querySelector("#close-check-in").onclick = () => confirmAction("Hoàn tất check-in?", "Bot chưa check-in sẽ không được đưa vào lịch đấu. Cần ít nhất hai bot đã check-in.", () => action(() => closeCheckIn(id)));
+
 document.querySelector("#cancel").onclick = () =>
   confirmAction(
     "Hủy giải đấu?",
@@ -185,14 +191,14 @@ document.querySelector("#add-participant").onsubmit = (event) => {
   const bot = savedBots().find(
     (bot) => bot.id === document.querySelector("#available-bot").value,
   );
-  if (bot) action(() => addParticipant(id, bot));
+  if (bot) action(() => currentTournament.status === "REGISTRATION" ? registerBot(id, bot) : addParticipant(id, bot));
 };
 document.querySelector("#upload-participant").onsubmit = (event) => {
   event.preventDefault();
   action(async () => {
     const bot = await uploadBot(document.querySelector("#participant-name").value.trim(),
       document.querySelector("#participant-file").files[0]);
-    const t = await addParticipant(id, bot);
+    const t = await (currentTournament.status === "REGISTRATION" ? registerBot(id, bot) : addParticipant(id, bot));
     document.querySelector("#upload-participant").reset();
     toast("Bot đã đăng ký vào giải đấu.");
     return t;
@@ -210,4 +216,21 @@ else {
     .catch((error) => toast(error.message, true));
   const stream = new TournamentStream(id, render);
   window.addEventListener("pagehide", () => stream.close());
+}
+
+function renderRegistrations(t, owner) {
+  const list = document.querySelector("#registration-list"); list.replaceChildren();
+  const labels = {PENDING:"Chờ duyệt",APPROVED:"Đã duyệt",REJECTED:"Bị từ chối",CANCELLED:"Đã rút",CHECKED_IN:"Đã check-in",NOT_CHECKED_IN:"Không check-in"};
+  for (const r of t.registrations || []) {
+    const row = document.createElement("div"); row.className="participant-row";
+    const text = document.createElement("span"); text.textContent=`${r.displayName} · ${labels[r.status] || r.status}`; row.append(text);
+    const buttons = document.createElement("div");buttons.className="actions";
+    const add = (label, operation) => {const button=document.createElement("button");button.textContent=label;button.onclick=()=>action(operation);buttons.append(button);};
+    if(owner && t.status === "REGISTRATION" && r.status === "PENDING")add("Duyệt",()=>approveRegistration(id,r.id));
+    if(owner && t.status === "REGISTRATION" && ["PENDING","APPROVED"].includes(r.status))add("Từ chối",()=>rejectRegistration(id,r.id));
+    if(account?.id === r.userId && t.status === "CHECK_IN" && r.status === "APPROVED")add("Check-in",()=>checkInRegistration(id,r.id));
+    if((account?.id === r.userId || owner) && ["REGISTRATION","CHECK_IN"].includes(t.status) && ["PENDING","APPROVED","CHECKED_IN"].includes(r.status))add("Rút đăng ký",()=>withdrawRegistration(id,r.id));
+    row.append(buttons);list.append(row);
+  }
+  if(!list.childElementCount)list.textContent="Chưa có đơn đăng ký.";
 }

@@ -58,6 +58,26 @@ public class OwnedBotService {
         return new BotUploadService.Upload(id,bot.name(),bot.language(),stored.token());
     }
     public BotAgent agent(Authentication auth,String id) {var bot=execution(auth,id);return artifacts.agent(id,bot.token());}
+    /** Validate the immutable upload before accepting it into registration. */
+    @Transactional public BotMetadata requireRegistrationBot(Authentication auth,String id) {
+        require(auth,id);return registrationMetadata(id);
+    }
+    /** Called only after tournament manager authorization; it does not grant execution permission to a controller. */
+    @Transactional public BotMetadata requireRegistrationBotForManager(Authentication auth,String id) {
+        accounts.requireUser(auth);return registrationMetadata(id);
+    }
+    private BotMetadata registrationMetadata(String id) {
+        var bot=bots.lock(uuid(id)).orElseThrow(()->new AuthException("BOT_NOT_FOUND",404));
+        if(bot.status()!=BotMetadata.Status.UPLOADED && bot.status()!=BotMetadata.Status.READY)throw new AuthException("BOT_NOT_READY",400);
+        var upload=artifacts.stored(id);
+        if(!java.nio.file.Files.isRegularFile(artifacts.source(upload),java.nio.file.LinkOption.NOFOLLOW_LINKS))throw new AuthException("BOT_NOT_READY",400);
+        if(bot.status()==BotMetadata.Status.UPLOADED) {
+            artifacts.validateRegistration(upload);
+            bot=bots.save(new BotMetadata(bot.id(),bot.ownerUserId(),bot.name(),bot.language(),bot.sourcePath(),BotMetadata.Status.READY,bot.createdAt(),Instant.now()));
+        }
+        return bot;
+    }
+    @Transactional public BotUploadService.Upload registrationExecution(String id) {registrationMetadata(id);return artifacts.stored(id);}
     public BotMetadata authorizeWithdrawal(Authentication auth,String id) {
         accounts.requireUser(auth);
         return authorize(auth,bots.find(uuid(id)).orElseThrow(()->new AuthException("BOT_NOT_FOUND",404)),true);

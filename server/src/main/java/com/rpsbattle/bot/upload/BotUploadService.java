@@ -21,6 +21,7 @@ public class BotUploadService {
     private final DockerArtifactPaths dockerPaths;
     private final String instanceKey;
     private final String bootId=UUID.randomUUID().toString();
+    private final java.util.concurrent.Semaphore registrationChecks=new java.util.concurrent.Semaphore(2);
     public BotUploadService(ObjectMapper json, @Value("${rps.bots.directory:data/bots}") String directory,
                             @Value("${rps.bots.enabled:true}") boolean enabled) {
         this(json,directory,enabled,"","local");
@@ -99,6 +100,37 @@ public class BotUploadService {
         if (!available(upload.language())) throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE");
         var source=root.resolve(id).resolve(upload.language().filename);
         return new BotAgent(new DockerBotProcess(dockerPaths.source(root,source),upload.language(),instanceKey,bootId,id),Duration.ofSeconds(2));
+    }
+
+    /** Compile/parse only in the same restricted sandbox as execution, with a bounded lifetime. */
+    public void validateRegistration(Upload upload) {
+        if(!registrationChecks.tryAcquire())throw new DemoRequestException("SERVER_BUSY");
+        try {validateRegistrationSandbox(upload);}finally {registrationChecks.release();}
+    }
+    private void validateRegistrationSandbox(Upload upload) {
+        if(!available(upload.language()))throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE");
+        String name="rps-bot-check-"+UUID.randomUUID();
+        String check=switch(upload.language()) {
+            case PYTHON -> "python -I -X pycache_prefix=/tmp/cache -m py_compile /bot/main.py";
+            case CPP -> "g++ -std=c++17 -O2 /bot/main.cpp -o /tmp/bot";
+            case JAVA -> "javac -J-Xmx128m -J-XX:ActiveProcessorCount=1 -d /tmp /bot/Main.java";
+            case JAR -> "jar tf /bot/bot.jar >/dev/null";
+        };
+        var command=new ArrayList<>(DockerBotProcess.command(dockerPaths.source(root,source(upload)),upload.language(),name,
+            Map.of("rps.managed","true","rps.scope",instanceKey,"rps.boot",bootId,"botId",upload.id(),"matchId","registration")));
+        command.set(command.size()-1,check);
+        Process process=null;
+        try {
+            process=new ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            if(!process.waitFor(25,TimeUnit.SECONDS)){process.destroyForcibly();throw new DemoRequestException("BOT_BUILD_ERROR");}
+            if(process.exitValue()!=0)throw new DemoRequestException("BOT_BUILD_ERROR");
+        } catch(java.io.IOException error){throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE");}
+        catch(InterruptedException error){Thread.currentThread().interrupt();throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE");}
+        finally {
+            if(process!=null && process.isAlive())process.destroyForcibly();
+            try {var cleanup=new ProcessBuilder("docker","rm","--force",name).redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start();if(!cleanup.waitFor(3,TimeUnit.SECONDS))cleanup.destroyForcibly();}
+            catch(Exception error){if(error instanceof InterruptedException)Thread.currentThread().interrupt();}
+        }
     }
 
     public boolean available(BotLanguage language) {
