@@ -29,7 +29,7 @@ public class TournamentService {
     public void removeAuthorized(String id, String participantId, String ownerToken, String botToken) {
         var t = find(id);
         synchronized (t) {
-            draft(t);
+            rosterOpen(t);
             var participant = t.participants.stream().filter(p -> p.participantId().equals(participantId))
                     .findFirst().orElseThrow(() -> new DemoRequestException("PARTICIPANT_NOT_FOUND"));
             if (!t.ownerToken.equals(ownerToken)) {
@@ -39,12 +39,18 @@ public class TournamentService {
             remove(id, participantId);
         }
     }
-    private void draft(Tournament t) { if(t.status!=TournamentStatus.DRAFT) throw new DemoRequestException("TOURNAMENT_LOCKED"); }
+    private void rosterOpen(Tournament t) {if(t.status!=TournamentStatus.DRAFT && t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("TOURNAMENT_LOCKED");}
+    public void openRegistration(String id) {var t=find(id);synchronized(t){TournamentStateMachine.transition(t,TournamentStatus.REGISTRATION,Instant.now());changed(t);}}
+    public void closeRegistration(String id) {var t=find(id);synchronized(t){
+        if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("INVALID_TOURNAMENT_TRANSITION");
+        if(t.participants.size()<2)throw new DemoRequestException("NOT_ENOUGH_BOTS");
+        TournamentStateMachine.transition(t,TournamentStatus.READY,Instant.now());changed(t);
+    }}
     public void add(String id,String botId,String token,String name,Long seed) {
         var t=find(id);
         var bot=bots.authorize(botId,token);
         synchronized(t) {
-            draft(t);
+            rosterOpen(t);
             if(t.participants.size()>=10) throw new DemoRequestException("PARTICIPANT_LIMIT");
             if(t.participants.stream().anyMatch(p->p.botId().equals(botId))) throw new DemoRequestException("DUPLICATE_PARTICIPANT");
             if(name!=null && (name.isBlank()||name.length()>60)) throw new DemoRequestException("INVALID_BOT_NAME");
@@ -52,18 +58,21 @@ public class TournamentService {
             changed(t);
         }
     }
-    public void remove(String id,String participantId) { var t=find(id); synchronized(t) { draft(t); if(!t.participants.removeIf(p->p.participantId().equals(participantId))) throw new DemoRequestException("PARTICIPANT_NOT_FOUND"); changed(t); } }
+    public void remove(String id,String participantId) { var t=find(id); synchronized(t) { rosterOpen(t); if(!t.participants.removeIf(p->p.participantId().equals(participantId))) throw new DemoRequestException("PARTICIPANT_NOT_FOUND"); changed(t); } }
     public void start(String id) {
         var t=find(id); synchronized(t) {
-            draft(t); if(t.participants.size()<2) throw new DemoRequestException("NOT_ENOUGH_BOTS");
+            if(t.status!=TournamentStatus.DRAFT && t.status!=TournamentStatus.READY)throw new DemoRequestException("TOURNAMENT_LOCKED");
+            if(t.participants.size()<2) throw new DemoRequestException("NOT_ENOUGH_BOTS");
             for(var p:t.participants) { var b=bots.authorize(p.botId(),p.botToken()); if(!bots.available(b.language())) throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE"); }
-            t.status=TournamentStatus.READY;
-            t.matches.addAll(scheduler.schedule(t)); t.status=TournamentStatus.RUNNING; t.startedAt=Instant.now(); changed(t);
+            var schedule=scheduler.schedule(t);var now=Instant.now();
+            // Preserve the existing quick-start API; it traverses the same legal lifecycle edges.
+            if(t.status==TournamentStatus.DRAFT){TournamentStateMachine.transition(t,TournamentStatus.REGISTRATION,now);TournamentStateMachine.transition(t,TournamentStatus.READY,now);}
+            t.matches.addAll(schedule);TournamentStateMachine.transition(t,TournamentStatus.RUNNING,now);changed(t);
         }
     }
     public void cancel(String id) { var t=find(id); synchronized(t) {
         if(t.status==TournamentStatus.FINISHED||t.status==TournamentStatus.CANCELLED) throw new DemoRequestException("TOURNAMENT_LOCKED");
-        t.status=TournamentStatus.CANCELLED; t.finishedAt=Instant.now(); changed(t);
+        TournamentStateMachine.transition(t,TournamentStatus.CANCELLED,Instant.now());changed(t);
     } }
     public void listen(Consumer<Tournament> listener){listeners.add(listener);}
     public void changed(Tournament t){t.revision++;if(!t.deferNotifications) notifyChanged(t);}
@@ -74,6 +83,7 @@ public class TournamentService {
         data.put("id",t.id);data.put("name",t.name);data.put("format",t.format);data.put("status",t.status);
         data.put("ownerUserId",t.ownerUserId);data.put("visibility","PUBLIC");
         data.put("createdAt",t.createdAt);data.put("startedAt",t.startedAt);data.put("finishedAt",t.finishedAt);data.put("revision",t.revision);
+        data.put("statusChangedAt",t.statusChangedAt);
         data.put("participants",List.copyOf(t.participants));
         // Copy mutable matches while holding the monitor; never expose internal tokens or mutable objects.
         data.put("matches",t.matches.stream().map(m->{var row=new LinkedHashMap<String,Object>();

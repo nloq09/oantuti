@@ -28,8 +28,12 @@ class OwnedTournamentRollbackTest {
         for(int i=0;i<2;i++) tournament.participants.add(new TournamentParticipant(UUID.randomUUID().toString(),UUID.randomUUID().toString(),"token","Bot "+i,42L,user.id().value()));
         var notified=new AtomicInteger();service.listen(t->notified.incrementAndGet());
         var queue=new com.rpsbattle.worker.ExecutionQueue(10);owned.executionQueue(queue);
+        var originalChangedAt=tournament.statusChangedAt;
+        assertThatThrownBy(()->owned.openRegistration(com.rpsbattle.auth.AuthService.sessionAuthentication(user),tournament.id)).isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
+        assertThat(tournament.status).isEqualTo(TournamentStatus.DRAFT);assertThat(tournament.statusChangedAt).isEqualTo(originalChangedAt);assertThat(notified.get()).isZero();
         assertThatThrownBy(()->owned.start(com.rpsbattle.auth.AuthService.sessionAuthentication(user),tournament.id)).isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
         assertThat(tournament.status).isEqualTo(TournamentStatus.DRAFT);assertThat(tournament.matches).isEmpty();assertThat(tournament.startedAt).isNull();assertThat(tournament.revision).isZero();assertThat(notified.get()).isZero();assertThat(tournament.deferNotifications).isFalse();
         assertThat(queue.size()).isZero();
+        assertThat(tournament.statusChangedAt).isEqualTo(originalChangedAt);
     }
 }

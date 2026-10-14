@@ -15,6 +15,7 @@ public class TournamentEntity {
     @Column(name="created_at",nullable=false) Instant createdAt;
     @Column(name="started_at") Instant startedAt;
     @Column(name="finished_at") Instant finishedAt;
+    @Column(name="status_changed_at",nullable=false) Instant statusChangedAt;
     protected TournamentEntity() {}
-    void copy(TournamentMetadata t) {id=t.id();ownerUserId=t.ownerUserId();name=t.name();format=t.format();status=t.status();revision=t.revision();createdAt=t.createdAt();startedAt=t.startedAt();finishedAt=t.finishedAt();}
+    void copy(TournamentMetadata t) {id=t.id();ownerUserId=t.ownerUserId();name=t.name();format=t.format();status=t.status();revision=t.revision();createdAt=t.createdAt();startedAt=t.startedAt();finishedAt=t.finishedAt();statusChangedAt=t.statusChangedAt();}
 }

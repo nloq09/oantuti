@@ -69,15 +69,15 @@ public class TournamentExecutionService {
             if(t.status!=TournamentStatus.RUNNING)continue;
             boolean changed=false;
             if(t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING)) {
-                t.status=TournamentStatus.FINISHED;t.finishedAt=Instant.now();changed=true;
+                TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());changed=true;
             }
             if(changed)tournaments.changed(t);
         }
     }
     public synchronized void checkpointShutdown() {
         for(var t:registry.findAll()) synchronized(t) {
-            if(t.status==TournamentStatus.RUNNING || t.status==TournamentStatus.READY) {
-                t.status=TournamentStatus.RECOVERY_REQUIRED;
+            if(t.status==TournamentStatus.RUNNING || t.status==TournamentStatus.PAUSED || (t.status==TournamentStatus.READY && !t.matches.isEmpty())) {
+                TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());
                 for(var m:t.matches) if(m.status==TournamentMatch.Status.RUNNING) {
                     try {
                         var room=online.find(m.onlineMatchId);
@@ -90,7 +90,7 @@ public class TournamentExecutionService {
                     }catch(RuntimeException missing){failed(m,"SERVER_SHUTDOWN");}
                     workers.complete(m.id);
                 }
-                if(t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED||m.status==TournamentMatch.Status.FAILED)) {t.status=TournamentStatus.FINISHED;t.finishedAt=Instant.now();}
+                if(!t.matches.isEmpty() && t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED||m.status==TournamentMatch.Status.FAILED)) {TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());}
                 tournaments.changed(t);
             }
         }

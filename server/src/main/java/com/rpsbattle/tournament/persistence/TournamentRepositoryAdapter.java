@@ -43,7 +43,7 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
                 String room=m.historyId==null?null:history.find(m.historyId).map(h->h.roomId()).orElse(null);
                 return new TournamentMetadata.Entry(m.id,m.a,m.b,m.historyId,room,m.status,m.winner,m.result,m.failure,m.remainingA==null?0:m.remainingA,m.remainingB==null?0:m.remainingB,m.startedAt,m.finishedAt,null);
             }).toList();
-            return new TournamentMetadata(t.id,t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,schedule);
+            return new TournamentMetadata(t.id,t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,schedule,t.statusChangedAt);
         }).toList();
     }
 }

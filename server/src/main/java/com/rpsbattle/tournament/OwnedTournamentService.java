@@ -37,12 +37,12 @@ public class OwnedTournamentService {
     /** Rollback memory on commit failure; scheduler and notifications cannot see staged changes. */
     private void mutate(Tournament t,Runnable mutation) {
         synchronized(t) {
-            var status=t.status;var started=t.startedAt;var finished=t.finishedAt;long revision=t.revision;
+            var status=t.status;var started=t.startedAt;var finished=t.finishedAt;var changedAt=t.statusChangedAt;long revision=t.revision;
             var participants=List.copyOf(t.participants);var matches=List.copyOf(t.matches);
             t.deferNotifications=true;
             try {mutation.run();persistence.persistNow(t);}
             catch(RuntimeException failure) {
-                t.status=status;t.startedAt=started;t.finishedAt=finished;t.revision=revision;
+                t.status=status;t.startedAt=started;t.finishedAt=finished;t.statusChangedAt=changedAt;t.revision=revision;
                 t.participants.clear();t.participants.addAll(participants);t.matches.clear();t.matches.addAll(matches);throw failure;
             } finally {t.deferNotifications=false;}
             tournaments.notifyChanged(t);
@@ -79,5 +79,7 @@ public class OwnedTournamentService {
         }
     }
     public void cancel(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,()->tournaments.cancel(id));}
+    public void openRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,()->tournaments.openRegistration(id));}
+    public void closeRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,()->tournaments.closeRegistration(id));}
     public void flush() {persistence.flushForRead();}
 }

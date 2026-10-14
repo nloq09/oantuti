@@ -4,7 +4,7 @@
 
 Một máy Linux có Docker Engine/Compose chạy ba dịch vụ: **Caddy HTTPS → rps-server → PostgreSQL 17**. Client được đóng trong JAR và phục vụ cùng domain với REST/WebSocket; không cần deploy client riêng. Docker Desktop Linux containers dùng được để thử trên Windows.
 
-Các volume lưu PostgreSQL, source bot, replay JSON và dữ liệu chứng chỉ Caddy. Phòng đang chơi/session và hàng đợi vẫn ở một JVM; không scale server nhiều replica. Metadata đã commit giữ qua restart; giải đang dở cần hủy theo chính sách RECOVERY_REQUIRED. Chặng này không thêm resume bàn cờ hoặc distributed worker.
+Các volume lưu PostgreSQL, source bot, replay JSON và dữ liệu chứng chỉ Caddy. Phòng đang chơi/session và hàng đợi vẫn ở một JVM; không scale server nhiều replica. Metadata đã commit giữ qua restart; giải đang dở cần hủy theo chính sách RECOVERY_REQUIRED. READY chưa có lịch đấu giữ nguyên để chủ giải bắt đầu sau restart. Chưa có resume bàn cờ hoặc distributed worker; xem [vòng đời giải đấu](CHANG-5-NHOM-1-LIFECYCLE.md).
 
 ## Chuẩn bị
 
@@ -91,7 +91,7 @@ Nếu chạy JAR ngoài Docker: build `server/gradlew bootJar` (Windows: `server
 
 Prod mặc định tắt runner; nếu host JAR có Docker Linux/image và muốn dùng bot upload, đặt BOTS_ENABLED=true. Compose dùng override riêng để bật quyền này.
 
-Flyway chạy V1–V9 khi app khởi động; Hibernate chỉ validate. Không sửa migration đã áp dụng, không clean/baseline tự động trong prod. DB quyền/credential hoặc schema sai sẽ làm startup thất bại. Chờ server healthy trước khi mở traffic.
+Flyway chạy V1–V10 khi app khởi động; V10 là Java migration cho lifecycle giải đấu, được đóng trong JAR cùng SQL V1–V9. Hibernate chỉ validate. Không sửa migration đã áp dụng, không clean/baseline tự động trong prod. DB quyền/credential hoặc schema sai sẽ làm startup thất bại. Chờ server healthy trước khi mở traffic.
 
 ## Backup, restore và upgrade
 

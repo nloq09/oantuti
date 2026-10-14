@@ -37,6 +37,8 @@ export const startTournament = (id) =>
   tournamentRequest("/" + encodeURIComponent(id) + "/start", {});
 export const cancelTournament = (id) =>
   tournamentRequest("/" + encodeURIComponent(id) + "/cancel", {});
+export const openRegistration = id => tournamentRequest("/" + encodeURIComponent(id) + "/open-registration", {});
+export const closeRegistration = id => tournamentRequest("/" + encodeURIComponent(id) + "/close-registration", {});
 export class TournamentStream {
   constructor(id, update, status = () => {}) {
     this.id = id;

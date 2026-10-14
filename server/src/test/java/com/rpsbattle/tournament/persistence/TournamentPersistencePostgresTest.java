@@ -49,6 +49,15 @@ class TournamentPersistencePostgresTest {
     }
     TournamentMetadata draft(User owner,List<TournamentMetadata.Participant> participants) {return new TournamentMetadata(UUID.randomUUID(),owner.id().value(),"Persistent Cup",TournamentFormat.ROUND_ROBIN,TournamentStatus.DRAFT,1,Instant.parse("2026-10-13T00:00:00Z"),null,null,participants,List.of());}
     TournamentRegistry restored() {var registry=new TournamentRegistry();new TournamentPersistenceCoordinator(repository,registry,tournaments,historyCoordinator,artifacts).restore();return registry;}
+    @Test void registrationCheckInAndReadyWithoutLiveScheduleKeepPhaseAndTimestampOnRestart() {
+        var owner=user();var created=Instant.parse("2026-10-14T00:00:00Z");var changed=created.plusSeconds(60);
+        for(var status:List.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY)) {
+            var cup=new TournamentMetadata(UUID.randomUUID(),owner.id().value(),"Lifecycle Cup",TournamentFormat.ROUND_ROBIN,status,1,created,null,null,List.of(),List.of(),changed);
+            repository.save(cup);var loaded=restored().findById(cup.id().toString()).orElseThrow();
+            assertThat(loaded.status).isEqualTo(status);assertThat(loaded.statusChangedAt).isEqualTo(changed);assertThat(loaded.startedAt).isNull();
+            assertThat(tournaments.view(loaded).get("statusChangedAt")).isEqualTo(changed);
+        }
+    }
     @Test void draftOwnershipRosterAndPrivateCapabilitiesSurviveRestoreWithoutBeingStoredInDb() throws Exception {
         var owner=user();var p=participant(owner,"Persistent bot");var cup=draft(owner,List.of(p));repository.save(cup);
         var registry=restored();var loaded=registry.findById(cup.id().toString()).orElseThrow();

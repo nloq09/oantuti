@@ -5,9 +5,11 @@ import {
   removeParticipant,
   startTournament,
   cancelTournament,
+  openRegistration,
+  closeRegistration,
   TournamentStream,
   canManageTournament,
-} from "./tournament-api.js?v=open-registration";
+} from "./tournament-api.js?v=lifecycle-v1";
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 import { getAccount, loginLink } from "../account/account-session.js";
@@ -22,8 +24,6 @@ if (!account) {
 }
 let latest = -1,
   busy = false;
-document.querySelector("#export").href =
-  "/api/tournaments/" + encodeURIComponent(id) + "/export";
 async function action(operation) {
   if (busy) return;
   busy = true;
@@ -43,14 +43,18 @@ function render(t) {
   const owner = canManageTournament(t, account);
   document.querySelector("#name").textContent = t.name;
   const p = t.progress;
-  const draft = t.status === "DRAFT";
+  const draft = ["DRAFT", "REGISTRATION"].includes(t.status);
   document.querySelector("#invite-link").value = location.origin + "/tournament.html?id=" + encodeURIComponent(id);
   document.querySelector("#invite-code").textContent = id;
   document.querySelector("#registration").hidden = !account || !draft || t.participants.length >= 10;
   document.querySelector("#registration-help").textContent = draft
     ? "Đăng ký bot trước khi chủ giải bắt đầu. Giải cần ít nhất 2 và tối đa 10 bot."
     : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
-  document.querySelector("#start").hidden = !draft || !owner;
+  document.querySelector("#open-registration").hidden = !owner || t.status !== "DRAFT";
+  document.querySelector("#close-registration").hidden = !owner || t.status !== "REGISTRATION";
+  document.querySelector("#close-registration").disabled = t.participants.length < 2;
+  document.querySelector("#start").hidden = !owner || !["DRAFT", "READY"].includes(t.status);
+  document.querySelector("#start").textContent = t.status === "DRAFT" ? "Bắt đầu nhanh" : "Bắt đầu giải";
   document.querySelector("#start").disabled = t.participants.length < 2;
   document.querySelector("#cancel").hidden = !owner || ["FINISHED", "CANCELLED"].includes(
     t.status,
@@ -167,6 +171,9 @@ document.querySelectorAll("[data-tab]").forEach(
 );
 document.querySelector("#start").onclick = () =>
   action(() => startTournament(id));
+document.querySelector("#open-registration").onclick = () => action(() => openRegistration(id));
+document.querySelector("#close-registration").onclick = () =>
+  confirmAction("Khóa đăng ký?", "Sau khi khóa, danh sách bot không thể thay đổi. Bạn có thể bắt đầu giải khi đã sẵn sàng.", () => action(() => closeRegistration(id)));
 document.querySelector("#cancel").onclick = () =>
   confirmAction(
     "Hủy giải đấu?",

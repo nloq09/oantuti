@@ -18,6 +18,8 @@ public class TournamentController {
     @DeleteMapping("/{id}/participants/{participantId}") public Map<String,Object> remove(Authentication auth,@PathVariable String id,@PathVariable String participantId) {owned.remove(auth,id,participantId);return detail(id);}
     @PostMapping("/{id}/start") public Map<String,Object> start(Authentication auth,@PathVariable String id) {owned.start(auth,id);return detail(id);}
     @PostMapping("/{id}/cancel") public Map<String,Object> cancel(Authentication auth,@PathVariable String id) {owned.cancel(auth,id);return detail(id);}
+    @PostMapping("/{id}/open-registration") public Map<String,Object> openRegistration(Authentication auth,@PathVariable String id) {owned.openRegistration(auth,id);return detail(id);}
+    @PostMapping("/{id}/close-registration") public Map<String,Object> closeRegistration(Authentication auth,@PathVariable String id) {owned.closeRegistration(auth,id);return detail(id);}
     @GetMapping("/{id}/ranking") public Object ranking(@PathVariable String id) {return detail(id).get("ranking");}
     @GetMapping(value="/{id}/export",produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String,Object>> export(@PathVariable String id) {return ResponseEntity.ok().header("Content-Disposition","attachment; filename=tournament-"+id+".json").body(detail(id));}

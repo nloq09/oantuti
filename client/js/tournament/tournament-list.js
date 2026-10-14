@@ -54,7 +54,7 @@ async function load() {
       const link = document.createElement("a");
       link.className = "button primary";
       link.href = "/tournament.html?id=" + encodeURIComponent(t.id);
-      link.textContent = t.status === "DRAFT" ? "Tham gia giải" : "Xem giải đấu";
+      link.textContent = ["DRAFT", "REGISTRATION"].includes(t.status) ? "Tham gia giải" : "Xem giải đấu";
       card.append(name, status, info, link);
       list.append(card);
     }

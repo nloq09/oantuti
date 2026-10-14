@@ -17,7 +17,7 @@ class FlywayMigrationTest {
 
     private Flyway fresh() {
         var flyway = configured("case_" + UUID.randomUUID().toString().replace("-", ""));
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(9);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(10);
         return flyway;
     }
     private Flyway configured(String schema) {
@@ -38,11 +38,37 @@ class FlywayMigrationTest {
     }
     @Test void migratesEmptyPostgresAndRepeatedStartupDoesNotReapply() throws Exception {
         var flyway = fresh();flyway.validate();
-        assertThat(flyway.info().applied()).filteredOn(info -> info.getVersion() != null).hasSize(9);
+        assertThat(flyway.info().applied()).filteredOn(info -> info.getVersion() != null).hasSize(10);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         try (var c=connect(flyway);var statement=c.createStatement()) {
             for (var table:List.of("users","bots","matches","match_participants","tournaments","tournament_participants","tournament_matches","replays"))
                 try(var rows=statement.executeQuery("SELECT COUNT(*) FROM "+table)) {assertThat(rows.next()).isTrue();assertThat(rows.getInt(1)).isZero();}
+        }
+    }
+    @Test void upgradeV9PreservesExistingStatusesAndAddsLifecycleChecksWithoutDroppingNotNull() throws Exception {
+        var schema="lifecycle_"+UUID.randomUUID().toString().replace("-","");
+        var old=Flyway.configure().configuration(configured(schema).getConfiguration()).target("9").load();old.migrate();
+        var owner=UUID.randomUUID();var ids=new LinkedHashMap<String,UUID>();
+        try(var c=connect(old)) {
+            user(c,owner,"lifecycle_owner");
+            for(var status:List.of("DRAFT","READY","RUNNING","FINISHED","CANCELLED","RECOVERY_REQUIRED")) {
+                var id=UUID.randomUUID();ids.put(status,id);
+                try(var statement=c.prepareStatement("INSERT INTO tournaments(id,owner_user_id,name,format,status,created_at) VALUES(?,?,?,'ROUND_ROBIN',?,'2026-10-01T00:00:00Z')")) {
+                    statement.setObject(1,id);statement.setObject(2,owner);statement.setString(3,status);statement.setString(4,status);statement.executeUpdate();
+                }
+            }
+        }
+        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);latest.validate();
+        assertThat(latest.info().applied()).filteredOn(info->info.getVersion()!=null && info.getVersion().toString().equals("10")).allMatch(info->info.getChecksum()!=null).hasSize(1);
+        try(var c=connect(latest);var sql=c.createStatement();var rows=sql.executeQuery("SELECT id,owner_user_id,status,status_changed_at FROM tournaments")) {
+            int count=0;while(rows.next()) {assertThat(rows.getObject(1,UUID.class)).isEqualTo(ids.get(rows.getString(3)));assertThat(rows.getObject(2,UUID.class)).isEqualTo(owner);assertThat(rows.getTimestamp(4).toInstant()).isEqualTo(java.time.Instant.parse("2026-10-01T00:00:00Z"));count++;}assertThat(count).isEqualTo(6);
+        }
+        try(var c=connect(latest);var sql=c.createStatement()) {
+            for(var status:List.of("REGISTRATION","CHECK_IN","PAUSED"))sql.executeUpdate("INSERT INTO tournaments(id,owner_user_id,name,format,status) VALUES('"+UUID.randomUUID()+"','"+owner+"','New','ROUND_ROBIN','"+status+"')");
+            assertThatThrownBy(()->sql.executeUpdate("UPDATE tournaments SET status='INVALID' WHERE id='"+ids.get("DRAFT")+"'"))
+                .isInstanceOf(SQLException.class).satisfies(error->assertThat(((SQLException)error).getSQLState()).isEqualTo("23514"));
+            assertThatThrownBy(()->sql.executeUpdate("UPDATE tournaments SET status=NULL WHERE id='"+ids.get("DRAFT")+"'"))
+                .isInstanceOf(SQLException.class).satisfies(error->assertThat(((SQLException)error).getSQLState()).isEqualTo("23502"));
         }
     }
     @Test void enforcesUniqueNormalizedAccountsAndForeignKeyOwnership() throws Exception {
@@ -90,7 +116,7 @@ class FlywayMigrationTest {
             sql.executeUpdate("INSERT INTO matches(id,mode,status,rule_set) VALUES('legacy','HUMAN_VS_HUMAN','FINISHED','classic')");
             sql.executeUpdate("INSERT INTO replays(id,match_id,file_path,event_count,valid) VALUES('"+UUID.randomUUID()+"','legacy','legacy.json',3,TRUE)");
         }
-        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);
+        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(2);
         try(var c=connect(latest);var sql=c.createStatement();var rows=sql.executeQuery("SELECT match_id,event_count,valid,sha256 FROM replays")) {
             assertThat(rows.next()).isTrue();assertThat(rows.getString(1)).isEqualTo("legacy");assertThat(rows.getInt(2)).isEqualTo(3);assertThat(rows.getBoolean(3)).isFalse();assertThat(rows.getString(4)).isNull();
         }
@@ -100,7 +126,7 @@ class FlywayMigrationTest {
         var old=Flyway.configure().configuration(configured(schema).getConfiguration()).target("6").load();
         assertThat(old.migrate().migrationsExecuted).isEqualTo(6);
         var id=UUID.randomUUID();try(var c=connect(old)){user(c,id,"existing_account");}
-        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(3);latest.validate();
+        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(4);latest.validate();
         try(var c=connect(latest);var statement=c.createStatement();var rows=statement.executeQuery("SELECT id,username,password_hash,auth_version FROM users")) {
             assertThat(rows.next()).isTrue();assertThat(rows.getObject(1,UUID.class)).isEqualTo(id);
             assertThat(rows.getString(2)).isEqualTo("existing_account");
@@ -115,7 +141,7 @@ class FlywayMigrationTest {
             user(c,id,"history_owner");
             sql.executeUpdate("INSERT INTO matches(id,mode,status,player1_user_id,winner_user_id,outcome,turn_count,rule_set) VALUES('old_room','HUMAN_VS_BOT','FINISHED','"+id+"','"+id+"','WIN',9,'classic-online-v1')");
         }
-        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(2);latest.validate();
+        var latest=configured(schema);assertThat(latest.migrate().migrationsExecuted).isEqualTo(3);latest.validate();
         try(var c=connect(latest);var sql=c.createStatement();var rows=sql.executeQuery("SELECT room_id,winner_seat,turn_count FROM matches WHERE id='old_room'")) {
             assertThat(rows.next()).isTrue();assertThat(rows.getString(1)).isEqualTo("old_room");assertThat(rows.getString(2)).isEqualTo("P1");assertThat(rows.getInt(3)).isEqualTo(9);
         }

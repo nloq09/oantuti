@@ -13,9 +13,9 @@ public final class Tournament {
     public final List<TournamentParticipant> participants = new ArrayList<>();
     public final List<TournamentMatch> matches = new ArrayList<>();
     public final Instant createdAt;
-    public Instant startedAt, finishedAt;
+    public Instant startedAt, finishedAt, statusChangedAt;
     public long revision;
     public Tournament(String id, String name, TournamentFormat format, Instant createdAt) {
-        this.id=id; this.name=name; this.format=format; this.createdAt=createdAt;
+        this.id=id; this.name=name; this.format=format; this.createdAt=createdAt;this.statusChangedAt=createdAt;
     }
 }

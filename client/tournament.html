@@ -53,6 +53,12 @@
           </form>
         </details>
         </div>
+        <div class="actions" aria-label="Quản lý giải đấu">
+          <button id="open-registration" hidden>Mở đăng ký</button>
+          <button id="close-registration" hidden>Khóa đăng ký</button>
+          <button id="start" class="primary" hidden>Bắt đầu nhanh</button>
+          <button id="cancel" class="danger" hidden>Hủy giải</button>
+        </div>
       </section>
       <section id="matches" hidden><div id="match-list"></div></section>
       <section id="ranking" class="panel" hidden>
@@ -81,7 +87,7 @@
     </main>
     <script
       type="module"
-      src="/js/tournament/tournament-detail.js?v=open-registration"
+      src="/js/tournament/tournament-detail.js?v=lifecycle-v1"
     ></script>
     <script type="module" src="/js/pages/account-nav.js"></script>
   </body>

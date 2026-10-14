@@ -1,4 +1,5 @@
 const errors = {
+  INVALID_TOURNAMENT_TRANSITION: "Trạng thái giải đã thay đổi hoặc không cho phép thao tác này. Hãy tải lại giải.",
   SERVER_BUSY: "Server đang bận hoặc đang dừng. Hãy thử lại sau; giải đấu chưa được bắt đầu nếu hàng đợi đã đầy.",
   RATE_LIMITED: "Bạn thao tác quá nhanh hoặc đã đăng nhập sai nhiều lần. Hãy chờ rồi thử lại.",
   INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
