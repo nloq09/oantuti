@@ -11,22 +11,24 @@ import java.util.*;
 @RequestMapping("/api/admin")
 public class AdminController {
     private final AdminService service;
-    public AdminController(AdminService service) {this.service=service;}
+    private final com.rpsbattle.admin.AdminDirectoryService directory;
+    public AdminController(AdminService service,com.rpsbattle.admin.AdminDirectoryService directory) {this.service=service;this.directory=directory;}
     @GetMapping("/users") public ResponseEntity<Map<String,Object>> users(Authentication authentication,
-            @RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) {
-        var result=service.list(authentication,page,size);
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(Map.of("users",result.users().stream().map(AccountController.Profile::from).toList(),
-                "total",result.total(),"page",result.page(),"size",result.size()));
+            @RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,@RequestParam Map<String,String> filters) {
+        var result=new LinkedHashMap<>(directory.list(authentication,"users",filters,page,size));
+        result.put("users",result.get("items"));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(result);
     }
-    @PostMapping("/users/{id}/disable") public ResponseEntity<AccountController.Profile> disable(Authentication authentication,@PathVariable UUID id) {
-        return status(authentication,id,AccountStatus.DISABLED);
+    @PostMapping("/users/{id}/disable") public ResponseEntity<AccountController.Profile> disable(Authentication authentication,@PathVariable UUID id,@RequestBody Reason body) {
+        return status(authentication,id,AccountStatus.DISABLED,body.reason());
     }
-    @PostMapping("/users/{id}/enable") public ResponseEntity<AccountController.Profile> enable(Authentication authentication,@PathVariable UUID id) {
-        return status(authentication,id,AccountStatus.ACTIVE);
+    @PostMapping("/users/{id}/enable") public ResponseEntity<AccountController.Profile> enable(Authentication authentication,@PathVariable UUID id,@RequestBody Reason body) {
+        return status(authentication,id,AccountStatus.ACTIVE,body.reason());
     }
-    private ResponseEntity<AccountController.Profile> status(Authentication authentication,UUID id,AccountStatus status) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(AccountController.Profile.from(service.setStatus(authentication,new UserId(id),status)));
+    private ResponseEntity<AccountController.Profile> status(Authentication authentication,UUID id,AccountStatus status,String reason) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(AccountController.Profile.from(directory.userStatus(authentication,id,status,reason)));
     }
+    public record Reason(String reason){}
     @GetMapping("/system") public ResponseEntity<Map<String,Object>> system(Authentication authentication) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.system(authentication));
     }

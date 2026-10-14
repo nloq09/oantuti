@@ -76,18 +76,18 @@ class AccountAuthorizationTest {
         try(var owner=new Browser();var guest=new Browser();var untouchedSession=new Browser()) {
             var administrator=admin(owner.register());var target=guest.register();owner.login(administrator);guest.login(target);untouchedSession.login(target);
             guest.request("/api/admin/users","GET",null,false,403);
-            guest.request("/api/admin/users/"+administrator.id()+"/disable","POST",Map.of(),true,403);
-            owner.request("/api/admin/users/"+target.id()+"/disable","POST",Map.of(),false,403);
-            var disabled=owner.request("/api/admin/users/"+target.id()+"/disable","POST",Map.of(),true,200);
+            guest.request("/api/admin/users/"+administrator.id()+"/disable","POST",Map.of("reason","Account moderation test"),true,403);
+            owner.request("/api/admin/users/"+target.id()+"/disable","POST",Map.of("reason","Account moderation test"),false,403);
+            var disabled=owner.request("/api/admin/users/"+target.id()+"/disable","POST",Map.of("reason","Account moderation test"),true,200);
             assertThat(disabled.path("status").asText()).isEqualTo("DISABLED");
             guest.request("/api/account/profile","GET",null,false,401);
             guest.request("/api/auth/login","POST",Map.of("username",target.username(),"password",password),true,401);
-            owner.request("/api/admin/users/"+target.id()+"/enable","POST",Map.of(),true,200);
+            owner.request("/api/admin/users/"+target.id()+"/enable","POST",Map.of("reason","Account moderation test"),true,200);
             untouchedSession.request("/api/account/profile","GET",null,false,401);
             guest.login(target);
             assertThat(users.findById(target.id())).isPresent();
-            owner.request("/api/admin/users/"+administrator.id()+"/disable","POST",Map.of(),true,400);
-            owner.request("/api/admin/users/"+UUID.randomUUID()+"/disable","POST",Map.of(),true,404);
+            owner.request("/api/admin/users/"+administrator.id()+"/disable","POST",Map.of("reason","Account moderation test"),true,400);
+            owner.request("/api/admin/users/"+UUID.randomUUID()+"/disable","POST",Map.of("reason","Account moderation test"),true,404);
             var page=owner.request("/api/admin/users?page=0&size=2","GET",null,false,200);
             assertThat(page.path("users").size()).isEqualTo(2);
             assertThat(page.toString()).doesNotContain("passwordHash","password_hash","authVersion","sourcePath");

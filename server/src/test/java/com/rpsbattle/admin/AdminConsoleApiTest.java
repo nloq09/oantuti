@@ -42,4 +42,23 @@ class AdminConsoleApiTest {
             assertThat(dashboard.toString()).doesNotContain("password","token","source_path","sessionId");
         }
     }
+    @Test void userFiltersReasonAuditAndRevocationAreEnforced()throws Exception{
+        try(var admin=new Browser();var target=new Browser();var guest=new Browser()){
+            var actor=admin.account(true);var user=target.account(false);
+            guest.call("/api/admin/users/"+user.id(),null,false,401);target.call("/api/admin/users/"+actor.id(),null,false,403);
+            var page=admin.call("/api/admin/users?q="+user.username()+"&role=USER&status=ACTIVE",null,false,200);
+            assertThat(page.path("total").asInt()).isEqualTo(1);assertThat(page.path("items").get(0).path("id").asText()).isEqualTo(user.id().toString());
+            admin.call("/api/admin/users?role=ROOT",null,false,400);admin.call("/api/admin/users?from=bad",null,false,400);
+            admin.call("/api/admin/users/"+user.id()+"/disable",Map.of("reason","Test moderation"),false,403);
+            admin.call("/api/admin/users/"+user.id()+"/disable",Map.of("reason"," "),true,400);
+            admin.call("/api/admin/users/"+user.id()+"/disable",Map.of("reason","Test moderation"),true,200);
+            target.call("/api/account/profile",null,false,401);
+            var detail=admin.call("/api/admin/users/"+user.id(),null,false,200);
+            assertThat(detail.path("status").asText()).isEqualTo("DISABLED");assertThat(detail.path("audit").get(0).path("reason").asText()).isEqualTo("Test moderation");
+            assertThat(detail.toString()).doesNotContain("password_hash","source_path","auth_version");
+            admin.call("/api/admin/users/"+user.id()+"/enable",Map.of("reason","Review complete"),true,200);
+            target.call("/api/account/profile",null,false,401);
+            admin.call("/api/admin/users/"+actor.id()+"/disable",Map.of("reason","Self disable"),true,400);
+        }
+    }
 }
