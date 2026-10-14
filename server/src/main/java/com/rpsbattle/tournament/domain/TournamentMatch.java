@@ -1,6 +1,10 @@
 package com.rpsbattle.tournament.domain;
 import java.time.Instant;
 public final class TournamentMatch {
+    public int round=1;
+    public Instant scheduledAt;
+    public long moveNanosA,moveNanosB;
+    public int moveCountA,moveCountB;
     public enum Status { PENDING, RUNNING, FINISHED, FAILED }
     public final String id, tournamentId;
     public final TournamentParticipant participantA, participantB;

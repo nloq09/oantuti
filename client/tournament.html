@@ -27,13 +27,20 @@
       <nav class="actions tab-bar" aria-label="Nội dung giải đấu">
         <button data-tab="overview" aria-pressed="true">Tổng quan</button
         ><button data-tab="matches" aria-pressed="false">Các trận</button
+        ><button data-tab="bracket" aria-pressed="false">Bracket</button
         ><button data-tab="ranking" aria-pressed="false">Xếp hạng</button>
       </nav>
       <section id="overview" class="panel">
-        <h2>Tổng quan · Round Robin</h2>
+        <h2 id="format-heading">Tổng quan</h2><p id="competition-policy"></p>
         <div id="counts" class="stats-grid"></div>
         <h3>Bot tham gia</h3>
         <div id="participants"></div>
+        <section id="competition-rules" hidden><h3>Luật giải đấu</h3><form id="rules-form">
+          <label for="rule-concurrency">Số trận chạy đồng thời (1–4)</label><input id="rule-concurrency" type="number" min="1" max="4" required />
+          <p>Điểm luôn được xét trước. Chọn các tiêu chí phụ theo thứ tự ưu tiên; mỗi tiêu chí chỉ dùng một lần.</p>
+          <div id="tie-break-inputs" class="tie-break-inputs"></div><button id="save-rules">Lưu luật giải</button>
+          <p>Thắng 3, hòa 1, thua 0 điểm. BYE và trận lỗi hạ tầng không tính điểm. Luật được khóa khi giải sẵn sàng.</p>
+        </form></section>
         <section id="seeding" hidden><h3>Xếp hạt giống</h3><form id="seeding-form">
           <label for="seeding-strategy">Cách xếp</label><select id="seeding-strategy"><option value="RANDOM">Ngẫu nhiên</option><option value="MANUAL">Thủ công</option><option value="RANKING">Theo thành tích</option></select>
           <label for="seeding-seed">Seed ngẫu nhiên</label><input id="seeding-seed" type="text" inputmode="numeric" maxlength="20" required />
@@ -69,11 +76,10 @@
         </div>
       </section>
       <section id="matches" hidden><div id="match-list"></div></section>
+      <section id="bracket" hidden><div id="bracket-tree" class="bracket-tree"></div></section>
       <section id="ranking" class="panel" hidden>
         <h2>Bảng xếp hạng</h2>
-        <p class="muted">
-          Ưu tiên điểm → số trận thắng → tổng quân còn lại → ID participant.
-        </p>
+        <p id="ranking-policy" class="muted"></p>
         <div class="table-scroll">
           <table>
             <thead>
@@ -85,7 +91,7 @@
                 <th>Hòa</th>
                 <th>Thua</th>
                 <th>Điểm</th>
-                <th>Quân còn</th>
+                <th>Quân còn</th><th>Tính nước TB (ms)</th>
               </tr>
             </thead>
             <tbody id="ranking-rows"></tbody>
@@ -95,7 +101,7 @@
     </main>
     <script
       type="module"
-      src="/js/tournament/tournament-detail.js?v=seeding-v3"
+      src="/js/tournament/tournament-detail.js?v=rounds-v4"
     ></script>
     <script type="module" src="/js/pages/account-nav.js"></script>
   </body>

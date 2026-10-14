@@ -27,7 +27,7 @@ public class TournamentPersistenceCoordinator {
             if(t.ownerUserId==null) return null; // Unmanaged internal/demo fixtures have no account to assign.
             var roster=t.participants.stream().map(p->new TournamentMetadata.Participant(UUID.fromString(p.participantId()),UUID.fromString(p.botId()),p.ownerUserId(),p.displayName(),p.seed(),p.artifactHash(),p.seedNumber(),p.manualSeed())).toList();
             var entries=t.matches.stream().map(m->new TournamentMetadata.Entry(UUID.fromString(m.id),UUID.fromString(m.participantA.participantId()),UUID.fromString(m.participantB.participantId()),m.historyMatchId,m.onlineMatchId,m.status,m.winnerParticipantId==null?null:UUID.fromString(m.winnerParticipantId),m.result,m.failure,m.remainingA,m.remainingB,m.startedAt,m.finishedAt,history.latest(m.historyMatchId))).toList();
-            return new TournamentMetadata(UUID.fromString(t.id),t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,entries,t.statusChangedAt,t.checkInRequired,t.maxParticipants,List.copyOf(t.registrations),t.seedingStrategy,t.seedingSeed);
+            return new TournamentMetadata(UUID.fromString(t.id),t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,entries,t.statusChangedAt,t.checkInRequired,t.maxParticipants,List.copyOf(t.registrations),t.seedingStrategy,t.seedingSeed,TournamentDetails.snapshot(t));
         }
     }
     public void capture(Tournament t) {
@@ -69,6 +69,7 @@ public class TournamentPersistenceCoordinator {
             for(var e:data.matches()) {
                 var match=new TournamentMatch(e.id().toString(),t.id,byId.get(e.a()),byId.get(e.b()));match.historyMatchId=e.historyId();match.onlineMatchId=e.roomId();match.status=e.status();match.winnerParticipantId=e.winner()==null?null:e.winner().toString();match.result=e.result();match.failure=e.failure();match.remainingA=e.remainingA();match.remainingB=e.remainingB();match.startedAt=e.startedAt();match.finishedAt=e.finishedAt();t.matches.add(match);
             }
+            if(data.details()!=null)data.details().restore(t);
             if(t.status==TournamentStatus.RUNNING || t.status==TournamentStatus.PAUSED || (t.status==TournamentStatus.READY && !t.matches.isEmpty())) {
                 TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());t.revision++;
                 for(var match:t.matches) if(match.status==TournamentMatch.Status.RUNNING) {match.status=TournamentMatch.Status.FAILED;match.failure="SERVER_RESTART";match.finishedAt=Instant.now();}

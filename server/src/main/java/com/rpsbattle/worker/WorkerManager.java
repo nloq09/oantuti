@@ -27,6 +27,7 @@ public class WorkerManager {
         if (maxConcurrent < 1 || maxConcurrent > 4) throw new IllegalArgumentException("Invalid match capacity");
         this.queue=queue;this.worker=worker;this.tournaments=tournaments;this.maxConcurrent=maxConcurrent;this.launches=launches;
     }
+    public void releaseReservations(Collection<String> ids){queue.release(ids);}
     public void offer(MatchExecutionRequest request) { queue.offer(request); }
     public void dispatch() {
         while (true) {
@@ -46,6 +47,7 @@ public class WorkerManager {
             if (t.status!=TournamentStatus.RUNNING || m.status!=TournamentMatch.Status.PENDING || draining()) {
                 complete(m.id); return;
             }
+            if(t.matches.stream().filter(game->game.status==TournamentMatch.Status.RUNNING).count()>=t.maxConcurrentMatches) {complete(m.id);return;}
             try {
                 var result=Objects.requireNonNull(worker.execute(request));
                 m.onlineMatchId=result.roomId();m.historyMatchId=result.historyId();

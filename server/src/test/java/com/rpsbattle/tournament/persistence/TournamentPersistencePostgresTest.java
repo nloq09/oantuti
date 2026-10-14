@@ -113,6 +113,17 @@ class TournamentPersistencePostgresTest {
         assertThatThrownBy(()->repository.save(cup)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThat(repository.all()).noneMatch(t->t.id().equals(cup.id()));assertThat(history.find(archive.id())).isEmpty();assertThat(stats.account(b.id().value()).matchesPlayed()).isZero();
     }
+    @Test void knockoutTreeRoundRestAndDecisionTimesSurviveRepeatedDatabaseRestore() {
+        var owner=user();var t=new Tournament(UUID.randomUUID().toString(),"Knockout restore",TournamentFormat.SINGLE_ELIMINATION,Instant.parse("2026-10-14T03:00:00Z"));t.ownerUserId=owner.id().value();t.maxParticipants=32;t.maxConcurrentMatches=1;
+        for(int i=0;i<3;i++){var p=participant(owner,"Bracket "+i);t.participants.add(new TournamentParticipant(p.id().toString(),p.botId().toString(),"unused",p.displayName(),p.seed(),p.ownerUserId(),null,i+1,null));}
+        t.matches.addAll(new com.rpsbattle.tournament.scheduler.SingleEliminationScheduler().schedule(t));
+        for(int i=0;i<3;i++) {for(var m:t.matches){m.status=TournamentMatch.Status.FINISHED;m.winnerParticipantId=m.participantA.participantId();m.result="WIN";m.remainingA=9;m.remainingB=0;m.moveCountA=2;m.moveNanosA=40000000;}
+            t.matches.addAll(com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t));}
+        t.status=TournamentStatus.FINISHED;t.finishedAt=t.createdAt.plusSeconds(5);t.tieBreakOrder=List.of(com.rpsbattle.tournament.ranking.TieBreak.POINTS,com.rpsbattle.tournament.ranking.TieBreak.AVERAGE_MOVE_TIME);
+        var coordinator=new TournamentPersistenceCoordinator(repository,new TournamentRegistry(),tournaments,historyCoordinator,artifacts);var snapshot=coordinator.snapshot(t);repository.save(snapshot);repository.save(snapshot);
+        for(int i=0;i<2;i++) {var loaded=restored().findById(t.id).orElseThrow();assertThat(loaded.bracket).isEqualTo(t.bracket);assertThat(loaded.rounds).isEqualTo(t.rounds);assertThat(loaded.maxConcurrentMatches).isEqualTo(1);assertThat(loaded.matches).hasSize(2);assertThat(loaded.tieBreakOrder).isEqualTo(t.tieBreakOrder);
+            assertThat(loaded.matches).allMatch(m->m.scheduledAt!=null&&m.moveCountA==2&&m.moveNanosA==40000000);assertThat(rankings.rank(loaded)).isEqualTo(rankings.rank(t));}
+    }
     @Test void existingPrivateDatabaseRowsAreNeverRestoredAsPublic() throws Exception {
         var owner=user();var id=UUID.randomUUID();
         try(var c=database.getConnection();var sql=c.prepareStatement("INSERT INTO tournaments(id,owner_user_id,name,format,status,visibility) VALUES (?,?,'Private','ROUND_ROBIN','DRAFT','PRIVATE')")) {sql.setObject(1,id);sql.setObject(2,owner.id().value());sql.executeUpdate();}

@@ -3,13 +3,14 @@ import {
   tournamentRequest,
   createTournament,
   addParticipant,
-} from "./tournament-api.js?v=registration-v2";
+} from "./tournament-api.js?v=rounds-v4";
+import { formatLabel } from "./bracket-renderer.js";
 import { statusLabels } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 import { getAccount, loginLink } from "../account/account-session.js";
 const account = await getAccount().catch(error => { toast(error.message, true); return null; });
 if (!account) {
-  document.querySelectorAll("#create-tournament input,#create-tournament button").forEach(element => element.disabled = true);
+  document.querySelectorAll("#create-tournament input,#create-tournament select,#create-tournament button").forEach(element => element.disabled = true);
   const link = document.createElement("a"); link.href = loginLink(); link.textContent = "Đăng nhập để tạo giải và đăng ký bot của bạn.";
   document.querySelector("#tournament-account-notice").append(link);
 }
@@ -50,7 +51,7 @@ async function load() {
       status.className = "status-badge";
       status.textContent = statusLabels[t.status];
       const info = document.createElement("p");
-      info.textContent = `Round Robin · ${t.participants.length} bot · ${t.progress.completed}/${t.progress.total} trận`;
+      info.textContent = `${formatLabel(t.format)} · ${t.participants.length} bot · ${t.progress.completed}/${t.progress.total} trận`;
       const link = document.createElement("a");
       link.className = "button primary";
       link.href = "/tournament.html?id=" + encodeURIComponent(t.id);
@@ -80,7 +81,7 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
   try {
     t = await createTournament(
       document.querySelector("#tournament-name").value.trim(),
-      {maxParticipants, checkInRequired: document.querySelector("#check-in-required").checked},
+      {maxParticipants, format:document.querySelector("#tournament-format").value, maxConcurrentMatches:Number(document.querySelector("#match-concurrency").value), checkInRequired: document.querySelector("#check-in-required").checked},
     );
     for (const bot of chosen) await addParticipant(t.id, bot);
     location.href = "/tournament.html?id=" + encodeURIComponent(t.id);

@@ -20,6 +20,7 @@ public class TournamentEntity {
     @Column(name="max_participants",nullable=false) int maxParticipants;
     @Enumerated(EnumType.STRING) @Column(name="seeding_strategy",nullable=false,length=16) SeedingStrategy seedingStrategy;
     @Column(name="seeding_seed",nullable=false) long seedingSeed;
+    @Convert(converter=TournamentDetailsConverter.class) @Column(name="structure_json",columnDefinition="text") TournamentDetails details;
     protected TournamentEntity() {}
-    void copy(TournamentMetadata t) {id=t.id();ownerUserId=t.ownerUserId();name=t.name();format=t.format();status=t.status();revision=t.revision();createdAt=t.createdAt();startedAt=t.startedAt();finishedAt=t.finishedAt();statusChangedAt=t.statusChangedAt();checkInRequired=t.checkInRequired();maxParticipants=t.maxParticipants();seedingStrategy=t.seedingStrategy();seedingSeed=t.seedingSeed();}
+    void copy(TournamentMetadata t) {id=t.id();ownerUserId=t.ownerUserId();name=t.name();format=t.format();status=t.status();revision=t.revision();createdAt=t.createdAt();startedAt=t.startedAt();finishedAt=t.finishedAt();statusChangedAt=t.statusChangedAt();checkInRequired=t.checkInRequired();maxParticipants=t.maxParticipants();seedingStrategy=t.seedingStrategy();seedingSeed=t.seedingSeed();details=t.details();}
 }

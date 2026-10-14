@@ -140,3 +140,17 @@ th {
   cursor: pointer;
   margin-bottom: 16px;
 }
+
+.bracket-tree { display:flex; gap:1.5rem; overflow-x:auto; padding:.5rem 0 1.5rem; }
+.bracket-round { flex:1 0 240px; display:flex; flex-direction:column; }
+.bracket-round h3 { text-align:center; }
+.bracket-slots { display:flex; flex:1; flex-direction:column; justify-content:space-around; gap:1rem; }
+.bracket-node { padding:1rem; margin:0; position:relative; }
+.bracket-node p { margin:.35rem 0; overflow-wrap:anywhere; }
+.bracket-node small { display:block; margin:.5rem 0; }
+.bracket-winner { color:var(--gold,#ffdc8b); font-weight:700; }
+.tie-break-inputs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+#competition-rules { margin:1.5rem 0; }
+#competition-rules input { max-width:12rem; }
+#match-list > h3,.round-bye { grid-column:1/-1; }
+@media(max-width:600px) { .tie-break-inputs { grid-template-columns:1fr; } .bracket-round { flex-basis:220px; } }

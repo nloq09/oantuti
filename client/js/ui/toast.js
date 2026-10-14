@@ -70,6 +70,8 @@ const errors = {
   MATCH_FINISHED: "Ván chơi đã kết thúc.",
   INVALID_PHASE: "Thao tác chưa khả dụng.",
   INVALID_MESSAGE: "Dữ liệu gửi không hợp lệ.",
+  INVALID_CONCURRENCY: "Số trận chạy đồng thời phải từ 1 đến 4.",
+  INVALID_TIE_BREAK_ORDER: "Điểm phải được xét trước; các tiêu chí phụ không được trùng nhau.",
 };
 export const errorText = message => errors[message] || (message === "Failed to fetch" ? "Không kết nối được server." : "Không thể thực hiện thao tác. Hãy thử lại.");
 export function toast(message, error = false) {

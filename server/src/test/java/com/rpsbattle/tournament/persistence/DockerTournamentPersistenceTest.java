@@ -42,6 +42,31 @@ class DockerTournamentPersistenceTest {
     @Autowired UserStatsService stats;
     @Autowired com.rpsbattle.replay.ReplayRegistry replays;
     User user() {var id=UserId.random();var now=Instant.now();var name="docker_"+id.value().toString().substring(0,8);return users.save(new User(id,name,name+"@example.com","unused","Player",UserRole.USER,AccountStatus.ACTIVE,now,now,null));}
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"ROUND_ROBIN,5,10","SINGLE_ELIMINATION,6,5"})
+    void dockerScheduleCompletesRoundsAndPersistsBracketAndTiming(TournamentFormat format,int count,int expected) throws Exception {
+        assumeTrue(artifacts.available(BotLanguage.PYTHON),"Docker Linux/python image unavailable");
+        var auth=AuthService.sessionAuthentication(user());var cup=owned.create(auth,"Docker rounds "+format,format,"PUBLIC",false,32,1,null);
+        for(int i=0;i<count;i++) {var bot=bots.upload(auth,"Round bot "+i,new MockMultipartFile("file","main.py","text/plain","raise SystemExit(1)\n".getBytes()));owned.add(auth,cup.id,bot.id().toString(),null,(long)i);}
+        owned.start(auth,cup.id);long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(60);
+        boolean finished=false;
+        while(System.nanoTime()<deadline) {
+            synchronized(cup) {
+                assertThat(cup.matches.stream().filter(m->m.status==TournamentMatch.Status.RUNNING).count()).isLessThanOrEqualTo(1);
+                for(var m:cup.matches)if(m.status==TournamentMatch.Status.RUNNING)assertThat(cup.matches.stream().filter(earlier->earlier.round<m.round)).allMatch(earlier->earlier.status==TournamentMatch.Status.FINISHED);
+                finished=cup.status==TournamentStatus.FINISHED;
+            }
+            if(finished)break;Thread.sleep(100);
+        }
+        assertThat(finished).isTrue();persistence.flushForRead();
+        var registry=new TournamentRegistry();new TournamentPersistenceCoordinator(repository,registry,tournaments,historyCoordinator,artifacts).restore();var loaded=registry.findById(cup.id).orElseThrow();
+        assertThat(loaded.matches).hasSize(expected).allMatch(m->m.status==TournamentMatch.Status.FINISHED&&m.round>=1&&m.scheduledAt!=null&&m.startedAt!=null&&m.finishedAt!=null);
+        assertThat(loaded.matches.stream().mapToInt(m->m.moveCountA+m.moveCountB).sum()).isEqualTo(expected);
+        assertThat(loaded.rounds).isEqualTo(cup.rounds);assertThat(loaded.bracket).isEqualTo(cup.bracket);assertThat(loaded.maxConcurrentMatches).isEqualTo(1);
+        for(var m:loaded.matches){assertThat(history.find(m.historyMatchId)).isPresent();assertThat(replays.view(m.historyMatchId).get("result")).isNotNull();}
+        assertThat(tournaments.view(loaded).get("champion")).isNotNull();
+        if(format==TournamentFormat.SINGLE_ELIMINATION){assertThat(loaded.bracket.getLast().winnerParticipantId()).isNotNull();assertThat(loaded.rounds.getFirst().byeParticipantIds()).hasSize(2);}
+    }
     @Test void realDockerBotForfeitCommitsTournamentResultHistoryRankingAndAccountStats() throws Exception {
         assumeTrue(artifacts.available(BotLanguage.PYTHON),"Docker Linux/python image unavailable");
         var a=user();var b=user();var authA=AuthService.sessionAuthentication(a);var authB=AuthService.sessionAuthentication(b);

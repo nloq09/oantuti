@@ -7,11 +7,12 @@ import {
   cancelTournament,
   openRegistration,
   closeRegistration,
-  configureSeeding,
+  configureSeeding, configureRules,
   registerBot, approveRegistration, rejectRegistration, withdrawRegistration, checkInRegistration, closeCheckIn,
   TournamentStream,
   canManageTournament,
-} from "./tournament-api.js?v=seeding-v3";
+} from "./tournament-api.js?v=rounds-v4";
+import { formatLabel, roundLabel, tieBreakLabels, renderBracket } from "./bracket-renderer.js";
 import { statusLabels, renderRanking } from "./ranking-renderer.js";
 import { toast } from "../ui/toast.js";
 import { getAccount, loginLink } from "../account/account-session.js";
@@ -64,7 +65,12 @@ function render(t) {
   document.querySelector("#close-check-in").hidden = !owner || t.status !== "CHECK_IN";
   document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < 2;
   renderRegistrations(t, owner);
-  renderSeeding(t, owner);
+  renderSeeding(t, owner);renderRules(t,owner);
+  document.querySelector("#format-heading").textContent="Tổng quan · "+formatLabel(t.format);
+  document.querySelector("#competition-policy").textContent=t.format==="SINGLE_ELIMINATION" ? "Hòa: bot còn nhiều quân hơn đi tiếp; nếu bằng nhau, ưu tiên hạt giống cao hơn. BYE được đi tiếp, không cộng điểm." : "Mỗi cặp gặp nhau một lần. Số bot lẻ: mỗi vòng có một bot nghỉ (BYE).";
+  document.querySelector("#ranking-policy").textContent=(t.format==="SINGLE_ELIMINATION"?"Ưu tiên vòng đi tới và kết quả bracket. Sau đó: ":"")+(t.tieBreakOrder||[]).map(rule=>tieBreakLabels[rule]).join(" → ")+" → ID bot trong giải. Thời gian tính nước gồm khởi chạy sandbox; chưa có dữ liệu được xếp sau.";
+  document.querySelector('[data-tab="bracket"]').hidden=t.format!=="SINGLE_ELIMINATION";
+  renderBracket(document.querySelector("#bracket-tree"),t);
   const champion = document.querySelector("#champion");
   champion.hidden = !t.champion;
   champion.textContent = t.champion
@@ -73,6 +79,7 @@ function render(t) {
   const counts = document.querySelector("#counts");
   counts.replaceChildren();
   for (const [label, value] of [
+    ["Vòng hiện tại", t.currentRound || "—"],
     ["Bot tham gia", t.participants.length],
     ["Tổng trận", p.total],
     ["Hoàn thành", p.completed],
@@ -123,7 +130,13 @@ function render(t) {
     text.textContent = "Lịch đấu được tạo khi bắt đầu giải.";
     matches.append(text);
   }
-  for (const m of t.matches) {
+  let currentRound;
+  for (const m of [...t.matches].sort((a,b)=>(a.round||1)-(b.round||1))) {
+    if(currentRound!==m.round) {
+      currentRound=m.round;const heading=document.createElement("h3");heading.textContent=roundLabel(m.round||1,t.rounds?.length||1,t.format);matches.append(heading);
+      const byes=t.rounds?.find(r=>r.number===m.round)?.byeParticipantIds||[];
+      if(byes.length){const note=document.createElement("p");note.className="round-bye";note.textContent="BYE · "+byes.map(id=>t.participants.find(p=>p.participantId===id)?.displayName||id).join(", ");matches.append(note);}
+    }
     const card = document.createElement("article");
     card.className = "panel match-card";
     const title = document.createElement("h3");
@@ -260,4 +273,27 @@ document.querySelector("#seeding-form").onsubmit=event=>{
   const manualSeeds=Object.fromEntries([...document.querySelectorAll("#manual-seeds input")].map(input=>[input.dataset.participantId,Number(input.value)]));
   if(strategy==="MANUAL" && new Set(Object.values(manualSeeds)).size!==Object.keys(manualSeeds).length){toast("Seed thủ công không được trùng nhau.",true);return;}
   action(()=>configureSeeding(id,{strategy,seed,manualSeeds:strategy==="MANUAL"?manualSeeds:null}));
+};
+
+const ruleInputs=document.querySelector("#tie-break-inputs");
+for(let index=0;index<4;index++) {
+  const label=document.createElement("label");label.textContent=`Tiêu chí phụ ${index+1}`;
+  const select=document.createElement("select");select.append(new Option("Không sử dụng",""));
+  for(const [value,text] of Object.entries(tieBreakLabels))if(value!=="POINTS")select.append(new Option(text,value));
+  label.append(select);ruleInputs.append(label);
+}
+function renderRules(t,owner) {
+  const section=document.querySelector("#competition-rules");section.hidden=!owner;
+  const editable=["DRAFT","REGISTRATION","CHECK_IN"].includes(t.status);
+  const concurrency=document.querySelector("#rule-concurrency");
+  if(!section.contains(document.activeElement)) {
+    concurrency.value=t.maxConcurrentMatches;
+    section.querySelectorAll("select").forEach((select,index)=>select.value=t.tieBreakOrder?.[index+1]||"");
+  }
+  section.querySelectorAll("input,select,button").forEach(input=>input.disabled=!editable);
+}
+document.querySelector("#rules-form").onsubmit=event=>{
+  event.preventDefault();const tieBreakOrder=["POINTS",...[...ruleInputs.querySelectorAll("select")].map(select=>select.value).filter(Boolean)];
+  if(new Set(tieBreakOrder).size!==tieBreakOrder.length){toast("Các tiêu chí phụ không được trùng nhau.",true);return;}
+  action(()=>configureRules(id,{maxConcurrentMatches:Number(document.querySelector("#rule-concurrency").value),tieBreakOrder}));
 };

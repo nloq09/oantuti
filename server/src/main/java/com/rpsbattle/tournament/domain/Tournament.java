@@ -12,6 +12,13 @@ public final class Tournament {
     public TournamentStatus status = TournamentStatus.DRAFT;
     public final List<TournamentParticipant> participants = new ArrayList<>();
     public final List<TournamentMatch> matches = new ArrayList<>();
+    public final List<TournamentRound> rounds = new ArrayList<>();
+    public final List<BracketNode> bracket = new ArrayList<>();
+    public final List<TournamentStage> stages = new ArrayList<>();
+    public int maxConcurrentMatches=4;
+    public List<com.rpsbattle.tournament.ranking.TieBreak> tieBreakOrder=List.of(
+        com.rpsbattle.tournament.ranking.TieBreak.POINTS,com.rpsbattle.tournament.ranking.TieBreak.WINS,
+        com.rpsbattle.tournament.ranking.TieBreak.HEAD_TO_HEAD,com.rpsbattle.tournament.ranking.TieBreak.REMAINING_PIECES);
     public final Instant createdAt;
     public Instant startedAt, finishedAt, statusChangedAt;
     public long revision;
@@ -22,5 +29,6 @@ public final class Tournament {
     public final List<TournamentRegistration> registrations=new ArrayList<>();
     public Tournament(String id, String name, TournamentFormat format, Instant createdAt) {
         this.id=id; this.name=name; this.format=format; this.createdAt=createdAt;this.statusChangedAt=createdAt;
+        stages.add(new TournamentStage(id+"/stage/1",1,format,null));
     }
 }

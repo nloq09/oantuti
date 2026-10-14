@@ -44,6 +44,14 @@ class WorkerManagerTest {
         when(worker.execute(second)).thenThrow(new IllegalStateException("private diagnostic"));
         manager.dispatch();tasks.remove().run();assertThat(second.match().failure).isEqualTo("MATCH_START_FAILED");assertThat(manager.active()).isZero();
     }
+    @Test void tournamentLimitIsEnforcedAtLaunchEvenWhenMultipleRequestsWereQueued() {
+        var tasks=new ArrayDeque<Runnable>();var calls=new AtomicInteger();
+        var manager=new WorkerManager(new ExecutionQueue(10),r->{calls.incrementAndGet();return new MatchExecutionResult(r.match().id,"archive");},mock(TournamentService.class),4,tasks::add);
+        var cup=tournament();cup.maxConcurrentMatches=1;var first=request(cup,"one");var second=request(cup,"two");var other=request(tournament(),"other");
+        manager.offer(first);manager.offer(second);manager.offer(other);manager.dispatch();while(!tasks.isEmpty())tasks.remove().run();
+        assertThat(calls.get()).isEqualTo(2);assertThat(second.match().status).isEqualTo(TournamentMatch.Status.PENDING);assertThat(manager.active()).isEqualTo(2);
+        first.match().status=TournamentMatch.Status.FINISHED;manager.complete(first.match().id);manager.offer(second);manager.dispatch();tasks.remove().run();assertThat(calls.get()).isEqualTo(3);
+    }
     @Test void dispatchDoesNotRunSlowWorkerOnCallerAndDrainPreventsFurtherLaunches() throws Exception {
         var entered=new CountDownLatch(1);var release=new CountDownLatch(1);var caller=Thread.currentThread();var thread=new java.util.concurrent.atomic.AtomicReference<Thread>();
         try(var pool=Executors.newSingleThreadExecutor()) {

@@ -115,18 +115,19 @@ public class OnlineMatchService {
                     var turn = pending.get();
                     var task = new FutureTask<Void>(() -> {
                         Action action = null;
-                        boolean failed = false;
+                        boolean failed = false;long decisionStarted=System.nanoTime();
                         try {
                             action = turn.agent().chooseAction(new PlayerView(turn.state(), turn.player()), turn.actions());
                         } catch (RuntimeException error) {
                             if(metrics!=null)metrics.botFailure(error);
                             failed = true;
                         }
+                        long decisionNanos=System.nanoTime()-decisionStarted;
                         synchronized (room) {
                             if(draining)return null;
                             try {
                                 var result = room.completeBot(turn, action, failed);
-                                if (!result.isEmpty()) publish(room, result);
+                                if (!result.isEmpty()) {room.recordBotTime(turn.player(),decisionNanos);publish(room, result);}
                             } catch(RuntimeException error) { room.infrastructureFailure(); }
                         }
                         return null;

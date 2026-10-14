@@ -48,6 +48,7 @@ public class TournamentExecutionService {
                         var result=room.state().result().orElseThrow();
                         m.winnerParticipantId=result.winner().map(p->p.equals(OnlineMatch.P1)?m.participantA.participantId():m.participantB.participantId()).orElse(null);
                         m.result=result.outcome().name();m.remainingA=room.state().aliveCount(OnlineMatch.P1);m.remainingB=room.state().aliveCount(OnlineMatch.P2);
+                        m.moveNanosA=room.botMoveNanos(OnlineMatch.P1);m.moveNanosB=room.botMoveNanos(OnlineMatch.P2);m.moveCountA=room.botMoveCount(OnlineMatch.P1);m.moveCountB=room.botMoveCount(OnlineMatch.P2);
                         m.failure=room.botError();m.finishedAt=room.finishedAt();m.status=TournamentMatch.Status.FINISHED;
                         online.release(room.id());changed=true;
                     } else if(Instant.now().isAfter(m.startedAt.plus(maxDuration))) { online.release(room.id());failed(m,"MATCH_TIMEOUT");changed=true; }
@@ -55,11 +56,19 @@ public class TournamentExecutionService {
                 if(m.status!=TournamentMatch.Status.RUNNING)workers.complete(m.id);
             }
             if(t.status==TournamentStatus.CANCELLED) for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING){failed(m,"CANCELLED");workers.complete(m.id);changed=true;}
+            if(t.status==TournamentStatus.RUNNING && t.format==TournamentFormat.SINGLE_ELIMINATION) {
+                var before=List.copyOf(t.bracket);var next=com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t);t.matches.addAll(next);
+                changed|=!before.equals(t.bracket)||!next.isEmpty();
+                if(t.matches.stream().anyMatch(m->m.status==TournamentMatch.Status.FAILED)) {TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());changed=true;}
+            }
+            if(t.status==TournamentStatus.CANCELLED || t.status==TournamentStatus.RECOVERY_REQUIRED)workers.releaseReservations(t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).toList());
             if(changed)tournaments.changed(t);
         }
         for(var t:all) synchronized(t) {
             if(t.status!=TournamentStatus.RUNNING)continue;
-            for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING) {
+            int round=t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(0);
+            int slots=t.maxConcurrentMatches-(int)t.matches.stream().filter(m->m.status==TournamentMatch.Status.RUNNING).count();
+            for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING && m.round==round && slots-->0) {
                 try {workers.offer(new com.rpsbattle.worker.MatchExecutionRequest(t,m));}
                 catch(com.rpsbattle.online.DemoRequestException full) {break;}
             }
@@ -68,7 +77,7 @@ public class TournamentExecutionService {
         for(var t:all) synchronized(t) {
             if(t.status!=TournamentStatus.RUNNING)continue;
             boolean changed=false;
-            if(t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING)) {
+            if(t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING) && (t.format!=TournamentFormat.SINGLE_ELIMINATION||com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.complete(t))) {
                 TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());changed=true;
             }
             if(changed)tournaments.changed(t);
@@ -85,12 +94,14 @@ public class TournamentExecutionService {
                             replays.save(room,online);var result=room.state().result().orElseThrow();
                             m.winnerParticipantId=result.winner().map(p->p.equals(OnlineMatch.P1)?m.participantA.participantId():m.participantB.participantId()).orElse(null);
                             m.result=result.outcome().name();m.remainingA=room.state().aliveCount(OnlineMatch.P1);m.remainingB=room.state().aliveCount(OnlineMatch.P2);
-                            m.failure=room.botError();m.finishedAt=room.finishedAt();m.status=TournamentMatch.Status.FINISHED;
+                            m.moveNanosA=room.botMoveNanos(OnlineMatch.P1);m.moveNanosB=room.botMoveNanos(OnlineMatch.P2);m.moveCountA=room.botMoveCount(OnlineMatch.P1);m.moveCountB=room.botMoveCount(OnlineMatch.P2);
+                        m.failure=room.botError();m.finishedAt=room.finishedAt();m.status=TournamentMatch.Status.FINISHED;
                         } else failed(m,"SERVER_SHUTDOWN");
                     }catch(RuntimeException missing){failed(m,"SERVER_SHUTDOWN");}
                     workers.complete(m.id);
                 }
-                if(!t.matches.isEmpty() && t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED||m.status==TournamentMatch.Status.FAILED)) {TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());}
+                if(t.format==TournamentFormat.SINGLE_ELIMINATION)t.matches.addAll(com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t));
+                if((t.format!=TournamentFormat.SINGLE_ELIMINATION||com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.complete(t)) && !t.matches.isEmpty() && t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED||m.status==TournamentMatch.Status.FAILED)) {TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());}
                 tournaments.changed(t);
             }
         }

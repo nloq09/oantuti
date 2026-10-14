@@ -11,7 +11,7 @@ public class TournamentController {
     private final OwnedTournamentService owned;
     public TournamentController(TournamentService service,OwnedTournamentService owned) {this.service=service;this.owned=owned;}
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
-    public Map<String,Object> create(Authentication auth,@RequestBody Create request) {return service.view(owned.create(auth,request.name(),request.format(),request.visibility(),Boolean.TRUE.equals(request.checkInRequired()),request.maxParticipants()));}
+    public Map<String,Object> create(Authentication auth,@RequestBody Create request) {return service.view(owned.create(auth,request.name(),request.format(),request.visibility(),Boolean.TRUE.equals(request.checkInRequired()),request.maxParticipants(),request.maxConcurrentMatches(),request.tieBreakOrder()));}
     @GetMapping public List<Map<String,Object>> list() {owned.flush();return service.list();}
     @GetMapping("/{id}") public Map<String,Object> detail(@PathVariable String id) {owned.flush();return service.view(service.find(id));}
     @PostMapping("/{id}/participants") public Map<String,Object> add(Authentication auth,@PathVariable String id,@RequestBody Participant p) {owned.add(auth,id,p.botId(),p.displayName(),p.seed());return detail(id);}
@@ -26,12 +26,14 @@ public class TournamentController {
     @DeleteMapping("/{id}/registrations/{registrationId}") public Map<String,Object> withdraw(Authentication auth,@PathVariable String id,@PathVariable String registrationId) {owned.withdraw(auth,id,registrationId);return detail(id);}
     @PostMapping("/{id}/check-in") public Map<String,Object> checkIn(Authentication auth,@PathVariable String id,@RequestBody(required=false) CheckIn request) {owned.checkIn(auth,id,request==null?null:request.registrationId());return detail(id);}
     @PostMapping("/{id}/close-check-in") public Map<String,Object> closeCheckIn(Authentication auth,@PathVariable String id) {owned.closeCheckIn(auth,id);return detail(id);}
+    @PostMapping("/{id}/rules") public Map<String,Object> rules(Authentication auth,@PathVariable String id,@RequestBody Rules request) {owned.configureRules(auth,id,request.maxConcurrentMatches(),request.tieBreakOrder());return detail(id);}
+    public record Rules(int maxConcurrentMatches,List<com.rpsbattle.tournament.ranking.TieBreak> tieBreakOrder) {}
     public record CheckIn(String registrationId) {}
     @PostMapping("/{id}/seeding") public Map<String,Object> seeding(Authentication auth,@PathVariable String id,@RequestBody Seeds request){owned.configureSeeding(auth,id,request.strategy(),request.seed(),request.manualSeeds());return detail(id);}
     public record Seeds(SeedingStrategy strategy,Long seed,Map<String,Integer> manualSeeds) {}
     @GetMapping("/{id}/ranking") public Object ranking(@PathVariable String id) {return detail(id).get("ranking");}
     @GetMapping(value="/{id}/export",produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String,Object>> export(@PathVariable String id) {return ResponseEntity.ok().header("Content-Disposition","attachment; filename=tournament-"+id+".json").body(detail(id));}
-    public record Create(String name,TournamentFormat format,String visibility,Boolean checkInRequired,Integer maxParticipants) {}
+    public record Create(String name,TournamentFormat format,String visibility,Boolean checkInRequired,Integer maxParticipants,Integer maxConcurrentMatches,List<com.rpsbattle.tournament.ranking.TieBreak> tieBreakOrder) {}
     public record Participant(String botId,String displayName,Long seed) {}
 }

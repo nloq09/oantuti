@@ -87,18 +87,24 @@ public class TournamentService {
         data.put("statusChangedAt",t.statusChangedAt);
         data.put("seedingStrategy",t.seedingStrategy);data.put("seedingSeed",Long.toString(t.seedingSeed));
         data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
+        data.put("maxConcurrentMatches",t.maxConcurrentMatches);data.put("tieBreakOrder",t.tieBreakOrder);
+        data.put("rounds",List.copyOf(t.rounds));data.put("bracket",List.copyOf(t.bracket));data.put("stages",List.copyOf(t.stages));
+        data.put("currentRound",t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(t.rounds.size()));
+        data.put("drawPolicy",t.format==TournamentFormat.SINGLE_ELIMINATION?"REMAINING_PIECES_THEN_SEED":null);
         data.put("registrations",List.copyOf(t.registrations));
         data.put("participants",List.copyOf(t.participants));
         // Copy mutable matches while holding the monitor; never expose internal tokens or mutable objects.
         data.put("matches",t.matches.stream().map(m->{var row=new LinkedHashMap<String,Object>();
             row.put("id",m.id);row.put("participantA",m.participantA);row.put("participantB",m.participantB);row.put("onlineMatchId",m.onlineMatchId);row.put("historyMatchId",m.historyMatchId);
             row.put("status",m.status);row.put("winnerParticipantId",m.winnerParticipantId);row.put("result",m.result);row.put("failure",m.failure);
-            row.put("startedAt",m.startedAt);row.put("finishedAt",m.finishedAt);row.put("remainingA",m.remainingA);row.put("remainingB",m.remainingB);return row;}).toList());
+            row.put("round",m.round);row.put("scheduledAt",m.scheduledAt);row.put("startedAt",m.startedAt);row.put("finishedAt",m.finishedAt);row.put("remainingA",m.remainingA);row.put("remainingB",m.remainingB);return row;}).toList());
         int pending=0,running=0,finished=0,failed=0;
         for(var m:t.matches) switch(m.status){case PENDING->pending++;case RUNNING->running++;case FINISHED->finished++;case FAILED->failed++;}
-        data.put("progress",Map.of("total",t.matches.size(),"pending",pending,"running",running,"finished",finished,"failed",failed,"completed",finished+failed));
+        int total=t.format==TournamentFormat.SINGLE_ELIMINATION&&!t.bracket.isEmpty()?t.participants.size()-1:t.matches.size();
+        data.put("progress",Map.of("total",total,"pending",pending+total-t.matches.size(),"running",running,"finished",finished,"failed",failed,"completed",finished+failed));
         var ranked=ranking.rank(t); data.put("ranking",ranked);
-        data.put("champion",t.status==TournamentStatus.FINISHED&&finished>0&&!ranked.isEmpty()?ranked.get(0):null);
+        String championId=t.format==TournamentFormat.SINGLE_ELIMINATION&&!t.bracket.isEmpty()?t.bracket.getLast().winnerParticipantId():null;
+        data.put("champion",t.status!=TournamentStatus.FINISHED?null:t.format==TournamentFormat.SINGLE_ELIMINATION?ranked.stream().filter(r->r.participantId().equals(championId)).findFirst().orElse(null):finished>0&&!ranked.isEmpty()?ranked.get(0):null);
         return data;
     } }
 }

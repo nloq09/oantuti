@@ -24,6 +24,7 @@ export function renderRanking(element, rows) {
       row.losses,
       row.points,
       row.piecesRemaining,
+      row.averageMoveMillis == null ? "—" : row.averageMoveMillis.toFixed(2),
     ]) {
       const td = document.createElement("td");
       td.textContent = value;

@@ -26,12 +26,17 @@ public class OwnedTournamentService {
         return create(auth,name,format,visibility,false,10);
     }
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants) {
+        return create(auth,name,format,visibility,checkInRequired,maxParticipants,4,null);
+    }
+    public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order) {
         var actor=accounts.requireUser(auth);
+        validateRules(concurrency==null?4:concurrency,order);
         int limit=maxParticipants==null?10:maxParticipants;
-        if(limit<2 || limit>10)throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
+        if(limit<2 || limit>32)throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
         if(visibility!=null && !visibility.equals("PUBLIC")) throw new AuthException("UNSUPPORTED_TOURNAMENT_VISIBILITY",400);
         var t=tournaments.create(name,format==null?TournamentFormat.ROUND_ROBIN:format);
         synchronized(t) {
+            t.maxConcurrentMatches=concurrency==null?4:concurrency;if(order!=null)t.tieBreakOrder=List.copyOf(order);
             t.ownerUserId=actor.id().value();t.checkInRequired=checkInRequired;t.maxParticipants=limit;t.deferNotifications=true;
             try {persistence.persistNow(t);} catch(RuntimeException failure) {registry.remove(t.id);throw failure;}
             finally {t.deferNotifications=false;}
@@ -45,12 +50,13 @@ public class OwnedTournamentService {
             var status=t.status;var started=t.startedAt;var finished=t.finishedAt;var changedAt=t.statusChangedAt;long revision=t.revision;
             var registrations=List.copyOf(t.registrations);var checkIn=t.checkInRequired;var capacity=t.maxParticipants;var strategy=t.seedingStrategy;var randomSeed=t.seedingSeed;
             var participants=List.copyOf(t.participants);var matches=List.copyOf(t.matches);
+            var details=com.rpsbattle.tournament.persistence.TournamentDetails.snapshot(t);
             t.deferNotifications=true;
             try {mutation.run();persistence.persistNow(t);}
             catch(RuntimeException failure) {
                 t.status=status;t.startedAt=started;t.finishedAt=finished;t.statusChangedAt=changedAt;t.revision=revision;
                 t.registrations.clear();t.registrations.addAll(registrations);t.checkInRequired=checkIn;t.maxParticipants=capacity;t.seedingStrategy=strategy;t.seedingSeed=randomSeed;
-                t.participants.clear();t.participants.addAll(participants);t.matches.clear();t.matches.addAll(matches);throw failure;
+                t.participants.clear();t.participants.addAll(participants);t.matches.clear();t.matches.addAll(matches);details.restore(t);throw failure;
             } finally {t.deferNotifications=false;}
             tournaments.notifyChanged(t);
         }
@@ -92,7 +98,7 @@ public class OwnedTournamentService {
                 mutate(t,()-> {
                     if(t.checkInRequired && t.status!=TournamentStatus.READY)throw new DemoRequestException("CHECK_IN_REQUIRED");
                     prepare(t,scores);tournaments.start(id);
-                    if(queue!=null) {var ids=t.matches.stream().map(m->m.id).toList();queue.reserve(ids);reserved.addAll(ids);}
+                    if(queue!=null) {var ids=t.format==TournamentFormat.SINGLE_ELIMINATION?t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).toList():t.matches.stream().map(m->m.id).toList();queue.reserve(ids);reserved.addAll(ids);}
                 });
             } catch(RuntimeException failure) {if(queue!=null)queue.release(reserved);throw failure;}
         }
@@ -142,6 +148,16 @@ public class OwnedTournamentService {
         });
     }
 
+    private static void validateRules(int concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order) {
+        if(concurrency<1||concurrency>4)throw new DemoRequestException("INVALID_CONCURRENCY");
+        if(order!=null && (order.isEmpty() || order.size()>5 || order.stream().anyMatch(Objects::isNull) || order.getFirst()!=com.rpsbattle.tournament.ranking.TieBreak.POINTS || new HashSet<>(order).size()!=order.size()))throw new DemoRequestException("INVALID_TIE_BREAK_ORDER");
+    }
+    public void configureRules(Authentication auth,String id,int concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order) {
+        var t=tournaments.find(id);authorization.requireManager(auth,t);validateRules(concurrency,order);
+        mutate(t,()->{if(!List.of(TournamentStatus.DRAFT,TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN).contains(t.status))throw new DemoRequestException("TOURNAMENT_LOCKED");
+            t.maxConcurrentMatches=concurrency;if(order!=null)t.tieBreakOrder=List.copyOf(order);tournaments.changed(t);
+        });
+    }
     private void registrationPhase(Tournament t) {
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("TOURNAMENT_LOCKED");
     }

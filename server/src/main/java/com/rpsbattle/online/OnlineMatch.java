@@ -33,6 +33,11 @@ public final class OnlineMatch {
     private final Map<PlayerId, PlayerAgent> uploadedAgents = new HashMap<>();
     private final Map<PlayerId, String> botNames = new HashMap<>();
     private final LegalActionGenerator generator = new LegalActionGenerator(rules);
+    private final Map<PlayerId,Long> botNanos=new HashMap<>();
+    private final Map<PlayerId,Integer> botMoves=new HashMap<>();
+    public synchronized void recordBotTime(PlayerId player,long nanos) {botNanos.merge(player,Math.max(0,nanos),Long::sum);botMoves.merge(player,1,Integer::sum);}
+    public synchronized long botMoveNanos(PlayerId player){return botNanos.getOrDefault(player,0L);}
+    public synchronized int botMoveCount(PlayerId player){return botMoves.getOrDefault(player,0);}
     private String botError;
     private Instant nextBotAt = Instant.MIN;
     private GameState setup;

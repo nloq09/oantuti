@@ -53,7 +53,7 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
                 String room=m.historyId==null?null:history.find(m.historyId).map(h->h.roomId()).orElse(null);
                 return new TournamentMetadata.Entry(m.id,m.a,m.b,m.historyId,room,m.status,m.winner,m.result,m.failure,m.remainingA==null?0:m.remainingA,m.remainingB==null?0:m.remainingB,m.startedAt,m.finishedAt,null);
             }).toList();
-            return new TournamentMetadata(t.id,t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,schedule,t.statusChangedAt,t.checkInRequired,t.maxParticipants,entities.createQuery("select r from TournamentRegistrationEntity r where r.tournamentId=:id order by r.registeredAt,r.id",TournamentRegistrationEntity.class).setParameter("id",t.id).getResultList().stream().map(TournamentRegistrationEntity::domain).toList(),t.seedingStrategy,t.seedingSeed);
+            return new TournamentMetadata(t.id,t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,schedule,t.statusChangedAt,t.checkInRequired,t.maxParticipants,entities.createQuery("select r from TournamentRegistrationEntity r where r.tournamentId=:id order by r.registeredAt,r.id",TournamentRegistrationEntity.class).setParameter("id",t.id).getResultList().stream().map(TournamentRegistrationEntity::domain).toList(),t.seedingStrategy,t.seedingSeed,t.details);
         }).toList();
     }
 }

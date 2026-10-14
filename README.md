@@ -38,12 +38,12 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 ### Giải đấu, xếp hạng và khán giả — Chặng 3
 
-- Home → **Giải đấu**: tạo giải Round Robin ngay cả khi chưa có bot; chia sẻ mã/link để người khác tham gia và đăng ký bot đã lưu hoặc tải bot mới ngay trong giải. Chủ giải bắt đầu khi đủ 2–10 bot. Mỗi cặp gặp nhau một lần, tổng `n × (n − 1) / 2` trận.
+- Home → **Giải đấu**: tạo giải Vòng tròn hoặc Loại trực tiếp ngay cả khi chưa có bot; chia sẻ mã/link để người khác tham gia và đăng ký bot đã lưu hoặc tải bot mới ngay trong giải. Chủ giải bắt đầu khi đủ 2–32 bot. Vòng tròn chia vòng/BYE, tổng `n × (n − 1) / 2` trận; loại trực tiếp có bracket/BYE và `n − 1` trận thật. Chủ giải đặt giới hạn chạy đồng thời và thứ tự tie-break trước READY.
 - Bản nháp cho phép thêm/gỡ bot; Bắt đầu kiểm tra artifact nội bộ và Docker rồi khóa danh sách.
 - Server tự cấu hình hai seat trong chế độ `HUMAN_VS_HUMAN`, xếp quân, sẵn sàng và chạy qua Match/GameEngine hiện có. Không tạo game mode hoặc engine mới.
-- Hàng đợi giới hạn mặc định 4 trận đồng thời trên toàn bộ giải đấu trong một server. Một trận lỗi không làm dừng các trận còn lại; có thể hủy giải.
+- Hàng đợi giới hạn mặc định 4 trận đồng thời trên toàn bộ giải đấu trong một server, có thêm giới hạn riêng mỗi giải. Vòng tròn tiếp tục khi một trận lỗi hạ tầng; loại trực tiếp chuyển RECOVERY_REQUIRED để không tự gán người thắng. Có thể hủy giải.
 - Cập nhật trực tiếp tiến độ, LIVE, kết quả và bảng xếp hạng qua WebSocket.
-- Thắng 3, hòa 1, thua 0 điểm; ưu tiên điểm → số thắng → tổng quân còn lại → participant ID. Trận lỗi hạ tầng `FAILED` không tính điểm.
+- Thắng 3, hòa 1, thua 0 điểm; tie-break tùy chỉnh gồm số thắng, đối đầu, quân còn và thời gian tính nước trung bình. Loại trực tiếp ưu tiên kết quả bracket; hòa chọn người đi tiếp theo quân còn rồi hạt giống. Trận lỗi hạ tầng `FAILED` và BYE không tính điểm.
 - Xem LIVE trong `game.html` ở chế độ khán giả chỉ đọc, không chiếm seat; server từ chối thao tác chơi từ spectator.
 - Giải hoàn tất hiển thị vô địch; replay đầy đủ và xuất JSON metadata/participants/matches/ranking. Token bot không xuất trong JSON công khai.
 - Giải đấu lưu PostgreSQL; replay trận kết thúc lưu JSON + metadata PostgreSQL, đọc được sau restart. Chặng 3 là nền tảng ban đầu: [CHANG-3.md](docs/CHANG-3.md); hành vi hiện tại: [lưu giải đấu](docs/TOURNAMENT-OWNERSHIP.md), [lưu replay](docs/REPLAY-PERSISTENCE.md).
@@ -111,7 +111,9 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 **Chặng 5 — Nhóm 2:** đơn đăng ký PENDING, duyệt/từ chối/rút, cấu hình giới hạn và check-in; bot vắng mặt bị loại khỏi roster READY. Source được kiểm tra biên dịch trong Docker trước khi nhận vào giải; V11 giữ roster cũ và lưu quyết định/timestamps qua restart. [Cách dùng, API và kiểm thử](docs/CHANG-5-NHOM-2-REGISTRATION.md). Tiếp theo: khóa phiên bản/hash và seeding.
 
-**Chặng 5 — Nhóm 3:** khóa bot vào bản sao source/JAR theo SHA-256, kiểm tra integrity khi start/launch; thêm RANDOM/MANUAL/RANKING, seed 64-bit và lưu thứ tự qua restart bằng V12. [Cách dùng, giới hạn và kiểm thử](docs/CHANG-5-NHOM-3-BOT-LOCK-SEEDING.md). Tiếp theo: Round Robin nâng cao với vòng đấu và BYE.
+**Chặng 5 — Nhóm 3:** khóa bot vào bản sao source/JAR theo SHA-256, kiểm tra integrity khi start/launch; thêm RANDOM/MANUAL/RANKING, seed 64-bit và lưu thứ tự qua restart bằng V12. [Cách dùng, giới hạn và kiểm thử](docs/CHANG-5-NHOM-3-BOT-LOCK-SEEDING.md). Nhóm 4–6 bổ sung bên dưới.
+
+**Chặng 5 — Nhóm 4–6:** Round Robin theo vòng/BYE, loại trực tiếp 2–32 bot với bracket và đi tiếp do server quyết định, standings/tie-break tùy chỉnh, thời gian tính nước và lưu qua restart bằng V13. Đã kiểm thử chung: 462 backend, 27 client, trong đó 11 migration tests; Docker nhiều vòng và native restart đều qua. [Cách dùng, API, giới hạn và danh sách file](docs/CHANG-5-NHOM-4-6-ROUNDS-BRACKET-STANDINGS.md). Tiếp theo: nhóm 7 quản lý giải đang chạy.
 
 Để chạy bộ production, copy `infra/.env.production.example` sang `.env.production`, điền domain và hai mật khẩu DB riêng, tải image bot nếu cần, rồi:
 
