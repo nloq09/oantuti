@@ -12,6 +12,17 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AdminConsoleApiTest {
+    @Test void systemAndReadOnlyAuditAreAdminOnlyAndRejectedPayloadsAreNeverLogged()throws Exception{
+        try(var admin=new Browser();var ordinary=new Browser();var guest=new Browser()){
+            admin.account(true);ordinary.account(false);guest.call("/api/admin/audit",null,false,401);ordinary.call("/api/admin/system",null,false,403);
+            admin.call("/api/admin/users/"+UUID.randomUUID()+"/disable",Map.of("reason","private-payload-must-not-be-recorded"),false,403);
+            var events=admin.call("/api/admin/audit?result=FAILURE",null,false,200);assertThat(events.path("total").asLong()).isPositive();assertThat(events.toString()).doesNotContain("private-payload-must-not-be-recorded","password","token","sessionId");
+            admin.call("/api/admin/audit?result=UNKNOWN",null,false,400);
+            var system=admin.call("/api/admin/system",null,false,200);assertThat(system.path("application").asText()).isEqualTo("UP");assertThat(system.path("postgresql").asText()).isEqualTo("UP");
+            assertThat(system.path("docker").path("status").asText()).isIn("UP","DOWN");assertThat(system.path("workers").path("maxConcurrentMatches").asInt()).isBetween(1,4);assertThat(system.has("alerts")).isTrue();
+            assertThat(system.toString()).doesNotContain("password","source_path","docker.sock","JSESSIONID");
+        }
+    }
     @Autowired com.rpsbattle.tournament.TournamentService tournaments;
     @Autowired com.rpsbattle.tournament.persistence.TournamentPersistenceCoordinator tournamentPersistence;
     @Test void disputeLifecycleUsesExistingReviewFactsAndKeepsClosedRequestsReadOnly()throws Exception{
@@ -75,7 +86,7 @@ class AdminConsoleApiTest {
             guest.call("/api/admin/dashboard",null,false,401);ordinary.account(false);ordinary.call("/api/admin/dashboard",null,false,403);admin.account(true);
             var dashboard=admin.call("/api/admin/dashboard",null,false,200);
             assertThat(dashboard.path("totalUsers").asLong()).isPositive();assertThat(dashboard.path("workers").path("maxConcurrentMatches").asInt()).isBetween(1,4);
-            assertThat(dashboard.path("openDisputes").isNull()).isTrue();assertThat(dashboard.path("dockerContainers").isNull()).isTrue();
+            assertThat(dashboard.path("openDisputes").asLong()).isGreaterThanOrEqualTo(0);assertThat(dashboard.has("dockerContainers")).isTrue();
             assertThat(dashboard.toString()).doesNotContain("password","token","source_path","sessionId");
         }
     }

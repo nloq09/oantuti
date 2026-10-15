@@ -19,8 +19,9 @@ public class AdminReadService {
     private final WorkerManager workers;
     private final MatchRegistry rooms;
     private final MeterRegistry metrics;
-    public AdminReadService(JdbcTemplate db,AccountAuthorizationService accounts,WorkerManager workers,MatchRegistry rooms,MeterRegistry metrics) {
-        this.db=db;this.accounts=accounts;this.workers=workers;this.rooms=rooms;this.metrics=metrics;
+    private final AdminOperationsService operations;
+    public AdminReadService(JdbcTemplate db,AccountAuthorizationService accounts,WorkerManager workers,MatchRegistry rooms,MeterRegistry metrics,AdminOperationsService operations) {
+        this.db=db;this.accounts=accounts;this.workers=workers;this.rooms=rooms;this.metrics=metrics;this.operations=operations;
     }
     public Map<String,Object> dashboard(Authentication auth) {
         accounts.requireAdmin(auth);
@@ -31,11 +32,11 @@ public class AdminReadService {
         result.put("uploadedBots",count("select count(*) from bots where status<>'DELETED'"));
         result.put("activeMatches",rooms.getActiveMatches().stream().filter(m->!m.state().isFinished()&&m.infrastructureError()==null).count());
         result.put("runningTournaments",count("select count(*) from tournaments where status='RUNNING'"));
-        result.put("openDisputes",null);result.put("disputesSupported",false);
+        var health=operations.system(auth);result.put("openDisputes",health.get("openDisputes"));result.put("disputesSupported",true);result.put("alerts",health.get("alerts"));
         result.put("queuedMatches",workers.pending());result.put("workers",workers.status());
         result.put("systemErrors",count("select count(*) from tournament_matches where status='FAILED'"));
         result.put("webSocketSessions",gauge("websocket_sessions"));
-        result.put("dockerContainers",null);
+        result.put("dockerContainers",((Map<?,?>)health.get("docker")).get("managedContainers"));
         result.put("checkedAt",Instant.now());
         result.put("activity",rows("select * from (select event_type,target_id,reason,occurred_at,tournament_id from tournament_audit_events union all select action || ':' || target_type,cast(target_id as varchar(160)),reason,occurred_at,cast(null as uuid) from admin_audit_events) events order by occurred_at desc limit 15"));
         return result;

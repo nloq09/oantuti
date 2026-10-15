@@ -12,7 +12,8 @@ import java.util.*;
 public class AdminController {
     private final AdminService service;
     private final com.rpsbattle.admin.AdminDirectoryService directory;
-    public AdminController(AdminService service,com.rpsbattle.admin.AdminDirectoryService directory) {this.service=service;this.directory=directory;}
+    private final com.rpsbattle.admin.AdminOperationsService operations;
+    public AdminController(AdminService service,com.rpsbattle.admin.AdminDirectoryService directory,com.rpsbattle.admin.AdminOperationsService operations) {this.service=service;this.directory=directory;this.operations=operations;}
     @GetMapping("/users") public ResponseEntity<Map<String,Object>> users(Authentication authentication,
             @RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,@RequestParam Map<String,String> filters) {
         var result=new LinkedHashMap<>(directory.list(authentication,"users",filters,page,size));
@@ -30,6 +31,6 @@ public class AdminController {
     }
     public record Reason(String reason){}
     @GetMapping("/system") public ResponseEntity<Map<String,Object>> system(Authentication authentication) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.system(authentication));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(operations.system(authentication));
     }
 }

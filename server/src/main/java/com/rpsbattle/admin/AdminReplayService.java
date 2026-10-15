@@ -8,8 +8,8 @@ import java.time.Instant;
 import java.util.*;
 @Service
 public class AdminReplayService {
-    private final AdminCatalogService catalog;private final AdminDirectoryService query;private final AccountAuthorizationService accounts;private final ReplayArchiveStore archives;
-    public AdminReplayService(AdminCatalogService catalog,AdminDirectoryService query,AccountAuthorizationService accounts,ReplayArchiveStore archives){this.catalog=catalog;this.query=query;this.accounts=accounts;this.archives=archives;}
+    private final AdminCatalogService catalog;private final AdminDirectoryService query;private final AccountAuthorizationService accounts;private final ReplayArchiveStore archives;private final AdminOperationJournal journal;
+    public AdminReplayService(AdminCatalogService catalog,AdminDirectoryService query,AccountAuthorizationService accounts,ReplayArchiveStore archives,AdminOperationJournal journal){this.catalog=catalog;this.query=query;this.accounts=accounts;this.archives=archives;this.journal=journal;}
     private static final String SOURCE="""
         select m.id,m.created_at,m.finished_at,tm.tournament_id,r.event_count,r.sha256,r.valid,
         case when r.id is null then 'MISSING' when r.valid=true then 'VALID' else 'INVALID' end as state,
@@ -27,6 +27,7 @@ public class AdminReplayService {
     public Map<String,Object> validate(Authentication auth,String id,String explanation){
         accounts.requireAdmin(auth);AdminDirectoryService.reason(explanation);detail(auth,id);String state="VALID",code=null;
         try{archives.load(id);}catch(AuthException failure){if(failure.status()==503)throw failure;code=failure.getMessage();state=Set.of("REPLAY_FILE_MISSING","REPLAY_NOT_READY").contains(code)?"MISSING":"INVALID";}
+        journal.record(accounts.requireAdmin(auth),"REPLAY",id,"VALIDATE_REPLAY","SUCCESS",200,explanation);
         var row=detail(auth,id);row.put("validation_state",state);row.put("validation_code",code);row.put("checked_at",Instant.now());return row;
     }
 }

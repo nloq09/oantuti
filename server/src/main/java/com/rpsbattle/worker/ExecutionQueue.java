@@ -40,4 +40,11 @@ public class ExecutionQueue {
     public synchronized Set<String> reservedIds(){return Set.copyOf(reservations);}
     public synchronized int size() { return reservations.size(); }
     public int capacity() { return capacity; }
+    public record QueueEntry(String matchId,String tournamentId,java.time.Instant scheduledAt,String status){}
+    public synchronized List<QueueEntry> snapshot(){
+        var entries=new ArrayList<QueueEntry>();var seen=new HashSet<String>();
+        for(var request:pending){entries.add(new QueueEntry(request.match().id,request.tournament().id,request.match().scheduledAt,"QUEUED"));seen.add(request.match().id);if(entries.size()==200)return List.copyOf(entries);}
+        for(var id:reservations)if(!seen.contains(id)){entries.add(new QueueEntry(id,null,null,"RESERVED"));if(entries.size()==200)break;}
+        return List.copyOf(entries);
+    }
 }

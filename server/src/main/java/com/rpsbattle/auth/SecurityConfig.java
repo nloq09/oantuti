@@ -39,11 +39,12 @@ public class SecurityConfig {
         return new CompositeSessionAuthenticationStrategy(List.of(new ChangeSessionIdAuthenticationStrategy(),new CsrfAuthenticationStrategy(csrfTokens)));
     }
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contexts,
-            CsrfTokenRepository tokens, ObjectMapper json,AuthService authService,com.rpsbattle.operations.RequestLimits limits,com.rpsbattle.operations.RuntimeMetrics metrics) throws Exception {
+            CsrfTokenRepository tokens, ObjectMapper json,AuthService authService,com.rpsbattle.operations.RequestLimits limits,com.rpsbattle.operations.RuntimeMetrics metrics,com.rpsbattle.admin.AdminOperationJournal journal) throws Exception {
         http.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable);
         http.securityContext(context -> context.securityContextRepository(contexts).requireExplicitSave(true));
         http.addFilterAfter(new SessionAccountFilter(authService,contexts),SecurityContextHolderFilter.class);
+        http.addFilterBefore(new com.rpsbattle.admin.AdminOperationAuditFilter(journal,authService),org.springframework.security.web.csrf.CsrfFilter.class);
         http.addFilterBefore(new com.rpsbattle.operations.RequestLogFilter(),org.springframework.security.web.access.intercept.AuthorizationFilter.class);
         http.addFilterAfter(new com.rpsbattle.operations.RequestLimitFilter(limits,metrics,json),com.rpsbattle.operations.RequestLogFilter.class);
         http.csrf(csrf -> csrf.csrfTokenRepository(tokens)

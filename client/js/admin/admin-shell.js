@@ -21,16 +21,17 @@ async function init() {
     exit.onclick = async () => { exit.disabled = true; try { await logout(); location.assign("/"); } catch (error) { exit.disabled = false; message(error, content); } };
     identity.append(summary, exit);
     const brand=node("a",undefined,"admin-brand");brand.href="/admin/index.html";brand.append(node("span","♛","admin-crest"),node("strong", "RPS BATTLE · QUẢN TRỊ"));
-    top.append(toggle, brand, identity);
+    const notifications=node("details",undefined,"admin-notifications");top.append(toggle, brand, notifications, identity);
     const sidebar = node("nav", undefined, "admin-sidebar"); sidebar.setAttribute("aria-label", "Quản trị");
     const current = location.pathname.split("/").pop() || "index.html";
-    for (const [label, path] of [["Tổng quan", "index.html"], ["Người dùng", "users.html"], ["Bot", "bots.html"], ["Trận đấu", "matches.html"], ["Giải đấu", "tournaments.html"], ["Tranh chấp", "disputes.html"], ["Kho replay", "replays.html"]]) {
+    for (const [label, path] of [["Tổng quan", "index.html"], ["Người dùng", "users.html"], ["Bot", "bots.html"], ["Trận đấu", "matches.html"], ["Giải đấu", "tournaments.html"], ["Tranh chấp", "disputes.html"], ["Kho replay", "replays.html"], ["Audit", "audit.html"], ["Hệ thống", "system.html"]]) {
       const a = link(label, "/admin/" + path); if (current === path || current === ({"users.html":"user-detail.html","bots.html":"bot-detail.html","matches.html":"match-detail.html"})[path] || (path === "matches.html" && ["replay.html","spectator.html"].includes(current))) a.setAttribute("aria-current", "page"); sidebar.append(a);
     }
-    for (const label of ["Audit", "Hệ thống"]) { const item = node("span", label + " · Sắp có", "muted"); sidebar.append(item); }
+
     const content = node("main", undefined, "admin-content"); content.id = "admin-content"; content.tabIndex = -1;
     const skip = link("Đến nội dung", "#admin-content"); skip.className = "skip-link"; root.append(skip, top, sidebar, content);
     content.append(node("h1", "Tổng quan"), node("p", "Giao diện quản trị đã sẵn sàng."));
+    const {watchNotifications}=await import("./operations.js");watchNotifications(notifications);
     const module = await import("./views.js"); await module.mount(current, content);
   } catch (error) { message(error, root); }
 }
