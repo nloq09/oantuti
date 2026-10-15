@@ -53,6 +53,7 @@ export async function initAccountNav() {
         catch (error) { toast(error.message, true); button.disabled = false; }
       };
       actions.append(name, button);
+      if(account.role==="USER")import("../tournament/notifications.js").then(module=>module.mountNotifications(actions));
     }
   } catch (error) {
     const message = document.createElement("span"); message.textContent = "Chưa kiểm tra được phiên đăng nhập."; nav.append(message); toast(error.message, true);

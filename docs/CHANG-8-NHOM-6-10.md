@@ -16,3 +16,11 @@ Kiểm thử nhóm 6: toàn bộ 506 backend, 47 client đạt; không fail/erro
 Lịch lọc tất cả/trận của tôi, theo vòng và thời gian, phân trang 20 trận. Nhận diện tất cả participant thuộc cùng tài khoản. Bracket cuộn ngang, chỉnh cỡ 80–150%, tìm nhánh của mình, đánh dấu nhánh bằng outline và giữ điều hướng bàn phím. Kết quả chỉ dùng ranking/champion từ server; loại trực tiếp phân biệt hạng bảng điểm và kết quả bracket. Tab Luật hiển thị snapshot đã khóa, không tự lấy config đang thay đổi. Không dựng bảng Group Stage/Swiss giả.
 
 File chính: competition-view.js, bracket-renderer.js, player-detail/player-state, tournament-mode.css. Toàn bộ 506 backend và 49 client đạt, không fail/error/skipped; bootJar thành công. Kiểm thử client bao gồm focus nhánh xa nhất, nhiều participant cùng chủ, lọc/phân trang và DOUBLE_FORFEIT. Không sửa core game hoặc scheduler.
+
+## Nhóm 8 — thông báo và reconnect
+
+Thông báo riêng theo tài khoản lấy từ audit đã lưu: duyệt/từ chối, check-in, ready, bắt đầu/kết thúc trận, vòng mới, tạm dừng, recovery và kết thúc giải. API chỉ trả tối đa 50 mục gần nhất, không trả token/credential. Trạng thái đã đọc lưu trong TournamentDetails JSON; đọc dữ liệu cũ thiếu trường sẽ dùng map rỗng. Không cần migration SQL, không đổi schema V17. POST read yêu cầu session + CSRF, giới hạn cursor và đọc lặp không tạo mutation.
+
+Navbar có trung tâm thông báo và mark-all-read; toast chỉ xuất hiện cho mục mới sau lần đồng bộ đầu, không lặp khi reconnect. Lobby tải snapshot mới khi WebSocket phục hồi, mạng online, tab trở lại hoặc BFCache khôi phục. Reload game chỉ dùng đúng ghế đã cấp; thiếu/khác ghế quay về lobby để API cấp lại. Home có banner gọn cho giải đang tham gia. Profile trỏ về trang participant.
+
+File chính: TournamentNotificationService/Controller, TournamentDetails/domain Tournament, notifications/reconnect/home-banner, account-session, player-detail và pages/game. Toàn bộ 507 backend, 51 client đạt; không fail/error/skipped; build thành công. Native PostgreSQL đã kiểm tra feed, CSRF, cursor, mark-read và token exclusion. UI thật đã đăng nhập, mở thông báo và mark-all về 0 thành công.

@@ -8,3 +8,4 @@ document.querySelector("#help").onclick = () =>
   );
 
 document.querySelector("#hero-settings").onclick = openSettings;
+import("../tournament/home-banner.js");
