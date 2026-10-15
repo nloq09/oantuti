@@ -28,6 +28,17 @@ public class OwnedTournamentService {
     private final AccountAuthorizationService accounts;
     private final TournamentAuthorizationService authorization;
     private final OwnedBotService bots;
+    private java.time.Clock clock=java.time.Clock.systemUTC();
+    @org.springframework.beans.factory.annotation.Autowired public void clock(java.time.Clock clock){this.clock=clock;}
+    public void configureTiming(Authentication auth,String id,Long revision,TournamentTiming timing){var t=tournaments.find(id);timing.validate();managedMutation(auth,t,revision,()->{if(t.status!=TournamentStatus.DRAFT||!t.registrations.isEmpty())throw new DemoRequestException("TOURNAMENT_LOCKED");t.timing=timing;TournamentAudit.append(t,"TIMING_CONFIGURED",actor(auth),id,null,null,null);tournaments.changed(t);});}
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay=1000) public void expireCheckIns(){
+        for(var t:registry.findAll()){if(t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;var scores=historicalScores();synchronized(t){
+            if(t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;
+            try{mutate(t,null,()->{for(int i=0;i<t.registrations.size();i++){var r=t.registrations.get(i);if(r.status()==TournamentRegistration.Status.APPROVED){t.registrations.set(i,r.withStatus(TournamentRegistration.Status.NOT_CHECKED_IN,clock.instant()));t.participants.removeIf(p->p.participantId().equals(r.id().toString()));}}
+                boolean enough=t.participants.size()>=2;if(enough){prepare(t,scores);lockRules(t);}TournamentStateMachine.transition(t,enough?TournamentStatus.READY:TournamentStatus.CANCELLED,clock.instant());TournamentAudit.append(t,enough?"TOURNAMENT_READY":"TOURNAMENT_CANCELLED",null,t.id,"CHECK_IN_DEADLINE",null,t.status.name());tournaments.changed(t);
+            });}catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=check_in_expiry_failed tournamentId={}",t.id);}
+        }}
+    }
     private com.rpsbattle.worker.ExecutionQueue queue;
     @org.springframework.beans.factory.annotation.Autowired
     public void executionQueue(com.rpsbattle.worker.ExecutionQueue queue) {this.queue=queue;}
@@ -203,6 +214,7 @@ public class OwnedTournamentService {
     }
     private void registrationPhase(Tournament t) {
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("TOURNAMENT_LOCKED");
+        if(t.timing.registrationDeadline()!=null&&!clock.instant().isBefore(t.timing.registrationDeadline()))throw new DemoRequestException("REGISTRATION_CLOSED");
     }
     private int registrationIndex(Tournament t,String registrationId) {
         for(int i=0;i<t.registrations.size();i++)if(t.registrations.get(i).id().toString().equals(registrationId))return i;
@@ -267,6 +279,7 @@ public class OwnedTournamentService {
         var actor=accounts.requireUser(auth);var t=tournaments.find(id);
         mutate(t,auth,()->{
             if(t.status!=TournamentStatus.CHECK_IN || !t.checkInRequired)throw new DemoRequestException("CHECK_IN_NOT_OPEN");
+            if(t.timing.checkInDeadline()!=null&&!clock.instant().isBefore(t.timing.checkInDeadline()))throw new DemoRequestException("CHECK_IN_NOT_OPEN");
             if(registrationId!=null) {
                 var r=t.registrations.get(registrationIndex(t,registrationId));
                 if(!r.userId().equals(actor.id().value()))throw new AuthException("TOURNAMENT_FORBIDDEN",403);

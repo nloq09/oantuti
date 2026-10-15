@@ -12,8 +12,8 @@ import com.rpsbattle.account.AccountAuthorizationService;import com.rpsbattle.to
     if(t.format==TournamentFormat.SINGLE_ELIMINATION&&games.stream().anyMatch(m->m.status==TournamentMatch.Status.FINISHED&&!key.equals(m.winnerParticipantId)))status="ELIMINATED";
     if(t.status==TournamentStatus.FINISHED){var champion=(com.rpsbattle.tournament.ranking.RankingEntry)view.get("champion");status=champion!=null&&key.equals(champion.participantId())?"CHAMPION":status.equals("ELIMINATED")?status:"FINISHED";}
    }
-   if(t.operations.participants().containsKey(key))status=t.operations.participants().get(key).name();if(t.status==TournamentStatus.CANCELLED)status="TOURNAMENT_CANCELLED";
-   row.put("registration",r);row.put("participantId",participant.map(TournamentParticipant::participantId).orElse(null));row.put("status",status);row.put("nextMatch",next.map(m->match(m,key)).orElse(null));row.put("currentMatch",running.map(m->match(m,key)).orElse(null));row.put("deadline",null);
+   if(t.operations.participants().containsKey(key))status=t.operations.participants().get(key).name();if(t.status==TournamentStatus.CANCELLED&&r.status()!=TournamentRegistration.Status.NOT_CHECKED_IN)status="TOURNAMENT_CANCELLED";
+   row.put("registration",r);row.put("participantId",participant.map(TournamentParticipant::participantId).orElse(null));row.put("status",status);row.put("nextMatch",next.map(m->match(m,key)).orElse(null));row.put("currentMatch",running.map(m->match(m,key)).orElse(null));row.put("deadline",t.status==TournamentStatus.CHECK_IN?t.timing.checkInDeadline():t.timing.registrationDeadline());
    row.put("rank",tournaments.ranking(t).stream().filter(rank->rank.participantId().equals(key)).findFirst().orElse(null));states.add(row);
   }
   return Map.of("tournamentId",id,"tournamentStatus",t.status,"revision",t.revision,"serverTime",Instant.now(),"states",states);

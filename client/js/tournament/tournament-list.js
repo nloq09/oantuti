@@ -1,3 +1,4 @@
+import{sessionRequest}from "../api/auth-api.js";
 import {mountHub} from "./tournament-hub.js";
 import { refreshBots, savedBots } from "../api/bot-api.js";
 import {
@@ -49,6 +50,7 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
       document.querySelector("#tournament-name").value.trim(),
       {participantPolicy:document.querySelector("#participant-policy").value,maxParticipants, format:document.querySelector("#tournament-format").value, maxConcurrentMatches:Number(document.querySelector("#match-concurrency").value), checkInRequired: document.querySelector("#check-in-required").checked},
     );
+    const stamp=id=>document.querySelector("#"+id).value?new Date(document.querySelector("#"+id).value).toISOString():null;const timing={revision:t.revision,registrationDeadline:stamp("registration-deadline"),checkInDeadline:stamp("check-in-deadline"),startTime:stamp("scheduled-start")};if(timing.registrationDeadline||timing.checkInDeadline||timing.startTime)await sessionRequest("/api/tournaments/"+encodeURIComponent(t.id)+"/timing",timing);
     for (const bot of chosen) await addParticipant(t.id, bot);
     location.href = "/tournament.html?id=" + encodeURIComponent(t.id);
   } catch (error) {

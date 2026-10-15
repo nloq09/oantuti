@@ -25,6 +25,7 @@ public final class Tournament {
     public long revision;
     public boolean checkInRequired;
     public ParticipantPolicy participantPolicy=ParticipantPolicy.BOT_ONLY;
+    public TournamentTiming timing=TournamentTiming.manual();
     public int maxParticipants=10;
     public SeedingStrategy seedingStrategy=SeedingStrategy.RANDOM;
     public long seedingSeed=java.util.UUID.randomUUID().getMostSignificantBits();

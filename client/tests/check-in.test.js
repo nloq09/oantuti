@@ -1,0 +1,2 @@
+import test from "node:test";import assert from "node:assert/strict";import{ServerClock}from "../js/tournament/check-in.js";
+test("check-in countdown uses server offset and never invents a missing deadline",()=>{const clock=new ServerClock();clock.update("2026-10-15T10:00:00Z",1000);assert.equal(clock.remaining("2026-10-15T10:00:30Z",11000),20);assert.equal(clock.remaining("2026-10-15T10:00:30Z",41000),0);assert.equal(clock.remaining(null,1000),null);});
