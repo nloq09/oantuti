@@ -7,6 +7,8 @@ import org.springframework.http.*;
 public class TournamentPlayerController {
     private final TournamentDiscoveryService discovery;private final ParticipantTournamentStateService participants;private final OwnedTournamentService owned;private final TournamentReadyService readiness;
     public TournamentPlayerController(TournamentDiscoveryService discovery,ParticipantTournamentStateService participants,OwnedTournamentService owned,TournamentReadyService readiness){this.discovery=discovery;this.participants=participants;this.owned=owned;this.readiness=readiness;}
+    @org.springframework.beans.factory.annotation.Autowired private TournamentMatchContextService context;
+    @GetMapping("/{id}/match-context") public ResponseEntity<?> context(@PathVariable String id,@RequestParam String onlineMatchId){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(context.context(id,onlineMatchId));}
     @PostMapping("/{id}/ready") public ResponseEntity<?> ready(Authentication auth,@PathVariable String id,@RequestBody Ready body){readiness.ready(auth,id,body.matchId(),body.windowId());return me(auth,id);}
     @PostMapping("/{id}/entry") public ResponseEntity<?> entry(Authentication auth,@PathVariable String id,@RequestBody Ready body){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(readiness.entry(auth,id,body.matchId()));}
     public record Ready(String matchId,String windowId){}

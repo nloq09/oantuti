@@ -12,3 +12,4 @@ else if(tournamentId&&(!seat?.token||seat.tournamentId!==tournamentId||seat.matc
 else if (!seat?.matchId || !seat?.token) location.replace("/lobby.html");
 else new GameController(seat);
 if(tournamentId&&/^[a-f0-9-]{36}$/i.test(tournamentId)){const back=document.createElement("a");back.className="button";back.href="/tournament-lobby.html?id="+encodeURIComponent(tournamentId)+"&stay=1";back.textContent="← Quay lại giải";document.querySelector("main")?.prepend(back);}
+if(tournamentId)import("../tournament/match-context.js").then(module=>module.mountMatchContext(tournamentId,spectate||new URLSearchParams(location.search).get("matchId")));
