@@ -12,6 +12,25 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AdminConsoleApiTest {
+    @Autowired com.rpsbattle.tournament.TournamentService tournaments;
+    @Autowired com.rpsbattle.tournament.persistence.TournamentPersistenceCoordinator tournamentPersistence;
+    @Test void disputeLifecycleUsesExistingReviewFactsAndKeepsClosedRequestsReadOnly()throws Exception{
+        try(var admin=new Browser();var ordinary=new Browser();var guest=new Browser()){
+            var user=admin.account(true);ordinary.account(false);
+            var created=admin.call("/api/tournaments",Map.of("name","Dispute fixture","format","ROUND_ROBIN"),true,201);String id=created.path("id").asText();var t=tournaments.find(id);var now=java.time.Instant.now();
+            for(int i=0;i<2;i++){var botId=UUID.randomUUID();new org.springframework.transaction.support.TransactionTemplate(transactions).execute(status->bots.create(new com.rpsbattle.bot.ownership.BotMetadata(botId,user.id().value(),"Review bot",com.rpsbattle.bot.upload.BotLanguage.PYTHON,"fixture/source",com.rpsbattle.bot.ownership.BotMetadata.Status.READY,now,now)));t.participants.add(new com.rpsbattle.tournament.domain.TournamentParticipant(UUID.randomUUID().toString(),botId.toString(),"never-public","Review bot "+i,i,user.id().value()));}
+            var m=new com.rpsbattle.tournament.domain.TournamentMatch(UUID.randomUUID().toString(),id,t.participants.get(0),t.participants.get(1));m.status=com.rpsbattle.tournament.domain.TournamentMatch.Status.FINISHED;m.winnerParticipantId=m.participantA.participantId();m.result="WIN";m.startedAt=now;m.finishedAt=now;t.matches.add(m);t.status=com.rpsbattle.tournament.domain.TournamentStatus.PAUSED;t.startedAt=now;t.revision++;tournamentPersistence.persistNow(t);
+            admin.call("/api/tournaments/"+id+"/matches/"+m.id+"/review",Map.of("revision",t.revision,"reason","Verify original result"),true,200);
+            guest.call("/api/admin/disputes",null,false,401);ordinary.call("/api/admin/disputes",null,false,403);ordinary.call("/api/admin/replays",null,false,403);
+            var list=admin.call("/api/admin/disputes?tournament="+id+"&status=OPEN",null,false,200);assertThat(list.path("total").asInt()).isEqualTo(1);String dispute=list.path("items").get(0).path("id").asText();
+            var detail=admin.call("/api/admin/disputes/"+dispute,null,false,200);assertThat(detail.toString()).doesNotContain("never-public","source_path");
+            admin.call("/api/admin/disputes/"+dispute+"/assign",Map.of("revision",detail.path("revision").asLong(),"reason","Investigation"),false,403);
+            detail=admin.call("/api/admin/disputes/"+dispute+"/assign",Map.of("revision",detail.path("revision").asLong(),"reason","Investigation"),true,200);assertThat(detail.path("status").asText()).isEqualTo("UNDER_REVIEW");
+            detail=admin.call("/api/admin/disputes/"+dispute+"/reject",Map.of("revision",detail.path("revision").asLong(),"reason","Original result confirmed"),true,200);assertThat(detail.path("status").asText()).isEqualTo("REJECTED");assertThat(m.winnerParticipantId).isEqualTo(m.participantA.participantId());
+            admin.call("/api/admin/disputes/"+dispute+"/uphold",Map.of("revision",detail.path("revision").asLong(),"reason","Duplicate decision"),true,409);
+            admin.call("/api/admin/replays",null,false,200);admin.call("/api/admin/replays?state=UNKNOWN",null,false,400);
+        }
+    }
     @Test void tournamentAdministrationUsesRevisionReasonAndRealAdminAuthorization()throws Exception{
         try(var admin=new Browser();var owner=new Browser();var guest=new Browser()){
             admin.account(true);owner.account(false);var cup=owner.call("/api/tournaments",Map.of("name","Admin lifecycle fixture","format","ROUND_ROBIN"),true,201);String id=cup.path("id").asText();

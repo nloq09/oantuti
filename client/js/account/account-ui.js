@@ -1,4 +1,4 @@
-const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html", "/admin/tournaments.html", "/admin/tournament-detail.html"]);
+const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html", "/admin/tournaments.html", "/admin/tournament-detail.html", "/admin/disputes.html", "/admin/dispute-detail.html", "/admin/replays.html", "/admin/replay-detail.html"]);
 export function safeNext(value, origin = "https://rps.invalid") {
   try {
     const url = new URL(value || "/", origin);

@@ -17,6 +17,15 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TournamentAdministrationTest {
+    @Test void reviewAssignmentRejectionAndDisqualificationKeepFactsAndCloseReviewAtomically(){
+        var t=cup(3,TournamentFormat.ROUND_ROBIN);var m=t.matches.getFirst();TournamentFixtures.finish(m,m.participantA.participantId(),8,2);String original=m.winnerParticipantId;
+        admin.review(auth,t.id,t.revision,m.id,"Check result",false);admin.assignReview(auth,t.id,t.revision,m.id,"Investigating");
+        assertThat(t.operations.audit().getLast().type()).isEqualTo("MATCH_REVIEW_ASSIGNED");
+        admin.rejectReview(auth,t.id,t.revision,m.id,"Request unsupported");assertThat(t.operations.reviews()).isEmpty();assertThat(m.winnerParticipantId).isEqualTo(original);
+        admin.review(auth,t.id,t.revision,m.id,"Second review",false);admin.disqualifyReview(auth,t.id,t.revision,m.id,m.participantB.participantId(),"Disqualify unsafe entry");
+        assertThat(t.operations.reviews()).isEmpty();assertThat(t.operations.participants().get(m.participantB.participantId())).isEqualTo(ParticipantStatus.DISQUALIFIED);assertThat(m.winnerParticipantId).isEqualTo(original);
+        assertThat(t.operations.audit().getLast().type()).isEqualTo("MATCH_REVIEW_CLOSED");
+    }
     final TournamentRegistry registry=new TournamentRegistry();
     final BotUploadService artifacts=mock(BotUploadService.class);
     final TournamentRepository repository=mock(TournamentRepository.class);

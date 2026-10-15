@@ -9,6 +9,31 @@ import java.util.*;
 
 @Service
 public class TournamentAdministrationService {
+    public void assignReview(Authentication auth,String id,Long revision,String matchId,String explanation){
+        String why=reason(explanation);var t=tournaments.find(id);owned.managedMutation(auth,t,revision,()->{
+            require(t.operations.reviews().containsKey(matchId),"MATCH_NOT_UNDER_REVIEW");
+            TournamentAudit.append(t,"MATCH_REVIEW_ASSIGNED",owned.actor(auth),matchId,why,null,owned.actor(auth).toString());tournaments.changed(t);
+        });
+    }
+    public void rejectReview(Authentication auth,String id,Long revision,String matchId,String explanation){
+        String why=reason(explanation);var t=tournaments.find(id);owned.managedMutation(auth,t,revision,()->{
+            require(t.operations.reviews().containsKey(matchId),"MATCH_NOT_UNDER_REVIEW");t.operations=t.operations.review(matchId,null);
+            TournamentAudit.append(t,"MATCH_REVIEW_REJECTED",owned.actor(auth),matchId,why,null,TournamentAudit.result(match(t,matchId)));tournaments.changed(t);
+        });
+    }
+    public void disqualifyReview(Authentication auth,String id,Long revision,String matchId,String participantId,String explanation){
+        String why=reason(explanation);var t=tournaments.find(id);owned.managedMutation(auth,t,revision,()->{
+            require(t.status==TournamentStatus.PAUSED||t.status==TournamentStatus.RECOVERY_REQUIRED,"PAUSE_REQUIRED");
+            require(t.operations.reviews().containsKey(matchId),"MATCH_NOT_UNDER_REVIEW");var m=match(t,matchId);
+            require(m.participantA.participantId().equals(participantId)||m.participantB.participantId().equals(participantId),"INVALID_PARTICIPANT_STATUS");
+            require(t.operations.active(participantId),"PARTICIPANT_INACTIVE");
+            require(t.matches.stream().noneMatch(game->game.status==TournamentMatch.Status.RUNNING&&(game.participantA.participantId().equals(participantId)||game.participantB.participantId().equals(participantId))),"PARTICIPANT_BUSY");
+            t.operations=t.operations.participant(participantId,ParticipantStatus.DISQUALIFIED).review(matchId,null);
+            TournamentAudit.append(t,"PARTICIPANT_DISQUALIFIED",owned.actor(auth),participantId,why,"ACTIVE","DISQUALIFIED");
+            settleForfeits(t);if(t.format==TournamentFormat.SINGLE_ELIMINATION)t.matches.addAll(SingleEliminationScheduler.advance(t));
+            TournamentAudit.append(t,"MATCH_REVIEW_CLOSED",owned.actor(auth),matchId,why,null,"DISQUALIFIED:"+participantId);tournaments.changed(t);
+        });
+    }
     private final OwnedTournamentService owned;
     private final TournamentService tournaments;
     public TournamentAdministrationService(OwnedTournamentService owned,TournamentService tournaments){this.owned=owned;this.tournaments=tournaments;}

@@ -79,6 +79,12 @@ public class ReplayArchiveStore {
         } catch(AuthException failure) {throw failure;}
         catch(Exception failure) {repository.invalidate(metadata.matchId());throw new AuthException("REPLAY_INVALID",422);}
     }
+    /** Metadata and file presence only; explicit validation additionally checks hash and game facts. */
+    public String availability(String id){
+        var stored=repository.find(id);if(stored.isEmpty())return "MISSING";var metadata=stored.get();
+        try{if(!metadata.filePath().equals(metadata.matchId()+".json"))return "INVALID";if(!Files.isRegularFile(safePath(metadata.filePath()),LinkOption.NOFOLLOW_LINKS))return "MISSING";return metadata.valid()?"VALID":"INVALID";}
+        catch(Exception failure){return "INVALID";}
+    }
     private void validate(Archive archive) {
         var actual=mapper.toDto(replay.replay(archive.log()),List.of(),List.of());
         if(!actual.equals(archive.snapshot().gameState()) || !"FINISHED".equals(archive.snapshot().status())) throw new IllegalArgumentException("Final replay snapshot mismatch");
