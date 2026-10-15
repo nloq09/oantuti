@@ -26,12 +26,12 @@ export function renderBracket(element,t) {
     const title=document.createElement("h3");title.textContent=round.label;column.append(title);
     const slots=document.createElement("div");slots.className="bracket-slots";column.append(slots);
     for(const n of round.nodes) {
-      const card=document.createElement("article");card.className="panel bracket-node";
+      const card=document.createElement("article");card.className="panel bracket-node";if(n.matchId)card.dataset.matchId=n.matchId;
       for(const [id,name] of [[n.slotA,n.a],[n.slotB,n.b]]) {
         const row=document.createElement("p");row.textContent=name;
         if(id && id===n.winnerParticipantId){row.className="bracket-winner";row.prepend("✓ ");}card.append(row);
       }
-      if(n.resolution) {const note=document.createElement("small");note.textContent=({BYE:"Miễn đấu",WALKOVER:"Đi tiếp do nhánh đối thủ trống",NO_ELIGIBLE_PARTICIPANT:"Không còn bot đủ điều kiện",DOUBLE_FORFEIT:"Cả hai bot bị xử thua",WIN:"Đã có kết quả",DRAW_REMAINING_PIECES:"Hòa · đi tiếp nhờ quân còn lại",DRAW_SEED:"Hòa · đi tiếp theo hạt giống"})[n.resolution];card.append(note);}
+      if(n.resolution) {const note=document.createElement("small");note.textContent=({BYE:"Miễn đấu",WALKOVER:"Đi tiếp do nhánh đối thủ trống",NO_ELIGIBLE_PARTICIPANT:"Không còn người tham gia đủ điều kiện",DOUBLE_FORFEIT:"Cả hai bị xử thua",WIN:"Đã có kết quả",DRAW_REMAINING_PIECES:"Hòa · đi tiếp nhờ quân còn lại",DRAW_SEED:"Hòa · đi tiếp theo hạt giống"})[n.resolution];card.append(note);}
       if(n.game?.failure){const note=document.createElement("small");note.textContent="Lỗi trận: "+n.game.failure;card.append(note);}
       if(n.game?.onlineMatchId && ["RUNNING","FINISHED"].includes(n.game.status)) {
         const live=n.game.status==="RUNNING",link=document.createElement("a");link.className="button";link.textContent=live?"Xem trực tiếp":"Xem replay";
