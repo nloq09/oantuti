@@ -1,3 +1,3 @@
-export function controllerChoices(policy="BOT_ONLY"){return policy==="HUMAN_ONLY"?["HUMAN"]:policy==="HUMAN_OR_BOT"?["HUMAN","BOT"]:["BOT"];}
+export function controllerChoices(policy="BOT_ONLY",states=[]){const choices=policy==="HUMAN_ONLY"?["HUMAN"]:policy==="HUMAN_OR_BOT"?["HUMAN","BOT"]:["BOT"];return choices.filter(type=>type!=="HUMAN"||!states.some(item=>item.registration.controllerType==="HUMAN"&&["PENDING","APPROVED","CHECKED_IN"].includes(item.registration.status)));}
 export const selectableBot=bot=>bot.status==="READY";
 export function registrationPayload(controllerType,botId,accepted){if(!accepted)throw new Error("RULES_ACCEPTANCE_REQUIRED");if(controllerType!=="HUMAN"&&controllerType!=="BOT")throw new Error("INVALID_CONTROLLER");if(controllerType==="BOT"&&!botId)throw new Error("BOT_NOT_READY");return{controllerType,botId:controllerType==="BOT"?botId:null,rulesAccepted:true};}

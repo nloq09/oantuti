@@ -1,8 +1,7 @@
 export class GameSocket {
   constructor(seat, onMessage, onStatus) {
-    this.seat = seat;
     this.role = seat.role || "PLAYER";
-    if (this.role !== "PLAYER") this.seat = { matchId: seat.matchId };
+    this.seat=this.role==="PLAYER"?{matchId:seat.matchId,playerId:seat.playerId,token:seat.token}:{matchId:seat.matchId};
     this.onMessage = onMessage;
     this.onStatus = onStatus;
     this.attempt = 0;

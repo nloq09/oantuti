@@ -44,10 +44,11 @@ public class TournamentAdministrationService {
         var t=tournaments.find(id);owned.managedMutation(auth,t,revision,()->{
             var before=t.status;int beforeRound=t.operations.releasedRound();
             switch(action) {
-                case "pause" -> TournamentStateMachine.transition(t,TournamentStatus.PAUSED,Instant.now());
+                case "pause" -> {t.readyWindows.clear();TournamentStateMachine.transition(t,TournamentStatus.PAUSED,Instant.now());}
                 case "resume" -> {
                     require(t.status==TournamentStatus.PAUSED||t.status==TournamentStatus.RECOVERY_REQUIRED,"TOURNAMENT_LOCKED");
                     require(t.operations.reviews().isEmpty()&&t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.FAILED),"MATCH_REVIEW_REQUIRED");
+                    t.readyWindows.clear();
                     owned.verifyArtifacts(t);TournamentStateMachine.transition(t,TournamentStatus.RUNNING,Instant.now());
                 }
                 case "next-round" -> {
@@ -108,7 +109,7 @@ public class TournamentAdministrationService {
         String why=reason(explanation);var t=tournaments.find(id);owned.managedMutation(auth,t,revision,()->{
             require(t.status==TournamentStatus.PAUSED||t.status==TournamentStatus.RECOVERY_REQUIRED,"PAUSE_REQUIRED");var m=match(t,matchId);
             require(m.status==TournamentMatch.Status.FAILED&&!"CANCELLED".equals(m.failure),"MATCH_NOT_RETRYABLE");String before=TournamentAudit.result(m);
-            m.status=TournamentMatch.Status.PENDING;m.onlineMatchId=null;m.historyMatchId=null;m.winnerParticipantId=null;m.result=null;m.failure=null;m.startedAt=null;m.finishedAt=null;m.attempt++;m.scheduledAt=Instant.now();
+            t.readyWindows.remove(m.id);m.status=TournamentMatch.Status.PENDING;m.onlineMatchId=null;m.historyMatchId=null;m.winnerParticipantId=null;m.result=null;m.failure=null;m.startedAt=null;m.finishedAt=null;m.attempt++;m.scheduledAt=Instant.now();
             m.moveNanosA=0;m.moveNanosB=0;m.moveCountA=0;m.moveCountB=0;m.remainingA=0;m.remainingB=0;m.decisionReason=null;
             t.operations=t.operations.review(matchId,null);TournamentAudit.append(t,"MATCH_RETRIED",owned.actor(auth),matchId,why,before,TournamentAudit.result(m));tournaments.changed(t);
         });

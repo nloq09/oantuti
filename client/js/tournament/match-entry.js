@@ -1,0 +1,6 @@
+import{tournamentRequest}from "./tournament-api.js";import{seatKey}from "../config.js";
+export class TournamentMatchEntry {
+ constructor(request=tournamentRequest,storage=globalThis.sessionStorage,navigate=url=>location.assign(url)){this.request=request;this.storage=storage;this.navigate=navigate;this.busy=false;this.entered=null;}
+ async enter(tournamentId,matchId){if(this.busy||this.entered===matchId)return false;this.busy=true;try{const seat=await this.request('/'+encodeURIComponent(tournamentId)+'/entry',{matchId});if(!seat.matchId||!["PLAYER","SPECTATOR"].includes(seat.role))throw new Error("MATCH_NOT_ASSIGNED");const url=seat.role==="PLAYER"?'/game.html?tournament='+encodeURIComponent(tournamentId)+'&matchId='+encodeURIComponent(seat.matchId):'/game.html?spectate='+encodeURIComponent(seat.matchId)+'&tournament='+encodeURIComponent(tournamentId);if(seat.role==="PLAYER"){if(!seat.token||!seat.playerId)throw new Error("MATCH_NOT_ASSIGNED");this.storage.setItem(seatKey,JSON.stringify(seat));}this.entered=matchId;this.navigate(url);return true;}finally{this.busy=false;}}
+}
+export const currentHumanMatch=states=>states.find(item=>item.registration.controllerType==="HUMAN"&&item.status==="PLAYING"&&item.currentMatch?.onlineMatchId)?.currentMatch;

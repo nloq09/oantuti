@@ -1,0 +1,24 @@
+package com.rpsbattle.tournament;
+import com.fasterxml.jackson.databind.*;import com.rpsbattle.online.*;import com.rpsbattle.tournament.domain.*;import org.junit.jupiter.api.Test;import org.springframework.beans.factory.annotation.Autowired;import org.springframework.boot.test.context.SpringBootTest;import org.springframework.boot.test.web.server.LocalServerPort;import java.net.*;import java.net.http.*;import java.util.*;import static org.assertj.core.api.Assertions.*;
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT) class AutoMatchAssignmentTest {
+ @LocalServerPort int port;@Autowired ObjectMapper json;@Autowired TournamentService tournaments;@Autowired OnlineMatchService online;
+ class Browser implements AutoCloseable{
+  final HttpClient client=HttpClient.newBuilder().cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL)).build();
+  JsonNode call(String path,Object body,boolean csrf,int expected)throws Exception{var request=HttpRequest.newBuilder(URI.create("http://localhost:"+port+path)).header("Content-Type","application/json");if(csrf){var token=call("/api/auth/csrf",null,false,200);request.header(token.path("headerName").asText(),token.path("token").asText());}request.method(body==null?"GET":"POST",body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));var result=client.send(request.build(),HttpResponse.BodyHandlers.ofString());assertThat(result.statusCode()).as(path).isEqualTo(expected);return json.readTree(result.body());}
+  void login()throws Exception{String name="entry_"+UUID.randomUUID().toString().substring(0,8),password="Tournament_fixture_12345";call("/api/auth/register",Map.of("username",name,"password",password,"email",name+"@example.invalid","displayName",name),true,201);call("/api/auth/login",Map.of("username",name,"password",password),true,200);}
+  public void close(){client.close();}
+ }
+ @Test void twoSessionOwnersReadyThenReceiveOnlyTheirStableSeatsWithoutMatchCodes()throws Exception{
+  try(var owner=new Browser();var player=new Browser();var outsider=new Browser();var guest=new Browser()){
+   owner.login();player.login();outsider.login();var t=owner.call("/api/tournaments",Map.of("name","Human assignment E2E","format","ROUND_ROBIN","participantPolicy","HUMAN_ONLY","maxParticipants",2),true,201);String id=t.path("id").asText(),path="/api/tournaments/"+id;
+   owner.call(path+"/open-registration",Map.of(),true,200);for(var participant:List.of(owner,player))participant.call(path+"/registrations",Map.of("controllerType","HUMAN","rulesAccepted",true),true,200);
+   t=owner.call(path,null,false,200);for(var registration:t.path("registrations"))owner.call(path+"/registrations/"+registration.path("id").asText()+"/approve",Map.of(),true,200);owner.call(path+"/close-registration",Map.of(),true,200);owner.call(path+"/start",Map.of(),true,200);
+   try{
+    guest.call(path+"/me",null,false,401);assertThat(outsider.call(path+"/me",null,false,200).path("states").size()).isZero();JsonNode next=null;for(int i=0;i<200;i++){next=owner.call(path+"/me",null,false,200).path("states").get(0).path("nextMatch");if(next.hasNonNull("readyWindowId"))break;Thread.sleep(20);}assertThat(next.hasNonNull("readyWindowId")).isTrue();String match=next.path("id").asText();var body=Map.of("matchId",match,"windowId",next.path("readyWindowId").asText());
+    owner.call(path+"/ready",body,false,403);outsider.call(path+"/ready",body,true,403);owner.call(path+"/ready",body,true,200);owner.call(path+"/ready",body,true,200);assertThat(tournaments.find(id).matches.getFirst().onlineMatchId).isNull();player.call(path+"/ready",body,true,200);
+    for(int i=0;i<200&&tournaments.find(id).matches.getFirst().onlineMatchId==null;i++)Thread.sleep(20);var first=owner.call(path+"/entry",Map.of("matchId",match),true,200);var second=player.call(path+"/entry",Map.of("matchId",match),true,200);assertThat(first.path("role").asText()).isEqualTo("PLAYER");assertThat(first.path("playerId").asText()).isNotEqualTo(second.path("playerId").asText());assertThat(first.path("matchId").asText()).isEqualTo(second.path("matchId").asText());
+    assertThat(owner.call(path+"/entry",Map.of("matchId",match),true,200)).isEqualTo(first);outsider.call(path+"/entry",Map.of("matchId",match),true,403);assertThat(owner.call(path,null,false,200).toString()).doesNotContain(first.path("token").asText(),second.path("token").asText());var room=online.find(first.path("matchId").asText());assertThat(room.seats()).hasSize(2);assertThat(room.status()).isEqualTo("PLACEMENT");
+   }finally{if(!List.of(TournamentStatus.FINISHED,TournamentStatus.CANCELLED).contains(tournaments.find(id).status))owner.call(path+"/cancel",Map.of(),true,200);}
+  }
+ }
+}

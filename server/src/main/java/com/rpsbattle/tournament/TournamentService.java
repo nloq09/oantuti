@@ -121,7 +121,7 @@ public class TournamentService {
         data.put("progress",Map.of("total",total,"pending",pending+total-t.matches.size(),"running",running,"finished",finished,"failed",failed,"completed",finished+failed));
         var ranked=ranking.rank(t); data.put("ranking",ranked);
         String championId=t.format==TournamentFormat.SINGLE_ELIMINATION&&!t.bracket.isEmpty()?t.bracket.getLast().winnerParticipantId():null;
-        data.put("champion",t.status!=TournamentStatus.FINISHED||!t.operations.reviews().isEmpty()?null:t.format==TournamentFormat.SINGLE_ELIMINATION?ranked.stream().filter(r->r.participantId().equals(championId)&&t.operations.active(r.participantId())).findFirst().orElse(null):finished>0&&!ranked.isEmpty()?ranked.stream().filter(r->t.operations.active(r.participantId())).findFirst().orElse(null):null);
+        data.put("champion",t.status!=TournamentStatus.FINISHED||!t.operations.reviews().isEmpty()?null:t.format==TournamentFormat.SINGLE_ELIMINATION?ranked.stream().filter(r->r.participantId().equals(championId)&&t.operations.active(r.participantId())).findFirst().orElse(null):finished>0&&!ranked.isEmpty()?ranked.stream().filter(r->t.operations.active(r.participantId())&&(r.wins()>0||r.draws()>0)).findFirst().orElse(null):null);
         return data;
     } }
 }

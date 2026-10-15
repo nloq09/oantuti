@@ -312,6 +312,7 @@ export class GameController {
     const won = snapshot.gameState.winner === snapshot.playerId,
       draw = !snapshot.gameState.winner;
     sound(won ? "victory" : "defeat");
+    if(this.seat.tournamentId){modal(draw?"Hòa!":won?"Bạn thắng!":"Bạn thua","Kết quả sẽ được server cập nhật vào giải đấu.",[{label:"Quay lại giải",primary:true,run:()=>location.assign("/tournament-lobby.html?id="+encodeURIComponent(this.seat.tournamentId))}]);return;}
     modal(
       draw ? "Hòa!" : won ? "Bạn thắng!" : "Bạn thua",
       `Ván kết thúc sau ${snapshot.gameState.turn} lượt. Xanh còn ${document.querySelector("#count-P1").textContent} quân, Đỏ còn ${document.querySelector("#count-P2").textContent} quân.`,

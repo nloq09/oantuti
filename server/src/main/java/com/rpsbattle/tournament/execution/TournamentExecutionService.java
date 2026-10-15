@@ -28,6 +28,8 @@ public class TournamentExecutionService {
             TournamentAudit.append(t,"PERSISTENCE_ERROR",null,t.id,"COMMIT_FAILED",null,null);t.revision++;return false;
         }
     }
+    private TournamentReadyService readiness;
+    @org.springframework.beans.factory.annotation.Autowired public void readiness(TournamentReadyService readiness){this.readiness=readiness;}
     public TournamentExecutionService(TournamentRegistry registry,TournamentService tournaments,TournamentMatchExecutor executor,
         OnlineMatchService online,ReplayRegistry replays,@Value("${rps.tournament.max-concurrent-matches:4}") int maxConcurrent,
         @Value("${rps.tournament.match-timeout-seconds:900}") long maxSeconds) {
@@ -81,7 +83,7 @@ public class TournamentExecutionService {
             if(t.status!=TournamentStatus.RUNNING)continue;
             int round=t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(0);
             int slots=t.maxConcurrentMatches-(int)t.matches.stream().filter(m->m.status==TournamentMatch.Status.RUNNING).count();
-            for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING && m.round==round && (t.operations.autoAdvanceRounds()||m.round<=t.operations.releasedRound()) && !t.operations.reviews().containsKey(m.id) && slots-->0) {
+            for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING && m.round==round && (t.operations.autoAdvanceRounds()||m.round<=t.operations.releasedRound()) && !t.operations.reviews().containsKey(m.id) && slots>0 && (readiness==null||readiness.permit(t,m)) && slots-->0) {
                 try {workers.offer(new com.rpsbattle.worker.MatchExecutionRequest(t,m));}
                 catch(com.rpsbattle.online.DemoRequestException full) {break;}
             }

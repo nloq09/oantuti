@@ -67,6 +67,14 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 - Cài đặt âm thanh, nhạc nền và hiệu ứng lưu trên trình duyệt.
 - Hướng dẫn bot và giao thức có cả bản Markdown và trang web.
 
+### Chế độ giải đấu cho người chơi — Chặng 8 (nhóm 1–5)
+
+- Hub khám phá giải theo 5 nhóm, tìm kiếm và phân trang; chi tiết có 7 tab và trạng thái riêng của từng đăng ký.
+- Tạo giải BOT_ONLY / HUMAN_ONLY / HUMAN_OR_BOT, đăng ký Tôi tự chơi hoặc bot READY, duyệt và check-in theo giờ server.
+- Lobby có đối thủ tiếp theo, rank và trận đang chạy. Người thật xác nhận sẵn sàng trong cửa sổ 30 giây, sau đó tự vào đúng ghế; bot dùng executor và sandbox hiện có.
+- Ready/entry có quyền theo tài khoản, CSRF, idempotency và no-show. V17 giữ dữ liệu bot cũ và thêm danh tính human; replay và gameplay dùng engine hiện tại.
+- [Hướng dẫn, API, migration và kết quả kiểm thử](docs/CHANG-8-NHOM-1-5-TOURNAMENT-MODE.md). Nhóm 6–10 của Chặng 8 chưa triển khai.
+
 ### Quản trị
 
 **Chặng 7 — Nhóm 6–10:** quản trị giải/participants/lifecycle, tranh chấp dựa trên review có audit, kiểm tra replay, audit chỉ đọc và System Health. Thêm cảnh báo polling, responsive/accessibility và hồ sơ ADMIN trong theme game; migration V16 giữ dữ liệu cũ. Kiểm thử cuối: 493 backend và 38 client qua, không bỏ qua; bootJar thành công. [Chức năng, API, giới hạn vận hành và kiểm thử](docs/CHANG-7-NHOM-6-10-ADMIN.md).

@@ -70,6 +70,7 @@ public class OwnedTournamentService {
         return t;
     }
     public UUID actor(Authentication auth){return accounts.requireUser(auth).id().value();}
+    void systemMutation(Tournament t,Runnable operation){mutate(t,null,operation);}
     public void managedMutation(Authentication auth,Tournament t,Long expected,Runnable operation){
         authorization.requireManager(auth,t);synchronized(t){
             if(expected==null||expected!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);

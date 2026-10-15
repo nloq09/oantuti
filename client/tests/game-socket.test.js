@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { GameSocket } from "../js/socket/game-socket.js";
+test("tournament metadata remains local and never changes the strict gameplay message schema",()=>{const originalSocket=globalThis.WebSocket,originalLocation=globalThis.location;let socket;class Fake{static OPEN=1;constructor(){socket=this;this.readyState=1;this.sent=[];}send(value){this.sent.push(JSON.parse(value));}close(){}}try{globalThis.location={protocol:"http:",host:"localhost"};globalThis.WebSocket=Fake;const game=new GameSocket({role:"PLAYER",matchId:"ROOM",playerId:"P1",token:"fixture",tournamentId:"cup",tournamentMatchId:"entry",historyId:"archive"},()=>{},()=>{});socket.onopen();assert.deepEqual(socket.sent[0],{type:"JOIN_MATCH",matchId:"ROOM",playerId:"P1",token:"fixture"});game.close();}finally{globalThis.WebSocket=originalSocket;globalThis.location=originalLocation;}});
 
 test("join, reconnect backoff, full snapshot synchronization and stop", () => {
   const originals = {

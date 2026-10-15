@@ -81,7 +81,7 @@ function render(t) {
   counts.replaceChildren();
   for (const [label, value] of [
     ["Vòng hiện tại", t.currentRound || "—"],
-    ["Bot tham gia", t.participants.length],
+    ["Người/bot tham gia", t.participants.length],
     ["Tổng trận", p.total],
     ["Hoàn thành", p.completed],
     ["Đang chạy", p.running],
@@ -122,7 +122,7 @@ function render(t) {
   if ([...available.options].some((o) => o.value === selected))
     available.value = selected;
   document.querySelector("#add-participant").hidden =
-    !draft || !available.options.length || (t.registrations || []).filter(r => ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)).length >= t.maxParticipants;
+    t.participantPolicy==="HUMAN_ONLY" || !draft || !available.options.length || (t.registrations || []).filter(r => ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)).length >= t.maxParticipants;
   const matches = document.querySelector("#match-list");
   matches.replaceChildren();
   if (!t.matches.length) {

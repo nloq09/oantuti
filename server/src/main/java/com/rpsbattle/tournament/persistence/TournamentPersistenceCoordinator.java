@@ -71,6 +71,7 @@ public class TournamentPersistenceCoordinator {
             }
             if(data.details()!=null)data.details().restore(t);
             if(t.status==TournamentStatus.RUNNING || t.status==TournamentStatus.PAUSED || (t.status==TournamentStatus.READY && !t.matches.isEmpty())) {
+                t.readyWindows.clear();
                 TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());com.rpsbattle.tournament.TournamentAudit.append(t,"TOURNAMENT_RECOVERY_REQUIRED",null,t.id,"SERVER_RESTART",data.status().name(),t.status.name());t.revision++;
                 for(var match:t.matches) if(match.status==TournamentMatch.Status.RUNNING) {match.status=TournamentMatch.Status.FAILED;match.failure="SERVER_RESTART";match.finishedAt=Instant.now();}
                 repository.save(snapshot(t));

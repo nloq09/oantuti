@@ -1,4 +1,12 @@
 const errors = {
+  CONTROLLER_NOT_ALLOWED: "Giải này không cho phép cách thi đấu đã chọn.",
+  RULES_ACCEPTANCE_REQUIRED: "Bạn cần xác nhận đã đọc và đồng ý với luật giải.",
+  REGISTRATION_CLOSED: "Đã hết hạn đăng ký theo giờ server.",
+  INVALID_TOURNAMENT_TIMING: "Hạn đăng ký, check-in và giờ dự kiến chưa đúng thứ tự.",
+  INVALID_CONTROLLER: "Cách điều khiển người/bot không hợp lệ.",
+  READY_WINDOW_CHANGED: "Cửa sổ sẵn sàng đã thay đổi. Hãy cập nhật giải rồi xác nhận lại.",
+  READY_WINDOW_CLOSED: "Đã hết hạn sẵn sàng hoặc trận đã chuyển trạng thái.",
+  MATCH_NOT_ASSIGNED: "Trận chưa được cấp ghế hoặc đã kết thúc. Hãy quay lại lobby giải.",
   BOT_ARTIFACT_CHANGED: "File bot bị thiếu hoặc không khớp phiên bản đã khóa. Giải chưa thể chạy bot này.",
   INVALID_MANUAL_SEEDS: "Mỗi bot cần một seed thủ công riêng từ 1 đến số bot đã duyệt.",
   BOT_NOT_READY: "Bot bị lỗi, đã xóa hoặc thiếu file source. Hãy tải lại bot.",

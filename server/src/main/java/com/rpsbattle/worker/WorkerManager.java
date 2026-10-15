@@ -17,6 +17,8 @@ public class WorkerManager {
     private final Executor launches;
     private final Set<String> active = new HashSet<>();
     private boolean draining;
+    private com.rpsbattle.tournament.TournamentReadyService readiness;
+    @Autowired public void readiness(com.rpsbattle.tournament.TournamentReadyService readiness){this.readiness=readiness;}
     @Autowired public WorkerManager(ExecutionQueue queue, MatchWorker worker, TournamentService tournaments,
             @Value("${rps.worker.max-concurrent-matches:${rps.tournament.max-concurrent-matches:4}}") int maxConcurrent) {
         this(queue, worker, tournaments, maxConcurrent, Executors.newFixedThreadPool(maxConcurrent,
@@ -48,6 +50,7 @@ public class WorkerManager {
                 complete(m.id); return;
             }
             if(t.matches.stream().filter(game->game.status==TournamentMatch.Status.RUNNING).count()>=t.maxConcurrentMatches) {complete(m.id);return;}
+            if(readiness!=null&&!readiness.confirmed(t,m)){complete(m.id);return;}
             if(!t.operations.active(m.participantA.participantId())||!t.operations.active(m.participantB.participantId())||(!t.operations.autoAdvanceRounds()&&m.round>t.operations.releasedRound())||t.operations.reviews().containsKey(m.id)){complete(m.id);return;}
             try {
                 var result=Objects.requireNonNull(worker.execute(request));
