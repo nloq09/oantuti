@@ -1,3 +1,4 @@
+import {mountHub} from "./tournament-hub.js";
 import { refreshBots, savedBots } from "../api/bot-api.js";
 import {
   tournamentRequest,
@@ -28,51 +29,7 @@ for (const bot of bots) {
   options.append(row);
 }
 document.querySelector("#bot-empty").hidden = bots.length > 0;
-let renderVersion=0;
-let stopped = false,
-  busy = false,
-  timer;
-async function load() {
-  const requestVersion=++renderVersion;clearTimeout(timer);
-  try {
-    const tournaments = await tournamentRequest();
-    if (stopped||requestVersion!==renderVersion) return;
-    const list = document.querySelector("#tournament-list");
-    list.replaceChildren();
-    if (!tournaments.length) {
-      const empty = document.createElement("p");
-      empty.className = "panel";
-      empty.textContent = "Chưa có giải đấu. Hãy tạo giải đấu đầu tiên.";
-      list.append(empty);
-    }
-    const ownerFilter=document.querySelector("#filter-owner"),previous=ownerFilter.value;
-    const owners=[...new Map(tournaments.filter(t=>t.ownerUserId).map(t=>[t.ownerUserId,t.ownerName||t.ownerUserId])).entries()];
-    if(ownerFilter.dataset.owners!==JSON.stringify(owners)){ownerFilter.dataset.owners=JSON.stringify(owners);ownerFilter.replaceChildren(new Option("Tất cả",""),...owners.map(([id,name])=>new Option(name,id)));ownerFilter.value=previous;}
-    const filtered=filterTournaments(tournaments,{format:document.querySelector("#filter-format").value,status:document.querySelector("#filter-status").value,owner:ownerFilter.value});
-    let group;
-    for (const t of filtered.sort((a,b)=>tournamentGroup(a.status).localeCompare(tournamentGroup(b.status),"vi"))) {
-      const groupName=tournamentGroup(t.status);if(group!==groupName){group=groupName;const heading=document.createElement("h3");heading.textContent=groupName;list.append(heading);}
-      const card = document.createElement("article");
-      card.className = "panel tournament-card";
-      const name = document.createElement("h3");
-      name.textContent = t.name;
-      const status = document.createElement("span");
-      status.className = "status-badge";
-      status.textContent = statusLabels[t.status];
-      const info = document.createElement("p");
-      info.textContent = `${formatLabel(t.format)} · ${t.participants.length} bot · ${t.progress.completed}/${t.progress.total} trận`;
-      const link = document.createElement("a");
-      link.className = "button primary";
-      link.href = "/tournament.html?id=" + encodeURIComponent(t.id);
-      link.textContent = ["DRAFT", "REGISTRATION"].includes(t.status) ? "Tham gia giải" : "Xem giải đấu";
-      card.append(name, status, info, link);
-      list.append(card);
-    }
-  } catch (error) {
-    if (!stopped&&requestVersion===renderVersion) toast(error.message, true);
-  }
-  if (!stopped&&requestVersion===renderVersion) timer = setTimeout(load, 5000);
-}
+let busy=false;
 document.querySelector("#create-tournament").onsubmit = async (event) => {
   event.preventDefault();
   if (busy) return;
@@ -115,9 +72,8 @@ document.querySelector("#join-tournament").onsubmit = (event) => {
   location.href = "/tournament.html?id=" + encodeURIComponent(target);
 };
 window.addEventListener("pagehide", () => {
-  stopped = true;
-  clearTimeout(timer);
-});
-load();
 
-for(const id of ['filter-format','filter-status','filter-owner'])document.querySelector('#'+id).onchange=load;
+
+});
+mountHub(document.querySelector("#tournament-list"));
+

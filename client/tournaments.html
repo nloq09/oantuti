@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/css/battle-theme.css" />
     <link rel="stylesheet" href="/css/tournament.css" />
     <link rel="stylesheet" href="/css/account.css">
+    <link rel="stylesheet" href="/css/tournament-mode.css">
   </head>
   <body>
     <nav class="account-nav site-account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/">Trang chủ</a><div class="account-actions"><a class="button" href="/login.html">Đăng nhập</a><a class="button" href="/register.html">Đăng ký</a></div></nav>
@@ -43,8 +44,7 @@
           </form>
         </section>
         <section>
-          <h2>Các giải đấu</h2><div class="tournament-filters"><label for="filter-format">Thể thức</label><select id="filter-format"><option value="">Tất cả</option><option value="ROUND_ROBIN">Vòng tròn</option><option value="SINGLE_ELIMINATION">Loại trực tiếp</option></select><label for="filter-status">Trạng thái</label><select id="filter-status"><option value="">Tất cả</option><option value="REGISTRATION">Mở đăng ký</option><option value="RUNNING">Đang chạy</option><option value="PAUSED">Tạm dừng</option><option value="RECOVERY_REQUIRED">Cần khôi phục</option><option value="FINISHED">Hoàn thành</option></select><label for="filter-owner">Chủ giải</label><select id="filter-owner"><option value="">Tất cả</option></select></div>
-          <div id="tournament-list" aria-live="polite"></div>
+          <h2>Khám phá giải đấu</h2><div id="tournament-list" aria-live="polite"></div>
         </section>
       </div>
     </main>
