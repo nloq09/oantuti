@@ -1,0 +1,4 @@
+export const node=(tag,text,css)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(css)n.className=css;return n;};
+export const link=(text,href)=>{const n=node("a",text,"button");n.href=href;return n;};
+export const date=value=>value?new Date(value).toLocaleString("vi-VN"):"Chưa công bố";
+export function table(columns,rows){const wrap=node("div",undefined,"table-scroll"),t=node("table"),head=node("thead"),tr=node("tr"),body=node("tbody");wrap.tabIndex=0;wrap.setAttribute("aria-label","Bảng dữ liệu có thể cuộn ngang");for(const [title]of columns){const th=node("th",title);th.scope="col";tr.append(th);}head.append(tr);for(const row of rows){const r=node("tr");for(const [,render]of columns){const td=node("td"),value=render(row);td.append(value instanceof Node?value:node("span",value??"—"));r.append(td);}body.append(r);}t.append(head,body);wrap.append(t);if(!rows.length)wrap.append(node("p","Chưa có dữ liệu."));return wrap;}

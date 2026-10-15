@@ -71,9 +71,5 @@ document.querySelector("#join-tournament").onsubmit = (event) => {
   }
   location.href = "/tournament.html?id=" + encodeURIComponent(target);
 };
-window.addEventListener("pagehide", () => {
 
-
-});
 mountHub(document.querySelector("#tournament-list"));
-
