@@ -1,4 +1,7 @@
 const errors = {
+  INVALID_DISPUTE: "Chọn lý do và nhập mô tả từ 1–400 ký tự.",
+  DISPUTE_WINDOW_CLOSED: "Đã hết hạn báo cáo hoặc trận chưa kết thúc.",
+  DISPUTE_ALREADY_REPORTED: "Trận đã được báo cáo hoặc đang được trọng tài xử lý.",
   CONTROLLER_NOT_ALLOWED: "Giải này không cho phép cách thi đấu đã chọn.",
   RULES_ACCEPTANCE_REQUIRED: "Bạn cần xác nhận đã đọc và đồng ý với luật giải.",
   REGISTRATION_CLOSED: "Đã hết hạn đăng ký theo giờ server.",

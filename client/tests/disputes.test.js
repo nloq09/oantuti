@@ -1,0 +1,2 @@
+import test from "node:test";import assert from "node:assert/strict";import{disputePayload}from "../js/tournament/disputes.js";
+test("dispute requests contain no result override or owner authority and require bounded explanations",()=>{assert.deepEqual(disputePayload("match","RESULT"," Please review "),{matchId:"match",reason:"RESULT",description:"Please review"});assert.throws(()=>disputePayload("match","override","reason"));assert.throws(()=>disputePayload("match","BOT"," "));assert.throws(()=>disputePayload("match","OTHER","x".repeat(401)));});
