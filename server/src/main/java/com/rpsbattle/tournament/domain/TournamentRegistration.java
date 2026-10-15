@@ -8,6 +8,7 @@ public record TournamentRegistration(UUID id, UUID tournamentId, UUID userId, UU
         String displayName, Status status, Instant registeredAt, Instant approvedAt, Instant checkedInAt,String sourceHash,String artifactHash,Instant lockedAt) {
     public TournamentRegistration(UUID id,UUID tournamentId,UUID userId,UUID botId,UUID version,String name,Status status,Instant registered,Instant approved,Instant checked){this(id,tournamentId,userId,botId,version,name,status,registered,approved,checked,null,null,null);}
     public enum Status { PENDING, APPROVED, REJECTED, CANCELLED, CHECKED_IN, NOT_CHECKED_IN }
+    @com.fasterxml.jackson.annotation.JsonProperty public String controllerType(){return botId==null?"HUMAN":"BOT";}
     public boolean active() {return status==Status.PENDING || status==Status.APPROVED || status==Status.CHECKED_IN;}
     public TournamentRegistration withStatus(Status next, Instant now) {
         return new TournamentRegistration(id,tournamentId,userId,botId,botVersionId,displayName,next,registeredAt,

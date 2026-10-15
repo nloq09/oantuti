@@ -47,7 +47,7 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
   try {
     t = await createTournament(
       document.querySelector("#tournament-name").value.trim(),
-      {maxParticipants, format:document.querySelector("#tournament-format").value, maxConcurrentMatches:Number(document.querySelector("#match-concurrency").value), checkInRequired: document.querySelector("#check-in-required").checked},
+      {participantPolicy:document.querySelector("#participant-policy").value,maxParticipants, format:document.querySelector("#tournament-format").value, maxConcurrentMatches:Number(document.querySelector("#match-concurrency").value), checkInRequired: document.querySelector("#check-in-required").checked},
     );
     for (const bot of chosen) await addParticipant(t.id, bot);
     location.href = "/tournament.html?id=" + encodeURIComponent(t.id);
@@ -73,3 +73,4 @@ document.querySelector("#join-tournament").onsubmit = (event) => {
 };
 
 mountHub(document.querySelector("#tournament-list"));
+document.querySelector("#participant-policy").onchange=()=>{const humanOnly=document.querySelector("#participant-policy").value==="HUMAN_ONLY";for(const input of options.querySelectorAll("input")){input.disabled=humanOnly;if(humanOnly)input.checked=false;}};

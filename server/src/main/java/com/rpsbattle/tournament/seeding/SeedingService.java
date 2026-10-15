@@ -16,9 +16,9 @@ public final class SeedingService {
                 for(var p:ordered)if(p.manualSeed()==null || p.manualSeed()<1 || !values.add(p.manualSeed()))throw new DemoRequestException("INVALID_MANUAL_SEEDS");
                 ordered.sort(Comparator.comparing(TournamentParticipant::manualSeed));
             }
-            case RANKING -> ordered.sort(Comparator.<TournamentParticipant>comparingLong(p->scores.getOrDefault(p.botId(),new Score(0,0,0)).points()).reversed()
-                .thenComparing(Comparator.<TournamentParticipant>comparingLong(p->scores.getOrDefault(p.botId(),new Score(0,0,0)).wins()).reversed())
-                .thenComparing(Comparator.<TournamentParticipant>comparingLong(p->scores.getOrDefault(p.botId(),new Score(0,0,0)).pieces()).reversed()).thenComparing(TournamentParticipant::participantId));
+            case RANKING -> ordered.sort(Comparator.<TournamentParticipant>comparingLong(p->scores.getOrDefault(p.botId()==null?"human:"+p.ownerUserId():p.botId(),new Score(0,0,0)).points()).reversed()
+                .thenComparing(Comparator.<TournamentParticipant>comparingLong(p->scores.getOrDefault(p.botId()==null?"human:"+p.ownerUserId():p.botId(),new Score(0,0,0)).wins()).reversed())
+                .thenComparing(Comparator.<TournamentParticipant>comparingLong(p->scores.getOrDefault(p.botId()==null?"human:"+p.ownerUserId():p.botId(),new Score(0,0,0)).pieces()).reversed()).thenComparing(TournamentParticipant::participantId));
         }
         var result=new ArrayList<TournamentParticipant>();for(var p:ordered)result.add(p.withSeeding(result.size()+1,p.manualSeed()));return List.copyOf(result);
     }

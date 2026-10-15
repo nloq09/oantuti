@@ -25,7 +25,7 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
         for(var p:metadata.participants()) {
             var old=roster.remove(p.id());
             if(old==null) entities.persist(new TournamentParticipantEntity(metadata.id(),p));
-            else if(!old.botId.equals(p.botId()) || !old.ownerUserId.equals(p.ownerUserId())) throw new IllegalStateException("Participant ownership cannot be changed");
+            else if(!Objects.equals(old.botId,p.botId()) || !old.ownerUserId.equals(p.ownerUserId())) throw new IllegalStateException("Participant ownership cannot be changed");
             else {old.artifactHash=p.artifactHash();old.seedNumber=p.seedNumber();old.manualSeed=p.manualSeed();}
         }
         entities.flush();
@@ -42,7 +42,7 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
             if(!registration.tournamentId().equals(metadata.id()))throw new IllegalArgumentException("Registration tournament mismatch");
             var existing=registrations.remove(registration.id());
             if(existing==null){existing=new TournamentRegistrationEntity();existing.copy(registration);entities.persist(existing);}
-            else {if(!existing.userId.equals(registration.userId()) || !existing.botId.equals(registration.botId()) || !existing.botVersionId.equals(registration.botVersionId()))throw new IllegalStateException("Registration identity cannot change");existing.copy(registration);}
+            else {if(!existing.userId.equals(registration.userId()) || !Objects.equals(existing.botId,registration.botId()) || !Objects.equals(existing.botVersionId,registration.botVersionId()))throw new IllegalStateException("Registration identity cannot change");existing.copy(registration);}
         }
         registrations.values().forEach(entities::remove);entities.flush();
         var previous=entities.createQuery("select a from TournamentAuditEntity a where a.tournamentId=:id",TournamentAuditEntity.class).setParameter("id",metadata.id()).getResultList().stream().collect(Collectors.toMap(a->a.id,a->a));

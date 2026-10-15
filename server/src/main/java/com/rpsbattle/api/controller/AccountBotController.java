@@ -12,6 +12,7 @@ public class AccountBotController {
     public AccountBotController(OwnedBotService bots,LegacyBotImportService legacy) {this.bots=bots;this.legacy=legacy;}
     @GetMapping public List<View> list(Authentication auth) {return bots.list(auth).stream().map(View::of).toList();}
     @GetMapping("/{id}") public View detail(Authentication auth,@PathVariable String id) {return View.of(bots.require(auth,id));}
+    @PostMapping("/{id}/validate") public View validate(Authentication auth,@PathVariable String id) {return View.of(bots.requireRegistrationBot(auth,id));}
     @PatchMapping("/{id}") public View rename(Authentication auth,@PathVariable String id,@RequestBody Rename body) {return View.of(bots.rename(auth,id,body.name()));}
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(Authentication auth,@PathVariable String id) {bots.delete(auth,id);}

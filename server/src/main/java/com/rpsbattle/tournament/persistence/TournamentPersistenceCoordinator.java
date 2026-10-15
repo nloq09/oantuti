@@ -25,7 +25,7 @@ public class TournamentPersistenceCoordinator {
     public TournamentMetadata snapshot(Tournament t) {
         synchronized(t) {
             if(t.ownerUserId==null) return null; // Unmanaged internal/demo fixtures have no account to assign.
-            var roster=t.participants.stream().map(p->new TournamentMetadata.Participant(UUID.fromString(p.participantId()),UUID.fromString(p.botId()),p.ownerUserId(),p.displayName(),p.seed(),p.artifactHash(),p.seedNumber(),p.manualSeed())).toList();
+            var roster=t.participants.stream().map(p->new TournamentMetadata.Participant(UUID.fromString(p.participantId()),p.botId()==null?null:UUID.fromString(p.botId()),p.ownerUserId(),p.displayName(),p.seed(),p.artifactHash(),p.seedNumber(),p.manualSeed())).toList();
             var entries=t.matches.stream().map(m->new TournamentMetadata.Entry(UUID.fromString(m.id),UUID.fromString(m.participantA.participantId()),UUID.fromString(m.participantB.participantId()),m.historyMatchId,m.onlineMatchId,m.status,m.winnerParticipantId==null?null:UUID.fromString(m.winnerParticipantId),m.result,m.failure,m.remainingA,m.remainingB,m.startedAt,m.finishedAt,history.latest(m.historyMatchId))).toList();
             return new TournamentMetadata(UUID.fromString(t.id),t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,entries,t.statusChangedAt,t.checkInRequired,t.maxParticipants,List.copyOf(t.registrations),t.seedingStrategy,t.seedingSeed,TournamentDetails.snapshot(t));
         }
@@ -62,8 +62,8 @@ public class TournamentPersistenceCoordinator {
             var t=new Tournament(data.id().toString(),data.name(),data.format(),data.createdAt());t.ownerUserId=data.ownerUserId();t.status=data.status();t.revision=data.revision();t.startedAt=data.startedAt();t.finishedAt=data.finishedAt();t.statusChangedAt=data.statusChangedAt();t.checkInRequired=data.checkInRequired();t.maxParticipants=data.maxParticipants();t.registrations.addAll(data.registrations());t.seedingStrategy=data.seedingStrategy();t.seedingSeed=data.seedingSeed();
             var byId=new HashMap<UUID,TournamentParticipant>();
             for(var p:data.participants()) {
-                String token="";try {token=artifacts.stored(p.botId().toString()).token();} catch(com.rpsbattle.online.DemoRequestException missing) { /* Readable even if an artifact is unavailable. */ }
-                var participant=new TournamentParticipant(p.id().toString(),p.botId().toString(),token,p.displayName(),p.seed(),p.ownerUserId(),p.artifactHash(),p.seedNumber(),p.manualSeed());t.participants.add(participant);byId.put(p.id(),participant);
+                String token="";try {if(p.botId()!=null)token=artifacts.stored(p.botId().toString()).token();} catch(com.rpsbattle.online.DemoRequestException missing) { /* Readable even if an artifact is unavailable. */ }
+                var participant=new TournamentParticipant(p.id().toString(),p.botId()==null?null:p.botId().toString(),token,p.displayName(),p.seed(),p.ownerUserId(),p.artifactHash(),p.seedNumber(),p.manualSeed());t.participants.add(participant);byId.put(p.id(),participant);
             }
             t.participants.sort(java.util.Comparator.comparing((TournamentParticipant p)->p.seedNumber()==null?Integer.MAX_VALUE:p.seedNumber()).thenComparing(TournamentParticipant::participantId));
             for(var e:data.matches()) {

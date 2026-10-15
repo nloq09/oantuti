@@ -17,17 +17,17 @@ public class TournamentMatchExecutor {
     public OnlineMatch start(TournamentMatch entry) {
         BotAgent a=null,b=null; OnlineMatch room=null;
         try {
-            a=entry.participantA.artifactHash()==null?bots.agent(entry.participantA.botId(),entry.participantA.botToken()):bots.lockedAgent(entry.participantA.botId(),entry.participantA.botToken(),entry.participantA.artifactHash());
-            b=entry.participantB.artifactHash()==null?bots.agent(entry.participantB.botId(),entry.participantB.botToken()):bots.lockedAgent(entry.participantB.botId(),entry.participantB.botToken(),entry.participantB.artifactHash());
+            if(entry.participantA.botId()!=null)a=entry.participantA.artifactHash()==null?bots.agent(entry.participantA.botId(),entry.participantA.botToken()):bots.lockedAgent(entry.participantA.botId(),entry.participantA.botToken(),entry.participantA.artifactHash());
+            if(entry.participantB.botId()!=null)b=entry.participantB.artifactHash()==null?bots.agent(entry.participantB.botId(),entry.participantB.botToken()):bots.lockedAgent(entry.participantB.botId(),entry.participantB.botToken(),entry.participantB.artifactHash());
             room=online.create(MatchMode.HUMAN_VS_HUMAN,entry.participantA.seed()^entry.participantB.seed());
             room.setBotDelayMillis(botDelayMillis);
             entry.historyMatchId=room.archiveId();
             synchronized(room) {
-                room.attachBot(OnlineMatch.P1,a,entry.participantA.displayName());
-                var other=room.join(); room.attachBot(other.id(),b,entry.participantB.displayName());
+                if(a!=null)room.attachBot(OnlineMatch.P1,a,entry.participantA.displayName());
+                var other=room.join(); if(b!=null)room.attachBot(other.id(),b,entry.participantB.displayName());
                 if(identities!=null) {
-                    identities.bindTournamentBot(room,OnlineMatch.P1,entry.participantA.botId());
-                    identities.bindTournamentBot(room,other.id(),entry.participantB.botId());
+                    if(entry.participantA.botId()==null)room.bindSeat(OnlineMatch.P1,entry.participantA.ownerUserId(),null);else identities.bindTournamentBot(room,OnlineMatch.P1,entry.participantA.botId());
+                    if(entry.participantB.botId()==null)room.bindSeat(other.id(),entry.participantB.ownerUserId(),null);else identities.bindTournamentBot(room,other.id(),entry.participantB.botId());
                 }
                 online.publish(room,room.prepareBots());
             }

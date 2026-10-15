@@ -1,6 +1,7 @@
 package com.rpsbattle.tournament.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 public record TournamentParticipant(String participantId, String botId, @JsonIgnore String botToken, String displayName, long seed, java.util.UUID ownerUserId,String artifactHash,Integer seedNumber,Integer manualSeed) {
+    @com.fasterxml.jackson.annotation.JsonProperty public String controllerType(){return botId==null?"HUMAN":"BOT";}
     public TournamentParticipant(String id,String bot,String token,String name,long seed,java.util.UUID owner){this(id,bot,token,name,seed,owner,null,null,null);}
     public TournamentParticipant(String id,String bot,String token,String name,long seed) {this(id,bot,token,name,seed,null);}
     public TournamentParticipant withHash(String hash){return new TournamentParticipant(participantId,botId,botToken,displayName,seed,ownerUserId,hash,seedNumber,manualSeed);}

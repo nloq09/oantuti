@@ -59,7 +59,7 @@ public class TournamentService {
         synchronized(t) {
             rosterOpen(t);
             if(t.participants.size()>=t.maxParticipants) throw new DemoRequestException("PARTICIPANT_LIMIT");
-            if(t.participants.stream().anyMatch(p->p.botId().equals(botId))) throw new DemoRequestException("DUPLICATE_PARTICIPANT");
+            if(t.participants.stream().anyMatch(p->Objects.equals(p.botId(),botId))) throw new DemoRequestException("DUPLICATE_PARTICIPANT");
             if(name!=null && (name.isBlank()||name.length()>60)) throw new DemoRequestException("INVALID_BOT_NAME");
             t.participants.add(new TournamentParticipant(UUID.randomUUID().toString(),botId,token,name==null?bot.name():name.trim(),seed==null?UUID.randomUUID().getMostSignificantBits():seed));
             changed(t);
@@ -70,7 +70,7 @@ public class TournamentService {
         var t=find(id); synchronized(t) {
             if(t.status!=TournamentStatus.DRAFT && t.status!=TournamentStatus.READY)throw new DemoRequestException("TOURNAMENT_LOCKED");
             if(t.participants.size()<2) throw new DemoRequestException("NOT_ENOUGH_BOTS");
-            for(var p:t.participants) { var b=bots.authorize(p.botId(),p.botToken()); if(!bots.available(b.language())) throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE"); }
+            for(var p:t.participants) { if(p.botId()==null)continue;var b=bots.authorize(p.botId(),p.botToken()); if(!bots.available(b.language())) throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE"); }
             var schedule=scheduler.schedule(t);var now=Instant.now();
             // Preserve the existing quick-start API; it traverses the same legal lifecycle edges.
             if(t.status==TournamentStatus.DRAFT){TournamentStateMachine.transition(t,TournamentStatus.REGISTRATION,now);TournamentStateMachine.transition(t,TournamentStatus.READY,now);}
@@ -98,7 +98,7 @@ public class TournamentService {
         data.put("createdAt",t.createdAt);data.put("startedAt",t.startedAt);data.put("finishedAt",t.finishedAt);data.put("revision",t.revision);
         data.put("statusChangedAt",t.statusChangedAt);
         data.put("seedingStrategy",t.seedingStrategy);data.put("seedingSeed",Long.toString(t.seedingSeed));
-        data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
+        data.put("participantPolicy",t.participantPolicy);data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
         data.put("maxConcurrentMatches",t.maxConcurrentMatches);data.put("tieBreakOrder",t.tieBreakOrder);
         data.put("rounds",List.copyOf(t.rounds));data.put("bracket",List.copyOf(t.bracket));data.put("stages",List.copyOf(t.stages));
         data.put("currentRound",t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(t.rounds.size()));
