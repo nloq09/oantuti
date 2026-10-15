@@ -67,6 +67,10 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 - Cài đặt âm thanh, nhạc nền và hiệu ứng lưu trên trình duyệt.
 - Hướng dẫn bot và giao thức có cả bản Markdown và trang web.
 
+### Quản trị
+
+**Chặng 7 — Nhóm 6–10:** quản trị giải/participants/lifecycle, tranh chấp dựa trên review có audit, kiểm tra replay, audit chỉ đọc và System Health. Thêm cảnh báo polling, responsive/accessibility và hồ sơ ADMIN trong theme game; migration V16 giữ dữ liệu cũ. Kiểm thử cuối: 493 backend và 38 client qua, không bỏ qua; bootJar thành công. [Chức năng, API, giới hạn vận hành và kiểm thử](docs/CHANG-7-NHOM-6-10-ADMIN.md).
+
 ## Luật chơi
 
 1. Mỗi bên có **6 Búa, 6 Bao, 6 Kéo**; đặt trong nửa bàn cờ của mình, chia bởi đường chéo A1–I9 (P1: row > col; P2: row < col); không đặt trên đường chéo hoặc cứ điểm. Trận bắt đầu khi cả hai bên đủ quân và sẵn sàng.
@@ -270,7 +274,7 @@ oantuti/
 ├── Dockerfile / .dockerignore      # Build Java 21 image, không đưa secrets/data vào image
 ├── infra/                         # Compose prod/DB dev, Caddy HTTPS, DB init và env mẫu
 ├── client/                         # Client web, được server phục vụ cùng host
-│   ├── admin/                      # Dashboard ADMIN, users/bots/matches và trang chi tiết
+│   ├── admin/                      # ADMIN: dashboard, users, bots, matches, tournaments, disputes, replay, audit, system, profile
 │   ├── index.html                  # Trang chủ
 │   ├── lobby.html                  # Chế độ, chọn bot, tạo/vào phòng
 │   ├── bots.html                   # Quản lý, tải và đấu thử bot

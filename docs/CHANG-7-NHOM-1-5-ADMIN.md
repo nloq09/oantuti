@@ -69,4 +69,4 @@ V15 tạo `admin_audit_events` và cột `bots.admin_disabled`, không sửa V1�
 - Controllers: `AdminController`, `AdminConsoleController`, `AdminMatchesController`; `OwnedBotService` chặn bot bị khóa trong execution/registration mới.
 - Migration `V15__admin_console_audit.sql`; tests admin API/PostgreSQL và cập nhật tests account/Flyway/JPA; client tests admin auth/API/navigation.
 
-Chưa làm nhóm 6–10: admin giải đấu riêng, dispute/replay management riêng, audit/system page riêng, notification live, responsive/accessibility polish đầy đủ và E2E mở rộng. Các chức năng giải đấu/replay cũ vẫn có thể mở từ liên kết hiện tại.
+Nhóm 6–10 đã được triển khai tiếp theo: [phạm vi, API, vận hành và kiểm thử](CHANG-7-NHOM-6-10-ADMIN.md). Phần mô tả dữ liệu chưa có bên trên là giới hạn tại thời điểm kết thúc nhóm 5; báo cáo mới ghi rõ các phần đã bổ sung.
