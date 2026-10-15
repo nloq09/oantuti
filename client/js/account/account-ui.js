@@ -1,4 +1,4 @@
-const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html"]);
+const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html", "/admin/tournaments.html", "/admin/tournament-detail.html"]);
 export function safeNext(value, origin = "https://rps.invalid") {
   try {
     const url = new URL(value || "/", origin);
@@ -19,7 +19,7 @@ export function adminDestination(account,pathname,search="") {
   const query=new URLSearchParams(search);
   if(pathname==="/replay.html")return "/admin/replay.html"+search;
   if(pathname==="/game.html"&&query.get("spectate"))return "/admin/spectator.html?spectate="+encodeURIComponent(query.get("spectate"));
-  if(pathname==="/tournament.html"&&query.get("id"))return "/admin/matches.html?tournament="+encodeURIComponent(query.get("id"));
+  if(pathname==="/tournament.html"&&query.get("id"))return "/admin/tournament-detail.html?id="+encodeURIComponent(query.get("id"));
   if(pathname==="/profile.html")return "/admin/user-detail.html?id="+encodeURIComponent(account.id);
   return "/admin/index.html";
 }

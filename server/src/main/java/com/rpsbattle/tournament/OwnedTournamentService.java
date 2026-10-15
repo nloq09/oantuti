@@ -12,6 +12,16 @@ import java.util.*;
 
 @Service
 public class OwnedTournamentService {
+    private final ThreadLocal<String> administrativeReason=new ThreadLocal<>();
+    /** Scope the audit explanation while reusing the existing lifecycle transactions and state machine. */
+    public void adminLifecycle(Authentication auth,String id,Long revision,String action,String reason,String registrationId){
+        accounts.requireAdmin(auth);var t=tournaments.find(id);synchronized(t){
+            if(revision==null||revision!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
+            administrativeReason.set(com.rpsbattle.admin.AdminDirectoryService.reason(reason));
+            try{switch(action){case "open-registration"->openRegistration(auth,id);case "close-registration"->closeRegistration(auth,id);case "close-check-in"->closeCheckIn(auth,id);case "start"->start(auth,id);case "cancel"->cancel(auth,id);case "approve"->review(auth,id,registrationId,true);case "reject"->review(auth,id,registrationId,false);default->throw new AuthException("INVALID_ACTION",400);}}
+            finally{administrativeReason.remove();}
+        }
+    }
     private final TournamentService tournaments;
     private final TournamentRegistry registry;
     private final TournamentPersistenceCoordinator persistence;
@@ -68,8 +78,8 @@ public class OwnedTournamentService {
             try {mutation.run();
                 if(t.operations.audit().size()==details.operations().audit().size()) {
                     var actorId=actor(auth);
-                    if(status!=t.status){String type=switch(t.status){case REGISTRATION->"REGISTRATION_OPENED";case CHECK_IN->"CHECK_IN_OPENED";case READY->"TOURNAMENT_READY";case RUNNING->"TOURNAMENT_STARTED";case CANCELLED->"TOURNAMENT_CANCELLED";default->"TOURNAMENT_UPDATED";};TournamentAudit.append(t,type,actorId,t.id,null,status.name(),t.status.name());}
-                    for(var r:t.registrations){var old=registrations.stream().filter(x->x.id().equals(r.id())).findFirst();if(old.isEmpty()||old.get().status()!=r.status()){String type=switch(r.status()){case APPROVED->"PARTICIPANT_APPROVED";case CHECKED_IN->"CHECK_IN";default->"REGISTRATION_UPDATED";};TournamentAudit.append(t,type,actorId,r.id().toString(),null,old.map(x->x.status().name()).orElse(null),r.status().name());}}
+                    if(status!=t.status){String type=switch(t.status){case REGISTRATION->"REGISTRATION_OPENED";case CHECK_IN->"CHECK_IN_OPENED";case READY->"TOURNAMENT_READY";case RUNNING->"TOURNAMENT_STARTED";case CANCELLED->"TOURNAMENT_CANCELLED";default->"TOURNAMENT_UPDATED";};TournamentAudit.append(t,type,actorId,t.id,administrativeReason.get(),status.name(),t.status.name());}
+                    for(var r:t.registrations){var old=registrations.stream().filter(x->x.id().equals(r.id())).findFirst();if(old.isEmpty()||old.get().status()!=r.status()){String type=switch(r.status()){case APPROVED->"PARTICIPANT_APPROVED";case CHECKED_IN->"CHECK_IN";default->"REGISTRATION_UPDATED";};TournamentAudit.append(t,type,actorId,r.id().toString(),administrativeReason.get(),old.map(x->x.status().name()).orElse(null),r.status().name());}}
                     if(t.operations.audit().size()==details.operations().audit().size())TournamentAudit.append(t,"TOURNAMENT_UPDATED",actorId,t.id,null,null,null);
                 }
                 persistence.persistNow(t);}

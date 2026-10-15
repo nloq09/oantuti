@@ -3,6 +3,7 @@ import { adminRequest } from "./admin-api.js";
 import { mountDirectory } from "./directory.js";
 import { mountMatches } from "./matches.js";
 import { mountViewer } from "./viewer.js";
+import { mountTournaments } from "./tournaments.js";
 function panel(title) { const element=node("section",undefined,"panel");element.append(node("h2",title));return element; }
 async function dashboard(root) {
   root.replaceChildren(node("h1","Tổng quan hệ thống"));
@@ -19,4 +20,4 @@ async function dashboard(root) {
   }catch(error){message(error,live);}finally{busy=false;}}
   await refresh();const timer=setInterval(refresh,10000);addEventListener("pagehide",()=>clearInterval(timer),{once:true});
 }
-export async function mount(page,root){try{if(page==="index.html")await dashboard(root);else if(["replay.html","spectator.html"].includes(page))await mountViewer(page,root);else if(["matches.html","match-detail.html"].includes(page))await mountMatches(page,root);else await mountDirectory(page,root);}catch(error){message(error,root);}}
+export async function mount(page,root){try{if(page==="index.html")await dashboard(root);else if(["tournaments.html","tournament-detail.html"].includes(page))await mountTournaments(page,root);else if(["replay.html","spectator.html"].includes(page))await mountViewer(page,root);else if(["matches.html","match-detail.html"].includes(page))await mountMatches(page,root);else await mountDirectory(page,root);}catch(error){message(error,root);}}

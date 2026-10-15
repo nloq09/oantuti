@@ -28,6 +28,6 @@ test("admin login and direct player URLs stay inside management while retaining 
   assert.equal(adminDestination(admin,"/game.html","?spectate=room-id"),"/admin/spectator.html?spectate=room-id");
   assert.equal(adminDestination(admin,"/game.html"),"/admin/index.html");
   assert.equal(adminDestination(admin,"/replay.html","?match=match-id"),"/admin/replay.html?match=match-id");
-  assert.equal(adminDestination(admin,"/tournament.html","?id=cup-id"),"/admin/matches.html?tournament=cup-id");
+  assert.equal(adminDestination(admin,"/tournament.html","?id=cup-id"),"/admin/tournament-detail.html?id=cup-id");
   assert.equal(adminDestination(admin,"/admin/replay.html","?match=match-id"),null);
 });

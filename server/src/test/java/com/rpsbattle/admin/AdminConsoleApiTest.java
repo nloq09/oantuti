@@ -12,6 +12,20 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AdminConsoleApiTest {
+    @Test void tournamentAdministrationUsesRevisionReasonAndRealAdminAuthorization()throws Exception{
+        try(var admin=new Browser();var owner=new Browser();var guest=new Browser()){
+            admin.account(true);owner.account(false);var cup=owner.call("/api/tournaments",Map.of("name","Admin lifecycle fixture","format","ROUND_ROBIN"),true,201);String id=cup.path("id").asText();
+            guest.call("/api/admin/tournaments",null,false,401);owner.call("/api/admin/tournaments/"+id,null,false,403);
+            var list=admin.call("/api/admin/tournaments?q=Admin%20lifecycle&status=DRAFT",null,false,200);assertThat(list.path("total").asLong()).isPositive();
+            String action="/api/admin/tournaments/"+id+"/actions/";long revision=cup.path("revision").asLong();
+            admin.call(action+"open-registration",Map.of("revision",revision,"reason","Open for test"),false,403);
+            admin.call(action+"open-registration",Map.of("revision",revision),true,400);
+            cup=admin.call(action+"open-registration",Map.of("revision",revision,"reason","Open for test"),true,200);
+            assertThat(cup.path("status").asText()).isEqualTo("REGISTRATION");assertThat(cup.path("audit").get(cup.path("audit").size()-1).path("reason").asText()).isEqualTo("Open for test");
+            admin.call(action+"cancel",Map.of("revision",revision,"reason","Stale request"),true,409);
+            cup=admin.call(action+"cancel",Map.of("revision",cup.path("revision").asLong(),"reason","Cancel fixture"),true,200);assertThat(cup.path("status").asText()).isEqualTo("CANCELLED");
+        }
+    }
     @LocalServerPort int port;
     @Autowired ObjectMapper json;
     @Autowired UserRepository users;
