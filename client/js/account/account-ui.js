@@ -1,4 +1,4 @@
-const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html", "/admin/tournaments.html", "/admin/tournament-detail.html", "/admin/disputes.html", "/admin/dispute-detail.html", "/admin/replays.html", "/admin/replay-detail.html", "/admin/audit.html", "/admin/system.html"]);
+const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html", "/admin/tournaments.html", "/admin/tournament-detail.html", "/admin/disputes.html", "/admin/dispute-detail.html", "/admin/replays.html", "/admin/replay-detail.html", "/admin/audit.html", "/admin/system.html", "/admin/profile.html"]);
 export function safeNext(value, origin = "https://rps.invalid") {
   try {
     const url = new URL(value || "/", origin);
@@ -20,7 +20,7 @@ export function adminDestination(account,pathname,search="") {
   if(pathname==="/replay.html")return "/admin/replay.html"+search;
   if(pathname==="/game.html"&&query.get("spectate"))return "/admin/spectator.html?spectate="+encodeURIComponent(query.get("spectate"));
   if(pathname==="/tournament.html"&&query.get("id"))return "/admin/tournament-detail.html?id="+encodeURIComponent(query.get("id"));
-  if(pathname==="/profile.html")return "/admin/user-detail.html?id="+encodeURIComponent(account.id);
+  if(pathname==="/profile.html")return "/admin/profile.html";
   return "/admin/index.html";
 }
 export function accountLanding(account,next,origin="https://rps.invalid") {

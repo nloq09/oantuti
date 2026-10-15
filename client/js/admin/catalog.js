@@ -13,12 +13,12 @@ export async function listPage(root,{title,path,fields=[],columns,actions}){
     history.replaceState(null,"",location.pathname+"?"+query);result.replaceChildren(table(columns,data.items,actions));
     const footer=node("div",undefined,"pagination"),previous=node("button","← Trước"),next=node("button","Sau →");previous.disabled=page===0;next.disabled=(page+1)*data.size>=data.total;
     previous.onclick=()=>{page--;load();};next.onclick=()=>{page++;load();};footer.append(node("span",`Trang ${page+1} · ${data.total} kết quả`),previous,next);result.append(footer);
-  }catch(error){if(generation===version)message(error,result);}finally{if(generation===version)result.removeAttribute("aria-busy");}}
+  }catch(error){if(generation===version){message(error,result);const retry=node("button","Thử tải lại");retry.onclick=load;result.append(retry);}}finally{if(generation===version)result.removeAttribute("aria-busy");}}
   form.onsubmit=event=>{event.preventDefault();params=new URLSearchParams(new FormData(form));page=0;load();};form.onreset=()=>{params=new URLSearchParams();page=0;setTimeout(load,0);};await load();
 }
 export function tabs(root,entries){
   const navigation=node("div",undefined,"admin-tabs");navigation.setAttribute("role","tablist");navigation.setAttribute("aria-label","Nội dung chi tiết");root.append(navigation);
-  const buttons=[],panels=[];const initial=decodeURIComponent(location.hash.slice(1));
+  const buttons=[],panels=[];let initial="";try{initial=decodeURIComponent(location.hash.slice(1));}catch{ /* Ignore a malformed bookmarked tab. */ }
   function select(index){buttons.forEach((button,i)=>{button.setAttribute("aria-selected",String(index===i));button.tabIndex=index===i?0:-1;panels[i].hidden=i!==index;});history.replaceState(null,"",location.pathname+location.search+"#"+entries[index][0]);}
   entries.forEach(([key,label,render],i)=>{const button=node("button",label),panel=node("section",undefined,"panel");button.id="tab-"+key;panel.id="panel-"+key;button.setAttribute("role","tab");button.setAttribute("aria-controls",panel.id);panel.setAttribute("role","tabpanel");panel.setAttribute("aria-labelledby",button.id);button.onclick=()=>select(i);button.onkeydown=event=>{let target;if(event.key==="ArrowRight")target=(i+1)%entries.length;if(event.key==="ArrowLeft")target=(i+entries.length-1)%entries.length;if(event.key==="Home")target=0;if(event.key==="End")target=entries.length-1;if(target!==undefined){event.preventDefault();select(target);buttons[target].focus();}};buttons.push(button);panels.push(panel);navigation.append(button);root.append(panel);render(panel);});
   select(Math.max(0,entries.findIndex(([key])=>key===initial)));

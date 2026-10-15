@@ -9,7 +9,7 @@ export function lifecycleActions(t){
   if(t.status==="RUNNING")result.push(["Tạm dừng","pause"]);
   if(["PAUSED","RECOVERY_REQUIRED"].includes(t.status)&&!review&&!failed)result.push(["Tiếp tục","resume"]);
   if(["PAUSED","RUNNING"].includes(t.status)&&!t.autoAdvanceRounds&&!review&&t.releasedRound<(t.rounds?.length||0)&&t.matches.filter(m=>m.round<=t.releasedRound).every(m=>m.status==="FINISHED"))result.push(["Cho chạy vòng tiếp","next-round"]);
-  if(["RUNNING","PAUSED","RECOVERY_REQUIRED"].includes(t.status)&&!active&&!review&&(t.format!=="SINGLE_ELIMINATION"||t.champion))result.push(["Hoàn tất giải","finish"]);
+  if(["RUNNING","PAUSED","RECOVERY_REQUIRED"].includes(t.status)&&!active&&!review&&(t.format!=="SINGLE_ELIMINATION"||t.bracket?.at(-1)?.resolution))result.push(["Hoàn tất giải","finish"]);
   if(!["FINISHED","CANCELLED"].includes(t.status))result.push(["Hủy giải","cancel"]);
   return result;
 }
