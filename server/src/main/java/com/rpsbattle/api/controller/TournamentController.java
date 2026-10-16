@@ -11,7 +11,7 @@ public class TournamentController {
     private final OwnedTournamentService owned;
     public TournamentController(TournamentService service,OwnedTournamentService owned) {this.service=service;this.owned=owned;}
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
-    public Map<String,Object> create(Authentication auth,@RequestBody Create request) {return service.view(owned.create(auth,request.name(),request.format(),request.visibility(),Boolean.TRUE.equals(request.checkInRequired()),request.maxParticipants(),request.maxConcurrentMatches(),request.tieBreakOrder(),request.participantPolicy()));}
+    public Map<String,Object> create(Authentication auth,@RequestBody Create request) {return service.view(owned.create(auth,request.name(),request.format(),request.visibility(),Boolean.TRUE.equals(request.checkInRequired()),request.maxParticipants(),request.maxConcurrentMatches(),request.tieBreakOrder(),request.participantPolicy(),request.bestOf()));}
     @GetMapping public List<Map<String,Object>> list(@RequestParam(required=false) TournamentFormat format,@RequestParam(required=false) TournamentStatus status,@RequestParam(required=false) UUID owner) {owned.flush();return service.list().stream().filter(t->(format==null||format==t.get("format"))&&(status==null||status==t.get("status"))&&(owner==null||owner.equals(t.get("ownerUserId")))).toList();}
     @GetMapping("/{id}") public Map<String,Object> detail(@PathVariable String id) {owned.flush();return service.view(service.find(id));}
     @PostMapping("/{id}/participants") public Map<String,Object> add(Authentication auth,@PathVariable String id,@RequestBody Participant p) {owned.add(auth,id,p.botId(),p.displayName(),p.seed());return detail(id);}
@@ -36,6 +36,6 @@ public class TournamentController {
     @GetMapping("/{id}/ranking") public Object ranking(@PathVariable String id) {return detail(id).get("ranking");}
     @GetMapping(value="/{id}/export",produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String,Object>> export(@PathVariable String id) {return ResponseEntity.ok().header("Content-Disposition","attachment; filename=tournament-"+id+".json").body(detail(id));}
-    public record Create(String name,TournamentFormat format,String visibility,Boolean checkInRequired,Integer maxParticipants,Integer maxConcurrentMatches,List<com.rpsbattle.tournament.ranking.TieBreak> tieBreakOrder,ParticipantPolicy participantPolicy) {}
+    public record Create(String name,TournamentFormat format,String visibility,Boolean checkInRequired,Integer maxParticipants,Integer maxConcurrentMatches,List<com.rpsbattle.tournament.ranking.TieBreak> tieBreakOrder,ParticipantPolicy participantPolicy,Integer bestOf) {}
     public record Participant(String botId,String displayName,Long seed,String controllerType,Boolean rulesAccepted) {}
 }

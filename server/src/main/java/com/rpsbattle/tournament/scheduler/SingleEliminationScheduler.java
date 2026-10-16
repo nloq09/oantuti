@@ -41,11 +41,12 @@ public final class SingleEliminationScheduler implements TournamentScheduler {
             if(n.sourceA()!=null)a=nodes.get(n.sourceA()).winnerParticipantId();
             if(n.sourceB()!=null)b=nodes.get(n.sourceB()).winnerParticipantId();
             var game=games.get(n.matchId());
-            if(winner==null && game!=null && game.status==TournamentMatch.Status.FINISHED && !t.operations.reviews().containsKey(game.id)) {
-                winner=game.winnerParticipantId;reason="WIN";
-                if("DOUBLE_FORFEIT".equals(game.decisionReason))reason="DOUBLE_FORFEIT";
+            var decided=TournamentSeries.decision(t,game).orElse(null);
+            if(winner==null && decided!=null && !t.operations.reviews().containsKey(game.id)) {
+                winner=decided.winnerParticipantId;reason="WIN";
+                if("DOUBLE_FORFEIT".equals(decided.decisionReason))reason="DOUBLE_FORFEIT";
                 else if(winner==null) {
-                    if(game.remainingA!=game.remainingB){winner=game.remainingA>game.remainingB?a:b;reason="DRAW_REMAINING_PIECES";}
+                    if(decided.remainingA!=decided.remainingB){winner=decided.remainingA>decided.remainingB?a:b;reason="DRAW_REMAINING_PIECES";}
                     else {var pa=players.get(a);var pb=players.get(b);int sa=pa.seedNumber()==null?t.participants.indexOf(pa)+1:pa.seedNumber();int sb=pb.seedNumber()==null?t.participants.indexOf(pb)+1:pb.seedNumber();winner=sa<sb?a:b;reason="DRAW_SEED";}
                 }
             }

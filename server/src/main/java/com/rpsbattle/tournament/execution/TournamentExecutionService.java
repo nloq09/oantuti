@@ -68,6 +68,7 @@ public class TournamentExecutionService {
             }
             if(t.status==TournamentStatus.CANCELLED) for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING){failed(m,"CANCELLED");workers.complete(m.id);changed=true;}
             if(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED)changed|=TournamentAdministrationService.settleForfeits(t);
+            changed|=TournamentSeries.advance(t);
             if((t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED) && t.format==TournamentFormat.SINGLE_ELIMINATION) {
                 var before=List.copyOf(t.bracket);var next=com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t);t.matches.addAll(next);
                 changed|=!before.equals(t.bracket)||!next.isEmpty();
@@ -119,7 +120,7 @@ public class TournamentExecutionService {
                     TournamentAudit.append(t,m.status==TournamentMatch.Status.FINISHED?"MATCH_FINISHED":"MATCH_ERROR",null,m.id,m.failure,null,TournamentAudit.result(m));
                 }
                 if(t.format==TournamentFormat.SINGLE_ELIMINATION)t.matches.addAll(com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t));
-                if(t.operations.reviews().isEmpty()&&(t.format!=TournamentFormat.SINGLE_ELIMINATION||com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.complete(t)) && !t.matches.isEmpty() && t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED)) {TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());TournamentAudit.append(t,"TOURNAMENT_FINISHED",null,t.id,null,null,"FINISHED");}
+                if(t.operations.reviews().isEmpty()&&(t.format!=TournamentFormat.SINGLE_ELIMINATION||com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.complete(t)) && !t.matches.isEmpty() && t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED) && (t.bestOf==1||TournamentSeries.roots(t).stream().allMatch(m->TournamentSeries.decision(t,m).isPresent()))) {TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());TournamentAudit.append(t,"TOURNAMENT_FINISHED",null,t.id,null,null,"FINISHED");}
                 tournaments.changed(t);
             }
         }

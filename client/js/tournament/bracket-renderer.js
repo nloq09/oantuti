@@ -13,7 +13,7 @@ export function bracketRounds(t) {
     nodes:t.bracket.filter(n=>n.round===index+1).sort((a,b)=>a.position-b.position).map(n=>({...n,
       a:players.get(n.slotA)?.displayName || (n.sourceA ? "Chờ người thắng" : "BYE"),
       b:players.get(n.slotB)?.displayName || (n.sourceB ? "Chờ người thắng" : "BYE"),
-      winner:players.get(n.winnerParticipantId)?.displayName,game:games.get(n.matchId),
+      winner:players.get(n.winnerParticipantId)?.displayName,series:t.series?.find(s=>s.id===n.matchId),game:games.get(t.series?.find(s=>s.id===n.matchId)?.gameIds?.at(-1)||n.matchId),
     })),
   }));
 }
@@ -31,6 +31,7 @@ export function renderBracket(element,t) {
         const row=document.createElement("p");row.textContent=name;
         if(id && id===n.winnerParticipantId){row.className="bracket-winner";row.prepend("✓ ");}card.append(row);
       }
+      if(n.series?.bestOf>1){const score=document.createElement("p");score.textContent=`BO${n.series.bestOf} · ${n.series.winsA} – ${n.series.winsB} · Ván ${n.series.currentGame}`;card.append(score);}
       if(n.resolution) {const note=document.createElement("small");note.textContent=({BYE:"Miễn đấu",WALKOVER:"Đi tiếp do nhánh đối thủ trống",NO_ELIGIBLE_PARTICIPANT:"Không còn người tham gia đủ điều kiện",DOUBLE_FORFEIT:"Cả hai bị xử thua",WIN:"Đã có kết quả",DRAW_REMAINING_PIECES:"Hòa · đi tiếp nhờ quân còn lại",DRAW_SEED:"Hòa · đi tiếp theo hạt giống"})[n.resolution];card.append(note);}
       if(n.game?.failure){const note=document.createElement("small");note.textContent="Lỗi trận: "+n.game.failure;card.append(note);}
       if(n.game?.onlineMatchId && ["RUNNING","FINISHED"].includes(n.game.status)) {

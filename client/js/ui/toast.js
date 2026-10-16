@@ -1,4 +1,7 @@
 const errors = {
+  SERIES_REOPEN_REQUIRED: "Quyết định này cần thi đấu thêm ván. Không thể tự mở lại một giải đã kết thúc.",
+  SERIES_NOT_FINISHED: "Còn series chưa có kết quả cuối. Không thể kết thúc giải lúc này.",
+  INVALID_BEST_OF: "Chỉ hỗ trợ BO1, BO3 hoặc BO5.",
   INVALID_DISPUTE: "Chọn lý do và nhập mô tả từ 1–400 ký tự.",
   DISPUTE_WINDOW_CLOSED: "Đã hết hạn báo cáo hoặc trận chưa kết thúc.",
   DISPUTE_ALREADY_REPORTED: "Trận đã được báo cáo hoặc đang được trọng tài xử lý.",

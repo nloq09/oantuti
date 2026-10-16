@@ -28,6 +28,7 @@ public final class Tournament {
     public TournamentTiming timing=TournamentTiming.manual();
     public final Map<String,MatchReadyWindow> readyWindows=new LinkedHashMap<>();
     public final Map<String,Long> notificationReads=new LinkedHashMap<>();
+    public int bestOf=1;
     public int maxParticipants=10;
     public SeedingStrategy seedingStrategy=SeedingStrategy.RANDOM;
     public long seedingSeed=java.util.UUID.randomUUID().getMostSignificantBits();

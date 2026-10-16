@@ -11,7 +11,7 @@ public class RankingService {
             var rows=new ArrayList<RankingEntry>();
             for(var p:t.participants) {
                 int played=0,wins=0,draws=0,losses=0,pieces=0,moves=0;long nanos=0;
-                for(var m:t.matches) if(m.status==TournamentMatch.Status.FINISHED &&
+                for(var m:TournamentSeries.scored(t)) if(m.status==TournamentMatch.Status.FINISHED &&
                         (m.participantA.participantId().equals(p.participantId())||m.participantB.participantId().equals(p.participantId()))) {
                     boolean a=m.participantA.participantId().equals(p.participantId());
                     played++;pieces+=a?m.remainingA:m.remainingB;moves+=a?m.moveCountA:m.moveCountB;nanos+=a?m.moveNanosA:m.moveNanosB;

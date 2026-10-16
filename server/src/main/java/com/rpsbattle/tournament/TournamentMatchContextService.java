@@ -5,7 +5,7 @@ import com.rpsbattle.tournament.domain.*;
 import org.springframework.stereotype.Service;
 import java.util.*;
 
-/** Read-only context for the existing BO1 match lifecycle. Never creates a room. */
+/** Read-only context for the existing match and series lifecycle. Never creates a room. */
 @Service
 public class TournamentMatchContextService {
     private final TournamentService tournaments;
@@ -19,7 +19,7 @@ public class TournamentMatchContextService {
             result.put("tournamentId",t.id);result.put("tournamentName",t.name);result.put("tournamentStatus",t.status);
             result.put("revision",t.revision);result.put("matchId",m.id);result.put("onlineMatchId",m.onlineMatchId);
             result.put("stage",t.stages.getFirst());result.put("round",m.round);result.put("totalRounds",t.rounds.size());
-            result.put("format",t.format);result.put("bestOf",1);result.put("gameNumber",1);
+            result.put("format",t.format);result.put("bestOf",t.bestOf);result.put("gameNumber",m.gameNumber);var series=new LinkedHashMap<>(TournamentSeries.view(t,t.matches.stream().filter(game->game.id.equals(m.seriesId)).findFirst().orElseThrow()));series.remove("participantA");series.remove("participantB");result.put("series",series);
             result.put("status",m.status);result.put("winnerParticipantId",m.winnerParticipantId);
             result.put("participantA",Map.of("id",m.participantA.participantId(),"name",m.participantA.displayName()));
             result.put("participantB",Map.of("id",m.participantB.participantId(),"name",m.participantB.displayName()));

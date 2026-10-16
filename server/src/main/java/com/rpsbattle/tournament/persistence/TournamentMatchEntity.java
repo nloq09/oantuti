@@ -7,6 +7,8 @@ import java.util.UUID;
 public class TournamentMatchEntity {
     @Id UUID id;
     @Column(name="tournament_id",nullable=false) UUID tournamentId;
+    @Column(name="series_id") UUID seriesId;
+    @Column(name="game_number",nullable=false) int gameNumber=1;
     @Column(name="match_id",length=64) String historyId;
     @Column(name="participant_a_id",nullable=false) UUID a;
     @Column(name="participant_b_id",nullable=false) UUID b;

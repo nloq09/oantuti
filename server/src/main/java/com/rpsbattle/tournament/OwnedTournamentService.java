@@ -53,6 +53,10 @@ public class OwnedTournamentService {
         return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,ParticipantPolicy.BOT_ONLY);
     }
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy) {
+        return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,policy,1);
+    }
+    public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf) {
+        int seriesLength=TournamentSeries.validate(bestOf);
         var actor=accounts.requireUser(auth);
         validateRules(concurrency==null?4:concurrency,order);
         int limit=maxParticipants==null?10:maxParticipants;
@@ -60,7 +64,7 @@ public class OwnedTournamentService {
         if(visibility!=null && !visibility.equals("PUBLIC")) throw new AuthException("UNSUPPORTED_TOURNAMENT_VISIBILITY",400);
         var t=tournaments.create(name,format==null?TournamentFormat.ROUND_ROBIN:format);
         synchronized(t) {
-            t.maxConcurrentMatches=concurrency==null?4:concurrency;if(order!=null)t.tieBreakOrder=List.copyOf(order);
+            t.bestOf=seriesLength;t.maxConcurrentMatches=concurrency==null?4:concurrency;if(order!=null)t.tieBreakOrder=List.copyOf(order);
             TournamentAudit.append(t,"TOURNAMENT_CREATED",actor.id().value(),t.id,null,null,t.format.name());
             t.ownerUserId=actor.id().value();t.participantPolicy=policy==null?ParticipantPolicy.BOT_ONLY:policy;t.checkInRequired=checkInRequired;t.maxParticipants=limit;t.deferNotifications=true;
             try {persistence.persistNow(t);} catch(RuntimeException failure) {registry.remove(t.id);throw failure;}
@@ -173,7 +177,7 @@ public class OwnedTournamentService {
     private void lockRules(Tournament t){
         if(!t.operations.rulesSnapshot().isEmpty())return;
         var rules=new LinkedHashMap<String,Object>(online==null?Map.of("ruleSet","classic-online-v1","turnSeconds",30L,"maxTurns",200,"pieceQuota",6,"boardRows",9,"boardColumns",9):online.ruleConfiguration());
-        rules.put("scoring",List.of(3,1,0));rules.put("tieBreakRules",t.tieBreakOrder.stream().map(Enum::name).toList());rules.put("autoAdvanceRounds",t.operations.autoAdvanceRounds());
+        rules.put("bestOf",t.bestOf);rules.put("seriesDrawPolicy","MAX_GAMES_THEN_WINS_REMAINING_PIECES_SEED");rules.put("scoring",List.of(3,1,0));rules.put("tieBreakRules",t.tieBreakOrder.stream().map(Enum::name).toList());rules.put("autoAdvanceRounds",t.operations.autoAdvanceRounds());
         t.operations=t.operations.rules(rules);
     }
     private void prepare(Tournament t,Map<String,com.rpsbattle.tournament.seeding.SeedingService.Score> scores) {

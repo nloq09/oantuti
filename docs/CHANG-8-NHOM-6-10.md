@@ -1,5 +1,7 @@
 # Chặng 8 — nhóm 6–10
 
+> Cập nhật: BO3/BO5 đã được bổ sung sau báo cáo nhóm 6–10 bên dưới. Xem [TOURNAMENT-SERIES.md](TOURNAMENT-SERIES.md). Những mô tả BO1 dưới đây ghi lại thời điểm nghiệm thu trước đó.
+
 ## Phạm vi thực tế
 
 Backend hiện chỉ có Round Robin và Single Elimination, một stage và BO1. Chưa có scheduler series BO3/BO5, Group Stage, Swiss, team/school, roster hoặc lineup. Không thêm dữ liệu giả hoặc đổi thuật toán scheduler để che các phụ thuộc này. Các phần UX của những thể thức đó chưa thể nghiệm thu.

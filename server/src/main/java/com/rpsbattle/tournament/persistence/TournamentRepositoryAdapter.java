@@ -33,7 +33,11 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
         for(var e:metadata.matches()) {
             if(e.history()!=null) history.save(e.history());
             var old=entries.remove(e.id());
-            if(old==null) {old=new TournamentMatchEntity();old.copy(metadata.id(),e);entities.persist(old);}else old.copy(metadata.id(),e);
+            boolean fresh=old==null;if(fresh)old=new TournamentMatchEntity();old.copy(metadata.id(),e);
+            var detail=metadata.details()==null?null:metadata.details().matches().get(e.id().toString());old.seriesId=detail==null||detail.seriesId()==null?e.id():UUID.fromString(detail.seriesId());old.gameNumber=detail==null?1:Math.max(1,detail.gameNumber());
+            UUID rootId=old.seriesId;var root=metadata.matches().stream().filter(game->game.id().equals(rootId)).findFirst().orElseThrow(()->new IllegalArgumentException("Missing series root"));
+            if(!root.a().equals(e.a())||!root.b().equals(e.b()))throw new IllegalArgumentException("Series participants cannot change");
+            if(fresh)entities.persist(old);
         }
         entries.values().forEach(entities::remove);entities.flush();
         roster.values().forEach(entities::remove);entities.flush();

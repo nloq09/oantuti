@@ -15,7 +15,7 @@ public class TournamentNotificationService {
  public TournamentNotificationService(AccountAuthorizationService accounts,TournamentService tournaments,OwnedTournamentService owned,TournamentRegistry registry){this.accounts=accounts;this.tournaments=tournaments;this.owned=owned;this.registry=registry;}
  private static final Set<String> GENERAL=Set.of("CHECK_IN_OPENED","TOURNAMENT_STARTED","TOURNAMENT_PAUSED","TOURNAMENT_RESUMED","ROUND_RELEASED","TOURNAMENT_FINISHED","TOURNAMENT_CANCELLED","TOURNAMENT_RECOVERY_REQUIRED");
  private static final Set<String> PERSONAL=Set.of("PARTICIPANT_APPROVED","REGISTRATION_UPDATED","CHECK_IN","PARTICIPANT_WITHDRAWN","PARTICIPANT_DISQUALIFIED");
- private static final Set<String> MATCH=Set.of("MATCH_READY_REQUIRED","MATCH_STARTED","MATCH_FINISHED","MATCH_NO_SHOW","MATCH_REVIEW_REQUESTED","MATCH_REVIEW_ASSIGNED","MATCH_REVIEW_CLOSED","MATCH_REVIEW_REJECTED","RESULT_OVERRIDDEN","MATCH_RETRIED");
+ private static final Set<String> MATCH=Set.of("SERIES_UPDATED","MATCH_READY_REQUIRED","MATCH_STARTED","MATCH_FINISHED","MATCH_NO_SHOW","MATCH_REVIEW_REQUESTED","MATCH_REVIEW_ASSIGNED","MATCH_REVIEW_CLOSED","MATCH_REVIEW_REJECTED","RESULT_OVERRIDDEN","MATCH_RETRIED");
  private boolean belongs(Tournament t,UUID user){return user.equals(t.ownerUserId)||t.registrations.stream().anyMatch(r->r.userId().equals(user));}
  private List<Map<String,Object>> project(Tournament t,UUID user){
   var ids=new HashSet<String>();t.registrations.stream().filter(r->r.userId().equals(user)).forEach(r->ids.add(r.id().toString()));t.participants.stream().filter(p->user.equals(p.ownerUserId())).forEach(p->ids.add(p.participantId()));

@@ -61,6 +61,7 @@ public class TournamentAdministrationService {
                     reason(reason);require(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED||t.status==TournamentStatus.RECOVERY_REQUIRED,"TOURNAMENT_LOCKED");
                     require(t.operations.reviews().isEmpty()&&t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING),"MATCH_REVIEW_REQUIRED");
                     require(t.format!=TournamentFormat.SINGLE_ELIMINATION||SingleEliminationScheduler.complete(t),"BRACKET_NOT_FINISHED");
+                    require(t.bestOf==1||TournamentSeries.roots(t).stream().allMatch(m->TournamentSeries.decision(t,m).isPresent()),"SERIES_NOT_FINISHED");
                     TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());
                 }
                 default -> throw new DemoRequestException("INVALID_TOURNAMENT_ACTION");
@@ -119,13 +120,14 @@ public class TournamentAdministrationService {
             require(List.of(TournamentStatus.PAUSED,TournamentStatus.RECOVERY_REQUIRED,TournamentStatus.FINISHED).contains(t.status),"PAUSE_REQUIRED");var m=match(t,matchId);
             require(t.operations.reviews().containsKey(matchId)&&m.status==TournamentMatch.Status.FINISHED,"MATCH_NOT_UNDER_REVIEW");
             require(winner==null||((winner.equals(m.participantA.participantId())||winner.equals(m.participantB.participantId()))&&t.operations.active(winner)),"INVALID_WINNER");
+            if(t.bestOf>1)require(t.matches.stream().noneMatch(other->other.seriesId.equals(m.seriesId)&&other.gameNumber>m.gameNumber),"DOWNSTREAM_MATCH_STARTED");
             if(t.format==TournamentFormat.SINGLE_ELIMINATION) {
                 require(t.matches.stream().filter(other->other.round>m.round).allMatch(other->other.status==TournamentMatch.Status.PENDING),"DOWNSTREAM_MATCH_STARTED");
                 t.matches.removeIf(other->other.round>m.round);
-                for(int i=0;i<t.bracket.size();i++){var node=t.bracket.get(i);if(node.round()>m.round||m.id.equals(node.matchId()))t.bracket.set(i,node.resolved(node.sourceA()==null?node.slotA():null,node.sourceB()==null?node.slotB():null,null,null));}
+                for(int i=0;i<t.bracket.size();i++){var node=t.bracket.get(i);if(node.round()>m.round||m.seriesId.equals(node.matchId()))t.bracket.set(i,node.resolved(node.sourceA()==null?node.slotA():null,node.sourceB()==null?node.slotB():null,null,null));}
             }
             String before=TournamentAudit.result(m);m.winnerParticipantId=winner;m.result=winner==null?"DRAW":"WIN";m.decisionReason="RESULT_OVERRIDE";
-            t.operations=t.operations.review(matchId,null);if(t.format==TournamentFormat.SINGLE_ELIMINATION)t.matches.addAll(SingleEliminationScheduler.advance(t));
+            t.operations=t.operations.review(matchId,null);if(t.bestOf>1&&t.status==TournamentStatus.FINISHED)require(TournamentSeries.decision(t,t.matches.stream().filter(game->game.id.equals(m.seriesId)).findFirst().orElseThrow()).isPresent(),"SERIES_REOPEN_REQUIRED");if(t.format==TournamentFormat.SINGLE_ELIMINATION)t.matches.addAll(SingleEliminationScheduler.advance(t));
             TournamentAudit.append(t,"RESULT_OVERRIDDEN",owned.actor(auth),matchId,why,before,TournamentAudit.result(m));tournaments.changed(t);
         });
     }
