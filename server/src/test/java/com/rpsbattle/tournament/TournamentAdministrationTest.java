@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TournamentAdministrationTest {
+    @Test void swissResultCannotInvalidateAlreadyPairedNextRound(){var t=cup(4,TournamentFormat.SWISS);for(var m:t.matches)TournamentFixtures.finish(m,m.participantA.participantId(),8,1);assertThat(com.rpsbattle.tournament.scheduler.SwissScheduler.advance(t)).isTrue();var m=t.matches.getFirst();admin.review(auth,t.id,t.revision,m.id,"Check previous Swiss round",false);assertThatThrownBy(()->admin.override(auth,t.id,t.revision,m.id,m.participantB.participantId(),"Would invalidate next pairing")).hasMessage("DOWNSTREAM_MATCH_STARTED");assertThat(t.swiss.currentRound()).isEqualTo(2);}
     @Test void groupQualificationCannotBeRewrittenAfterTheCrossBracketIsFrozen(){
         var t=cup(4,TournamentFormat.GROUP_KNOCKOUT);for(var m:t.matches)TournamentFixtures.finish(m,m.participantA.participantId(),8,1);
         assertThat(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.qualify(t)).isTrue();var group=t.matches.getFirst();var qualifiers=t.groupStage;

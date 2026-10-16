@@ -30,6 +30,8 @@ public final class Tournament {
     public final Map<String,Long> notificationReads=new LinkedHashMap<>();
     public int bestOf=1;
     public GroupStageState groupStage;
+    public SwissState swiss;
+    public TeamState teams=TeamState.empty();
     public int maxParticipants=10;
     public SeedingStrategy seedingStrategy=SeedingStrategy.RANDOM;
     public long seedingSeed=java.util.UUID.randomUUID().getMostSignificantBits();

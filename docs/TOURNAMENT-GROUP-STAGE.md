@@ -42,4 +42,4 @@ Sao lưu PostgreSQL và bot/replay trước khi nâng; bản local được lưu
 
 ## Phạm vi còn lại
 
-Hiện hỗ trợ đúng **hai bảng, top 2 mỗi bảng**. Chưa có cấu hình số bảng/top N tùy ý, Swiss, Team/School hoặc multi-stage tùy biến. Không coi các phần này là đã hoàn tất.
+Hiện hỗ trợ đúng **hai bảng, top 2 mỗi bảng**. Chưa có cấu hình số bảng/top N hoặc multi-stage tùy biến. [Swiss và Đồng đội / trường](TOURNAMENT-SWISS-TEAM.md) đã được bổ sung thành các thể thức riêng.

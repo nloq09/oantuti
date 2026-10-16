@@ -70,12 +70,14 @@ public class TournamentExecutionService {
             if(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED)changed|=TournamentAdministrationService.settleForfeits(t);
             changed|=TournamentSeries.advance(t);
             changed|=com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.qualify(t);
+            changed|=com.rpsbattle.tournament.scheduler.SwissScheduler.advance(t);
+            changed|=com.rpsbattle.tournament.scheduler.TeamScheduler.advance(t);
             if((t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED) && com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t)) {
                 var before=List.copyOf(t.bracket);var next=com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t);t.matches.addAll(next);
                 changed|=!before.equals(t.bracket)||!next.isEmpty();
                 if(t.matches.stream().anyMatch(m->m.status==TournamentMatch.Status.FAILED)) {TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());changed=true;}
             }
-            if(t.format==TournamentFormat.GROUP_KNOCKOUT&&(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED)&&t.matches.stream().anyMatch(m->m.status==TournamentMatch.Status.FAILED)){TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());changed=true;}
+            if(Set.of(TournamentFormat.GROUP_KNOCKOUT,TournamentFormat.SWISS,TournamentFormat.TEAM_ROUND_ROBIN).contains(t.format)&&(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED)&&t.matches.stream().anyMatch(m->m.status==TournamentMatch.Status.FAILED)){TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());changed=true;}
             if(t.status==TournamentStatus.CANCELLED || t.status==TournamentStatus.RECOVERY_REQUIRED)workers.releaseReservations(t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).toList());
             workers.releaseReservations(t.matches.stream().filter(m->m.status==TournamentMatch.Status.FINISHED||m.status==TournamentMatch.Status.FAILED).map(m->m.id).toList());
             workers.releaseReservations(t.bracket.stream().filter(node->node.resolution()!=null).map(BracketNode::matchId).filter(Objects::nonNull).toList());

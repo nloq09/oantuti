@@ -21,7 +21,7 @@ public class AdminCatalogService {
         accounts.requireAdmin(auth);owned.flush();var clauses=new ArrayList<String>();var args=new ArrayList<Object>();
         AdminDirectoryService.search(clauses,args,filters.get("q"),List.of("name","owner"));
         AdminDirectoryService.choice(clauses,args,filters,"status",Set.of("DRAFT","REGISTRATION","CHECK_IN","READY","RUNNING","PAUSED","FINISHED","CANCELLED","RECOVERY_REQUIRED"));
-        AdminDirectoryService.choice(clauses,args,filters,"format",Set.of("ROUND_ROBIN","SINGLE_ELIMINATION","GROUP_KNOCKOUT"));AdminDirectoryService.dates(clauses,args,filters);
+        AdminDirectoryService.choice(clauses,args,filters,"format",Set.of("ROUND_ROBIN","SINGLE_ELIMINATION","GROUP_KNOCKOUT","SWISS","TEAM_ROUND_ROBIN"));AdminDirectoryService.dates(clauses,args,filters);
         return page("""
             select t.id,t.name,t.format,t.status,t.created_at,t.started_at,t.owner_user_id,u.username as owner,
             (select count(*) from tournament_participants p where p.tournament_id=t.id) as participants,

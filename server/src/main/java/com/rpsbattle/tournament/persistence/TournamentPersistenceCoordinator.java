@@ -54,7 +54,7 @@ public class TournamentPersistenceCoordinator {
     public void flushForRead() {try {flush();} catch(RuntimeException error) {throw new AuthException("TOURNAMENT_PERSISTENCE_UNAVAILABLE",503);}}
     @Scheduled(fixedDelayString="${rps.tournament.flush-millis:500}") public void synchronize() {
         for(var t:registry.findAll()) capture(t);
-        try {flush();} catch(RuntimeException error) {org.slf4j.LoggerFactory.getLogger(getClass()).warn("Tournament persistence unavailable; {} snapshots retained for retry",pending.size());}
+        try {flush();} catch(RuntimeException error) {Throwable cause=error;while(cause.getCause()!=null&&cause.getCause()!=cause)cause=cause.getCause();org.slf4j.LoggerFactory.getLogger(getClass()).warn("Tournament persistence unavailable; {} snapshots retained for retry; errorType={} origin={}",pending.size(),cause.getClass().getSimpleName(),cause.getStackTrace().length==0?"unknown":cause.getStackTrace()[0]);}
     }
     /** DRAFT is editable again; live matches are deliberately never resumed automatically. */
     public void restore() {

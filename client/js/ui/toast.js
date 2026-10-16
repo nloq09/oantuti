@@ -1,4 +1,12 @@
 const errors = {
+  TEAM_ROSTER_INCOMPLETE:"Cần ít nhất hai đội, mỗi đội đủ 3 thành viên hợp lệ; mọi participant phải có đội.",
+  TEAM_MEMBER_NOT_OWNED:"Chỉ có thể đưa người/bot thuộc tài khoản của bạn vào đội.",
+  TEAM_CAPTAIN_REQUIRED:"Chỉ đội trưởng được nộp hoặc thay đổi đội hình.",
+  TEAM_LINEUP_LOCKED:"Đội hình đã khóa. Không thể thay đổi người hoặc thứ tự vị trí.",
+  TEAM_ROSTER_LOCKED:"Danh sách đội đã khóa khi chuẩn bị thi đấu.",
+  INVALID_TEAM_LINEUP:"Chọn đúng 3 thành viên khác nhau trong danh sách đội đã khóa.",
+  TEAM_MEMBER_DUPLICATE:"Người/bot này đã thuộc một đội trong giải.",
+  TEAM_ROSTER_FULL:"Mỗi đội có tối đa 5 thành viên.",
   GROUP_STAGE_REQUIRES_FOUR_PARTICIPANTS:"Thể thức vòng bảng cần ít nhất 4 người tham gia đủ điều kiện.",
   GROUP_QUALIFICATION_LOCKED:"Suất đi tiếp đã chốt. Không thể thay đổi kết quả vòng bảng; trọng tài có thể giữ nguyên, từ chối báo cáo hoặc loại participant.",
   SERIES_REOPEN_REQUIRED: "Quyết định này cần thi đấu thêm ván. Không thể tự mở lại một giải đã kết thúc.",

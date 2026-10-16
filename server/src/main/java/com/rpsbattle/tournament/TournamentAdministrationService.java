@@ -121,6 +121,7 @@ public class TournamentAdministrationService {
             require(t.operations.reviews().containsKey(matchId)&&m.status==TournamentMatch.Status.FINISHED,"MATCH_NOT_UNDER_REVIEW");
             require(winner==null||((winner.equals(m.participantA.participantId())||winner.equals(m.participantB.participantId()))&&t.operations.active(winner)),"INVALID_WINNER");
             require(t.groupStage==null||!t.groupStage.locked()||m.round>t.groupStage.rounds(),"GROUP_QUALIFICATION_LOCKED");
+            if(t.format==TournamentFormat.SWISS)require(t.matches.stream().noneMatch(other->other.round>m.round),"DOWNSTREAM_MATCH_STARTED");
             if(t.bestOf>1)require(t.matches.stream().noneMatch(other->other.seriesId.equals(m.seriesId)&&other.gameNumber>m.gameNumber),"DOWNSTREAM_MATCH_STARTED");
             if(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t)) {
                 require(t.matches.stream().filter(other->other.round>m.round).allMatch(other->other.status==TournamentMatch.Status.PENDING),"DOWNSTREAM_MATCH_STARTED");

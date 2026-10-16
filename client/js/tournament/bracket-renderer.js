@@ -1,5 +1,7 @@
-export const formatLabel = format => format === "GROUP_KNOCKOUT" ? "Vòng bảng → Loại trực tiếp" : format === "SINGLE_ELIMINATION" ? "Loại trực tiếp" : "Vòng tròn";
-export const tieBreakLabels = {POINTS:"Điểm",WINS:"Số trận thắng",HEAD_TO_HEAD:"Đối đầu trong nhóm bằng điểm",REMAINING_PIECES:"Quân còn lại",AVERAGE_MOVE_TIME:"Thời gian tính nước trung bình"};
+export const isKnockout=format=>["SINGLE_ELIMINATION","GROUP_KNOCKOUT"].includes(format);
+export const competitionComplete=t=>t.format==="SWISS"?Boolean(t.swiss?.complete):t.format==="TEAM_ROUND_ROBIN"?Boolean(t.teamCompetition?.fixtures?.length)&&t.teamCompetition.fixtures.every(f=>f.score.complete):t.format==="ROUND_ROBIN"||Boolean(t.bracket?.at(-1)?.resolution);
+export const formatLabel = format => format==="SWISS"?"Swiss":format==="TEAM_ROUND_ROBIN"?"Đồng đội / Trường học": format === "GROUP_KNOCKOUT" ? "Vòng bảng → Loại trực tiếp" : format === "SINGLE_ELIMINATION" ? "Loại trực tiếp" : "Vòng tròn";
+export const tieBreakLabels = {BUCHHOLZ:"Buchholz (điểm đối thủ)",POINTS:"Điểm",WINS:"Số trận thắng",HEAD_TO_HEAD:"Đối đầu trong nhóm bằng điểm",REMAINING_PIECES:"Quân còn lại",AVERAGE_MOVE_TIME:"Thời gian tính nước trung bình"};
 export function roundLabel(round, total, format) {
   if (!["SINGLE_ELIMINATION","GROUP_KNOCKOUT"].includes(format)) return `Vòng ${round}`;
   return ({0:"Chung kết",1:"Bán kết",2:"Tứ kết"})[total-round] || `Vòng ${round}`;

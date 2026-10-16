@@ -76,3 +76,7 @@ document.querySelector("#join-tournament").onsubmit = (event) => {
 
 mountHub(document.querySelector("#tournament-list"));
 document.querySelector("#participant-policy").onchange=()=>{const humanOnly=document.querySelector("#participant-policy").value==="HUMAN_ONLY";for(const input of options.querySelectorAll("input")){input.disabled=humanOnly;if(humanOnly)input.checked=false;}};
+
+const formatControl=document.querySelector("#tournament-format"),formatHelp=document.querySelector("#format-help"),capacityControl=document.querySelector("#max-participants");
+function showFormatHelp(){const format=formatControl.value;formatHelp.textContent=({ROUND_ROBIN:"Mỗi cặp gặp nhau một lần; thắng 3, hòa 1, thua 0 điểm.",SINGLE_ELIMINATION:"Thua một cặp đấu sẽ dừng bước; người thắng đi tiếp theo nhánh.",GROUP_KNOCKOUT:"Cần ít nhất 4 người/bot. Hai bảng, top 2 mỗi bảng vào bán kết A1–B2 và B1–A2.",SWISS:"Ghép các đối thủ gần điểm qua nhiều vòng, không gặp lại. BYE được 3 điểm và không tạo phòng đấu.",TEAM_ROUND_ROBIN:"Cần ít nhất 2 đội đủ 3 người/bot. Sau khi được duyệt, vào Chi tiết giải → Đồng đội để tạo/gia nhập đội. Đội trưởng nộp đội hình trước mỗi cặp đấu."})[format];capacityControl.min=format==="TEAM_ROUND_ROBIN"?6:format==="GROUP_KNOCKOUT"?4:2;if(Number(capacityControl.value)<Number(capacityControl.min))capacityControl.value=capacityControl.min;}
+formatControl.addEventListener("change",showFormatHelp);showFormatHelp();

@@ -4,7 +4,7 @@
 
 ## Phạm vi thực tế
 
-Backend hiện chỉ có Round Robin và Single Elimination, một stage và BO1. Chưa có scheduler series BO3/BO5, Group Stage, Swiss, team/school, roster hoặc lineup. Không thêm dữ liệu giả hoặc đổi thuật toán scheduler để che các phụ thuộc này. Các phần UX của những thể thức đó chưa thể nghiệm thu.
+Ghi chú lịch sử: báo cáo này ghi nhận trạng thái ở thời điểm nghiệm thu nhóm 6–10 ban đầu. Sau đó đã bổ sung [BO3/BO5](TOURNAMENT-SERIES.md), [vòng bảng → loại trực tiếp](TOURNAMENT-GROUP-STAGE.md), [Swiss và Đồng đội / trường](TOURNAMENT-SWISS-TEAM.md) với backend, roster, lineup, fixture và kiểm thử thực tế. Các mục chưa có backend bên dưới mô tả giới hạn tại thời điểm viết, không phải danh sách tính năng hiện tại. Pipeline multi-stage và số bảng/top N tùy biến vẫn chưa triển khai.
 
 ## Nhóm 6 — ngữ cảnh trận
 

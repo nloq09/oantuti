@@ -17,6 +17,7 @@ public class AccountTournamentController {
         for(var t:registry.findAll().stream().sorted(Comparator.comparing((Tournament t)->t.createdAt).reversed()).toList())synchronized(t){
             boolean creator=user.equals(t.ownerUserId),participant=t.registrations.stream().anyMatch(r->r.userId().equals(user));
             boolean won=t.status==TournamentStatus.FINISHED&&tournaments.ranking(t).stream().findFirst().filter(r->t.operations.active(r.participantId())&&t.participants.stream().anyMatch(p->p.participantId().equals(r.participantId())&&user.equals(p.ownerUserId()))).isPresent()&&tournaments.view(t).get("champion")!=null;
+            if(t.format==TournamentFormat.TEAM_ROUND_ROBIN){String winner=com.rpsbattle.tournament.scheduler.TeamScheduler.winner(t);won=winner!=null&&t.teams.teams().stream().anyMatch(team->team.id().equals(winner)&&team.roster().stream().anyMatch(id->t.participants.stream().anyMatch(p->p.participantId().equals(id)&&user.equals(p.ownerUserId())&&t.operations.active(id))));}
             if((creator||participant)&&switch(filter){case "created"->creator;case "participated"->participant;case "finished"->t.status==TournamentStatus.FINISHED;case "won"->won;default->true;})result.add(tournaments.view(t));
         }return result;
     }

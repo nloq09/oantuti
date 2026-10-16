@@ -1,3 +1,4 @@
+import {competitionComplete} from "./bracket-renderer.js";
 import {tournamentControl,tournamentRoundPolicy,tournamentParticipantStatus,tournamentMatchOperation,tournamentRequest} from "./tournament-api.js?final-v5";
 import {toast} from "../ui/toast.js";
 import {confirmAction} from "../ui/modal.js";
@@ -6,7 +7,7 @@ export function tournamentNotification(event){const labels={PARTICIPANT_APPROVED
 export function allowedControls(t){return {
   pause:t.status==="RUNNING",resume:["PAUSED","RECOVERY_REQUIRED"].includes(t.status)&&!Object.keys(t.reviews||{}).length&&!t.matches.some(m=>m.status==="FAILED"),
   "next-round":["PAUSED","RUNNING"].includes(t.status)&&!t.autoAdvanceRounds&&t.releasedRound<(t.rounds?.length||0)&&t.matches.filter(m=>m.round<=t.releasedRound).every(m=>m.status==="FINISHED"),
-  finish:["RUNNING","PAUSED","RECOVERY_REQUIRED"].includes(t.status)&&!Object.keys(t.reviews||{}).length&&!t.matches.some(m=>["PENDING","RUNNING"].includes(m.status))&&(t.format==="ROUND_ROBIN"||Boolean(t.bracket?.at(-1)?.resolution)),
+  finish:["RUNNING","PAUSED","RECOVERY_REQUIRED"].includes(t.status)&&!Object.keys(t.reviews||{}).length&&!t.matches.some(m=>["PENDING","RUNNING"].includes(m.status))&&competitionComplete(t),
 };}
 function options(select,items){const key=JSON.stringify(items);if(select.dataset.options===key)return;select.dataset.options=key;const previous=select.value;select.replaceChildren(...items.map(([value,label])=>new Option(label,value)));if(items.some(([value])=>value===previous))select.value=previous;}
 function card(m,live){const article=document.createElement("article");article.className="panel match-card";const title=document.createElement("h3");title.textContent=`${m.participantA.displayName} vs ${m.participantB.displayName}`;article.append(title);const text=document.createElement("p");text.textContent=`Vòng ${m.round} · ${live?"Lượt "+(m.turn??"—"):m.result||m.status}${m.decisionReason?" · Quyết định: "+m.decisionReason:""}`;article.append(text);
@@ -35,7 +36,7 @@ function renderMatchReview(t){const m=t.matches.find(m=>m.id===document.querySel
   const logs=document.querySelector("#match-execution-log");logs.replaceChildren();for(const event of (t.audit||[]).filter(e=>e.target===m?.id)){const row=document.createElement("li");row.textContent=`${event.type} · ${new Date(event.at).toLocaleString("vi-VN")} · ${event.reason||""}`;logs.append(row);}
   const paused=["PAUSED","RECOVERY_REQUIRED"].includes(t.status);document.querySelector("#retry-match").disabled=!paused||m?.status!=="FAILED";
   document.querySelector("#request-review").disabled=!["FINISHED","FAILED"].includes(m?.status)||t.status==="CANCELLED";
-  document.querySelector("#keep-result").disabled=!t.reviews?.[m?.id];document.querySelector("#override-result").disabled=!t.reviews?.[m?.id]||m?.status!=="FINISHED"||(t.groupStage?.locked&&m.round<=t.groupStage.rounds);
+  document.querySelector("#keep-result").disabled=!t.reviews?.[m?.id];document.querySelector("#override-result").disabled=!t.reviews?.[m?.id]||m?.status!=="FINISHED"||(t.groupStage?.locked&&m.round<=t.groupStage.rounds)||(t.format==="SWISS"&&t.matches.some(other=>other.round>m.round));
   document.querySelectorAll("[data-participant-status]").forEach(button=>button.disabled=!paused);
 }
 export function bindAdministration(current,action){

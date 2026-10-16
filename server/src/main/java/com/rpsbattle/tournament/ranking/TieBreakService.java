@@ -15,7 +15,7 @@ public final class TieBreakService {
         var groups=new TreeMap<Double,List<RankingEntry>>(Comparator.reverseOrder());
         for(var r:rows) {
             double score=switch(rule) {
-                case POINTS->r.points();case WINS->r.wins();case REMAINING_PIECES->r.piecesRemaining();
+                case BUCHHOLZ->com.rpsbattle.tournament.scheduler.SwissScheduler.buchholz(t,r.participantId());case POINTS->r.points();case WINS->r.wins();case REMAINING_PIECES->r.piecesRemaining();
                 case AVERAGE_MOVE_TIME->r.averageMoveMillis()==null?Double.NEGATIVE_INFINITY:-r.averageMoveMillis();
                 case HEAD_TO_HEAD->headToHead(t,r.participantId(),ids,scoring);
             };

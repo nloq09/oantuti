@@ -18,6 +18,7 @@ public class RankingService {
                     if("DOUBLE_FORFEIT".equals(m.decisionReason))losses++;else if(m.winnerParticipantId==null) draws++;
                     else if(m.winnerParticipantId.equals(p.participantId())) wins++; else losses++;
                 }
+                if(t.format==TournamentFormat.SWISS){int byes=(int)t.rounds.stream().filter(round->round.byeParticipantIds().contains(p.participantId())).count();played+=byes;wins+=byes;}
                 rows.add(new RankingEntry(0,p.participantId(),p.displayName(),played,wins,draws,losses,
                     wins*scoring.pointsForWin()+draws*scoring.pointsForDraw()+losses*scoring.pointsForLoss(),pieces,moves==0?null:nanos/(1_000_000.0*moves)));
             }

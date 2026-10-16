@@ -13,7 +13,7 @@ import java.util.*;
 public class TournamentNotificationService {
  private final AccountAuthorizationService accounts;private final TournamentService tournaments;private final OwnedTournamentService owned;private final TournamentRegistry registry;
  public TournamentNotificationService(AccountAuthorizationService accounts,TournamentService tournaments,OwnedTournamentService owned,TournamentRegistry registry){this.accounts=accounts;this.tournaments=tournaments;this.owned=owned;this.registry=registry;}
- private static final Set<String> GENERAL=Set.of("GROUP_QUALIFICATION_LOCKED","CHECK_IN_OPENED","TOURNAMENT_STARTED","TOURNAMENT_PAUSED","TOURNAMENT_RESUMED","ROUND_RELEASED","TOURNAMENT_FINISHED","TOURNAMENT_CANCELLED","TOURNAMENT_RECOVERY_REQUIRED");
+ private static final Set<String> GENERAL=Set.of("SWISS_ROUND_PAIRED","SWISS_COMPLETED","TEAM_CREATED","TEAM_REMOVED","TEAM_MEMBER_JOINED","TEAM_MEMBER_LEFT","TEAM_LINEUP_SUBMITTED","TEAM_LINEUPS_LOCKED","GROUP_QUALIFICATION_LOCKED","CHECK_IN_OPENED","TOURNAMENT_STARTED","TOURNAMENT_PAUSED","TOURNAMENT_RESUMED","ROUND_RELEASED","TOURNAMENT_FINISHED","TOURNAMENT_CANCELLED","TOURNAMENT_RECOVERY_REQUIRED");
  private static final Set<String> PERSONAL=Set.of("PARTICIPANT_APPROVED","REGISTRATION_UPDATED","CHECK_IN","PARTICIPANT_WITHDRAWN","PARTICIPANT_DISQUALIFIED");
  private static final Set<String> MATCH=Set.of("SERIES_UPDATED","MATCH_READY_REQUIRED","MATCH_STARTED","MATCH_FINISHED","MATCH_NO_SHOW","MATCH_REVIEW_REQUESTED","MATCH_REVIEW_ASSIGNED","MATCH_REVIEW_CLOSED","MATCH_REVIEW_REJECTED","RESULT_OVERRIDDEN","MATCH_RETRIED");
  private boolean belongs(Tournament t,UUID user){return user.equals(t.ownerUserId)||t.registrations.stream().anyMatch(r->r.userId().equals(user));}

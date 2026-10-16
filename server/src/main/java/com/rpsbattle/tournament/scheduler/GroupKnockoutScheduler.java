@@ -48,7 +48,7 @@ public final class GroupKnockoutScheduler implements TournamentScheduler {
         return true;
     }
     public static boolean hasKnockout(Tournament t){return t.format==TournamentFormat.SINGLE_ELIMINATION||t.format==TournamentFormat.GROUP_KNOCKOUT&&t.groupStage!=null&&t.groupStage.locked();}
-    public static boolean complete(Tournament t){return t.format==TournamentFormat.ROUND_ROBIN||hasKnockout(t)&&SingleEliminationScheduler.complete(t);}
+    public static boolean complete(Tournament t){return switch(t.format){case ROUND_ROBIN->true;case SWISS->t.swiss!=null&&t.swiss.complete();case TEAM_ROUND_ROBIN->TeamScheduler.complete(t);default->hasKnockout(t)&&SingleEliminationScheduler.complete(t);};}
     public static int stage(Tournament t,int round){return t.groupStage!=null&&round>t.groupStage.rounds()?2:1;}
     public static String group(Tournament t,TournamentMatch m){return t.groupStage==null||stage(t,m.round)==2?null:t.groupStage.groups().entrySet().stream().filter(e->e.getValue().contains(m.participantA.participantId())).map(Map.Entry::getKey).findFirst().orElse(null);}
     public static List<Map<String,Object>> view(Tournament t){
