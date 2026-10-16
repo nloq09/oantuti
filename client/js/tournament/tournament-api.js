@@ -49,8 +49,8 @@ export const closeCheckIn = id => tournamentRequest("/" + encodeURIComponent(id)
 export const configureRules = (id, settings) => tournamentRequest("/" + encodeURIComponent(id) + "/rules", settings);
 export const configureSeeding = (id, settings) => tournamentRequest("/" + encodeURIComponent(id) + "/seeding", settings);
 export class TournamentStream {
-  constructor(id, update, status = () => {}, notification = () => {}) {
-    this.id = id;
+  constructor(id, update, status = () => {}, notification = () => {}, updatesOnly = false) {
+    this.id = id;this.updatesOnly=updatesOnly;
     this.update = update;
     this.status = status;this.notification=notification;this.lastEvent=0;
     this.stopped = false;
@@ -64,7 +64,7 @@ export class TournamentStream {
     );
     this.socket.onopen = () =>
       this.socket.send(
-        JSON.stringify({ type: "WATCH_TOURNAMENT", tournamentId: this.id }),
+        JSON.stringify({ type: "WATCH_TOURNAMENT", tournamentId: this.id, ...(this.updatesOnly?{updatesOnly:true}:{}) }),
       );
     this.socket.onmessage = (event) => {
       try {

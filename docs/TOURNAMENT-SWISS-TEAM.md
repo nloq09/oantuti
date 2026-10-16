@@ -51,4 +51,4 @@ Mã cuối đã qua **547 backend tests**, **67 client tests**, kiểm tra cú p
 
 Smoke test local qua HTTP/WebSocket đã chạy 5 giải Swiss/đồng đội hoàn tất với 42 ván thật có replay, so sánh pairing, điểm, đội trưởng, lineup và champion sau restart. Kiểm tra lại các fixture vòng bảng, BO3/BO5 và luồng Chặng 5. Một lần thử trước gặp HTTP 503 khi đang chạy nhiều kiểm thử; fixture đó được cancel bằng API và giữ lịch sử. Các lần chạy sau thành công; logging chỉ bổ sung loại lỗi/vị trí gốc, không ghi credential hoặc payload.
 
-Các giới hạn còn lại: số bảng/top N tùy ý và pipeline multi-stage tùy biến chưa được triển khai. Vòng bảng hiện giữ hai bảng, top 2 mỗi bảng; xem [hướng dẫn vòng bảng](TOURNAMENT-GROUP-STAGE.md).
+Đã bổ sung [số bảng/top N và chuỗi nhiều vòng bảng → loại trực tiếp, rút giữa giải và phân trang server](TOURNAMENT-COMPLETION.md). Swiss và Đồng đội hiện là thể thức độc lập; không trộn vào pipeline vòng bảng.

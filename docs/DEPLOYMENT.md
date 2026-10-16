@@ -138,3 +138,5 @@ Series BO3/BO5 dùng migration V18; sao lưu DB và bot/replay trước nâng, t
 Vòng bảng → Loại trực tiếp dùng V19; sao lưu DB và bot/replay trước nâng, triển khai đồng bộ. Xem [TOURNAMENT-GROUP-STAGE.md](TOURNAMENT-GROUP-STAGE.md) về qualification snapshot, rematch và rollback.
 
 Swiss và Đồng đội / trường dùng V20, bổ sung trạng thái pairing/roster/lineup vào snapshot giải. Sao lưu DB và bot/replay trước nâng; xem [TOURNAMENT-SWISS-TEAM.md](TOURNAMENT-SWISS-TEAM.md) về quyền đội trưởng, tính điểm, recovery và giới hạn.
+
+Các cập nhật vòng bảng nhiều giai đoạn, rút giữa giải và tải dữ liệu theo trang không thêm migration SQL (vẫn V20). JSON bổ sung kế hoạch/lịch sử giai đoạn; sao lưu DB/bot/replay và deploy đồng bộ binary mới. Xem [TOURNAMENT-COMPLETION.md](TOURNAMENT-COMPLETION.md).

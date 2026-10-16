@@ -1,3 +1,4 @@
+import {stagePlanText} from "./stage-plan.js";
 import {isKnockout} from "./bracket-renderer.js";
 import {renderSwiss} from "./swiss-view.js";
 import {renderGroups} from "./competition-view.js";
@@ -71,6 +72,7 @@ function render(t) {
   renderRegistrations(t, owner);
   renderSeeding(t, owner);renderRules(t,owner);
   document.querySelector("#format-heading").textContent="Tổng quan · "+formatLabel(t.format);
+  let stageSummary=document.querySelector("#stage-plan-summary");if(!stageSummary){stageSummary=document.createElement("p");stageSummary.id="stage-plan-summary";document.querySelector("#format-heading").after(stageSummary);}stageSummary.hidden=t.format!=="GROUP_KNOCKOUT";stageSummary.textContent=stagePlanText(t.groupPlans);
   let teamActions=document.querySelector("#manage-team-link");if(!teamActions){teamActions=document.createElement("a");teamActions.id="manage-team-link";teamActions.className="button";document.querySelector("#format-heading").after(teamActions);}teamActions.hidden=t.format!=="TEAM_ROUND_ROBIN";teamActions.href="/tournament-detail.html?id="+encodeURIComponent(t.id)+"#teams";teamActions.textContent="Đội, đội hình và kết quả đồng đội →";
   document.querySelector("#competition-policy").textContent=t.format==="SWISS"?"Swiss: ghép theo điểm, không gặp lại đối thủ; BYE +3 điểm, không tạo phòng. Buchholz là tổng điểm các đối thủ đã gặp.":t.format==="TEAM_ROUND_ROBIN"?"Hai đội đấu 3 vị trí theo đội hình đã khóa. Điểm đội tính theo kết quả cả cặp đội; không lấy thứ hạng cá nhân làm vô địch đồng đội.":isKnockout(t.format) ? "Hòa: bot còn nhiều quân hơn đi tiếp; nếu bằng nhau, ưu tiên hạt giống cao hơn. BYE được đi tiếp, không cộng điểm." : "Mỗi cặp gặp nhau một lần. Số bot lẻ: mỗi vòng có một bot nghỉ (BYE).";
   document.querySelector("#ranking-policy").textContent=(isKnockout(t.format)?"Ưu tiên vòng đi tới và kết quả bracket. Sau đó: ":"")+(t.tieBreakOrder||[]).map(rule=>tieBreakLabels[rule]).join(" → ")+" → ID bot trong giải. Thời gian tính nước gồm khởi chạy sandbox; chưa có dữ liệu được xếp sau.";

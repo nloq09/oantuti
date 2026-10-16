@@ -1,3 +1,5 @@
+> Báo cáo lịch sử nhóm 1–5. Trạng thái mới nhất: [BO3/BO5](TOURNAMENT-SERIES.md), [Swiss/đồng đội](TOURNAMENT-SWISS-TEAM.md), [nhiều vòng bảng, rút giữa giải và phân trang server](TOURNAMENT-COMPLETION.md).
+
 # Chế độ giải đấu cho người chơi — Nhóm 1–5
 
 Phạm vi theo [yêu cầu Chặng 8](CHANG-8-TOURNAMENT-MODE-PROMPT.md): Hub/Discovery, Detail/My Status, đăng ký người hoặc bot, check-in/lobby, ready check và tự vào trận. Không triển khai nhóm 6–10 trong lượt này.

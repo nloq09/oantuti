@@ -120,7 +120,7 @@ public class TournamentAdministrationService {
             require(List.of(TournamentStatus.PAUSED,TournamentStatus.RECOVERY_REQUIRED,TournamentStatus.FINISHED).contains(t.status),"PAUSE_REQUIRED");var m=match(t,matchId);
             require(t.operations.reviews().containsKey(matchId)&&m.status==TournamentMatch.Status.FINISHED,"MATCH_NOT_UNDER_REVIEW");
             require(winner==null||((winner.equals(m.participantA.participantId())||winner.equals(m.participantB.participantId()))&&t.operations.active(winner)),"INVALID_WINNER");
-            require(t.groupStage==null||!t.groupStage.locked()||m.round>t.groupStage.rounds(),"GROUP_QUALIFICATION_LOCKED");
+            require(t.groupHistory.stream().noneMatch(stage->m.round>stage.startRound()&&m.round<=stage.rounds())&&(t.groupStage==null||!t.groupStage.locked()||m.round>t.groupStage.rounds()),"GROUP_QUALIFICATION_LOCKED");
             if(t.format==TournamentFormat.SWISS)require(t.matches.stream().noneMatch(other->other.round>m.round),"DOWNSTREAM_MATCH_STARTED");
             if(t.bestOf>1)require(t.matches.stream().noneMatch(other->other.seriesId.equals(m.seriesId)&&other.gameNumber>m.gameNumber),"DOWNSTREAM_MATCH_STARTED");
             if(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t)) {

@@ -36,7 +36,7 @@ function renderMatchReview(t){const m=t.matches.find(m=>m.id===document.querySel
   const logs=document.querySelector("#match-execution-log");logs.replaceChildren();for(const event of (t.audit||[]).filter(e=>e.target===m?.id)){const row=document.createElement("li");row.textContent=`${event.type} · ${new Date(event.at).toLocaleString("vi-VN")} · ${event.reason||""}`;logs.append(row);}
   const paused=["PAUSED","RECOVERY_REQUIRED"].includes(t.status);document.querySelector("#retry-match").disabled=!paused||m?.status!=="FAILED";
   document.querySelector("#request-review").disabled=!["FINISHED","FAILED"].includes(m?.status)||t.status==="CANCELLED";
-  document.querySelector("#keep-result").disabled=!t.reviews?.[m?.id];document.querySelector("#override-result").disabled=!t.reviews?.[m?.id]||m?.status!=="FINISHED"||(t.groupStage?.locked&&m.round<=t.groupStage.rounds)||(t.format==="SWISS"&&t.matches.some(other=>other.round>m.round));
+  document.querySelector("#keep-result").disabled=!t.reviews?.[m?.id];document.querySelector("#override-result").disabled=!t.reviews?.[m?.id]||m?.status!=="FINISHED"||(t.groupHistory||[]).some(s=>m.round>s.startRound&&m.round<=s.rounds)||(t.groupStage?.locked&&m.round<=t.groupStage.rounds)||(t.format==="SWISS"&&t.matches.some(other=>other.round>m.round));
   document.querySelectorAll("[data-participant-status]").forEach(button=>button.disabled=!paused);
 }
 export function bindAdministration(current,action){

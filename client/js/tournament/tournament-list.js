@@ -1,3 +1,4 @@
+import {stagePlanEditor,validateStagePlan} from "./stage-plan.js";
 import{sessionRequest}from "../api/auth-api.js";
 import {mountHub} from "./tournament-hub.js";
 import { refreshBots, savedBots } from "../api/bot-api.js";
@@ -30,6 +31,7 @@ for (const bot of bots) {
   options.append(row);
 }
 document.querySelector("#bot-empty").hidden = bots.length > 0;
+const stageBox=document.createElement("fieldset");const legend=document.createElement("legend");legend.textContent="Các giai đoạn vòng bảng";stageBox.append(legend);document.querySelector("#format-help").after(stageBox);const readStages=stagePlanEditor(stageBox);const syncStages=()=>stageBox.hidden=document.querySelector("#tournament-format").value!=="GROUP_KNOCKOUT";document.querySelector("#tournament-format").addEventListener("change",syncStages);syncStages();
 let busy=false;
 document.querySelector("#create-tournament").onsubmit = async (event) => {
   event.preventDefault();
@@ -46,10 +48,12 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
   document.querySelector("#create").disabled = true;
   let t;
   try {
+    const plans=document.querySelector("#tournament-format").value==="GROUP_KNOCKOUT"?validateStagePlan(readStages(),maxParticipants):null;
     t = await createTournament(
       document.querySelector("#tournament-name").value.trim(),
       {bestOf:Number(document.querySelector("#tournament-best-of").value),participantPolicy:document.querySelector("#participant-policy").value,maxParticipants, format:document.querySelector("#tournament-format").value, maxConcurrentMatches:Number(document.querySelector("#match-concurrency").value), checkInRequired: document.querySelector("#check-in-required").checked},
     );
+    if(plans)t=await sessionRequest("/api/tournaments/"+encodeURIComponent(t.id)+"/stage-plan",{revision:t.revision,stages:plans});
     const stamp=id=>document.querySelector("#"+id).value?new Date(document.querySelector("#"+id).value).toISOString():null;const timing={revision:t.revision,registrationDeadline:stamp("registration-deadline"),checkInDeadline:stamp("check-in-deadline"),startTime:stamp("scheduled-start")};if(timing.registrationDeadline||timing.checkInDeadline||timing.startTime)await sessionRequest("/api/tournaments/"+encodeURIComponent(t.id)+"/timing",timing);
     for (const bot of chosen) await addParticipant(t.id, bot);
     location.href = "/tournament.html?id=" + encodeURIComponent(t.id);
@@ -78,5 +82,5 @@ mountHub(document.querySelector("#tournament-list"));
 document.querySelector("#participant-policy").onchange=()=>{const humanOnly=document.querySelector("#participant-policy").value==="HUMAN_ONLY";for(const input of options.querySelectorAll("input")){input.disabled=humanOnly;if(humanOnly)input.checked=false;}};
 
 const formatControl=document.querySelector("#tournament-format"),formatHelp=document.querySelector("#format-help"),capacityControl=document.querySelector("#max-participants");
-function showFormatHelp(){const format=formatControl.value;formatHelp.textContent=({ROUND_ROBIN:"Mỗi cặp gặp nhau một lần; thắng 3, hòa 1, thua 0 điểm.",SINGLE_ELIMINATION:"Thua một cặp đấu sẽ dừng bước; người thắng đi tiếp theo nhánh.",GROUP_KNOCKOUT:"Cần ít nhất 4 người/bot. Hai bảng, top 2 mỗi bảng vào bán kết A1–B2 và B1–A2.",SWISS:"Ghép các đối thủ gần điểm qua nhiều vòng, không gặp lại. BYE được 3 điểm và không tạo phòng đấu.",TEAM_ROUND_ROBIN:"Cần ít nhất 2 đội đủ 3 người/bot. Sau khi được duyệt, vào Chi tiết giải → Đồng đội để tạo/gia nhập đội. Đội trưởng nộp đội hình trước mỗi cặp đấu."})[format];capacityControl.min=format==="TEAM_ROUND_ROBIN"?6:format==="GROUP_KNOCKOUT"?4:2;if(Number(capacityControl.value)<Number(capacityControl.min))capacityControl.value=capacityControl.min;}
+function showFormatHelp(){const format=formatControl.value;formatHelp.textContent=({ROUND_ROBIN:"Mỗi cặp gặp nhau một lần; thắng 3, hòa 1, thua 0 điểm.",SINGLE_ELIMINATION:"Thua một cặp đấu sẽ dừng bước; người thắng đi tiếp theo nhánh.",GROUP_KNOCKOUT:"Cần ít nhất 4 người/bot. Chọn số bảng và top N cho từng giai đoạn bên dưới; sau đó thi đấu loại trực tiếp.",SWISS:"Ghép các đối thủ gần điểm qua nhiều vòng, không gặp lại. BYE được 3 điểm và không tạo phòng đấu.",TEAM_ROUND_ROBIN:"Cần ít nhất 2 đội đủ 3 người/bot. Sau khi được duyệt, vào Chi tiết giải → Đồng đội để tạo/gia nhập đội. Đội trưởng nộp đội hình trước mỗi cặp đấu."})[format];capacityControl.min=format==="TEAM_ROUND_ROBIN"?6:format==="GROUP_KNOCKOUT"?4:2;if(Number(capacityControl.value)<Number(capacityControl.min))capacityControl.value=capacityControl.min;}
 formatControl.addEventListener("change",showFormatHelp);showFormatHelp();

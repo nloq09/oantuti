@@ -8,6 +8,17 @@ public class TournamentPlayerController {
     private final TournamentDiscoveryService discovery;private final ParticipantTournamentStateService participants;private final OwnedTournamentService owned;private final TournamentReadyService readiness;
     public TournamentPlayerController(TournamentDiscoveryService discovery,ParticipantTournamentStateService participants,OwnedTournamentService owned,TournamentReadyService readiness){this.discovery=discovery;this.participants=participants;this.owned=owned;this.readiness=readiness;}
     @org.springframework.beans.factory.annotation.Autowired private TournamentMatchContextService context;
+    @org.springframework.beans.factory.annotation.Autowired private ParticipantWithdrawalService withdrawals;
+    @PostMapping("/{id}/withdraw") public ResponseEntity<?> withdraw(Authentication auth,@PathVariable String id,@RequestBody Withdrawal body){withdrawals.withdraw(auth,id,body.revision(),body.participantId(),body.confirmed());return me(auth,id);}
+    public record Withdrawal(Long revision,String participantId,boolean confirmed){}
+    @PostMapping("/{id}/stage-plan") public ResponseEntity<?> stagePlan(Authentication auth,@PathVariable String id,@RequestBody StagePlan body){owned.stagePlan(auth,id,body.revision(),body.stages());return summary(id);}
+    public record StagePlan(Long revision,java.util.List<com.rpsbattle.tournament.domain.GroupRoundPlan> stages){}
+    @org.springframework.beans.factory.annotation.Autowired private TournamentMatchPageService pages;
+    @org.springframework.beans.factory.annotation.Autowired private TournamentService tournaments;
+    @GetMapping("/{id}/summary") public ResponseEntity<?> summary(@PathVariable String id){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(tournaments.summary(tournaments.find(id)));}
+    @GetMapping("/{id}/bracket") public ResponseEntity<?> bracket(@PathVariable String id){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(pages.bracket(id));}
+    @GetMapping("/{id}/fixtures/{fixtureId}/matches") public ResponseEntity<?> fixture(@PathVariable String id,@PathVariable String fixtureId){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(pages.fixture(id,fixtureId));}
+    @GetMapping("/{id}/matches") public ResponseEntity<?> matches(Authentication auth,@PathVariable String id,@RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="20")int size,@RequestParam(required=false)Integer round,@RequestParam(required=false)Integer stage,@RequestParam(required=false)String status,@RequestParam(defaultValue="false")boolean mine,@RequestParam(defaultValue="round")String order,@RequestParam(defaultValue="false")boolean replay){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(pages.page(auth,id,page,size,round,stage,status,mine,order,replay));}
     @GetMapping("/{id}/match-context") public ResponseEntity<?> context(@PathVariable String id,@RequestParam String onlineMatchId){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(context.context(id,onlineMatchId));}
     @PostMapping("/{id}/ready") public ResponseEntity<?> ready(Authentication auth,@PathVariable String id,@RequestBody Ready body){readiness.ready(auth,id,body.matchId(),body.windowId());return me(auth,id);}
     @PostMapping("/{id}/entry") public ResponseEntity<?> entry(Authentication auth,@PathVariable String id,@RequestBody Ready body){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(readiness.entry(auth,id,body.matchId()));}

@@ -53,6 +53,12 @@ public class TournamentExecutionService {
                 try {
                     var room=online.find(m.onlineMatchId);
                     if(room.infrastructureError()!=null)throw new IllegalStateException(room.infrastructureError());
+                    // Withdrawal was persisted before touching a room; never replace an already finished result.
+                    boolean activeA=t.operations.active(m.participantA.participantId()),activeB=t.operations.active(m.participantB.participantId());
+                    if((!activeA||!activeB)&&!room.state().isFinished()) {
+                        if(room.startedAt()!=null&&activeA!=activeB)online.publish(room,room.leave(activeA?OnlineMatch.P2:OnlineMatch.P1));
+                        else {online.release(room.id());m.status=TournamentMatch.Status.PENDING;TournamentAdministrationService.settleForfeits(t);workers.complete(m.id);changed=true;continue;}
+                    }
                     if(t.status==TournamentStatus.CANCELLED) { online.release(room.id());failed(m,"CANCELLED");changed=true; }
                     else if(room.state().isFinished()) {
                         replays.save(room,online);

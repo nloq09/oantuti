@@ -1,4 +1,7 @@
 const errors = {
+  INVALID_STAGE_PLAN:"Cấu hình vòng bảng chưa phù hợp số người tham gia: mỗi bảng cần ít nhất 2 người, đủ top N và ít nhất 2 suất vào vòng sau.",
+  WITHDRAW_CONFIRMATION_REQUIRED:"Bạn cần xác nhận hậu quả trước khi rút khỏi giải.",
+  INVALID_PAGING:"Bộ lọc hoặc trang dữ liệu không hợp lệ.",
   TEAM_ROSTER_INCOMPLETE:"Cần ít nhất hai đội, mỗi đội đủ 3 thành viên hợp lệ; mọi participant phải có đội.",
   TEAM_MEMBER_NOT_OWNED:"Chỉ có thể đưa người/bot thuộc tài khoản của bạn vào đội.",
   TEAM_CAPTAIN_REQUIRED:"Chỉ đội trưởng được nộp hoặc thay đổi đội hình.",

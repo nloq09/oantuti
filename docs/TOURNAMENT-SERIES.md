@@ -34,7 +34,7 @@ Domain: TournamentSeries, Tournament/TournamentMatch. Tích hợp: TournamentExe
 
 Kiểm tra tự động bao gồm thắng sớm, lội ngược dòng BO5, giới hạn ván hòa, không advance sau game 1, no-show, pause/review/failure, ID ván ổn định, JSON cũ, migration V17→V18, unique DB, persist/restore nhiều ván, review không mở lại giải ngầm. Native PostgreSQL + hai tài khoản + WebSocket đã kiểm tra BO3 KO 2–1, BO5 KO 3–0 và BO3 RR 2–0: mỗi ván có phòng/replay riêng, ready window mới, entry lặp ổn định, không đi tiếp sớm và ranking một series.
 
-Đã bổ sung [Group Stage hai bảng → loại trực tiếp](TOURNAMENT-GROUP-STAGE.md) và [Swiss, Đồng đội / trường](TOURNAMENT-SWISS-TEAM.md), dùng chung BO1/BO3/BO5. Pipeline multi-stage tùy biến vẫn chưa triển khai.
+Đã bổ sung [Group Stage hai bảng → loại trực tiếp](TOURNAMENT-GROUP-STAGE.md) và [Swiss, Đồng đội / trường](TOURNAMENT-SWISS-TEAM.md), dùng chung BO1/BO3/BO5. Đã bổ sung [chuỗi vòng bảng có số bảng/top N tùy chỉnh → loại trực tiếp](TOURNAMENT-COMPLETION.md), dùng chung BO1/BO3/BO5.
 
 Nghiệm thu 16/10/2026: **519 backend, 0 failures/errors/skipped; 59 client, 0 fail/skipped; 71 module JS syntax đạt; bootJar thành công.** Đã sửa lỗi JPA ghi giá trị số ván mặc định trước insert; test PostgreSQL lưu BO3 nhiều ván và native WebSocket đều qua sau sửa. Không sửa GameEngine, RuleSet hoặc bot protocol; có thay tích hợp scheduler/ranking để chờ và tính kết quả toàn series, các regression BO1 giữ nguyên.
 Native restart đã qua: tỷ số BO3/BO5, ID từng ván, champion, ranking và toàn bộ replay giữ nguyên; hồi quy dữ liệu giải cũ cũng đạt. Fixture lỗi đầu tiên đã hủy sau recovery, không xóa lịch sử/audit.

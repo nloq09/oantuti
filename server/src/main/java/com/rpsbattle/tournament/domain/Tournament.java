@@ -30,6 +30,8 @@ public final class Tournament {
     public final Map<String,Long> notificationReads=new LinkedHashMap<>();
     public int bestOf=1;
     public GroupStageState groupStage;
+    public List<GroupRoundPlan> groupPlans=GroupRoundPlan.defaults();
+    public final List<GroupStageState> groupHistory=new ArrayList<>();
     public SwissState swiss;
     public TeamState teams=TeamState.empty();
     public int maxParticipants=10;

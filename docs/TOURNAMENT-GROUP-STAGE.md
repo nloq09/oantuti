@@ -1,3 +1,5 @@
+> Cập nhật: hai bảng/top 2 trong tài liệu này là cấu hình mặc định và kết quả kiểm thử của phiên bản đầu. Hiện đã hỗ trợ số bảng/top N và chuỗi vòng bảng tùy chỉnh; xem [TOURNAMENT-COMPLETION.md](TOURNAMENT-COMPLETION.md).
+
 # Vòng bảng → Loại trực tiếp
 
 Chọn **Hai bảng → Loại trực tiếp** khi tạo giải. API dùng `format: "GROUP_KNOCKOUT"`; `bestOf` nhận 1, 3 hoặc 5. Giữ nguyên đăng ký, duyệt, check-in, controller người/bot, ready check, spectator và replay hiện có.
@@ -42,4 +44,4 @@ Sao lưu PostgreSQL và bot/replay trước khi nâng; bản local được lưu
 
 ## Phạm vi còn lại
 
-Hiện hỗ trợ đúng **hai bảng, top 2 mỗi bảng**. Chưa có cấu hình số bảng/top N hoặc multi-stage tùy biến. [Swiss và Đồng đội / trường](TOURNAMENT-SWISS-TEAM.md) đã được bổ sung thành các thể thức riêng.
+Cấu hình mặc định là **hai bảng, top 2 mỗi bảng**. Đã bổ sung [số bảng/top N và chuỗi nhiều vòng bảng → loại trực tiếp](TOURNAMENT-COMPLETION.md); tối đa 8 giai đoạn vòng bảng, không phải đồ thị tùy ý trộn mọi thể thức. [Swiss và Đồng đội / trường](TOURNAMENT-SWISS-TEAM.md) đã được bổ sung thành các thể thức riêng.

@@ -4,7 +4,7 @@
 
 ## Phạm vi thực tế
 
-Ghi chú lịch sử: báo cáo này ghi nhận trạng thái ở thời điểm nghiệm thu nhóm 6–10 ban đầu. Sau đó đã bổ sung [BO3/BO5](TOURNAMENT-SERIES.md), [vòng bảng → loại trực tiếp](TOURNAMENT-GROUP-STAGE.md), [Swiss và Đồng đội / trường](TOURNAMENT-SWISS-TEAM.md) với backend, roster, lineup, fixture và kiểm thử thực tế. Các mục chưa có backend bên dưới mô tả giới hạn tại thời điểm viết, không phải danh sách tính năng hiện tại. Pipeline multi-stage và số bảng/top N tùy biến vẫn chưa triển khai.
+Ghi chú lịch sử: báo cáo này ghi nhận trạng thái ở thời điểm nghiệm thu nhóm 6–10 ban đầu. Sau đó đã bổ sung [BO3/BO5](TOURNAMENT-SERIES.md), [vòng bảng → loại trực tiếp](TOURNAMENT-GROUP-STAGE.md), [Swiss và Đồng đội / trường](TOURNAMENT-SWISS-TEAM.md) với backend, roster, lineup, fixture và kiểm thử thực tế. Các mục chưa có backend bên dưới mô tả giới hạn tại thời điểm viết, không phải danh sách tính năng hiện tại. Đã bổ sung tiếp [cấu hình nhiều vòng bảng/top N → loại trực tiếp, rút giữa giải và phân trang server](TOURNAMENT-COMPLETION.md).
 
 ## Nhóm 6 — ngữ cảnh trận
 
@@ -47,7 +47,7 @@ File chính: tournament-mode.css, game.html/pages/game, progression/competition-
 
 Native PostgreSQL/WebSocket đã chạy lại cả Round Robin và Single Elimination với hai tài khoản: đăng ký → duyệt → check-in → ready → hai ghế riêng ổn định → xếp quân → thi đấu/đầu hàng → giải kết thúc → champion và replay thật. Bracket knockout khớp winner cuối, không tạo thêm trận. Đã kiểm tra notification CSRF/cursor/mark-read và dispute tới workflow trọng tài; báo cáo thử đã đóng, kết quả/replay giữ nguyên.
 
-## Phần chưa nghiệm thu
+## Giới hạn tại thời điểm báo cáo ban đầu
 
 - BO3/BO5, Group Stage, Swiss, multi-stage qualification, Team/School/captain/lineup/fixture chưa có backend. Không coi toàn bộ Chặng 8 đã hoàn thành theo Definition of Done gốc.
 - Discovery có phân trang server. Lịch hiện phân trang/lọc ở client từ snapshot giải hiện tại; endpoint detail/stream vẫn dùng snapshot đầy đủ của core hiện có. Replay chỉ tải khi mở link. Muốn mở rộng giải lớn cần projection/pagination server cho detail thay vì chỉ đổi giao diện.

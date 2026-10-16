@@ -17,13 +17,14 @@ public class SpectatorService {
     private final TournamentService tournaments;
     private final ObjectMapper json;
     private final Map<String,MatchSubscription> subscriptions=new ConcurrentHashMap<>();
+    private final Set<String> compactSubscriptions=ConcurrentHashMap.newKeySet();
     private final Map<String,Long> auditCursors=new ConcurrentHashMap<>();
     public SpectatorService(OnlineMatchService online,ReplayRegistry replays,TournamentService tournaments,ObjectMapper json) {
         this.online=online;this.replays=replays;this.tournaments=tournaments;this.json=json;
         online.listen(update->{for(var s:List.copyOf(subscriptions.values()))if(update.match().id().equals(s.matchId()))
             state(s,online.snapshot(update.match(),OnlineMatch.P1,update.events()));});
         tournaments.listen(t->{for(var s:List.copyOf(subscriptions.values()))if(t.id.equals(s.tournamentId())){
-            send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",tournaments.view(t)));
+            send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",compactSubscriptions.contains(s.session().getId())?Map.of("id",t.id,"revision",t.revision):tournaments.view(t)));
             send(s.session(),"TOURNAMENT_UPDATED",Map.of("tournamentId",t.id,"revision",t.revision));
             long cursor=auditCursors.getOrDefault(s.session().getId(),0L);
             for(var e:t.operations.audit())if(e.sequence()>cursor){String type=switch(e.type()){case "PARTICIPANT_APPROVED","CHECK_IN","CHECK_IN_OPENED","REGISTRATION_UPDATED"->"REGISTRATION_UPDATED";case "ROUND_STARTED","MATCH_STARTED","MATCH_FINISHED","TOURNAMENT_FINISHED"->e.type();default->"TOURNAMENT_UPDATED";};
@@ -34,7 +35,7 @@ public class SpectatorService {
         }});
     }
     public boolean owns(WebSocketSession session){return subscriptions.containsKey(session.getId());}
-    public void closed(WebSocketSession session){subscriptions.remove(session.getId());auditCursors.remove(session.getId());}
+    public void closed(WebSocketSession session){compactSubscriptions.remove(session.getId());subscriptions.remove(session.getId());auditCursors.remove(session.getId());}
     /** Live turn counts update without changing tournament revision or taking room->tournament locks. */
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay=1000)
     public void refreshLiveTournaments(){for(var id:subscriptions.values().stream().map(MatchSubscription::tournamentId).filter(Objects::nonNull).distinct().toList())try{var t=tournaments.find(id);synchronized(t){if(t.status==com.rpsbattle.tournament.domain.TournamentStatus.RUNNING||t.status==com.rpsbattle.tournament.domain.TournamentStatus.PAUSED)tournaments.notifyChanged(t);}}catch(RuntimeException ignored){}}
@@ -53,7 +54,7 @@ public class SpectatorService {
             } else if(type.equals("WATCH_TOURNAMENT")) {
                 var t=tournaments.find(message.path("tournamentId").asText());
                 var s=new MatchSubscription(new ConcurrentWebSocketSessionDecorator(session,5000,1048576),null,t.id);
-                synchronized(t){subscriptions.put(session.getId(),s);auditCursors.put(session.getId(),(long)t.operations.audit().size());send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",tournaments.view(t)));}
+                synchronized(t){if(message.path("updatesOnly").asBoolean(false))compactSubscriptions.add(session.getId());else compactSubscriptions.remove(session.getId());subscriptions.put(session.getId(),s);auditCursors.put(session.getId(),(long)t.operations.audit().size());send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",compactSubscriptions.contains(s.session().getId())?Map.of("id",t.id,"revision",t.revision):tournaments.view(t)));}
             } else send(session,"ACTION_REJECTED",Map.of("error","SPECTATOR_READ_ONLY"));
         }catch(DemoRequestException error){send(session,"ACTION_REJECTED",Map.of("error",error.code()));}
         catch(com.rpsbattle.auth.AuthException error){send(session,"ACTION_REJECTED",Map.of("error",error.code()));}
