@@ -17,6 +17,13 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TournamentAdministrationTest {
+    @Test void groupQualificationCannotBeRewrittenAfterTheCrossBracketIsFrozen(){
+        var t=cup(4,TournamentFormat.GROUP_KNOCKOUT);for(var m:t.matches)TournamentFixtures.finish(m,m.participantA.participantId(),8,1);
+        assertThat(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.qualify(t)).isTrue();var group=t.matches.getFirst();var qualifiers=t.groupStage;
+        admin.review(auth,t.id,t.revision,group.id,"Check group result",false);
+        assertThatThrownBy(()->admin.override(auth,t.id,t.revision,group.id,group.participantB.participantId(),"Would change qualification")).hasMessage("GROUP_QUALIFICATION_LOCKED");
+        assertThat(t.groupStage).isEqualTo(qualifiers);assertThat(t.operations.reviews()).containsKey(group.id);
+    }
     @Test void reviewAssignmentRejectionAndDisqualificationKeepFactsAndCloseReviewAtomically(){
         var t=cup(3,TournamentFormat.ROUND_ROBIN);var m=t.matches.getFirst();TournamentFixtures.finish(m,m.participantA.participantId(),8,2);String original=m.winnerParticipantId;
         admin.review(auth,t.id,t.revision,m.id,"Check result",false);admin.assignReview(auth,t.id,t.revision,m.id,"Investigating");

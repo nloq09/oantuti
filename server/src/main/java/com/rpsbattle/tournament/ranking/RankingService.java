@@ -22,7 +22,7 @@ public class RankingService {
                     wins*scoring.pointsForWin()+draws*scoring.pointsForDraw()+losses*scoring.pointsForLoss(),pieces,moves==0?null:nanos/(1_000_000.0*moves)));
             }
             var ordered=TieBreakService.order(t,rows,scoring);
-            if(t.format==TournamentFormat.SINGLE_ELIMINATION) {
+            if(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t)) {
                 // Bracket progression precedes statistical ties, so a BYE never penalizes a finalist.
                 var progress=new HashMap<String,Integer>();
                 for(var n:t.bracket) {

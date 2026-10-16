@@ -6,25 +6,28 @@ import java.util.*;
 
 /** Seeded knockout tree, with explicit BYEs and no placeholder game rooms. */
 public final class SingleEliminationScheduler implements TournamentScheduler {
-    private static String id(Tournament t,int round,int position) {
-        return UUID.nameUUIDFromBytes((t.id+"/bracket/"+round+"/"+position).getBytes(StandardCharsets.UTF_8)).toString();
+    private static String id(String namespace,int round,int position) {
+        return UUID.nameUUIDFromBytes((namespace+"/bracket/"+round+"/"+position).getBytes(StandardCharsets.UTF_8)).toString();
     }
     public List<TournamentMatch> schedule(Tournament t) {
-        int size=2;while(size<t.participants.size())size*=2;
+        return schedule(t,t.participants,0,t.id);
+    }
+    public List<TournamentMatch> schedule(Tournament t,List<TournamentParticipant> participants,int offset,String namespace) {
+        int size=2;while(size<participants.size())size*=2;
         List<Integer> seeds=new ArrayList<>(List.of(1,2));
         for(int n=4;n<=size;n*=2) {var next=new ArrayList<Integer>();for(int seed:seeds){next.add(seed);next.add(n+1-seed);}seeds=next;}
         int rounds=Integer.numberOfTrailingZeros(size);
-        t.rounds.clear();t.bracket.clear();
-        for(int round=1,count=size/2;round<=rounds;round++,count/=2) {
+        if(offset==0)t.rounds.clear();t.bracket.clear();
+        for(int round=offset+1,count=size/2;round<=offset+rounds;round++,count/=2) {
             var byes=new ArrayList<String>();
             for(int position=0;position<count;position++) {
                 String a=null,b=null;
-                if(round==1) {int sa=seeds.get(position*2),sb=seeds.get(position*2+1);a=sa<=t.participants.size()?t.participants.get(sa-1).participantId():null;b=sb<=t.participants.size()?t.participants.get(sb-1).participantId():null;}
-                boolean bye=round==1&&(a==null||b==null);String winner=bye?(a==null?b:a):null;
-                if(bye)byes.add(winner);
-                t.bracket.add(new BracketNode(id(t,round,position),round,position,bye?null:id(t,round,position),a,b,
-                    round==1?null:id(t,round-1,position*2),round==1?null:id(t,round-1,position*2+1),
-                    round==rounds?null:id(t,round+1,position/2),winner,bye?"BYE":null));
+                if(round==offset+1) {int sa=seeds.get(position*2),sb=seeds.get(position*2+1);a=sa<=participants.size()&&participants.get(sa-1)!=null?participants.get(sa-1).participantId():null;b=sb<=participants.size()&&participants.get(sb-1)!=null?participants.get(sb-1).participantId():null;}
+                boolean bye=round==offset+1&&(a==null||b==null);String winner=bye?(a==null?b:a):null;
+                if(bye&&winner!=null)byes.add(winner);
+                t.bracket.add(new BracketNode(id(namespace,round,position),round,position,bye?null:id(namespace,round,position),a,b,
+                    round==offset+1?null:id(namespace,round-1,position*2),round==offset+1?null:id(namespace,round-1,position*2+1),
+                    round==offset+rounds?null:id(namespace,round+1,position/2),winner,bye?"BYE":null));
             }
             t.rounds.add(new TournamentRound(round,byes));
         }

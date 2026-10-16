@@ -27,6 +27,17 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(properties={"rps.bots.enabled=false","rps.tournament.flush-millis=60000"})
 @Testcontainers(disabledWithoutDocker=true)
 class TournamentPersistencePostgresTest {
+    @Test void groupQualificationAndSamePairFinalSurviveDatabaseRestore() {
+        var owner=user();var t=new Tournament(UUID.randomUUID().toString(),"Group storage",TournamentFormat.GROUP_KNOCKOUT,Instant.now());t.ownerUserId=owner.id().value();t.status=TournamentStatus.RUNNING;
+        for(int i=0;i<4;i++){var p=participant(owner,"Group bot "+i);t.participants.add(new TournamentParticipant(p.id().toString(),p.botId().toString(),"unused",p.displayName(),p.seed(),p.ownerUserId(),null,i+1,null));}
+        t.matches.addAll(new com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler().schedule(t));
+        var coordinator=new TournamentPersistenceCoordinator(repository,new TournamentRegistry(),tournaments,historyCoordinator,artifacts);
+        for(var m:t.matches){m.status=TournamentMatch.Status.FINISHED;m.winnerParticipantId=m.participantA.participantId();m.result="WIN";m.finishedAt=Instant.now();}
+        assertThat(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.qualify(t)).isTrue();t.revision++;repository.save(coordinator.snapshot(t));
+        for(var m:t.matches)if(m.status==TournamentMatch.Status.PENDING){m.status=TournamentMatch.Status.FINISHED;m.winnerParticipantId=t.groupStage.groups().get("A").contains(m.participantA.participantId())?m.participantA.participantId():m.participantB.participantId();m.result="WIN";m.finishedAt=Instant.now();}
+        t.matches.addAll(com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t));var last=t.matches.getLast();last.status=TournamentMatch.Status.FINISHED;last.winnerParticipantId=last.participantB.participantId();last.result="WIN";last.finishedAt=Instant.now();t.matches.addAll(com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t));t.status=TournamentStatus.FINISHED;t.finishedAt=Instant.now();t.revision++;var snapshot=coordinator.snapshot(t);repository.save(snapshot);repository.save(snapshot);
+        var loaded=restored().findById(t.id).orElseThrow();assertThat(loaded.matches).hasSize(5);assertThat(loaded.groupStage).isEqualTo(t.groupStage);assertThat(loaded.bracket).isEqualTo(t.bracket);assertThat(loaded.stages).hasSize(2);assertThat(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.standings(loaded,"A")).isEqualTo(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.standings(t,"A"));assertThat(rankings.rank(loaded).getFirst().participantId()).isEqualTo(last.winnerParticipantId);
+    }
     @Container static final PostgreSQLContainer<?> POSTGRES=new PostgreSQLContainer<>("postgres:17-alpine").withLabel("rps.stage","stage4-group6-test");
     @TempDir static Path root;
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) {

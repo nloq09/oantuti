@@ -1,4 +1,5 @@
 import test from "node:test";import assert from "node:assert/strict";import{contextLabel}from "../js/tournament/match-context.js";
+test("group match labels do not mistake the last group round for a knockout quarterfinal",()=>{const label=contextLabel({format:"GROUP_KNOCKOUT",stage:{number:1,format:"ROUND_ROBIN"},group:"B",round:3,totalRounds:5,bestOf:3,gameNumber:2});assert.match(label,/Bảng B · Vòng 3/);assert.doesNotMatch(label,/Tứ kết/);});
 test("match context describes the actual BO1 round without inventing a series score",()=>{assert.equal(contextLabel({format:"SINGLE_ELIMINATION",round:2,totalRounds:3,bestOf:1,gameNumber:1}),"Loại trực tiếp · Bán kết · BO1 · Ván 1/1");});
 test("BO3 context uses the actual subgame and does not reset to BO1 on reload",()=>{assert.equal(contextLabel({format:"SINGLE_ELIMINATION",round:1,totalRounds:1,bestOf:3,gameNumber:2}),"Loại trực tiếp · Chung kết · BO3 · Ván 2/3");});
 test("match context includes the actual stage when the server supplies it",()=>{assert.match(contextLabel({format:"SINGLE_ELIMINATION",round:1,totalRounds:1,bestOf:5,gameNumber:3,stage:{number:1}}),/Giai đoạn 1 · Chung kết · BO5 · Ván 3\/5/);});

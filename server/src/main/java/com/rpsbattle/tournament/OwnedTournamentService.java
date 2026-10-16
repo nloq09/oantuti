@@ -35,7 +35,7 @@ public class OwnedTournamentService {
         for(var t:registry.findAll()){if(t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;var scores=historicalScores();synchronized(t){
             if(t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;
             try{mutate(t,null,()->{for(int i=0;i<t.registrations.size();i++){var r=t.registrations.get(i);if(r.status()==TournamentRegistration.Status.APPROVED){t.registrations.set(i,r.withStatus(TournamentRegistration.Status.NOT_CHECKED_IN,clock.instant()));t.participants.removeIf(p->p.participantId().equals(r.id().toString()));}}
-                boolean enough=t.participants.size()>=2;if(enough){prepare(t,scores);lockRules(t);}TournamentStateMachine.transition(t,enough?TournamentStatus.READY:TournamentStatus.CANCELLED,clock.instant());TournamentAudit.append(t,enough?"TOURNAMENT_READY":"TOURNAMENT_CANCELLED",null,t.id,"CHECK_IN_DEADLINE",null,t.status.name());tournaments.changed(t);
+                boolean enough=t.participants.size()>=(t.format==TournamentFormat.GROUP_KNOCKOUT?4:2);if(enough){prepare(t,scores);lockRules(t);}TournamentStateMachine.transition(t,enough?TournamentStatus.READY:TournamentStatus.CANCELLED,clock.instant());TournamentAudit.append(t,enough?"TOURNAMENT_READY":"TOURNAMENT_CANCELLED",null,t.id,"CHECK_IN_DEADLINE",null,t.status.name());tournaments.changed(t);
             });}catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=check_in_expiry_failed tournamentId={}",t.id);}
         }}
     }
@@ -60,7 +60,7 @@ public class OwnedTournamentService {
         var actor=accounts.requireUser(auth);
         validateRules(concurrency==null?4:concurrency,order);
         int limit=maxParticipants==null?10:maxParticipants;
-        if(limit<2 || limit>32)throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
+        if(limit<(format==TournamentFormat.GROUP_KNOCKOUT?4:2) || limit>32)throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
         if(visibility!=null && !visibility.equals("PUBLIC")) throw new AuthException("UNSUPPORTED_TOURNAMENT_VISIBILITY",400);
         var t=tournaments.create(name,format==null?TournamentFormat.ROUND_ROBIN:format);
         synchronized(t) {
@@ -177,10 +177,12 @@ public class OwnedTournamentService {
     private void lockRules(Tournament t){
         if(!t.operations.rulesSnapshot().isEmpty())return;
         var rules=new LinkedHashMap<String,Object>(online==null?Map.of("ruleSet","classic-online-v1","turnSeconds",30L,"maxTurns",200,"pieceQuota",6,"boardRows",9,"boardColumns",9):online.ruleConfiguration());
+        if(t.format==TournamentFormat.GROUP_KNOCKOUT){rules.put("groupCount",2);rules.put("qualifyPerGroup",2);rules.put("groupSeeding","SERPENTINE");rules.put("semifinals","A1_B2_B1_A2");}
         rules.put("bestOf",t.bestOf);rules.put("seriesDrawPolicy","MAX_GAMES_THEN_WINS_REMAINING_PIECES_SEED");rules.put("scoring",List.of(3,1,0));rules.put("tieBreakRules",t.tieBreakOrder.stream().map(Enum::name).toList());rules.put("autoAdvanceRounds",t.operations.autoAdvanceRounds());
         t.operations=t.operations.rules(rules);
     }
     private void prepare(Tournament t,Map<String,com.rpsbattle.tournament.seeding.SeedingService.Score> scores) {
+        if(t.format==TournamentFormat.GROUP_KNOCKOUT&&t.participants.size()<4)throw new DemoRequestException("GROUP_STAGE_REQUIRES_FOUR_PARTICIPANTS");
         for(int i=0;i<t.participants.size();i++) {
             var p=t.participants.get(i);String hash=p.artifactHash();
             if(p.botId()==null)continue;

@@ -18,7 +18,7 @@ class JpaFoundationTest {
 
     @Test void springBootInitializesJpaAfterAllFlywayMigrationsWithTestOnlyDatabase() throws Exception {
         assertThat(entityManagerFactory.isOpen()).isTrue();
-        assertThat(flyway.info().applied()).filteredOn(info -> info.getVersion() != null).hasSize(18);
+        assertThat(flyway.info().applied()).filteredOn(info -> info.getVersion() != null).hasSize(19);
         flyway.validate();
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
         assertThat(environment.getProperty("spring.jpa.open-in-view")).isEqualTo("false");

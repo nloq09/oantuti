@@ -1,3 +1,4 @@
+import {renderGroups} from "./competition-view.js";
 import { refreshBots, savedBots, uploadBot } from "../api/bot-api.js";
 import {
   getTournament,
@@ -56,21 +57,21 @@ function render(t) {
     : t.status === "CHECK_IN" ? "Check-in đã mở. Chủ bot cần xác nhận có mặt trước khi chủ giải hoàn tất." : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
   document.querySelector("#open-registration").hidden = !owner || t.status !== "DRAFT";
   document.querySelector("#close-registration").hidden = !owner || t.status !== "REGISTRATION";
-  document.querySelector("#close-registration").disabled = t.participants.length < 2;
+  document.querySelector("#close-registration").disabled = t.participants.length < (t.format==="GROUP_KNOCKOUT"?4:2);
   document.querySelector("#start").hidden = !owner || !(["DRAFT", "READY"].includes(t.status) && !(t.status === "DRAFT" && t.checkInRequired));
   document.querySelector("#start").textContent = t.status === "DRAFT" ? "Bắt đầu nhanh" : "Bắt đầu giải";
-  document.querySelector("#start").disabled = t.participants.length < 2;
+  document.querySelector("#start").disabled = t.participants.length < (t.format==="GROUP_KNOCKOUT"?4:2);
   document.querySelector("#cancel").hidden = !owner || ["FINISHED", "CANCELLED"].includes(
     t.status,
   );
   document.querySelector("#close-check-in").hidden = !owner || t.status !== "CHECK_IN";
-  document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < 2;
+  document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < (t.format==="GROUP_KNOCKOUT"?4:2);
   renderRegistrations(t, owner);
   renderSeeding(t, owner);renderRules(t,owner);
   document.querySelector("#format-heading").textContent="Tổng quan · "+formatLabel(t.format);
-  document.querySelector("#competition-policy").textContent=t.format==="SINGLE_ELIMINATION" ? "Hòa: bot còn nhiều quân hơn đi tiếp; nếu bằng nhau, ưu tiên hạt giống cao hơn. BYE được đi tiếp, không cộng điểm." : "Mỗi cặp gặp nhau một lần. Số bot lẻ: mỗi vòng có một bot nghỉ (BYE).";
-  document.querySelector("#ranking-policy").textContent=(t.format==="SINGLE_ELIMINATION"?"Ưu tiên vòng đi tới và kết quả bracket. Sau đó: ":"")+(t.tieBreakOrder||[]).map(rule=>tieBreakLabels[rule]).join(" → ")+" → ID bot trong giải. Thời gian tính nước gồm khởi chạy sandbox; chưa có dữ liệu được xếp sau.";
-  document.querySelector('[data-tab="bracket"]').hidden=t.format!=="SINGLE_ELIMINATION";
+  document.querySelector("#competition-policy").textContent=t.format!=="ROUND_ROBIN" ? "Hòa: bot còn nhiều quân hơn đi tiếp; nếu bằng nhau, ưu tiên hạt giống cao hơn. BYE được đi tiếp, không cộng điểm." : "Mỗi cặp gặp nhau một lần. Số bot lẻ: mỗi vòng có một bot nghỉ (BYE).";
+  document.querySelector("#ranking-policy").textContent=(t.format!=="ROUND_ROBIN"?"Ưu tiên vòng đi tới và kết quả bracket. Sau đó: ":"")+(t.tieBreakOrder||[]).map(rule=>tieBreakLabels[rule]).join(" → ")+" → ID bot trong giải. Thời gian tính nước gồm khởi chạy sandbox; chưa có dữ liệu được xếp sau.";
+  document.querySelector('[data-tab="bracket"]').hidden=t.format==="ROUND_ROBIN";
   renderBracket(document.querySelector("#bracket-tree"),t);
   const champion = document.querySelector("#champion");
   champion.hidden = !t.champion;
@@ -177,6 +178,7 @@ function render(t) {
     }
     matches.append(card);
   }
+  let groups=document.querySelector("#group-standings");if(!groups){groups=document.createElement("div");groups.id="group-standings";document.querySelector("#ranking-policy").after(groups);}groups.replaceChildren();renderGroups(groups,t);
   renderRanking(document.querySelector("#ranking-rows"), t.ranking);renderDashboard(t,owner);
 }
 document.querySelectorAll("[data-tab]").forEach(

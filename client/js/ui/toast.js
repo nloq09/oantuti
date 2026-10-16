@@ -1,4 +1,6 @@
 const errors = {
+  GROUP_STAGE_REQUIRES_FOUR_PARTICIPANTS:"Thể thức vòng bảng cần ít nhất 4 người tham gia đủ điều kiện.",
+  GROUP_QUALIFICATION_LOCKED:"Suất đi tiếp đã chốt. Không thể thay đổi kết quả vòng bảng; trọng tài có thể giữ nguyên, từ chối báo cáo hoặc loại participant.",
   SERIES_REOPEN_REQUIRED: "Quyết định này cần thi đấu thêm ván. Không thể tự mở lại một giải đã kết thúc.",
   SERIES_NOT_FINISHED: "Còn series chưa có kết quả cuối. Không thể kết thúc giải lúc này.",
   INVALID_BEST_OF: "Chỉ hỗ trợ BO1, BO3 hoặc BO5.",

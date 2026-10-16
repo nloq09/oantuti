@@ -99,11 +99,12 @@ public class TournamentService {
         data.put("statusChangedAt",t.statusChangedAt);
         data.put("seedingStrategy",t.seedingStrategy);data.put("seedingSeed",Long.toString(t.seedingSeed));
         data.put("timing",t.timing);data.put("participantPolicy",t.participantPolicy);data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
+        data.put("groups",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.view(t));data.put("groupStage",t.groupStage);
         data.put("bestOf",t.bestOf);data.put("series",TournamentSeries.roots(t).stream().map(m->TournamentSeries.view(t,m)).toList());
         data.put("maxConcurrentMatches",t.maxConcurrentMatches);data.put("tieBreakOrder",t.tieBreakOrder);
         data.put("rounds",List.copyOf(t.rounds));data.put("bracket",List.copyOf(t.bracket));data.put("stages",List.copyOf(t.stages));
         data.put("currentRound",t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(t.rounds.size()));
-        data.put("drawPolicy",t.format==TournamentFormat.SINGLE_ELIMINATION?"REMAINING_PIECES_THEN_SEED":null);
+        data.put("drawPolicy",(t.format!=TournamentFormat.ROUND_ROBIN)?"REMAINING_PIECES_THEN_SEED":null);
         data.put("autoAdvanceRounds",t.operations.autoAdvanceRounds());data.put("releasedRound",t.operations.releasedRound());data.put("participantStatuses",t.operations.participants());
         data.put("reviews",t.operations.reviews());data.put("rulesSnapshot",t.operations.rulesSnapshot());data.put("audit",t.operations.audit());
         var names=new LinkedHashMap<String,String>();for(var participant:t.participants)names.put(participant.participantId(),username(participant.ownerUserId()));data.put("participantOwners",names);
@@ -115,14 +116,14 @@ public class TournamentService {
             row.put("status",m.status);row.put("winnerParticipantId",m.winnerParticipantId);row.put("result",m.result);row.put("failure",m.failure);
             row.put("attempt",m.attempt);row.put("decisionReason",m.decisionReason);
             if(m.status==TournamentMatch.Status.RUNNING && online!=null)try{row.put("turn",online.find(m.onlineMatchId).state().turnNumber());}catch(RuntimeException ignored){}
-            row.put("seriesId",m.seriesId);row.put("gameNumber",m.gameNumber);row.put("round",m.round);row.put("scheduledAt",m.scheduledAt);row.put("startedAt",m.startedAt);row.put("finishedAt",m.finishedAt);row.put("remainingA",m.remainingA);row.put("remainingB",m.remainingB);return row;}).toList());
+            row.put("stageNumber",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.stage(t,m.round));row.put("group",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.group(t,m));row.put("seriesId",m.seriesId);row.put("gameNumber",m.gameNumber);row.put("round",m.round);row.put("scheduledAt",m.scheduledAt);row.put("startedAt",m.startedAt);row.put("finishedAt",m.finishedAt);row.put("remainingA",m.remainingA);row.put("remainingB",m.remainingB);return row;}).toList());
         int pending=0,running=0,finished=0,failed=0;
         for(var m:t.matches) switch(m.status){case PENDING->pending++;case RUNNING->running++;case FINISHED->finished++;case FAILED->failed++;}
-        int total=t.bestOf>1?t.matches.size():t.format==TournamentFormat.SINGLE_ELIMINATION&&!t.bracket.isEmpty()?(int)t.bracket.stream().filter(node->node.matchId()!=null&&(node.resolution()==null||t.matches.stream().anyMatch(m->m.id.equals(node.matchId())))).count():t.matches.size();
+        int total=t.format==TournamentFormat.GROUP_KNOCKOUT?t.matches.size():t.bestOf>1?t.matches.size():(t.format!=TournamentFormat.ROUND_ROBIN)&&!t.bracket.isEmpty()?(int)t.bracket.stream().filter(node->node.matchId()!=null&&(node.resolution()==null||t.matches.stream().anyMatch(m->m.id.equals(node.matchId())))).count():t.matches.size();
         data.put("progress",Map.of("total",total,"pending",pending+total-t.matches.size(),"running",running,"finished",finished,"failed",failed,"completed",finished+failed));
         var ranked=ranking.rank(t); data.put("ranking",ranked);
-        String championId=t.format==TournamentFormat.SINGLE_ELIMINATION&&!t.bracket.isEmpty()?t.bracket.getLast().winnerParticipantId():null;
-        data.put("champion",t.status!=TournamentStatus.FINISHED||!t.operations.reviews().isEmpty()?null:t.format==TournamentFormat.SINGLE_ELIMINATION?ranked.stream().filter(r->r.participantId().equals(championId)&&t.operations.active(r.participantId())).findFirst().orElse(null):finished>0&&!ranked.isEmpty()?ranked.stream().filter(r->t.operations.active(r.participantId())&&(r.wins()>0||r.draws()>0)).findFirst().orElse(null):null);
+        String championId=(t.format!=TournamentFormat.ROUND_ROBIN)&&!t.bracket.isEmpty()?t.bracket.getLast().winnerParticipantId():null;
+        data.put("champion",t.status!=TournamentStatus.FINISHED||!t.operations.reviews().isEmpty()?null:(t.format!=TournamentFormat.ROUND_ROBIN)?ranked.stream().filter(r->r.participantId().equals(championId)&&t.operations.active(r.participantId())).findFirst().orElse(null):finished>0&&!ranked.isEmpty()?ranked.stream().filter(r->t.operations.active(r.participantId())&&(r.wins()>0||r.draws()>0)).findFirst().orElse(null):null);
         return data;
     } }
 }

@@ -2,6 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {bracketRounds,roundLabel,formatLabel} from "../js/tournament/bracket-renderer.js";
 import {configureRules,createTournament} from "../js/tournament/tournament-api.js";
+test("group knockout only renders actual bracket rounds after the group-stage offset",()=>{
+ const t={format:"GROUP_KNOCKOUT",participants:[],matches:[],bracket:[{id:"semi",round:8,position:0},{id:"final",round:9,position:0}]};
+ assert.deepEqual(bracketRounds(t).map(r=>r.label),["Bán kết","Chung kết"]);assert.equal(bracketRounds(t).length,2);assert.equal(formatLabel(t.format),"Vòng bảng → Loại trực tiếp");
+});
 test("bracket preserves server advancement and shows BYE separately from unresolved slots",()=>{
   const t={format:"SINGLE_ELIMINATION",participants:[{participantId:"a",displayName:"<Alpha>"}],matches:[],bracket:[
     {id:"one",round:1,position:0,slotA:"a",slotB:null,sourceA:null,sourceB:null,winnerParticipantId:"a",resolution:"BYE"},

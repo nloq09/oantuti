@@ -69,11 +69,13 @@ public class TournamentExecutionService {
             if(t.status==TournamentStatus.CANCELLED) for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING){failed(m,"CANCELLED");workers.complete(m.id);changed=true;}
             if(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED)changed|=TournamentAdministrationService.settleForfeits(t);
             changed|=TournamentSeries.advance(t);
-            if((t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED) && t.format==TournamentFormat.SINGLE_ELIMINATION) {
+            changed|=com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.qualify(t);
+            if((t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED) && com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t)) {
                 var before=List.copyOf(t.bracket);var next=com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t);t.matches.addAll(next);
                 changed|=!before.equals(t.bracket)||!next.isEmpty();
                 if(t.matches.stream().anyMatch(m->m.status==TournamentMatch.Status.FAILED)) {TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());changed=true;}
             }
+            if(t.format==TournamentFormat.GROUP_KNOCKOUT&&(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED)&&t.matches.stream().anyMatch(m->m.status==TournamentMatch.Status.FAILED)){TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());changed=true;}
             if(t.status==TournamentStatus.CANCELLED || t.status==TournamentStatus.RECOVERY_REQUIRED)workers.releaseReservations(t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).toList());
             workers.releaseReservations(t.matches.stream().filter(m->m.status==TournamentMatch.Status.FINISHED||m.status==TournamentMatch.Status.FAILED).map(m->m.id).toList());
             workers.releaseReservations(t.bracket.stream().filter(node->node.resolution()!=null).map(BracketNode::matchId).filter(Objects::nonNull).toList());
@@ -93,7 +95,7 @@ public class TournamentExecutionService {
         for(var t:all) synchronized(t) {
             if(t.status!=TournamentStatus.RUNNING)continue;
             boolean changed=false;
-            if(t.operations.reviews().isEmpty() && t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING) && (t.format!=TournamentFormat.SINGLE_ELIMINATION||com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.complete(t))) {
+            if(t.operations.reviews().isEmpty() && t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING) && com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.complete(t)) {
                 var target=t.matches.stream().anyMatch(m->m.status==TournamentMatch.Status.FAILED)?TournamentStatus.RECOVERY_REQUIRED:TournamentStatus.FINISHED;
                 TournamentStateMachine.transition(t,target,Instant.now());TournamentAudit.append(t,"TOURNAMENT_"+target,null,t.id,null,null,target.name());changed=true;
             }
@@ -119,8 +121,8 @@ public class TournamentExecutionService {
                     workers.complete(m.id);
                     TournamentAudit.append(t,m.status==TournamentMatch.Status.FINISHED?"MATCH_FINISHED":"MATCH_ERROR",null,m.id,m.failure,null,TournamentAudit.result(m));
                 }
-                if(t.format==TournamentFormat.SINGLE_ELIMINATION)t.matches.addAll(com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t));
-                if(t.operations.reviews().isEmpty()&&(t.format!=TournamentFormat.SINGLE_ELIMINATION||com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.complete(t)) && !t.matches.isEmpty() && t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED) && (t.bestOf==1||TournamentSeries.roots(t).stream().allMatch(m->TournamentSeries.decision(t,m).isPresent()))) {TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());TournamentAudit.append(t,"TOURNAMENT_FINISHED",null,t.id,null,null,"FINISHED");}
+                if(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t))t.matches.addAll(com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t));
+                if(t.operations.reviews().isEmpty()&&com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.complete(t) && !t.matches.isEmpty() && t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED) && (t.bestOf==1||TournamentSeries.roots(t).stream().allMatch(m->TournamentSeries.decision(t,m).isPresent()))) {TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());TournamentAudit.append(t,"TOURNAMENT_FINISHED",null,t.id,null,null,"FINISHED");}
                 tournaments.changed(t);
             }
         }

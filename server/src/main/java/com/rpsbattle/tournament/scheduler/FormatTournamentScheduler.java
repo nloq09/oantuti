@@ -7,6 +7,7 @@ import java.util.*;
 public class FormatTournamentScheduler implements TournamentScheduler {
     private final Map<TournamentFormat,TournamentScheduler> strategies=Map.of(
         TournamentFormat.ROUND_ROBIN,new RoundRobinScheduler(),
-        TournamentFormat.SINGLE_ELIMINATION,new SingleEliminationScheduler());
+        TournamentFormat.SINGLE_ELIMINATION,new SingleEliminationScheduler(),
+        TournamentFormat.GROUP_KNOCKOUT,new GroupKnockoutScheduler());
     public List<TournamentMatch> schedule(Tournament tournament) {return strategies.get(tournament.format).schedule(tournament);}
 }

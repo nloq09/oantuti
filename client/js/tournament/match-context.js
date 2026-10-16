@@ -1,7 +1,7 @@
 import{tournamentRequest}from "./tournament-api.js";
 import{roundLabel,formatLabel}from "./bracket-renderer.js";
 import{node,link}from "./player-dom.js";
-export function contextLabel(c){return `${formatLabel(c.format)}${c.stage?.number?" · Giai đoạn "+c.stage.number:""} · ${roundLabel(c.round,c.totalRounds,c.format)} · BO${c.bestOf} · Ván ${c.gameNumber}/${c.bestOf}`;}
+export function contextLabel(c){return `${formatLabel(c.format)}${c.stage?.number?" · Giai đoạn "+c.stage.number:""}${c.group?" · Bảng "+c.group:""} · ${roundLabel(c.round,c.totalRounds,c.stage?.format||c.format)} · BO${c.bestOf} · Ván ${c.gameNumber}/${c.bestOf}`;}
 export async function mountMatchContext(tournamentId,onlineId){
  const panel=node("section",undefined,"panel tournament-match-context");panel.setAttribute("aria-label","Ngữ cảnh trận giải đấu");document.querySelector("main")?.prepend(panel);
  let stopped=false,timer;

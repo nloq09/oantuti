@@ -18,7 +18,7 @@ public class TournamentMatchContextService {
             var result=new LinkedHashMap<String,Object>();
             result.put("tournamentId",t.id);result.put("tournamentName",t.name);result.put("tournamentStatus",t.status);
             result.put("revision",t.revision);result.put("matchId",m.id);result.put("onlineMatchId",m.onlineMatchId);
-            result.put("stage",t.stages.getFirst());result.put("round",m.round);result.put("totalRounds",t.rounds.size());
+            result.put("stage",t.stages.get(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.stage(t,m.round)-1));result.put("group",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.group(t,m));result.put("round",m.round);result.put("totalRounds",t.rounds.size());
             result.put("format",t.format);result.put("bestOf",t.bestOf);result.put("gameNumber",m.gameNumber);var series=new LinkedHashMap<>(TournamentSeries.view(t,t.matches.stream().filter(game->game.id.equals(m.seriesId)).findFirst().orElseThrow()));series.remove("participantA");series.remove("participantB");result.put("series",series);
             result.put("status",m.status);result.put("winnerParticipantId",m.winnerParticipantId);
             result.put("participantA",Map.of("id",m.participantA.participantId(),"name",m.participantA.displayName()));
