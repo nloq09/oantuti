@@ -1,4 +1,9 @@
 const errors = {
+  INVALID_BOT_SUBMISSION_POLICY:"Chính sách nộp bot chưa hợp lệ. Kiểm tra ngôn ngữ, hạn nộp, số phiên bản và giới hạn sandbox.",
+  BOT_SUBMISSION_POLICY_MISMATCH:"Bot đã chọn không phù hợp cách nộp hoặc ngôn ngữ của giải. Hãy bỏ chọn bot đó.",
+  PLATFORM_CODE_REQUIRED:"Giải bắt buộc code bot trên hệ thống; không nhận bot đã upload từ trước.",
+  BOT_LANGUAGE_NOT_ALLOWED:"Ngôn ngữ bot không được phép trong giải này.",
+  BOT_POLICY_LOCKED:"Chính sách nộp bot đã khóa vì giải đã mở hoặc có người đăng ký.",
   INVALID_STAGE_PLAN:"Cấu hình vòng bảng chưa phù hợp số người tham gia: mỗi bảng cần ít nhất 2 người, đủ top N và ít nhất 2 suất vào vòng sau.",
   WITHDRAW_CONFIRMATION_REQUIRED:"Bạn cần xác nhận hậu quả trước khi rút khỏi giải.",
   INVALID_PAGING:"Bộ lọc hoặc trang dữ liệu không hợp lệ.",

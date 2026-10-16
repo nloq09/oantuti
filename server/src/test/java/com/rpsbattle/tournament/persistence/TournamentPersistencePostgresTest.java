@@ -27,6 +27,13 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(properties={"rps.bots.enabled=false","rps.tournament.flush-millis=60000"})
 @Testcontainers(disabledWithoutDocker=true)
 class TournamentPersistencePostgresTest {
+    @Test void botSubmissionPolicyIsCommittedAndRestoredFromItsOwnTable()throws Exception {
+        var owner=user();var t=new Tournament(UUID.randomUUID().toString(),"Bot policy",TournamentFormat.ROUND_ROBIN,Instant.now());t.ownerUserId=owner.id().value();
+        t.botPolicy=new TournamentBotPolicyConverter().convertToEntityAttribute("{\"submissionMode\":\"CODE_IN_PLATFORM_ONLY\",\"allowedLanguages\":[\"CPP\"],\"maxSubmissionVersions\":3,\"submissionDeadline\":\"2027-01-01T00:00:00Z\"}");
+        var coordinator=new TournamentPersistenceCoordinator(repository,new TournamentRegistry(),tournaments,historyCoordinator,artifacts);repository.save(coordinator.snapshot(t));var loaded=restored().findById(t.id).orElseThrow();assertThat(loaded.botPolicy).isEqualTo(t.botPolicy);
+        try(var connection=database.getConnection();var query=connection.prepareStatement("select submission_mode,allowed_languages from tournament_bot_policies where tournament_id=?")){query.setObject(1,UUID.fromString(t.id));try(var row=query.executeQuery()){assertThat(row.next()).isTrue();assertThat(row.getString(1)).isEqualTo("CODE_IN_PLATFORM_ONLY");assertThat(row.getString(2)).isEqualTo("CPP");}}
+        assertThat(loaded.registrations).isEmpty();assertThat(loaded.matches).isEmpty();
+    }
     @Test void swissCursorAndTeamCaptainsLineupsPersistWithoutRecreatingPairings(){
         var owner=user();var coordinator=new TournamentPersistenceCoordinator(repository,new TournamentRegistry(),tournaments,historyCoordinator,artifacts);
         for(var format:List.of(TournamentFormat.SWISS,TournamentFormat.TEAM_ROUND_ROBIN)){var t=new Tournament(UUID.randomUUID().toString(),"New format storage",format,Instant.now());t.ownerUserId=owner.id().value();t.status=TournamentStatus.RUNNING;for(int i=0;i<(format==TournamentFormat.SWISS?5:6);i++){var p=participant(owner,"Stored participant "+i);t.participants.add(new TournamentParticipant(p.id().toString(),p.botId().toString(),"unused",p.displayName(),p.seed(),p.ownerUserId()));}

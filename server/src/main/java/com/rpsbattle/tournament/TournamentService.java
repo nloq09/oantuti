@@ -100,7 +100,7 @@ public class TournamentService {
         data.put("createdAt",t.createdAt);data.put("startedAt",t.startedAt);data.put("finishedAt",t.finishedAt);data.put("revision",t.revision);
         data.put("statusChangedAt",t.statusChangedAt);
         data.put("seedingStrategy",t.seedingStrategy);data.put("seedingSeed",Long.toString(t.seedingSeed));
-        data.put("timing",t.timing);data.put("participantPolicy",t.participantPolicy);data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
+        data.put("timing",t.timing);data.put("participantPolicy",t.participantPolicy);data.put("botPolicy",t.botPolicy);data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
         data.put("groups",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.view(t));data.put("groupStage",t.groupStage);data.put("groupPlans",t.groupPlans);data.put("groupHistory",List.copyOf(t.groupHistory));
         data.put("swiss",t.swiss);data.put("teamCompetition",t.format==TournamentFormat.TEAM_ROUND_ROBIN?com.rpsbattle.tournament.scheduler.TeamScheduler.view(t):null);
         data.put("bestOf",t.bestOf);data.put("series",TournamentSeries.roots(t).stream().filter(m->!compact||selected.stream().anyMatch(game->game.seriesId.equals(m.id))).map(m->TournamentSeries.view(t,m)).toList());

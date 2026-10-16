@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {effectiveBotPolicy,allowsPreuploaded,allowedPolicyBot} from '../js/tournament/bot-policy.js';
+test('legacy tournaments keep all three language families and Java JAR compatibility',()=>{assert.equal(effectiveBotPolicy({}).submissionMode,'PRE_UPLOADED_ONLY');for(const language of ['PYTHON','CPP','JAVA','JAR'])assert.equal(allowedPolicyBot({},{language}),true);});
+test('code-only hides existing bots and BOTH still filters languages including JAR',()=>{const code={botPolicy:{submissionMode:'CODE_IN_PLATFORM_ONLY',allowedLanguages:['CPP']}};assert.equal(allowsPreuploaded(code),false);assert.equal(allowedPolicyBot(code,{language:'CPP'}),false);const both={botPolicy:{submissionMode:'BOTH',allowedLanguages:['PYTHON','CPP']}};assert.equal(allowedPolicyBot(both,{language:'PYTHON'}),true);for(const language of ['JAVA','JAR','RUST'])assert.equal(allowedPolicyBot(both,{language}),false);});

@@ -25,6 +25,7 @@ public final class Tournament {
     public long revision;
     public boolean checkInRequired;
     public ParticipantPolicy participantPolicy=ParticipantPolicy.BOT_ONLY;
+    public TournamentBotPolicy botPolicy=TournamentBotPolicy.defaults();
     public TournamentTiming timing=TournamentTiming.manual();
     public final Map<String,MatchReadyWindow> readyWindows=new LinkedHashMap<>();
     public final Map<String,Long> notificationReads=new LinkedHashMap<>();

@@ -1,3 +1,4 @@
+import {botPolicyEditor} from "./bot-policy.js";
 import {stagePlanEditor,validateStagePlan} from "./stage-plan.js";
 import{sessionRequest}from "../api/auth-api.js";
 import {mountHub} from "./tournament-hub.js";
@@ -32,6 +33,7 @@ for (const bot of bots) {
 }
 document.querySelector("#bot-empty").hidden = bots.length > 0;
 const stageBox=document.createElement("fieldset");const legend=document.createElement("legend");legend.textContent="Các giai đoạn vòng bảng";stageBox.append(legend);document.querySelector("#format-help").after(stageBox);const readStages=stagePlanEditor(stageBox);const syncStages=()=>stageBox.hidden=document.querySelector("#tournament-format").value!=="GROUP_KNOCKOUT";document.querySelector("#tournament-format").addEventListener("change",syncStages);syncStages();
+const policyEditor=botPolicyEditor(document.querySelector("#create-tournament"));document.querySelector("#create").before(policyEditor.box);policyEditor.box.disabled=!account;const syncBotPolicy=()=>policyEditor.box.hidden=document.querySelector("#participant-policy").value==="HUMAN_ONLY";document.querySelector("#participant-policy").addEventListener("change",syncBotPolicy);syncBotPolicy();
 let busy=false;
 document.querySelector("#create-tournament").onsubmit = async (event) => {
   event.preventDefault();
@@ -48,10 +50,11 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
   document.querySelector("#create").disabled = true;
   let t;
   try {
+    const botPolicy=document.querySelector("#participant-policy").value==="HUMAN_ONLY"?null:policyEditor.read();if(botPolicy&&chosen.length&&(botPolicy.submissionMode==="CODE_IN_PLATFORM_ONLY"||chosen.some(b=>!botPolicy.allowedLanguages.includes(b.language==="JAR"?"JAVA":b.language))))throw Error("BOT_SUBMISSION_POLICY_MISMATCH");
     const plans=document.querySelector("#tournament-format").value==="GROUP_KNOCKOUT"?validateStagePlan(readStages(),maxParticipants):null;
     t = await createTournament(
       document.querySelector("#tournament-name").value.trim(),
-      {bestOf:Number(document.querySelector("#tournament-best-of").value),participantPolicy:document.querySelector("#participant-policy").value,maxParticipants, format:document.querySelector("#tournament-format").value, maxConcurrentMatches:Number(document.querySelector("#match-concurrency").value), checkInRequired: document.querySelector("#check-in-required").checked},
+      {botPolicy,bestOf:Number(document.querySelector("#tournament-best-of").value),participantPolicy:document.querySelector("#participant-policy").value,maxParticipants, format:document.querySelector("#tournament-format").value, maxConcurrentMatches:Number(document.querySelector("#match-concurrency").value), checkInRequired: document.querySelector("#check-in-required").checked},
     );
     if(plans)t=await sessionRequest("/api/tournaments/"+encodeURIComponent(t.id)+"/stage-plan",{revision:t.revision,stages:plans});
     const stamp=id=>document.querySelector("#"+id).value?new Date(document.querySelector("#"+id).value).toISOString():null;const timing={revision:t.revision,registrationDeadline:stamp("registration-deadline"),checkInDeadline:stamp("check-in-deadline"),startTime:stamp("scheduled-start")};if(timing.registrationDeadline||timing.checkInDeadline||timing.startTime)await sessionRequest("/api/tournaments/"+encodeURIComponent(t.id)+"/timing",timing);

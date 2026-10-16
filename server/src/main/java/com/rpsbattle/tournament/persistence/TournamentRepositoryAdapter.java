@@ -20,6 +20,10 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
         if(stored!=null && !stored.ownerUserId.equals(metadata.ownerUserId())) throw new IllegalStateException("Tournament owner cannot be changed");
         if(stored==null) {stored=new TournamentEntity();stored.copy(metadata);entities.persist(stored);}else stored.copy(metadata);
         entities.flush();
+        var policy=metadata.details()==null||metadata.details().botPolicy()==null?com.rpsbattle.tournament.domain.TournamentBotPolicy.defaults():metadata.details().botPolicy();
+        var storedPolicy=entities.find(TournamentBotPolicyEntity.class,metadata.id());
+        if(storedPolicy==null)entities.persist(new TournamentBotPolicyEntity(metadata.id(),policy));else storedPolicy.setPolicy(policy);
+        entities.flush();
         var roster=participants.findByTournamentIdOrderById(metadata.id()).stream().collect(Collectors.toMap(p->p.id,p->p));
         for(var existing:roster.values())existing.seedNumber=null;entities.flush();
         for(var p:metadata.participants()) {
@@ -57,12 +61,14 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
     @Transactional(readOnly=true) public List<TournamentMetadata> all() {
         // PRIVATE is intentionally unsupported in this version; never publish existing private rows.
         return tournaments.findByVisibilityOrderByCreatedAtAsc("PUBLIC").stream().map(t->{
+            var policy=entities.find(TournamentBotPolicyEntity.class,t.id);var details=t.details;
+            if(details!=null&&policy!=null)details=details.withBotPolicy(policy.domain());
             var roster=participants.findByTournamentIdOrderById(t.id).stream().map(TournamentParticipantEntity::domain).toList();
             var schedule=matches.findByTournamentIdOrderById(t.id).stream().map(m->{
                 String room=m.historyId==null?null:history.find(m.historyId).map(h->h.roomId()).orElse(null);
                 return new TournamentMetadata.Entry(m.id,m.a,m.b,m.historyId,room,m.status,m.winner,m.result,m.failure,m.remainingA==null?0:m.remainingA,m.remainingB==null?0:m.remainingB,m.startedAt,m.finishedAt,null);
             }).toList();
-            return new TournamentMetadata(t.id,t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,schedule,t.statusChangedAt,t.checkInRequired,t.maxParticipants,entities.createQuery("select r from TournamentRegistrationEntity r where r.tournamentId=:id order by r.registeredAt,r.id",TournamentRegistrationEntity.class).setParameter("id",t.id).getResultList().stream().map(TournamentRegistrationEntity::domain).toList(),t.seedingStrategy,t.seedingSeed,t.details);
+            return new TournamentMetadata(t.id,t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,schedule,t.statusChangedAt,t.checkInRequired,t.maxParticipants,entities.createQuery("select r from TournamentRegistrationEntity r where r.tournamentId=:id order by r.registeredAt,r.id",TournamentRegistrationEntity.class).setParameter("id",t.id).getResultList().stream().map(TournamentRegistrationEntity::domain).toList(),t.seedingStrategy,t.seedingSeed,details);
         }).toList();
     }
 }

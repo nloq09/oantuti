@@ -67,6 +67,10 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 - Cài đặt âm thanh, nhạc nền và hiệu ứng lưu trên trình duyệt.
 - Hướng dẫn bot và giao thức có cả bản Markdown và trang web.
 
+### Lập trình bot trong giải đấu — Chặng 9
+
+Đã hoàn thành **nhóm 1**: chính sách nộp bot (bot có sẵn / code trên hệ thống / cả hai), giới hạn ngôn ngữ, cấu hình thời hạn và giao diện tạo giải; lưu PostgreSQL qua V21. Workspace/build/test/submit dành cho bot code trên hệ thống chưa triển khai. Xem [phạm vi, API và kiểm thử](docs/CHANG-9-NHOM-1-BOT-POLICY.md).
+
 ### Chế độ giải đấu cho người chơi — Chặng 8
 
 - Hub khám phá giải theo 5 nhóm, tìm kiếm và phân trang; các tab chi tiết theo thể thức và trạng thái riêng của từng đăng ký.
