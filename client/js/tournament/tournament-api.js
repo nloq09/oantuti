@@ -73,6 +73,8 @@ export class TournamentStream {
           this.attempt = 0;
           this.status("connected");
           this.update(message.payload.tournament);
+          const revision=message.payload.tournament.revision;
+          if(this.notificationRevision!==revision){this.notificationRevision=revision;if(typeof dispatchEvent==="function"&&typeof CustomEvent==="function")dispatchEvent(new CustomEvent("rps-tournament-update",{detail:{id:this.id,revision}}));}
         } else if(message.payload?.event) {
           if(message.payload.event.sequence>this.lastEvent){this.lastEvent=message.payload.event.sequence;this.notification(message.payload.event);}
         } else if (message.type === "ACTION_REJECTED") {

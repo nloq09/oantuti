@@ -34,3 +34,20 @@ Báo cáo dùng đúng MATCH_REVIEW_REQUESTED/audit/reviews hiện tại, xuất
 File chính: ParticipantDisputeService/Controller, disputes.js, player-detail/player-state/toast và tests. Toàn bộ 508 backend và 52 client đạt, 0 fail/error/skipped; build thành công. Native API kiểm tra session/CSRF, lý do không hợp lệ, duplicate, audit, đóng review và giữ nguyên winner. UI đã gửi báo cáo thật trên fixture, thấy chờ xử lý, sau đó đóng bằng chủ giải và xác nhận champion/replay giữ nguyên.
 
 Phần Team/School UX của nhóm 9 chưa thực hiện được vì backend chưa có team/roster/lineup/fixture. UI ghi rõ chỉ hỗ trợ giải cá nhân, không dựng captain dashboard hoặc fixture giả.
+
+## Nhóm 10 — responsive và hồi quy
+
+Giao diện ưu tiên My Status/Ready, nút tối thiểu 44px, focus rõ, tabs và bracket cuộn ngang trong khung; kiểm tra viewport 390×844 không làm tràn toàn trang. Kích thước bracket 80–150% và tìm tôi hoạt động trên điện thoại. Context trận chiếm một hàng riêng trên bàn cờ, bỏ link quay lại lặp. Giải kết thúc không còn hai panel trống chờ trận/live. Tab đang xem giữ qua reload bằng URL hash; bộ lọc lịch giữ khi snapshot cập nhật. Chỉ force refresh khi kết nối thực sự phục hồi, tránh dựng lại UI với mọi snapshot WebSocket.
+
+Thông báo được tải lại khi WebSocket báo revision mới, có polling dự phòng và online/visibility recovery. Mark-read chỉ tiến đến event thuộc feed cá nhân, không sinh audit lặp vì chính event đánh dấu đã đọc. Kết quả thể hiện đang review khi trọng tài chưa chốt; podium dùng champion/bracket/ranking từ server, không dựng hạng ba knockout hoặc champion của giải double-forfeit. Snapshot JSON cũ không có notificationReads vẫn đọc được và snapshot mới không dùng chung map mutable.
+
+File chính: tournament-mode.css, game.html/pages/game, progression/competition-view/player-detail, tournament-api/notifications, TournamentNotificationService và tests tương thích dữ liệu cũ. Hồi quy: 509 backend, 55 client, 71 module JS syntax đạt; không fail/error/skipped. Không thêm SQL migration (vẫn V17), không sửa GameEngine/RuleSet/thuật toán scheduler.
+
+Native PostgreSQL/WebSocket đã chạy lại cả Round Robin và Single Elimination với hai tài khoản: đăng ký → duyệt → check-in → ready → hai ghế riêng ổn định → xếp quân → thi đấu/đầu hàng → giải kết thúc → champion và replay thật. Bracket knockout khớp winner cuối, không tạo thêm trận. Đã kiểm tra notification CSRF/cursor/mark-read và dispute tới workflow trọng tài; báo cáo thử đã đóng, kết quả/replay giữ nguyên.
+
+## Phần chưa nghiệm thu
+
+- BO3/BO5, Group Stage, Swiss, multi-stage qualification, Team/School/captain/lineup/fixture chưa có backend. Không coi toàn bộ Chặng 8 đã hoàn thành theo Definition of Done gốc.
+- Discovery có phân trang server. Lịch hiện phân trang/lọc ở client từ snapshot giải hiện tại; endpoint detail/stream vẫn dùng snapshot đầy đủ của core hiện có. Replay chỉ tải khi mở link. Muốn mở rộng giải lớn cần projection/pagination server cho detail thay vì chỉ đổi giao diện.
+- Trạng thái session HTTP hiện hết hiệu lực khi server restart; người chơi đăng nhập lại, sau đó vào lobby lấy trạng thái giải. Trận đang chạy khi restart vẫn chuyển RECOVERY_REQUIRED như policy hiện có, không tự phát lại.
+- Không có E2E BO3 hoặc Team vì các luồng tương ứng chưa tồn tại. Các test RR/KO BO1, Docker, PostgreSQL, auth/CSRF, WebSocket, replay và recovery đã chạy thực tế.
