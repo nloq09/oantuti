@@ -40,6 +40,7 @@ public class WorkspaceSandbox {
  public Build build(String language,String source){
   BotLanguage lang=BotLanguage.valueOf(language);String name="rps-workspace-build-"+UUID.randomUUID();Process process=null;Path input=null;
   var io=Executors.newVirtualThreadPerTaskExecutor();try{
+   if(lang==BotLanguage.JAR){byte[] artifact=Base64.getDecoder().decode(source);if(artifact.length==0||artifact.length>5*1024*1024)throw new Failure("ARTIFACT_SIZE_LIMIT");UUID id=UUID.randomUUID();write(id,lang,artifact);return new Build(true,id,hash(artifact),"Imported immutable JAR; protocol and validation still required.");}
    input=write(UUID.randomUUID(),lang,source.getBytes(StandardCharsets.UTF_8));
    String script=switch(lang){
     case PYTHON->"python -I -X pycache_prefix=/tmp/cache -m py_compile /bot/main.py >&2 && base64 /bot/main.py";
@@ -56,9 +57,10 @@ public class WorkspaceSandbox {
   }catch(Exception error){if(error instanceof InterruptedException)Thread.currentThread().interrupt();var cause=error instanceof ExecutionException?error.getCause():error;return new Build(false,null,null,cause instanceof Failure f?f.code:"SANDBOX_UNAVAILABLE");}
   finally{if(process!=null&&process.isAlive())process.destroyForcibly();io.shutdownNow();remove(name);if(input!=null){try{safe(input);Files.deleteIfExists(input);Files.deleteIfExists(input.getParent());}catch(IOException ignored){}}}
  }
+ public void verify(WorkspaceStore.Work work){try{var path=file(work.artifactId(),BotLanguage.valueOf(work.language()));safe(path);byte[] bytes;try(var input=Files.newInputStream(path)){bytes=input.readNBytes(ARTIFACT_LIMIT+1);}if(bytes.length>ARTIFACT_LIMIT||!hash(bytes).equals(work.artifactHash()))throw new Failure("ARTIFACT_CHANGED");}catch(IOException error){throw new Failure("ARTIFACT_CHANGED");}}
  public Session open(WorkspaceStore.Work work){try{
-  var language=BotLanguage.valueOf(work.language());Path path=file(work.artifactId(),language);safe(path);byte[] bytes;try(var input=Files.newInputStream(path)){bytes=input.readNBytes(ARTIFACT_LIMIT+1);}if(bytes.length>ARTIFACT_LIMIT||!hash(bytes).equals(work.artifactHash()))throw new Failure("ARTIFACT_CHANGED");
-  String script=switch(language){case PYTHON->"exec python -I -u /bot/main.py";case CPP->"cp /bot/main.cpp /tmp/bot && chmod 500 /tmp/bot && exec /tmp/bot";case JAVA->"exec java -Xmx128m -XX:ActiveProcessorCount=1 -jar /bot/Main.java";default->throw new Failure("UNSUPPORTED_BOT_LANGUAGE");};
+  verify(work);var language=BotLanguage.valueOf(work.language());Path path=file(work.artifactId(),language);
+  String script=switch(language){case PYTHON->"exec python -I -u /bot/main.py";case CPP->"cp /bot/main.cpp /tmp/bot && chmod 500 /tmp/bot && exec /tmp/bot";case JAVA->"exec java -Xmx128m -XX:ActiveProcessorCount=1 -jar /bot/Main.java";case JAR->"exec java -Xmx128m -XX:ActiveProcessorCount=1 -jar /bot/bot.jar";};
   String name="rps-workspace-test-"+UUID.randomUUID();return new Session(name,command(path,language,name,"printf 'RPS_BOOT_READY\\n'; "+script));
  }catch(Failure failure){throw failure;}catch(Exception error){throw new Failure("SANDBOX_UNAVAILABLE");}}
  static void remove(String name){Process cleanup=null;try{cleanup=new ProcessBuilder("docker","rm","--force",name).redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start();cleanup.waitFor(3,TimeUnit.SECONDS);}catch(Exception error){if(error instanceof InterruptedException)Thread.currentThread().interrupt();}finally{if(cleanup!=null&&cleanup.isAlive())cleanup.destroyForcibly();}}

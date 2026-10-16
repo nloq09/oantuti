@@ -7,6 +7,10 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 @Component
 public class TournamentMatchExecutor {
+    private com.rpsbattle.tournament.coding.SubmissionStore submissions;
+    private com.rpsbattle.tournament.coding.WorkspaceSandbox sandbox;
+    @org.springframework.beans.factory.annotation.Autowired public void submissions(com.rpsbattle.tournament.coding.SubmissionStore store,com.rpsbattle.tournament.coding.WorkspaceSandbox sandbox){this.submissions=store;this.sandbox=sandbox;}
+    private BotAgent agent(TournamentMatch entry,TournamentParticipant p){if(submissions!=null){var work=submissions.execution(entry.tournamentId,p.participantId(),p.botId());if(work!=null)return new BotAgent(sandbox.open(work),java.time.Duration.ofSeconds(2));}return p.artifactHash()==null?bots.agent(p.botId(),p.botToken()):bots.lockedAgent(p.botId(),p.botToken(),p.artifactHash());}
     private final OnlineMatchService online;
     private final BotUploadService bots;
     private final long botDelayMillis;
@@ -17,8 +21,8 @@ public class TournamentMatchExecutor {
     public OnlineMatch start(TournamentMatch entry) {
         BotAgent a=null,b=null; OnlineMatch room=null;
         try {
-            if(entry.participantA.botId()!=null)a=entry.participantA.artifactHash()==null?bots.agent(entry.participantA.botId(),entry.participantA.botToken()):bots.lockedAgent(entry.participantA.botId(),entry.participantA.botToken(),entry.participantA.artifactHash());
-            if(entry.participantB.botId()!=null)b=entry.participantB.artifactHash()==null?bots.agent(entry.participantB.botId(),entry.participantB.botToken()):bots.lockedAgent(entry.participantB.botId(),entry.participantB.botToken(),entry.participantB.artifactHash());
+            if(entry.participantA.botId()!=null)a=agent(entry,entry.participantA);
+            if(entry.participantB.botId()!=null)b=agent(entry,entry.participantB);
             room=online.create(MatchMode.HUMAN_VS_HUMAN,entry.participantA.seed()^entry.participantB.seed());
             room.setBotDelayMillis(botDelayMillis);
             entry.historyMatchId=room.archiveId();

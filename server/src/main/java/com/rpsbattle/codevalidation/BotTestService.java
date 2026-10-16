@@ -26,6 +26,17 @@ public class BotTestService {
  public List<Map<String,String>> publicCases(){var protocol=new BotProtocol();var rules=new ClassicRuleSet(P1,P2);var generator=new LegalActionGenerator(rules);var result=new ArrayList<Map<String,String>>();int index=0;for(var state:states())result.add(Map.of("id","legal-"+(++index),"input",protocol.encodeTurn(new PlayerView(state,state.currentPlayerId()),generator.getLegalActions(state,state.currentPlayerId())),"expectedBehavior","Return one ACTION JSON line with matching sequence and a move accepted by the current GameEngine."));return result;}
  private Map<String,Object> resources(){return Map.of("cpuLimit",0.5,"memoryLimitMiB",384,"pidsLimit",64,"tempBytes",67108864,"stdoutLineBytes",65536,"stderrBytes",32768,"turnTimeoutMs",2000,"testTimeoutMs",60000,"network","none","rootFilesystem","read-only");}
  private static String error(Throwable error){if(error instanceof WorkspaceSandbox.Failure f)return f.code;if(error instanceof InvalidActionException||error instanceof IllegalArgumentException)return "INVALID_ACTION";if(error instanceof BotProtocolException)return "PROTOCOL_ERROR";return "TEST_ERROR";}
+ public record HiddenCase(String id,String status){}
+ public record HiddenResult(boolean passed,List<HiddenCase> cases){}
+ /** No hidden state, request, exception text, timing or stderr crosses this return boundary. */
+ public HiddenResult hidden(WorkspaceStore.Work work){var results=new ArrayList<HiddenCase>();boolean passed=true;long deadline=System.nanoTime()+Duration.ofSeconds(55).toNanos();try(var session=sandbox.open(work)){
+  var f=fixture();var state=f.state;var protocol=new BotProtocol();var generator=new LegalActionGenerator(f.rules);var engine=new GameEngine(f.rules);var random=new RandomBotAgent(new java.security.SecureRandom().nextLong());
+  for(int i=0;i<12;i++){
+   try{for(int step=0;step<3&&!state.isFinished();step++){var player=state.currentPlayerId();state=engine.applyAction(state,player,random.chooseAction(new PlayerView(state,player),generator.getLegalActions(state,player))).newState();}if(state.isFinished())state=f.state;
+    if(System.nanoTime()>deadline)throw new IllegalStateException();var player=state.currentPlayerId();String request=protocol.encodeTurn(new PlayerView(state,player),generator.getLegalActions(state,player));var action=protocol.decodeResponse(session.exchange(request,Duration.ofSeconds(2)),state.sequence(),player);engine.applyAction(state,player,action);results.add(new HiddenCase("Hidden Test "+(i+1),"PASS"));
+   }catch(RuntimeException failure){passed=false;results.add(new HiddenCase("Hidden Test "+(i+1),"FAIL"));break;}
+  }
+ }catch(RuntimeException failure){passed=false;results.add(new HiddenCase("Hidden Test 1","FAIL"));}return new HiddenResult(passed,List.copyOf(results));}
  public Result test(WorkspaceStore.Work work){long started=System.nanoTime();var cases=new ArrayList<Case>();String debug="";boolean pass=true;int timeouts=0,invalid=0;
   try(var session=sandbox.open(work)){
    var protocol=new BotProtocol();var generator=new LegalActionGenerator(new ClassicRuleSet(P1,P2));var engine=new GameEngine(new ClassicRuleSet(P1,P2));int number=0;

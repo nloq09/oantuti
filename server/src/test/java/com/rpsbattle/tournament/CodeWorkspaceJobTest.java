@@ -21,13 +21,13 @@ class CodeWorkspaceJobTest extends StageThreeWebFixture {
   var queued=request(path+"/build","POST",Map.of("language","PYTHON","revision",0,"sourceCode",source),202);
   try{request(path,"PUT",Map.of("language","PYTHON","revision",queued.path("revision").asLong(),"sourceCode","print('changed')"),409);request(path+"/test","POST",Map.of("language","PYTHON","revision",queued.path("revision").asLong()),409);}finally{release.countDown();}
   var built=done(path);assertThat(built.path("status").asText()).isEqualTo("BUILT");assertThat(built.path("version").path("sourceCode").asText()).isEqualTo(source);
-  when(tests.test(any())).thenReturn(pass("PUBLIC"));when(tests.sample(any())).thenReturn(pass("SAMPLE_MATCH"));
+  when(tests.test(any())).thenReturn(pass("PUBLIC"));when(tests.sample(any())).thenReturn(pass("SAMPLE_MATCH"));when(tests.hidden(any())).thenReturn(new BotTestService.HiddenResult(false,List.of(new BotTestService.HiddenCase("Hidden Test 1","FAIL"))));
   request(path+"/test","POST",Map.of("language","PYTHON","revision",built.path("revision").asLong()),202);var tested=done(path);assertThat(tested.path("status").asText()).isEqualTo("BUILT");
   request(path+"/test-match","POST",Map.of("language","PYTHON","revision",tested.path("revision").asLong()),202);var ready=done(path);assertThat(ready.path("status").asText()).isEqualTo("READY");
   var changed=request(path,"PUT",Map.of("language","PYTHON","revision",ready.path("revision").asLong(),"sourceCode","print('new draft')"),200);assertThat(changed.path("status").asText()).isEqualTo("DRAFT");assertThat(changed.path("version").isNull()).isTrue();request(path+"/test","POST",Map.of("language","PYTHON","revision",changed.path("revision").asLong()),400);verify(sandbox).build("PYTHON",source);
  }
  @Test void hiddenRequirementsNeverBecomeReadyFromOnlyPublicTestsAndVersionLimitsApply()throws Exception{
-  String path=workspace(Map.of("submissionMode","BOTH","hiddenTestsEnabled",true,"maxSubmissionVersions",1));when(sandbox.build(any(),any())).thenReturn(new WorkspaceSandbox.Build(true,UUID.randomUUID(),"b".repeat(64),"Built"));when(tests.test(any())).thenReturn(pass("PUBLIC"));when(tests.sample(any())).thenReturn(pass("SAMPLE_MATCH"));
+  String path=workspace(Map.of("submissionMode","BOTH","hiddenTestsEnabled",true,"maxSubmissionVersions",1));when(sandbox.build(any(),any())).thenReturn(new WorkspaceSandbox.Build(true,UUID.randomUUID(),"b".repeat(64),"Built"));when(tests.test(any())).thenReturn(pass("PUBLIC"));when(tests.sample(any())).thenReturn(pass("SAMPLE_MATCH"));when(tests.hidden(any())).thenReturn(new BotTestService.HiddenResult(false,List.of(new BotTestService.HiddenCase("Hidden Test 1","FAIL"))));
   request(path+"/build","POST",Map.of("language","PYTHON","revision",0,"sourceCode","print('one')"),202);var w=done(path);
   for(String type:List.of("test","test-match")){request(path+"/"+type,"POST",Map.of("language","PYTHON","revision",w.path("revision").asLong()),202);w=done(path);}
   assertThat(w.path("status").asText()).isEqualTo("BUILT");request(path+"/build","POST",Map.of("language","PYTHON","revision",w.path("revision").asLong(),"sourceCode","print('two')"),400);

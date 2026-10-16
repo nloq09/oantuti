@@ -83,6 +83,12 @@ public class BotUploadService {
     }
 
     public Path source(Upload upload) {return root.resolve(upload.id()).resolve(upload.language().filename);}
+    /** Internal identity snapshot for a tested tournament version; never accepts a client-selected path. */
+    public synchronized Upload submissionSnapshot(String name,BotLanguage language,byte[] data) {
+        if(data.length==0||data.length>(language==BotLanguage.JAR?5*1024*1024:512*1024))throw new DemoRequestException("BOT_FILE_SIZE");
+        var upload=new Upload(UUID.randomUUID().toString(),name,language,UUID.randomUUID().toString());
+        try{Files.createDirectories(root);var directory=root.resolve(upload.id());Files.createDirectory(directory);Files.write(directory.resolve(language.filename),data,StandardOpenOption.CREATE_NEW);Files.writeString(directory.resolve("metadata.json"),json.writeValueAsString(upload),StandardOpenOption.CREATE_NEW);return upload;}catch(java.io.IOException error){throw new DemoRequestException("BOT_STORAGE_ERROR");}
+    }
 
     private byte[] artifactBytes(Path path,BotLanguage language) {
         for(Path current=path;current!=null && !current.equals(root);current=current.getParent())if(Files.isSymbolicLink(current))throw new DemoRequestException("BOT_ARTIFACT_CHANGED");

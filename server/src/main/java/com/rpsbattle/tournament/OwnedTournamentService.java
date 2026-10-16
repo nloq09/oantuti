@@ -12,6 +12,12 @@ import java.util.*;
 
 @Service
 public class OwnedTournamentService {
+    private com.rpsbattle.tournament.coding.SubmissionStore submissions;
+    private org.springframework.transaction.support.TransactionTemplate submissionTransactions;
+    private final ThreadLocal<Boolean> submissionTransaction=new ThreadLocal<>();
+    @org.springframework.beans.factory.annotation.Autowired public void submissionSupport(com.rpsbattle.tournament.coding.SubmissionStore store,org.springframework.transaction.PlatformTransactionManager manager){submissions=store;submissionTransactions=new org.springframework.transaction.support.TransactionTemplate(manager);}
+    /** Commit registration, version promotion and submission in one DB transaction; restore memory on commit failure. */
+    public void submissionMutation(Tournament t,Authentication auth,Runnable change){synchronized(t){var details=com.rpsbattle.tournament.persistence.TournamentDetails.snapshot(t);var registrations=List.copyOf(t.registrations);var participants=List.copyOf(t.participants);long revision=t.revision;try{submissionTransaction.set(true);submissionTransactions.executeWithoutResult(tx->mutate(t,auth,change));tournaments.notifyChanged(t);}catch(RuntimeException failure){details.restore(t);t.registrations.clear();t.registrations.addAll(registrations);t.participants.clear();t.participants.addAll(participants);t.revision=revision;throw failure;}finally{submissionTransaction.remove();}}}
     private final ThreadLocal<String> administrativeReason=new ThreadLocal<>();
     /** Scope the audit explanation while reusing the existing lifecycle transactions and state machine. */
     public void adminLifecycle(Authentication auth,String id,Long revision,String action,String reason,String registrationId){
@@ -55,9 +61,9 @@ public class OwnedTournamentService {
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy) {
         return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,policy,1);
     }
-    public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf) {return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,policy,bestOf,TournamentBotPolicy.defaults());}
+    public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf) {return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,policy,bestOf,null);}
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf,TournamentBotPolicy botPolicy) {
-        int seriesLength=TournamentSeries.validate(bestOf);
+        boolean enroll=botPolicy!=null;int seriesLength=TournamentSeries.validate(bestOf);
         var actor=accounts.requireUser(auth);botPolicy=botPolicy==null?TournamentBotPolicy.defaults():botPolicy;
         if(policy==ParticipantPolicy.HUMAN_ONLY&&botPolicy.submissionMode()!=BotSubmissionMode.PRE_UPLOADED_ONLY)throw new DemoRequestException("INVALID_BOT_SUBMISSION_POLICY");
         validateRules(concurrency==null?4:concurrency,order);
@@ -70,7 +76,7 @@ public class OwnedTournamentService {
             t.botPolicy=botPolicy;t.bestOf=seriesLength;t.maxConcurrentMatches=concurrency==null?4:concurrency;if(order!=null)t.tieBreakOrder=List.copyOf(order);
             TournamentAudit.append(t,"TOURNAMENT_CREATED",actor.id().value(),t.id,null,null,t.format.name());
             t.ownerUserId=actor.id().value();t.participantPolicy=policy==null?ParticipantPolicy.BOT_ONLY:policy;t.checkInRequired=checkInRequired;t.maxParticipants=limit;t.deferNotifications=true;
-            try {persistence.persistNow(t);} catch(RuntimeException failure) {registry.remove(t.id);throw failure;}
+            try {if(submissions!=null&&enroll)submissionTransactions.executeWithoutResult(tx->{persistence.persistNow(t);submissions.enable(t.id);});else persistence.persistNow(t);} catch(RuntimeException failure) {registry.remove(t.id);throw failure;}
             finally {t.deferNotifications=false;}
             tournaments.notifyChanged(t);
         }
@@ -112,7 +118,7 @@ public class OwnedTournamentService {
                 t.registrations.clear();t.registrations.addAll(registrations);t.checkInRequired=checkIn;t.maxParticipants=capacity;t.seedingStrategy=strategy;t.seedingSeed=randomSeed;
                 t.participants.clear();t.participants.addAll(participants);t.matches.clear();t.matches.addAll(matches);for(int i=0;i<matches.size();i++)matches.get(i).restore(matchStates.get(i));details.restore(t);throw failure;
             } finally {t.deferNotifications=false;}
-            tournaments.notifyChanged(t);
+            if(!Boolean.TRUE.equals(submissionTransaction.get()))tournaments.notifyChanged(t);
         }
     }
     public void add(Authentication auth,String id,String botId,String displayName,Long seed) {
@@ -166,7 +172,7 @@ public class OwnedTournamentService {
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("INVALID_TOURNAMENT_TRANSITION");
         if(t.participants.size()<2)throw new DemoRequestException("NOT_ENOUGH_BOTS");
         for(int i=0;i<t.registrations.size();i++)if(t.registrations.get(i).status()==TournamentRegistration.Status.PENDING)t.registrations.set(i,t.registrations.get(i).withStatus(TournamentRegistration.Status.REJECTED,java.time.Instant.now()));
-        if(!t.checkInRequired){prepare(t,scores);lockRules(t);}
+        if(submissions!=null)submissions.lockAll(t.id);if(!t.checkInRequired){prepare(t,scores);lockRules(t);}
         TournamentStateMachine.transition(t,t.checkInRequired?TournamentStatus.CHECK_IN:TournamentStatus.READY,java.time.Instant.now());tournaments.changed(t);
     });}
     public void flush() {persistence.flushForRead();}
@@ -191,12 +197,14 @@ public class OwnedTournamentService {
         t.operations=t.operations.rules(rules);
     }
     private void prepare(Tournament t,Map<String,com.rpsbattle.tournament.seeding.SeedingService.Score> scores) {
+        if(submissions!=null)submissions.lockAll(t.id);
         if(t.format==TournamentFormat.TEAM_ROUND_ROBIN)com.rpsbattle.tournament.scheduler.TeamScheduler.validateRoster(t);
         if(t.format==TournamentFormat.GROUP_KNOCKOUT)GroupRoundPlan.validate(t.groupPlans,t.participants.size());
         for(int i=0;i<t.participants.size();i++) {
             var p=t.participants.get(i);String hash=p.artifactHash();
             if(p.botId()==null)continue;
-            if(!t.botPolicy.equals(TournamentBotPolicy.defaults()))t.botPolicy.requirePreuploaded(bots.registrationExecution(p.botId()).language());
+            if(submissions!=null&&submissions.enabled(t.id))submissions.requireLocked(t.id,p.participantId());
+            else if(!t.botPolicy.equals(TournamentBotPolicy.defaults()))t.botPolicy.requirePreuploaded(bots.registrationExecution(p.botId()).language());
             if(hash==null) {hash=bots.freeze(p.botId(),null);t.participants.set(i,p.withHash(hash));
                 for(int j=0;j<t.registrations.size();j++)if(t.registrations.get(j).id().toString().equals(p.participantId()))t.registrations.set(j,t.registrations.get(j).withLock(hash,java.time.Instant.now()));
             }else bots.verifyFrozen(p.botId(),hash);
@@ -308,7 +316,7 @@ public class OwnedTournamentService {
             for(int i=0;i<t.registrations.size();i++) {
                 var r=t.registrations.get(i);
                 if(r.userId().equals(actor.id().value()) && (registrationId==null || r.id().toString().equals(registrationId)) && (r.status()==TournamentRegistration.Status.APPROVED || r.status()==TournamentRegistration.Status.CHECKED_IN)) {
-                    found=true;if(r.status()==TournamentRegistration.Status.APPROVED)t.registrations.set(i,r.withStatus(TournamentRegistration.Status.CHECKED_IN,java.time.Instant.now()));
+                    if(r.botId()!=null&&submissions!=null)submissions.requireLocked(t.id,r.id().toString());found=true;if(r.status()==TournamentRegistration.Status.APPROVED)t.registrations.set(i,r.withStatus(TournamentRegistration.Status.CHECKED_IN,java.time.Instant.now()));
                 }
             }
             if(!found)throw new DemoRequestException("NO_APPROVED_REGISTRATION");tournaments.changed(t);

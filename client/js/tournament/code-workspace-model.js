@@ -10,4 +10,4 @@ export class DraftSession {
  resolve(local){if(!this.remote)return;this.revision=this.remote.revision;this.server=this.remote.sourceCode;if(!local)this.local=this.server;this.remote=null;}
 }
 export function parseTestResult(value){if(!value)return null;try{const result=JSON.parse(value);return result&&typeof result.passed==='boolean'?result:null;}catch{return null;}}
-export function canTest(workspace,source){return !busyWorkspace(workspace)&&Boolean(workspace?.version?.artifactHash)&&workspace.version.sourceCode===source;}
+export function canTest(workspace,source){return !busyWorkspace(workspace)&&!['SUBMITTED','LOCKED'].includes(workspace?.status)&&Boolean(workspace?.version?.artifactHash)&&workspace.version.sourceCode===source;}

@@ -18,6 +18,13 @@ public class CodeVersion {
  @Column(name="build_log",nullable=false,columnDefinition="text") String buildLog;
  @Column(name="test_result",columnDefinition="text") String testResult;
  @Column(name="sample_result",columnDefinition="text") String sampleResult;
+ @Column(name="hidden_result",columnDefinition="text") String hiddenResult;
+ @Column(name="hidden_passed",nullable=false) boolean hiddenPassed;
+ @Column(name="public_passed",nullable=false) boolean publicPassed;
+ @Column(name="sample_passed",nullable=false) boolean samplePassed;
+ @Column(name="execution_bot_id") UUID executionBotId;
+ @Column(name="imported_bot_id") UUID importedBotId;
+ @Column(name="runtime_language",length=16) String runtimeLanguage;
  @Column(name="created_at",nullable=false) Instant createdAt;
  @Column(name="updated_at",nullable=false) Instant updatedAt;
  protected CodeVersion(){}

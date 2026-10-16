@@ -18,5 +18,6 @@ public class TournamentCodeController {
  @PostMapping("/me/build") public ResponseEntity<?> build(Authentication auth,@PathVariable String id,@RequestBody Change request){return response(service.job(auth,id,request.language(),request.revision(),request.sourceCode(),"BUILD"),202);}
  @PostMapping("/me/test") public ResponseEntity<?> test(Authentication auth,@PathVariable String id,@RequestBody Change request){return response(service.job(auth,id,request.language(),request.revision(),null,"TEST"),202);}
  @PostMapping("/me/test-match") public ResponseEntity<?> sample(Authentication auth,@PathVariable String id,@RequestBody Change request){return response(service.job(auth,id,request.language(),request.revision(),null,"SAMPLE"),202);}
+ @PostMapping("/me/validate") public ResponseEntity<?> validate(Authentication auth,@PathVariable String id,@RequestBody Change request){return response(service.job(auth,id,request.language(),request.revision(),null,"VALIDATE"),202);}
  @GetMapping("/public-tests") public ResponseEntity<?> cases(Authentication auth,@PathVariable String id){return response(service.publicCases(auth,id),200);}
 }
