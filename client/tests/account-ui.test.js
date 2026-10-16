@@ -7,6 +7,7 @@ test("login return paths reject external origins, credentials, scripts and authe
   const origin = "http://localhost:8080";
   for (const input of ["https://evil.test/profile.html", "//evil.test/lobby.html", "javascript:alert(1)", "http://user:secret@localhost:8080/profile.html", "/login.html?next=/profile.html", "/register.html", "http://localhost:8081/profile.html", "\\\\evil.test\\profile.html"]) assert.equal(safeNext(input, origin), "/", input);
   assert.equal(safeNext("/tournament.html?id=abc#ranking", origin), "/tournament.html?id=abc#ranking");
+  assert.equal(safeNext("/tournament-code.html?id=cup", origin), "/tournament-code.html?id=cup");
   assert.equal(safeNext("http://localhost:8080/history.html", origin), "/history.html");
   assert.equal(safeNext(null, origin), "/");
 });

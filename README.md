@@ -69,7 +69,7 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 ### Lập trình bot trong giải đấu — Chặng 9
 
-Đã hoàn thành **nhóm 1**: chính sách nộp bot (bot có sẵn / code trên hệ thống / cả hai), giới hạn ngôn ngữ, cấu hình thời hạn và giao diện tạo giải; lưu PostgreSQL qua V21. Workspace/build/test/submit dành cho bot code trên hệ thống chưa triển khai. Xem [phạm vi, API và kiểm thử](docs/CHANG-9-NHOM-1-BOT-POLICY.md).
+Đã hoàn thành **nhóm 1**: chính sách nộp bot (bot có sẵn / code trên hệ thống / cả hai), giới hạn ngôn ngữ, cấu hình thời hạn và giao diện tạo giải; lưu PostgreSQL qua V21. Đã bổ sung **nhóm 2–5**: [workspace, lưu nháp server, build Python/C++/Java, public tests và đấu mẫu](docs/CHANG-9-NHOM-2-5-WORKSPACE.md). Hidden tests, submit/lock và sử dụng artifact workspace trong giải chính thức chưa triển khai. Xem [phạm vi, API và kiểm thử](docs/CHANG-9-NHOM-1-BOT-POLICY.md).
 
 ### Chế độ giải đấu cho người chơi — Chặng 8
 
