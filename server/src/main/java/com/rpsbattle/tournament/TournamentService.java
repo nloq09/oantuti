@@ -69,11 +69,15 @@ public class TournamentService {
     }
     public void remove(String id,String participantId) { var t=find(id); synchronized(t) { rosterOpen(t); if(!t.participants.removeIf(p->p.participantId().equals(participantId))) throw new DemoRequestException("PARTICIPANT_NOT_FOUND"); changed(t); } }
     public void start(String id) {
+        start(id,Instant.now());
+    }
+    public void start(String id,Instant now) {
         var t=find(id); synchronized(t) {
             if(t.status!=TournamentStatus.DRAFT && t.status!=TournamentStatus.READY)throw new DemoRequestException("TOURNAMENT_LOCKED");
             if(t.participants.size()<2) throw new DemoRequestException("NOT_ENOUGH_BOTS");
             for(var p:t.participants) { if(p.botId()==null)continue;var b=bots.authorize(p.botId(),p.botToken()); if(!bots.available(b.language())) throw new DemoRequestException("BOT_SANDBOX_UNAVAILABLE"); }
-            var schedule=scheduler.schedule(t);var now=Instant.now();
+            var schedule=scheduler.schedule(t);
+            if(t.timeline!=null)for(var match:schedule)match.scheduledAt=now;
             // Preserve the existing quick-start API; it traverses the same legal lifecycle edges.
             if(t.status==TournamentStatus.DRAFT){TournamentStateMachine.transition(t,TournamentStatus.REGISTRATION,now);TournamentStateMachine.transition(t,TournamentStatus.READY,now);}
             t.matches.addAll(schedule);TournamentStateMachine.transition(t,TournamentStatus.RUNNING,now);changed(t);
@@ -99,6 +103,7 @@ public class TournamentService {
         var data=new LinkedHashMap<String,Object>();
         data.put("id",t.id);data.put("name",t.name);data.put("format",t.format);data.put("status",t.status);
         data.put("timeline",t.timeline);
+        data.put("timelineStartIssue",TimelineStartService.issue(t));
         data.put("ownerUserId",t.ownerUserId);data.put("ownerName",username(t.ownerUserId));data.put("visibility","PUBLIC");
         data.put("createdAt",t.createdAt);data.put("startedAt",t.startedAt);data.put("finishedAt",t.finishedAt);data.put("revision",t.revision);
         data.put("statusChangedAt",t.statusChangedAt);
