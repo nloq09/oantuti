@@ -34,3 +34,11 @@ test('all submission modes show the same person registration form without bot co
 test('pending registration has a status and coding countdown without a duplicate form or workspace link',()=>{
  const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_OPEN',registrationStatus:'PENDING',registration:{displayName:'Player',intendedLanguage:'CPP'}},()=>{});const nodes=all(root);assert.equal(nodes.some(x=>x.tag==='form'),false);assert.ok(nodes.some(x=>x.dataset.codingStarts===tournament.timeline.codingOpenAt));assert.equal(nodes.some(x=>String(x.href).includes('tournament-code')),false);
 });
+test('approved participants wait with rules and protocol but no editor before coding',()=>{
+ const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'WAITING_FOR_CODING',registrationStatus:'APPROVED',registration:{displayName:'Player',intendedLanguage:'CPP'},allowedLanguages:['CPP']},()=>{});const nodes=all(root);
+ assert.ok(nodes.some(x=>x.textContent==='Phần thi lập trình chưa bắt đầu'));assert.ok(nodes.some(x=>x.href==='/bot-protocol.html'));assert.equal(nodes.some(x=>x.tag==='textarea'||String(x.href).includes('tournament-code')),false);
+});
+test('rejected participants see their reason and cannot open coding or submit another application',()=>{
+ const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_REVIEW',registrationStatus:'REJECTED',registration:{displayName:'Player',intendedLanguage:'CPP',reviewReason:'Missing information'}},()=>{});const nodes=all(root);
+ assert.ok(nodes.some(x=>x.textContent.includes('Missing information')));assert.equal(nodes.some(x=>x.tag==='form'||String(x.href).includes('tournament-code')),false);
+});

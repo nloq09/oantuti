@@ -112,7 +112,7 @@ public class TournamentService {
         data.put("currentRound",t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(t.rounds.size()));
         data.put("drawPolicy",Set.of(TournamentFormat.GROUP_KNOCKOUT,TournamentFormat.SINGLE_ELIMINATION).contains(t.format)?"REMAINING_PIECES_THEN_SEED":null);
         data.put("autoAdvanceRounds",t.operations.autoAdvanceRounds());data.put("releasedRound",t.operations.releasedRound());data.put("participantStatuses",t.operations.participants());
-        data.put("reviews",t.operations.reviews());data.put("rulesSnapshot",t.operations.rulesSnapshot());data.put("audit",compact?t.operations.audit().stream().skip(Math.max(0,t.operations.audit().size()-20)).toList():t.operations.audit());data.put("paged",compact);
+        data.put("reviews",t.operations.reviews());data.put("rulesSnapshot",t.operations.rulesSnapshot());data.put("audit",(compact?t.operations.audit().stream().skip(Math.max(0,t.operations.audit().size()-20)):t.operations.audit().stream()).map(e->e.type().equals("PARTICIPANT_APPLICATION_REVIEWED")?new TournamentAuditEvent(e.id(),e.sequence(),e.type(),e.actor(),e.target(),null,e.beforeValue(),e.afterValue(),e.at()):e).toList());data.put("paged",compact);
         var names=new LinkedHashMap<String,String>();for(var participant:t.participants)names.put(participant.participantId(),username(participant.ownerUserId()));data.put("participantOwners",names);
         data.put("registrations",List.copyOf(t.registrations));
         data.put("participants",List.copyOf(t.participants));

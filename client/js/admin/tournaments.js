@@ -14,6 +14,7 @@ async function detail(root){
   const id=new URLSearchParams(location.search).get("id");if(!id)throw new Error("Thiếu mã giải đấu.");const t=await adminRequest("tournaments/"+encodeURIComponent(id));
   root.replaceChildren(node("h1",t.name),link("← Danh sách giải","/admin/tournaments.html"));
   root.append(link("Bài nộp bot và hàng đợi","/admin/submissions.html?id="+encodeURIComponent(id)));
+  if(t.timeline)root.append(link("Duyệt đăng ký người chơi","/admin/applications.html?id="+encodeURIComponent(id)));
   const reload=()=>detail(root),action=(label,operation)=>{const button=node("button",label);button.onclick=()=>confirmAction(label,async reason=>{await operation(reason);await reload();});return button;};
   const lifecycle=(operation,reason,extra={})=>adminRequest(`tournaments/${encodeURIComponent(id)}/actions/${operation}`,{revision:t.revision,reason,...extra});
   tabs(root,[

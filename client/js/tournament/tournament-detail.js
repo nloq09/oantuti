@@ -72,6 +72,7 @@ function render(t) {
   document.querySelector("#close-check-in").hidden = !owner || t.status !== "CHECK_IN";
   document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);
   let submissionLink=document.querySelector("#submission-dashboard-link");if(!submissionLink){submissionLink=document.createElement("a");submissionLink.id="submission-dashboard-link";submissionLink.className="button";submissionLink.textContent="Bài nộp bot và hàng đợi →";document.querySelector("#admin-tab").prepend(submissionLink);}submissionLink.hidden=!owner;submissionLink.href="/tournament-submissions.html?id="+encodeURIComponent(id);
+  let applicationLink=document.querySelector("#application-review-link");if(!applicationLink){applicationLink=document.createElement("a");applicationLink.id="application-review-link";applicationLink.className="button";applicationLink.textContent="Duyệt đăng ký người chơi →";document.querySelector("#admin-tab").prepend(applicationLink);}applicationLink.hidden=!owner||!t.timeline;applicationLink.href="/tournament-applications.html?id="+encodeURIComponent(id);
   renderRegistrations(t, owner);
   renderSeeding(t, owner);renderRules(t,owner);
   document.querySelector("#format-heading").textContent="Tổng quan · "+formatLabel(t.format);
