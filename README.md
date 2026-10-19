@@ -71,6 +71,8 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 Đã triển khai nhóm 1–10: chính sách nộp bot, [workspace và build Python/C++/Java](docs/CHANG-9-NHOM-2-5-WORKSPACE.md), public/hidden tests, đấu mẫu, lịch sử version, submit/lock theo deadline và dashboard bài nộp cho chủ giải/admin. Bot có sẵn và bot code trên hệ thống dùng chung pipeline validation; trận chính thức chạy đúng artifact đã khóa, không compile lại. Queue PostgreSQL có giới hạn, lease và recovery sau restart. Xem [luồng sử dụng, API, vận hành và giới hạn nhóm 6–10](docs/CHANG-9-NHOM-6-10-SUBMISSIONS.md). Migration hiện tại: V23.
 
+Chặng 10 đang triển khai theo từng nhóm. [Nhóm 1 — Timeline và Phase Resolver](docs/CHANG-10-NHOM-1-TIMELINE.md) bổ sung lưu lịch, API cấu hình có quyền/revision/audit và phase theo giờ server. Chưa bật điều hướng hoặc chặn các chức năng theo phase; các giải hiện tại giữ luồng cũ cho đến khi tích hợp các nhóm tiếp theo.
+
 ### Chế độ giải đấu cho người chơi — Chặng 8
 
 - Hub khám phá giải theo 5 nhóm, tìm kiếm và phân trang; các tab chi tiết theo thể thức và trạng thái riêng của từng đăng ký.

@@ -27,6 +27,7 @@ public final class Tournament {
     public ParticipantPolicy participantPolicy=ParticipantPolicy.BOT_ONLY;
     public TournamentBotPolicy botPolicy=TournamentBotPolicy.defaults();
     public TournamentTiming timing=TournamentTiming.manual();
+    public TournamentTimeline timeline;
     public final Map<String,MatchReadyWindow> readyWindows=new LinkedHashMap<>();
     public final Map<String,Long> notificationReads=new LinkedHashMap<>();
     public int bestOf=1;

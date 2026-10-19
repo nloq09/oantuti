@@ -37,6 +37,15 @@ public class OwnedTournamentService {
     private java.time.Clock clock=java.time.Clock.systemUTC();
     @org.springframework.beans.factory.annotation.Autowired public void clock(java.time.Clock clock){this.clock=clock;}
     public void configureTiming(Authentication auth,String id,Long revision,TournamentTiming timing){var t=tournaments.find(id);timing.validate();managedMutation(auth,t,revision,()->{if(t.status!=TournamentStatus.DRAFT||!t.registrations.isEmpty())throw new DemoRequestException("TOURNAMENT_LOCKED");t.timing=timing;TournamentAudit.append(t,"TIMING_CONFIGURED",actor(auth),id,null,null,null);tournaments.changed(t);});}
+    public void configureTimeline(Authentication auth,String id,Long revision,TournamentTimeline timeline){
+        var t=tournaments.find(id);
+        managedMutation(auth,t,revision,()->{
+            if(timeline==null)throw new DemoRequestException("INVALID_TOURNAMENT_TIMELINE");
+            if(t.status!=TournamentStatus.DRAFT||!t.registrations.isEmpty()||!t.participants.isEmpty())throw new DemoRequestException("TOURNAMENT_LOCKED");
+            String before=t.timeline==null?null:t.timeline.toString();t.timeline=timeline;
+            TournamentAudit.append(t,"TIMELINE_CONFIGURED",actor(auth),id,null,before,timeline.toString());tournaments.changed(t);
+        });
+    }
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay=1000) public void expireCheckIns(){
         for(var t:registry.findAll()){if(t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;var scores=historicalScores();synchronized(t){
             if(t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;
