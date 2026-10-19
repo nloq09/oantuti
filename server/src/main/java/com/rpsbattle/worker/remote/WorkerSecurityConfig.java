@@ -31,7 +31,7 @@ public class WorkerSecurityConfig {
             .securityContext(s->s.securityContextRepository(new NullSecurityContextRepository()))
             .authorizeHttpRequests(a->a.requestMatchers(HttpMethod.POST,"/internal/workers/register").permitAll()
                 .requestMatchers(HttpMethod.GET,"/internal/workers/*/identity").hasAuthority("REMOTE_WORKER")
-                .requestMatchers(HttpMethod.POST,"/internal/workers/*/capabilities","/internal/workers/*/heartbeat","/internal/workers/*/jobs/claim","/internal/workers/*/jobs/*/decline").hasAuthority("REMOTE_WORKER")
+                .requestMatchers(HttpMethod.POST,"/internal/workers/*/capabilities","/internal/workers/*/heartbeat","/internal/workers/*/jobs/claim","/internal/workers/*/jobs/*/decline","/internal/workers/*/jobs/*/start").hasAuthority("REMOTE_WORKER")
                 .requestMatchers(HttpMethod.GET,"/internal/workers/*/jobs/assigned").hasAuthority("REMOTE_WORKER")
                 .requestMatchers(HttpMethod.GET,"/internal/workers/*/artifacts/*").hasAuthority("REMOTE_WORKER")
                 .anyRequest().denyAll())

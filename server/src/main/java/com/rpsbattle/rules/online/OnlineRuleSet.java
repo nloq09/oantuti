@@ -14,7 +14,12 @@ public final class OnlineRuleSet implements RuleSet {
     private final TurnRule turns;
 
     public OnlineRuleSet(PlayerId p1, PlayerId p2) {
-        classic = new ClassicRuleSet(p1, p2);
+        this(p1, p2, ClassicRuleSet.DEFAULT_MAX_TURNS);
+    }
+
+    public OnlineRuleSet(PlayerId p1, PlayerId p2, int maxTurns) {
+        if (maxTurns < 1 || maxTurns > 10000) throw new IllegalArgumentException("Invalid turn limit");
+        classic = new ClassicRuleSet(p1, p2, maxTurns);
         turns = new TurnRule() {
             public boolean canAct(GameState state, PlayerId player, Action action) {
                 if (action instanceof SurrenderAction) return state.isPlaying()

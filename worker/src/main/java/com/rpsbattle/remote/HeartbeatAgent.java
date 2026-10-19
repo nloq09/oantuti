@@ -13,7 +13,8 @@ public class HeartbeatAgent {
     private long epoch,sequence;
     private String lastStatus="";
     public HeartbeatAgent(CentralClient central,IdentityStore.Identity identity,Map<String,Object> capabilities,Supplier<Map<String,Object>> sample,PrintStream log){this.central=central;this.identity=identity;this.capabilities=capabilities;this.sample=sample;this.log=log;}
-    public void tick()throws IOException,InterruptedException {
+    public synchronized long epoch(){return epoch;}
+    public synchronized void tick()throws IOException,InterruptedException {
         try {
             if(epoch==0){var session=central.post(identity,"capabilities",capabilities);epoch=session.path("epoch").asLong();if(epoch<1)throw new IOException("Invalid heartbeat session");sequence=0;}
             var body=new HashMap<>(sample.get());body.put("epoch",epoch);body.put("sequence",++sequence);

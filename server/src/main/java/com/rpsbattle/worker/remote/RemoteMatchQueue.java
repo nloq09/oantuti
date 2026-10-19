@@ -20,6 +20,7 @@ public class RemoteMatchQueue {
     public record Assignment(UUID jobId,UUID executionId,UUID workerId,long epoch,int slot,String status,Instant leaseUntil,Spec match) {}
     public record Batch(List<Assignment> jobs,int occupiedSlots,int effectiveFreeSlots,Instant serverNow) {}
     public record Decline(UUID executionId,String reason) {}
+    public record Start(UUID executionId,Long epoch) {}
     private static java.sql.Timestamp at(Instant time){return java.sql.Timestamp.from(time);}
     private void guard(){db.queryForObject("select id from remote_match_queue_guard where id=1 for update",Integer.class);}
     private String encoded(Object object){try{return json.writeValueAsString(object);}catch(Exception e){throw new IllegalArgumentException("Invalid remote protocol data");}}
@@ -75,6 +76,17 @@ public class RemoteMatchQueue {
     }
     private Batch batch(UUID worker,List<UUID> ids){var view=telemetry.view(worker);return new Batch(ids.stream().map(this::assignment).toList(),view.reservedSlots(),view.effectiveFreeSlots(),clock.instant());}
     public Batch assigned(UUID id){return batch(id,db.query("select id from match_execution_attempts where worker_id=? and active_marker=1 order by claimed_at,id",(r,n)->r.getObject(1,UUID.class),id));}
+    @Transactional
+    public Assignment start(UUID id,UUID job,Start body) {
+        if(body==null||body.executionId()==null||body.epoch()==null||body.epoch()<1)throw new AuthException("INVALID_EXECUTION_START",400);
+        guard();var w=worker(id,body.epoch());
+        var rows=db.queryForList("select a.*,j.status as job_status,j.minimum_trust from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id where a.id=? and a.job_id=? and a.worker_id=?",body.executionId(),job,id);
+        if(rows.isEmpty())throw new AuthException("EXECUTION_NOT_ASSIGNED",404);var row=rows.getFirst();
+        if(((Number)row.get("heartbeat_epoch")).longValue()!=body.epoch()||!"LEASED".equals(row.get("job_status"))||!Set.of("CLAIMED","RUNNING").contains(row.get("status"))||!clock.instant().isBefore(assignment(body.executionId()).leaseUntil()))throw new AuthException("EXECUTION_NOT_STARTABLE",409);
+        var view=telemetry.view(id);
+        if(!"APPROVED".equals(w.get("approval_status"))||!Set.of("ONLINE","BUSY").contains(view.status())||!Set.of("TRUSTED","COMMUNITY").contains(w.get("trust_level"))||"TRUSTED".equals(row.get("minimum_trust"))&&!"TRUSTED".equals(w.get("trust_level")))throw new AuthException("WORKER_NOT_AVAILABLE",409);
+        db.update("update match_execution_attempts set status='RUNNING' where id=?",body.executionId());return assignment(body.executionId());
+    }
     @Transactional
     public Assignment decline(UUID id,UUID job,Decline body) {
         if(body==null||body.executionId()==null||body.reason()==null||!Set.of("EXECUTION_NOT_AVAILABLE","SHUTDOWN_BEFORE_START","ARTIFACT_UNAVAILABLE").contains(body.reason()))throw new AuthException("INVALID_DECLINE",400);

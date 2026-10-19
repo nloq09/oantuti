@@ -1,6 +1,6 @@
 plugins { id 'java'; id 'application' }
 group = 'com.rpsbattle'
-version = '0.4.0'
+version = '0.5.0'
 java { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
 tasks.withType(JavaCompile).configureEach { options.release = 21 }
 if (System.getProperty('os.name').startsWith('Windows')) {
@@ -8,6 +8,17 @@ if (System.getProperty('os.name').startsWith('Windows')) {
     layout.buildDirectory.set(new File(gradle.gradleUserHomeDir, "rps-battle-builds/worker-${key}"))
 }
 repositories { mavenCentral() }
+
+// Compile the exact headless domain/protocol/replay sources used by Central. No Spring/server boot dependency.
+sourceSets.main.java {
+    srcDir '../server/src/main/java'
+    include 'com/rpsbattle/remote/**', 'com/rpsbattle/game/**', 'com/rpsbattle/rule/**',
+            'com/rpsbattle/rules/**', 'com/rpsbattle/agent/**', 'com/rpsbattle/match/**',
+            'com/rpsbattle/bot/Bot*.java', 'com/rpsbattle/replay/MatchLog.java',
+            'com/rpsbattle/replay/ReplayJson.java', 'com/rpsbattle/replay/ReplayService.java',
+            'com/rpsbattle/online/OnlineMatch.java', 'com/rpsbattle/online/MatchMode.java',
+            'com/rpsbattle/online/DemoRequestException.java'
+}
 dependencies {
     implementation platform('org.springframework.boot:spring-boot-dependencies:3.5.16')
     implementation 'com.fasterxml.jackson.core:jackson-databind'
