@@ -46,7 +46,7 @@ class WorkerStartupTest {
         server.start();
         try {
             String url="http://127.0.0.1:"+server.getAddress().getPort();
-            var args=new String[]{"--central="+url,"--state-dir="+temp.resolve("state"),"--allow-insecure-http"};
+            var args=new String[]{"--central="+url,"--state-dir="+temp.resolve("state"),"--allow-insecure-http","--identity-only"};
             var output=new ByteArrayOutputStream();var log=new PrintStream(output);
             assertEquals(0,WorkerApplication.run(args,Map.of("WORKER_REGISTRATION_TOKEN",TOKEN),log));
             assertEquals(0,WorkerApplication.run(args,Map.of(),log));assertEquals(1,registrations.get());assertEquals(2,checks.get());
@@ -58,7 +58,7 @@ class WorkerStartupTest {
     @Test void redirectsAndRejectedEnrollmentNeverPersistIdentityOrPrintReflectedSecrets()throws Exception {
         var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         server.createContext("/internal/workers/register",exchange->{exchange.getResponseHeaders().add("Location","https://example.com");byte[] bytes=(TOKEN+CREDENTIAL).getBytes();exchange.sendResponseHeaders(302,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();});server.start();
-        try {var output=new ByteArrayOutputStream();assertEquals(1,WorkerApplication.run(new String[]{"--central=http://127.0.0.1:"+server.getAddress().getPort(),"--state-dir="+temp.resolve("state"),"--allow-insecure-http"},Map.of("WORKER_REGISTRATION_TOKEN",TOKEN),new PrintStream(output)));assertFalse(Files.exists(temp.resolve("state/identity.json")));assertFalse(output.toString().contains(TOKEN));assertFalse(output.toString().contains(CREDENTIAL));}
+        try {var output=new ByteArrayOutputStream();assertEquals(1,WorkerApplication.run(new String[]{"--central=http://127.0.0.1:"+server.getAddress().getPort(),"--state-dir="+temp.resolve("state"),"--allow-insecure-http","--identity-only"},Map.of("WORKER_REGISTRATION_TOKEN",TOKEN),new PrintStream(output)));assertFalse(Files.exists(temp.resolve("state/identity.json")));assertFalse(output.toString().contains(TOKEN));assertFalse(output.toString().contains(CREDENTIAL));}
         finally{server.stop(0);}
     }
 }

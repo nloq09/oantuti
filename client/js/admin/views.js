@@ -7,6 +7,7 @@ import { mountOperations } from "./operations.js";
 import { mountReviews } from "./reviews.js";
 import { mountTournaments } from "./tournaments.js";
 import { mountProfile } from "./profile.js";
+import { mountWorkers } from "./workers.js";
 function panel(title) { const element=node("section",undefined,"panel");element.append(node("h2",title));return element; }
 async function dashboard(root) {
   root.replaceChildren(node("h1","Tổng quan hệ thống"));
@@ -25,4 +26,4 @@ async function dashboard(root) {
   }catch(error){message(error,live);}finally{busy=false;}}
   await refresh();const timer=setInterval(refresh,10000);addEventListener("pagehide",()=>clearInterval(timer),{once:true});
 }
-export async function mount(page,root){try{if(page==="profile.html")await mountProfile(root);else if(page==="index.html")await dashboard(root);else if(["audit.html","system.html"].includes(page))await mountOperations(page,root);else if(["disputes.html","dispute-detail.html","replays.html","replay-detail.html"].includes(page))await mountReviews(page,root);else if(["tournaments.html","tournament-detail.html"].includes(page))await mountTournaments(page,root);else if(["replay.html","spectator.html"].includes(page))await mountViewer(page,root);else if(["matches.html","match-detail.html"].includes(page))await mountMatches(page,root);else await mountDirectory(page,root);}catch(error){message(error,root);}}
+export async function mount(page,root){try{if(["workers.html","worker-setup.html"].includes(page))await mountWorkers(page,root);else if(page==="profile.html")await mountProfile(root);else if(page==="index.html")await dashboard(root);else if(["audit.html","system.html"].includes(page))await mountOperations(page,root);else if(["disputes.html","dispute-detail.html","replays.html","replay-detail.html"].includes(page))await mountReviews(page,root);else if(["tournaments.html","tournament-detail.html"].includes(page))await mountTournaments(page,root);else if(["replay.html","spectator.html"].includes(page))await mountViewer(page,root);else if(["matches.html","match-detail.html"].includes(page))await mountMatches(page,root);else await mountDirectory(page,root);}catch(error){message(error,root);}}

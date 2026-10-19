@@ -33,6 +33,8 @@ a{color:#91d0ff}.error{color:#ffaaa0}.notice{color:#ffe2a0}
 @media(max-width:700px){.admin-shell{grid-template-columns:145px minmax(0,1fr);grid-template-rows:76px auto}.admin-topbar{padding:10px;gap:8px}.admin-brand strong{display:none}.admin-account{gap:8px}.admin-account span{max-width:100px;font-size:.75rem}.admin-sidebar{padding:12px 6px}.admin-content{padding:14px}.filters{padding:12px}.filters input{min-width:0;max-width:100%}.sidebar-collapsed{grid-template-columns:0 minmax(0,1fr)}}
 
 [hidden]{display:none!important}
+.worker-setup pre{max-width:100%;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#0b1d2b;border-radius:8px}
+.badge[data-status=ONLINE]{color:#a4edbb}.badge[data-status=OFFLINE]{color:#ccc}.badge[data-status=DEGRADED]{color:#ffdc8b}
 .admin-shell{grid-template-rows:minmax(78px,auto) 1fr}
 .admin-topbar{position:relative;z-index:4;flex-wrap:wrap;min-width:0}
 .admin-sidebar{align-self:stretch}.admin-sidebar a{min-height:44px}

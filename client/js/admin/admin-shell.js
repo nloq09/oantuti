@@ -31,8 +31,8 @@ async function init() {
     const notifications=node("details",undefined,"admin-notifications");top.append(toggle, brand, notifications, identity);
     const sidebar = node("nav", undefined, "admin-sidebar"); sidebar.id="admin-navigation"; sidebar.setAttribute("aria-label", "Quản trị");
     const current = location.pathname.split("/").pop() || "index.html";
-    for (const [label, path] of [["Tổng quan", "index.html"], ["Người dùng", "users.html"], ["Bot", "bots.html"], ["Trận đấu", "matches.html"], ["Giải đấu", "tournaments.html"], ["Tranh chấp", "disputes.html"], ["Kho replay", "replays.html"], ["Audit", "audit.html"], ["Hệ thống", "system.html"]]) {
-      const a = link(label, "/admin/" + path); if (current === path || current === ({"users.html":"user-detail.html","bots.html":"bot-detail.html","matches.html":"match-detail.html","tournaments.html":"tournament-detail.html","disputes.html":"dispute-detail.html","replays.html":"replay-detail.html"})[path] || (path === "matches.html" && ["replay.html","spectator.html"].includes(current))) a.setAttribute("aria-current", "page"); sidebar.append(a);
+    for (const [label, path] of [["Tổng quan", "index.html"], ["Người dùng", "users.html"], ["Bot", "bots.html"], ["Trận đấu", "matches.html"], ["Giải đấu", "tournaments.html"], ["Tranh chấp", "disputes.html"], ["Kho replay", "replays.html"], ["Audit", "audit.html"], ["Worker", "workers.html"], ["Hệ thống", "system.html"]]) {
+      const a = link(label, "/admin/" + path); if (current === path || current === ({"workers.html":"worker-setup.html","users.html":"user-detail.html","bots.html":"bot-detail.html","matches.html":"match-detail.html","tournaments.html":"tournament-detail.html","disputes.html":"dispute-detail.html","replays.html":"replay-detail.html"})[path] || (path === "matches.html" && ["replay.html","spectator.html"].includes(current))) a.setAttribute("aria-current", "page"); sidebar.append(a);
     }
 
     const content = node("main", undefined, "admin-content"); content.id = "admin-content"; content.tabIndex = -1;

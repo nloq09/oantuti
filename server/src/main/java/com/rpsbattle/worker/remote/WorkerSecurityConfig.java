@@ -31,6 +31,7 @@ public class WorkerSecurityConfig {
             .securityContext(s->s.securityContextRepository(new NullSecurityContextRepository()))
             .authorizeHttpRequests(a->a.requestMatchers(HttpMethod.POST,"/internal/workers/register").permitAll()
                 .requestMatchers(HttpMethod.GET,"/internal/workers/*/identity").hasAuthority("REMOTE_WORKER")
+                .requestMatchers(HttpMethod.POST,"/internal/workers/*/capabilities","/internal/workers/*/heartbeat").hasAuthority("REMOTE_WORKER")
                 .anyRequest().denyAll())
             .exceptionHandling(e->e.authenticationEntryPoint((q,r,x)->error(r,json,401,"WORKER_CREDENTIAL_REQUIRED"))
                 .accessDeniedHandler((q,r,x)->error(r,json,403,"WORKER_FORBIDDEN")));

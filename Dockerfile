@@ -2,6 +2,7 @@ FROM gradle:8.14.3-jdk21 AS build
 WORKDIR /workspace
 COPY server/build.gradle server/settings.gradle server/
 COPY worker/build.gradle worker/
+COPY worker/src worker/src
 COPY server/src server/src
 COPY client client
 WORKDIR /workspace/server

@@ -3,6 +3,7 @@ package com.rpsbattle.api.controller;
 import com.rpsbattle.account.AccountAuthorizationService;
 import com.rpsbattle.auth.AuthException;
 import com.rpsbattle.worker.remote.WorkerIdentityService;
+import com.rpsbattle.worker.remote.WorkerTelemetryService;
 import java.util.*;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -12,7 +13,8 @@ import org.springframework.web.bind.annotation.*;
 public class RemoteWorkerController {
     private final WorkerIdentityService workers;
     private final AccountAuthorizationService accounts;
-    public RemoteWorkerController(WorkerIdentityService workers, AccountAuthorizationService accounts){this.workers=workers;this.accounts=accounts;}
+    private final WorkerTelemetryService telemetry;
+    public RemoteWorkerController(WorkerIdentityService workers, AccountAuthorizationService accounts,WorkerTelemetryService telemetry){this.workers=workers;this.accounts=accounts;this.telemetry=telemetry;}
     public record Issue(Integer uses,Integer lifetimeMinutes) {}
     @PostMapping("/api/admin/workers/registration-tokens")
     public ResponseEntity<?> issue(Authentication auth,@RequestBody Issue body){var actor=accounts.requireAdmin(auth).id().value();return response(201,workers.issue(actor,body.uses()==null?1:body.uses(),body.lifetimeMinutes()==null?15:body.lifetimeMinutes()));}
@@ -24,5 +26,20 @@ public class RemoteWorkerController {
     public ResponseEntity<?> register(@RequestBody WorkerIdentityService.Registration body){return response(201,workers.register(body));}
     @GetMapping("/internal/workers/{id}/identity")
     public ResponseEntity<?> identity(Authentication auth,@PathVariable UUID id){if(auth==null || !id.equals(auth.getPrincipal()))throw new AuthException("WORKER_FORBIDDEN",403);return response(200,workers.identity(id));}
+    @PostMapping("/internal/workers/{id}/capabilities")
+    public ResponseEntity<?> capabilities(Authentication auth,@PathVariable UUID id,@RequestBody WorkerTelemetryService.Capabilities body){own(auth,id);return response(200,telemetry.capabilities(id,body));}
+    @PostMapping("/internal/workers/{id}/heartbeat")
+    public ResponseEntity<?> heartbeat(Authentication auth,@PathVariable UUID id,@RequestBody WorkerTelemetryService.Heartbeat body,jakarta.servlet.http.HttpServletRequest request){own(auth,id);return response(200,telemetry.heartbeat(id,body,request.getRemoteAddr()));}
+    @GetMapping("/api/admin/workers")
+    public ResponseEntity<?> list(Authentication auth,@RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="20")int size){accounts.requireAdmin(auth);return response(200,telemetry.list(page,size));}
+    @GetMapping("/api/admin/workers/{id}")
+    public ResponseEntity<?> detail(Authentication auth,@PathVariable UUID id){accounts.requireAdmin(auth);return response(200,telemetry.view(id));}
+    @PostMapping("/api/admin/workers/{id}/review")
+    public ResponseEntity<?> review(Authentication auth,@PathVariable UUID id,@RequestBody WorkerTelemetryService.Review body){return response(200,telemetry.review(id,accounts.requireAdmin(auth).id().value(),body));}
+    @GetMapping("/api/admin/workers/download")
+    public ResponseEntity<org.springframework.core.io.Resource> download(Authentication auth){accounts.requireAdmin(auth);var jar=new org.springframework.core.io.ClassPathResource("worker-distribution/rps-worker.jar");if(!jar.exists())throw new AuthException("WORKER_DOWNLOAD_UNAVAILABLE",503);return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\"rps-worker.jar\"").contentType(MediaType.APPLICATION_OCTET_STREAM).body(jar);}
+    private static void own(Authentication auth,UUID id){if(auth==null||!id.equals(auth.getPrincipal()))throw new AuthException("WORKER_FORBIDDEN",403);}
+    @GetMapping("/admin/workers") public ResponseEntity<Void> workerPage(){return ResponseEntity.status(302).location(java.net.URI.create("/admin/workers.html")).build();}
+    @GetMapping("/admin/workers/setup") public ResponseEntity<Void> setupPage(){return ResponseEntity.status(302).location(java.net.URI.create("/admin/worker-setup.html")).build();}
     private static ResponseEntity<?> response(int status,Object body){return ResponseEntity.status(status).cacheControl(CacheControl.noStore()).body(body);}
 }

@@ -72,6 +72,8 @@ tasks.named('run', JavaExec) {
 
 tasks.named('processResources') {
     from('../client') { into 'static' }
+    dependsOn ':worker:workerJar'
+    from({ project(':worker').tasks.named('workerJar').get().archiveFile.get().asFile }) { into 'worker-distribution' }
 }
 
 test {

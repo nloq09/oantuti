@@ -7,7 +7,7 @@ public final class WorkerApplication {
     }
     static int run(String[] args,java.util.Map<String,String> env,java.io.PrintStream out) {
         if(args.length==1 && args[0].equals("--help")) {
-            out.println("RPS Worker 0.1.0 (registration foundation)\nJava 21+. Set WORKER_REGISTRATION_TOKEN for first enrollment.\njava -jar rps-worker.jar --central=https://central.example --name=LAB-PC-01 --state-dir=./worker-state\nLAN/local only: add --allow-insecure-http. Keep worker-state private and persistent.");return 0;
+            out.println("RPS Worker 0.2.0\nJava 21+. Set WORKER_REGISTRATION_TOKEN for first enrollment.\njava -jar rps-worker.jar --central=https://central.example --name=LAB-PC-01 --state-dir=./worker-state --max-matches=1 --max-bots=2\nLAN/local only: add --allow-insecure-http. Use --once for one heartbeat, --identity-only to check credentials. Keep worker-state private and persistent.");return 0;
         }
         WorkerConfig config;
         try{config=WorkerConfig.parse(args,env);}catch(RuntimeException e){out.println("Invalid configuration. Use --help; HTTPS is required except explicit LAN/local HTTP.");return 2;}
@@ -20,8 +20,10 @@ public final class WorkerApplication {
             }
             var current=central.identity(identity);
             out.println("Worker "+identity.workerId()+" connected. Approval: "+current.path("approvalStatus").asText()+". Status: "+current.path("status").asText());
-            out.println("Registration foundation only: heartbeat, approval UI and job execution are not enabled yet.");
-            return 0;
+            if(config.identityOnly())return 0;
+            var probe=new RuntimeProbe(config);
+            out.println("Heartbeat agent running. Job claim/execution are not enabled yet. Ctrl+C to stop.");
+            return new HeartbeatAgent(central,identity,probe.capabilities(),probe::heartbeat,out).run(config.once());
         } catch(InterruptedException e){Thread.currentThread().interrupt();out.println("Worker interrupted; persisted identity retained.");return 1;}
         catch(Exception e){out.println("Worker connection or private identity storage failed. Check Central, credentials and state directory. If initial enrollment response was lost, ask admin for a new token; do not retry enrollment automatically.");return 1;}
     }
