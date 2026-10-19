@@ -5,6 +5,7 @@ import com.rpsbattle.auth.AuthException;
 import com.rpsbattle.worker.remote.WorkerIdentityService;
 import com.rpsbattle.worker.remote.WorkerTelemetryService;
 import com.rpsbattle.worker.remote.RemoteMatchQueue;
+import com.rpsbattle.worker.remote.RemoteArtifactService;
 import java.util.*;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -16,7 +17,8 @@ public class RemoteWorkerController {
     private final AccountAuthorizationService accounts;
     private final WorkerTelemetryService telemetry;
     private final RemoteMatchQueue queue;
-    public RemoteWorkerController(WorkerIdentityService workers, AccountAuthorizationService accounts,WorkerTelemetryService telemetry,RemoteMatchQueue queue){this.workers=workers;this.accounts=accounts;this.telemetry=telemetry;this.queue=queue;}
+    private final RemoteArtifactService artifacts;
+    public RemoteWorkerController(WorkerIdentityService workers, AccountAuthorizationService accounts,WorkerTelemetryService telemetry,RemoteMatchQueue queue,RemoteArtifactService artifacts){this.workers=workers;this.accounts=accounts;this.telemetry=telemetry;this.queue=queue;this.artifacts=artifacts;}
     public record Issue(Integer uses,Integer lifetimeMinutes) {}
     @PostMapping("/api/admin/workers/registration-tokens")
     public ResponseEntity<?> issue(Authentication auth,@RequestBody Issue body){var actor=accounts.requireAdmin(auth).id().value();return response(201,workers.issue(actor,body.uses()==null?1:body.uses(),body.lifetimeMinutes()==null?15:body.lifetimeMinutes()));}
@@ -43,6 +45,7 @@ public class RemoteWorkerController {
     private static void own(Authentication auth,UUID id){if(auth==null||!id.equals(auth.getPrincipal()))throw new AuthException("WORKER_FORBIDDEN",403);}
     @PostMapping("/internal/workers/{id}/jobs/claim") public ResponseEntity<?> claim(Authentication auth,@PathVariable UUID id,@RequestBody RemoteMatchQueue.Claim body){own(auth,id);return response(200,queue.claim(id,body));}
     @GetMapping("/internal/workers/{id}/jobs/assigned") public ResponseEntity<?> assigned(Authentication auth,@PathVariable UUID id){own(auth,id);return response(200,queue.assigned(id));}
+    @GetMapping("/internal/workers/{id}/artifacts/{artifact}") public ResponseEntity<byte[]> artifact(Authentication auth,@PathVariable UUID id,@PathVariable UUID artifact,@RequestParam UUID executionId){own(auth,id);var data=artifacts.download(id,executionId,artifact);return ResponseEntity.ok().cacheControl(CacheControl.noStore()).contentType(MediaType.APPLICATION_OCTET_STREAM).contentLength(data.bytes().length).header("X-Artifact-SHA256",data.hash()).header("X-Artifact-Language",data.language()).header("X-Artifact-Format",data.format()).header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\"artifact.bin\"").body(data.bytes());}
     @PostMapping("/internal/workers/{id}/jobs/{job}/decline") public ResponseEntity<?> decline(Authentication auth,@PathVariable UUID id,@PathVariable UUID job,@RequestBody RemoteMatchQueue.Decline body){own(auth,id);return response(200,queue.decline(id,job,body));}
     @GetMapping("/admin/workers") public ResponseEntity<Void> workerPage(){return ResponseEntity.status(302).location(java.net.URI.create("/admin/workers.html")).build();}
     @GetMapping("/admin/workers/setup") public ResponseEntity<Void> setupPage(){return ResponseEntity.status(302).location(java.net.URI.create("/admin/worker-setup.html")).build();}

@@ -25,7 +25,7 @@ public class RemoteMatchQueue {
     private String encoded(Object object){try{return json.writeValueAsString(object);}catch(Exception e){throw new IllegalArgumentException("Invalid remote protocol data");}}
     private Spec decoded(String value){try{return json.readValue(value,Spec.class);}catch(Exception e){throw new IllegalStateException("Remote job metadata invalid");}}
     private static boolean version(String v){return v!=null&&v.matches("[A-Za-z0-9._+-]{1,64}");}
-    private static void bot(BotRef bot){if(bot==null||bot.artifactId()==null||bot.artifactHash()==null||!bot.artifactHash().matches("[a-f0-9]{64}")||bot.language()==null||!Map.of("PYTHON","python:3.12-slim","CPP","gcc:14","JAVA","eclipse-temurin:21-jdk").getOrDefault(bot.language(),"").equals(bot.runtime()))throw new AuthException("INVALID_REMOTE_ARTIFACT",400);}
+    private static void bot(BotRef bot){if(bot==null||bot.artifactId()==null||bot.artifactHash()==null||!bot.artifactHash().matches("[a-f0-9]{64}")||bot.language()==null||!Set.of("PYTHON","CPP","JAVA").contains(bot.language())||!Map.of("PYTHON","python:3.12-slim","CPP","gcc:14","JAVA","eclipse-temurin:21-jdk").get(bot.language()).equals(bot.runtime()))throw new AuthException("INVALID_REMOTE_ARTIFACT",400);}
     @Transactional
     public UUID enqueue(Spec spec) {
         if(spec==null||spec.matchId()==null||spec.tournamentId()==null||!version(spec.gameCoreVersion())||!version(spec.ruleSetVersion())||spec.turnTimeoutMs()<1||spec.turnTimeoutMs()>10000||spec.matchHardTimeoutMs()<spec.turnTimeoutMs()||spec.matchHardTimeoutMs()>3600000||spec.maxTurns()<1||spec.maxTurns()>10000||!Set.of("TRUSTED","COMMUNITY").contains(Objects.toString(spec.minimumTrust(),"")))throw new AuthException("INVALID_REMOTE_JOB",400);

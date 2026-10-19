@@ -46,7 +46,7 @@ public final class IdentityStore implements AutoCloseable {
             Files.move(temporary,destination,StandardCopyOption.ATOMIC_MOVE);
         } finally {Files.deleteIfExists(temporary);}
     }
-    private static void secure(Path path)throws IOException {
+    static void secure(Path path)throws IOException {
         if(Files.getFileAttributeView(path,PosixFileAttributeView.class,LinkOption.NOFOLLOW_LINKS)!=null) {
             Files.setPosixFilePermissions(path,PosixFilePermissions.fromString(Files.isDirectory(path)?"rwx------":"rw-------")); return;
         }

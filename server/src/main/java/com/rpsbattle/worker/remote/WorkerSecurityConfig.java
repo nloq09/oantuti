@@ -33,6 +33,7 @@ public class WorkerSecurityConfig {
                 .requestMatchers(HttpMethod.GET,"/internal/workers/*/identity").hasAuthority("REMOTE_WORKER")
                 .requestMatchers(HttpMethod.POST,"/internal/workers/*/capabilities","/internal/workers/*/heartbeat","/internal/workers/*/jobs/claim","/internal/workers/*/jobs/*/decline").hasAuthority("REMOTE_WORKER")
                 .requestMatchers(HttpMethod.GET,"/internal/workers/*/jobs/assigned").hasAuthority("REMOTE_WORKER")
+                .requestMatchers(HttpMethod.GET,"/internal/workers/*/artifacts/*").hasAuthority("REMOTE_WORKER")
                 .anyRequest().denyAll())
             .exceptionHandling(e->e.authenticationEntryPoint((q,r,x)->error(r,json,401,"WORKER_CREDENTIAL_REQUIRED"))
                 .accessDeniedHandler((q,r,x)->error(r,json,403,"WORKER_FORBIDDEN")));

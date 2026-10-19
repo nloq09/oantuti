@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.*;
 
 public final class CentralClient implements AutoCloseable {
-    public static final String VERSION="0.3.0";
+    public static final String VERSION="0.4.0";
     private final URI central;
     private final ObjectMapper json=new ObjectMapper();
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NEVER).build();
@@ -38,12 +38,25 @@ public final class CentralClient implements AutoCloseable {
         public final int status;
         CentralFailure(int status){super("Central request failed");this.status=status;}
     }
+    public JsonNode assigned(IdentityStore.Identity identity)throws IOException,InterruptedException {
+        checkOrigin(identity);return send(HttpRequest.newBuilder(central.resolve("/internal/workers/"+identity.workerId()+"/jobs/assigned")).timeout(Duration.ofSeconds(15)).header("Authorization","Bearer "+identity.workerCredential()).GET().build(),200);
+    }
+    private void checkOrigin(IdentityStore.Identity identity)throws IOException {if(!central.toString().equals(identity.central()))throw new IOException("Identity belongs to another Central");}
+    public java.io.InputStream artifact(IdentityStore.Identity identity,UUID execution,ArtifactRef ref)throws IOException,InterruptedException {
+        checkOrigin(identity);var request=HttpRequest.newBuilder(central.resolve("/internal/workers/"+identity.workerId()+"/artifacts/"+ref.artifactId()+"?executionId="+execution)).timeout(Duration.ofSeconds(15)).header("Authorization","Bearer "+identity.workerCredential()).GET().build();
+        var response=http.send(request,HttpResponse.BodyHandlers.ofInputStream());var input=response.body();
+        if(response.statusCode()!=200){input.close();throw new CentralFailure(response.statusCode());}
+        if(!response.headers().firstValue("X-Artifact-SHA256").orElse("").equals(ref.artifactHash())||!response.headers().firstValue("X-Artifact-Language").orElse("").equals(ref.language())||!response.headers().firstValue("X-Artifact-Format").orElse("").equals(ref.format())||response.headers().firstValueAsLong("Content-Length").orElse(0)>ArtifactCache.ARTIFACT_LIMIT){input.close();throw new IOException("Invalid artifact response");}
+        var timer=java.util.concurrent.Executors.newSingleThreadScheduledExecutor(task->{var thread=new Thread(task,"artifact-download-timeout");thread.setDaemon(true);return thread;});
+        var deadline=timer.schedule(()->{try{input.close();}catch(IOException ignored){}},30,java.util.concurrent.TimeUnit.SECONDS);
+        return new java.io.FilterInputStream(input){public void close()throws IOException{deadline.cancel(false);timer.shutdownNow();super.close();}};
+    }
     private JsonNode send(HttpRequest request,int expected)throws IOException,InterruptedException {
         // Never echo response bodies or exception messages: an upstream error could reflect credentials.
         var response=http.send(request,HttpResponse.BodyHandlers.ofInputStream());
         try(var input=response.body()) {
             if(response.statusCode()!=expected)throw new CentralFailure(response.statusCode());
-            byte[] bytes=input.readNBytes(16385);if(bytes.length>16384)throw new IOException("Central response too large");
+            byte[] bytes=input.readNBytes(1048577);if(bytes.length>1048576)throw new IOException("Central response too large");
             return json.readTree(bytes);
         }
     }
