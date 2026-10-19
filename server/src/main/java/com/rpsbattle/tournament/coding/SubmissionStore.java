@@ -27,9 +27,10 @@ public class SubmissionStore {
  @Transactional(readOnly=true) public List<Map<String,Object>> versions(String id,UUID user){return db.createQuery("select v from CodeVersion v,CodeWorkspace w where v.workspaceId=w.id and w.tournamentId=:t and w.userId=:u order by v.createdAt desc",CodeVersion.class).setParameter("t",UUID.fromString(id)).setParameter("u",user).setMaxResults(100).getResultStream().map(v->{var w=db.find(CodeWorkspace.class,v.workspaceId);return Map.<String,Object>of("id",v.id,"number",v.number,"language",w.language,"status",v.status,"sourceHash",v.sourceHash,"artifactHash",Objects.toString(v.artifactHash,""),"createdAt",v.createdAt);}).toList();}
  public record Selection(CodeWorkspace w,CodeVersion v){}
  private Selection selection(UUID t,UUID user,String language,UUID versionId){var v=versionId==null?null:db.find(CodeVersion.class,versionId);var w=v==null?null:db.find(CodeWorkspace.class,v.workspaceId,LockModeType.PESSIMISTIC_WRITE);if(w==null||!w.tournamentId.equals(t)||!w.userId.equals(user)||language!=null&&!w.language.equals(language))throw new AuthException("VERSION_NOT_OWNED",403);return new Selection(w,v);}
- @Transactional public TournamentRegistration submit(Tournament t,UUID user,UUID versionId,boolean automatic){
+ @Transactional public TournamentRegistration submit(Tournament t,UUID user,UUID versionId,boolean automatic){return promote(t,user,versionId,automatic,false);}
+ private TournamentRegistration promote(Tournament t,UUID user,UUID versionId,boolean automatic,boolean deadline){
   UUID tid=UUID.fromString(t.id);db.createNativeQuery("select id from users where id=:id for update").setParameter("id",user).getSingleResult();var selected=selection(tid,user,null,versionId);var w=selected.w;var v=selected.v;
-  if(w.busy()||!v.status.equals("READY")||!v.publicPassed||!v.samplePassed||t.botPolicy.hiddenTestsEnabled()&&!v.hiddenPassed||v.artifactHash==null)throw new AuthException("SUBMISSION_NOT_READY",409);
+  if(!deadline&&w.busy()||!v.status.equals("READY")||!v.publicPassed||!v.samplePassed||t.botPolicy.hiddenTestsEnabled()&&!v.hiddenPassed||v.artifactHash==null)throw new AuthException("SUBMISSION_NOT_READY",409);
   if(!t.botPolicy.allowedLanguages().contains(w.language))throw new AuthException("BOT_LANGUAGE_NOT_ALLOWED",400);
   boolean imported=v.importedBotId!=null;if(imported&&t.botPolicy.submissionMode()==BotSubmissionMode.CODE_IN_PLATFORM_ONLY||!imported&&t.botPolicy.submissionMode()==BotSubmissionMode.PRE_UPLOADED_ONLY)throw new AuthException("BOT_SUBMISSION_POLICY_MISMATCH",400);
   sandbox.verify(work(w,v));
@@ -65,4 +66,40 @@ public class SubmissionStore {
  @Transactional public void finishDeadline(String id){if(!deadlineDone(id))db.createNativeQuery("insert into tournament_submission_deadlines(tournament_id,processed_at) values(:t,:now)").setParameter("t",UUID.fromString(id)).setParameter("now",Instant.now()).executeUpdate();}
  @Transactional public void autoRejected(String id,UUID user){audit(UUID.fromString(id),user,"AUTO_SUBMIT_REJECTED",null,"No eligible slot, account or version at deadline");}
  @Transactional(readOnly=true) public List<UUID> readyUsers(String t){return db.createQuery("select distinct w.userId from CodeWorkspace w,CodeVersion v where v.workspaceId=w.id and w.tournamentId=:t and v.status='READY'",UUID.class).setParameter("t",UUID.fromString(t)).getResultList();}
+
+ @Transactional(readOnly=true) public CodingFreeze.View frozenMine(String id,UUID user,Instant cutoff){var rows=db.createQuery("select f from CodingFreeze f where f.tournamentId=:t and f.userId=:u and f.codingCloseAt=:c",CodingFreeze.class).setParameter("t",UUID.fromString(id)).setParameter("u",user).setParameter("c",cutoff).getResultList();return rows.isEmpty()?null:rows.getFirst().view();}
+ /** Keyset-like work admission: completed rows disappear from this bounded query. */
+ @Transactional(readOnly=true) public List<UUID> pendingFreezeUsers(String id,Instant cutoff,int limit){return db.createNativeQuery("select r.user_id from tournament_timeline_registrations r where r.tournament_id=:t and r.status='APPROVED' and not exists (select 1 from tournament_coding_freezes f where f.tournament_id=r.tournament_id and f.user_id=r.user_id and f.coding_close_at=:c) order by r.user_id",UUID.class).setParameter("t",UUID.fromString(id)).setParameter("c",cutoff).setMaxResults(limit).getResultList();}
+ public record FreezeResult(CodingFreeze.View freeze,TournamentRegistration registration){}
+ @Transactional public FreezeResult freezeAtDeadline(Tournament t,UUID user,boolean active,Instant now){
+  UUID tid=UUID.fromString(t.id);Instant cutoff=t.timeline.codingCloseAt();
+  db.createNativeQuery("select id from users where id=:u for update").setParameter("u",user).getSingleResult();
+  var previous=frozenMine(t.id,user,cutoff);if(previous!=null)return new FreezeResult(previous,null);
+  if(now.isBefore(cutoff))throw new AuthException("CODING_STILL_OPEN",409);
+  var old=submission(tid,user,true);TournamentRegistration registration=null;String decision="EXPLICIT_SUBMIT",reason=null;
+  boolean eligible=active&&(old==null||Set.of("SUBMITTED","LOCKED").contains(old.status));
+  if(eligible&&t.timeline.deadlinePolicy()==TournamentTimeline.DeadlinePolicy.AUTO_SUBMIT_LATEST_READY&&(old==null||old.status.equals("SUBMITTED")&&t.botPolicy.allowResubmitBeforeDeadline())){
+   var candidates=db.createQuery("select v from CodeVersion v,CodeWorkspace w where v.workspaceId=w.id and w.tournamentId=:t and w.userId=:u and v.status='READY' and v.createdAt<:c and v.updatedAt<:c order by v.createdAt desc,v.id desc",CodeVersion.class).setParameter("t",tid).setParameter("u",user).setParameter("c",cutoff).setMaxResults(1).getResultList();
+   if(!candidates.isEmpty()){
+    var v=candidates.getFirst();var existingVersion=old==null?null:db.find(CodeVersion.class,old.versionId);
+    if(existingVersion==null||v.createdAt.isAfter(existingVersion.createdAt)){
+     var w=db.find(CodeWorkspace.class,v.workspaceId);
+     try{sandbox.verify(work(w,v));}catch(WorkspaceSandbox.Failure invalid){eligible=false;reason="ARTIFACT_CHANGED";}
+     if(eligible){registration=promote(t,user,v.id,true,true);old=submission(tid,user,true);decision="AUTO_SUBMITTED";}
+    }
+   }
+  }
+  boolean hasSubmission=eligible&&old!=null&&!old.submittedAt.isAfter(cutoff)&&Set.of("SUBMITTED","LOCKED").contains(old.status);
+  // Automatic promotion occurs after the cutoff, but selects only READY facts from before it.
+  if(registration!=null)hasSubmission=true;
+  var f=new CodingFreeze();f.id=UUID.randomUUID();f.tournamentId=tid;f.userId=user;f.codingCloseAt=cutoff;f.frozenAt=now;
+  if(hasSubmission){
+   var v=db.find(CodeVersion.class,old.versionId);var w=db.find(CodeWorkspace.class,v.workspaceId);
+   if(!Objects.equals(old.artifactHash,v.artifactHash)){hasSubmission=false;reason="ARTIFACT_CHANGED";}
+   if(hasSubmission&&registration==null)try{sandbox.verify(work(w,v));}catch(WorkspaceSandbox.Failure invalid){hasSubmission=false;reason="ARTIFACT_CHANGED";}
+   if(hasSubmission){old.status="LOCKED";old.lockedAt=now;v.status="LOCKED";lockWorkspaces(tid,user);f.decision=decision;f.versionId=v.id;f.versionNumber=v.number;f.language=w.language;f.sourceHash=v.sourceHash;f.artifactHash=old.artifactHash;f.submittedAt=old.submittedAt;}
+  }
+  if(!hasSubmission){f.decision="MISSING";f.reason=reason!=null?reason:!active?"ACCOUNT_INACTIVE":!eligible?"SUBMISSION_REJECTED":t.timeline.deadlinePolicy()==TournamentTimeline.DeadlinePolicy.REQUIRE_EXPLICIT_SUBMIT?"EXPLICIT_SUBMIT_REQUIRED":"NO_READY_VERSION_BEFORE_DEADLINE";}
+  db.persist(f);audit(tid,user,"CODING_DEADLINE_FROZEN",f.versionId,f.decision+(f.reason==null?"":":"+f.reason));db.flush();return new FreezeResult(f.view(),registration);
+ }
 }

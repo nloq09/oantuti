@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {renderFrozenSubmission} from '../js/tournament/frozen-submission.js';
+import {renderTimelineRegistration} from '../js/tournament/timeline-registration.js';
+class Element{constructor(tag){this.tag=tag;this.children=[];this.textContent='';this.dataset={};}append(...nodes){this.children.push(...nodes);}setAttribute(){}}
+const setup=()=>{globalThis.document={createElement:tag=>new Element(tag)};return new Element('main');};
+const all=e=>[e,...e.children.filter(x=>x instanceof Element).flatMap(all)];
+const frozen={decision:'AUTO_SUBMITTED',version:12,language:'CPP',sourceHash:'source123',artifactHash:'artifact456',submittedAt:'2026-10-19T03:00:02Z',codingCloseAt:'2026-10-19T03:00:00Z'};
+test('frozen screen shows exact selected version, language, hashes and provenance without mutation controls',()=>{const root=setup();renderFrozenSubmission(root,{id:'cup'},{frozenSubmission:frozen,canAccessWorkspace:true});const nodes=all(root),text=nodes.map(n=>n.textContent).join(' ');for(const value of ['v12','CPP','source123','artifact456','tự nộp'])assert.ok(text.includes(value));assert.equal(nodes.some(n=>['textarea','input','button','select'].includes(n.tag)),false);assert.ok(nodes.some(n=>n.href==='/tournament-code.html?id=cup'));});
+test('explicit missing submission does not fabricate a version or PASS status',()=>{const root=setup();renderFrozenSubmission(root,{id:'cup'},{frozenSubmission:{decision:'MISSING',reason:'EXPLICIT_SUBMIT_REQUIRED'}});const text=all(root).map(n=>n.textContent).join(' ');assert.ok(text.includes('chưa bấm nộp'));assert.equal(text.includes('PASS'),false);});
+test('pending freeze tells users to wait for server without claiming a submitted bot',()=>{const root=setup();renderFrozenSubmission(root,{id:'cup'},{});const text=all(root).map(n=>n.textContent).join(' ');assert.ok(text.includes('đang chốt'));assert.equal(text.includes('Build: PASS'),false);});
+test('participant timeline routes frozen and missing outcomes away from registration and coding countdown',()=>{for(const submissionStatus of ['FREEZE_PENDING','SUBMISSION_MISSING','SUBMISSION_FROZEN']){const root=setup();renderTimelineRegistration(root,{id:'cup'},{id:'me'},{registrationStatus:'APPROVED',phase:'SUBMISSION_FROZEN',submissionStatus,frozenSubmission:submissionStatus==='SUBMISSION_FROZEN'?frozen:null},()=>{});const nodes=all(root);assert.ok(nodes.some(n=>n.textContent==='Phần lập trình đã kết thúc'));assert.equal(nodes.some(n=>n.dataset.codingStarts||n.tag==='form'),false);}});

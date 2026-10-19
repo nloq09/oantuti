@@ -7,8 +7,11 @@ import com.rpsbattle.online.DemoRequestException;
 public record TournamentTimeline(Instant registrationOpenAt, Instant registrationCloseAt,
         Instant codingOpenAt, Instant codingCloseAt, Instant validationStartAt,
         Instant validationDeadline, Instant checkInOpenAt, Instant checkInCloseAt,
-        Instant tournamentStartAt, Instant estimatedEndAt, Instant resultPublishAt) {
+        Instant tournamentStartAt, Instant estimatedEndAt, Instant resultPublishAt, DeadlinePolicy deadlinePolicy) {
+    public enum DeadlinePolicy { REQUIRE_EXPLICIT_SUBMIT, AUTO_SUBMIT_LATEST_READY }
+    public TournamentTimeline(Instant registrationOpenAt,Instant registrationCloseAt,Instant codingOpenAt,Instant codingCloseAt,Instant validationStartAt,Instant validationDeadline,Instant checkInOpenAt,Instant checkInCloseAt,Instant tournamentStartAt,Instant estimatedEndAt,Instant resultPublishAt){this(registrationOpenAt,registrationCloseAt,codingOpenAt,codingCloseAt,validationStartAt,validationDeadline,checkInOpenAt,checkInCloseAt,tournamentStartAt,estimatedEndAt,resultPublishAt,null);}
     public TournamentTimeline {
+        deadlinePolicy=deadlinePolicy==null?DeadlinePolicy.AUTO_SUBMIT_LATEST_READY:deadlinePolicy;
         if (registrationOpenAt == null || registrationCloseAt == null || codingOpenAt == null
                 || codingCloseAt == null || validationStartAt == null || validationDeadline == null
                 || checkInOpenAt == null || checkInCloseAt == null || tournamentStartAt == null

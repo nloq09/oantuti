@@ -1,4 +1,5 @@
 import {allowsPreuploaded,allowedPolicyBot,renderBotPolicy} from "./bot-policy.js";
+import {renderDeadlinePolicy} from './deadline-policy-editor.js';
 import {stagePlanText} from "./stage-plan.js";
 import {isKnockout} from "./bracket-renderer.js";
 import {renderSwiss} from "./swiss-view.js";
@@ -73,6 +74,7 @@ function render(t) {
   document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);
   let submissionLink=document.querySelector("#submission-dashboard-link");if(!submissionLink){submissionLink=document.createElement("a");submissionLink.id="submission-dashboard-link";submissionLink.className="button";submissionLink.textContent="Bài nộp bot và hàng đợi →";document.querySelector("#admin-tab").prepend(submissionLink);}submissionLink.hidden=!owner;submissionLink.href="/tournament-submissions.html?id="+encodeURIComponent(id);
   let applicationLink=document.querySelector("#application-review-link");if(!applicationLink){applicationLink=document.createElement("a");applicationLink.id="application-review-link";applicationLink.className="button";applicationLink.textContent="Duyệt đăng ký người chơi →";document.querySelector("#admin-tab").prepend(applicationLink);}applicationLink.hidden=!owner||!t.timeline;applicationLink.href="/tournament-applications.html?id="+encodeURIComponent(id);
+  let deadlinePolicy=document.querySelector('#deadline-policy');if(!deadlinePolicy){deadlinePolicy=document.createElement('section');deadlinePolicy.id='deadline-policy';document.querySelector('#admin-tab').prepend(deadlinePolicy);}if(owner)renderDeadlinePolicy(deadlinePolicy,t,async()=>render(await getTournament(id)));else deadlinePolicy.hidden=true;
   renderRegistrations(t, owner);
   renderSeeding(t, owner);renderRules(t,owner);
   document.querySelector("#format-heading").textContent="Tổng quan · "+formatLabel(t.format);

@@ -3,8 +3,10 @@ import {sessionRequest} from '../api/auth-api.js';
 import {loginLink} from '../account/account-session.js';
 import {errorText} from '../ui/toast.js';
 import {canApply,applicationPayload,applicationLabels} from './timeline-registration-model.js';
+import {renderFrozenSubmission} from './frozen-submission.js';
 
 export function renderTimelineRegistration(root,t,account,flow,refresh){
+ if(account&&flow.registrationStatus==='APPROVED'&&['FREEZE_PENDING','SUBMISSION_MISSING','SUBMISSION_FROZEN'].includes(flow.submissionStatus)){renderFrozenSubmission(root,t,flow);return;}
  const panel=node('section',undefined,'panel timeline-registration-panel');root.append(panel);
  if(flow.phase==='DRAFT'){panel.append(node('h2','Giải chưa công bố đăng ký'));return;}
  if(flow.phase==='UPCOMING'){

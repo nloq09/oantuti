@@ -10,6 +10,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@org.springframework.test.context.TestPropertySource(properties="rps.coding.deadline-initial-delay-ms=3600000")
 class TimelineCodingApiTest extends StageThreeWebFixture {
  @MockitoBean Clock clock;
  @MockitoBean WorkspaceSandbox sandbox;
