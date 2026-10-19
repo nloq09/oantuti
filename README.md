@@ -69,9 +69,9 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 ### Lập trình bot trong giải đấu — Chặng 9
 
-Đã triển khai nhóm 1–10: chính sách nộp bot, [workspace và build Python/C++/Java](docs/CHANG-9-NHOM-2-5-WORKSPACE.md), public/hidden tests, đấu mẫu, lịch sử version, submit/lock theo deadline và dashboard bài nộp cho chủ giải/admin. Bot có sẵn và bot code trên hệ thống dùng chung pipeline validation; trận chính thức chạy đúng artifact đã khóa, không compile lại. Queue PostgreSQL có giới hạn, lease và recovery sau restart. Xem [luồng sử dụng, API, vận hành và giới hạn nhóm 6–10](docs/CHANG-9-NHOM-6-10-SUBMISSIONS.md). Migration hiện tại: V23.
+Đã triển khai nhóm 1–10: chính sách nộp bot, [workspace và build Python/C++/Java](docs/CHANG-9-NHOM-2-5-WORKSPACE.md), public/hidden tests, đấu mẫu, lịch sử version, submit/lock theo deadline và dashboard bài nộp cho chủ giải/admin. Bot có sẵn và bot code trên hệ thống dùng chung pipeline validation; trận chính thức chạy đúng artifact đã khóa, không compile lại. Queue PostgreSQL có giới hạn, lease và recovery sau restart. Xem [luồng sử dụng, API, vận hành và giới hạn nhóm 6–10](docs/CHANG-9-NHOM-6-10-SUBMISSIONS.md). Schema bài nộp dùng V23; migration hiện tại V24 bổ sung đơn đăng ký người chơi theo timeline.
 
-Chặng 10 đang triển khai theo từng nhóm. [Nhóm 1 — Timeline và Phase Resolver](docs/CHANG-10-NHOM-1-TIMELINE.md) bổ sung lưu lịch, API cấu hình có quyền/revision/audit và phase theo giờ server. Chưa bật điều hướng hoặc chặn các chức năng theo phase; các giải hiện tại giữ luồng cũ cho đến khi tích hợp các nhóm tiếp theo.
+Chặng 10 đang triển khai theo từng nhóm. [Nhóm 1 — Timeline và Phase Resolver](docs/CHANG-10-NHOM-1-TIMELINE.md) bổ sung lưu lịch, API cấu hình có quyền/revision/audit và phase theo giờ server. [Nhóm 2 — Đăng ký người chơi](docs/CHANG-10-NHOM-2-REGISTRATION.md) đã tách đơn đăng ký khỏi chọn bot, mở/đóng form theo phase server và chặn truy cập editor sớm. Luồng duyệt đơn mới và coding theo timeline sẽ nối ở nhóm 3–4; giải không có timeline giữ cách hoạt động cũ.
 
 ### Chế độ giải đấu cho người chơi — Chặng 8
 

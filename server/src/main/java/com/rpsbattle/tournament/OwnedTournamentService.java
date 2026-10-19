@@ -132,6 +132,7 @@ public class OwnedTournamentService {
     }
     public void add(Authentication auth,String id,String botId,String displayName,Long seed) {
         var tournament=tournaments.find(id);
+        if(tournament.timeline!=null)throw new AuthException("REGISTRATION_PARTICIPANT_ONLY",409);
         if(tournament.botPolicy.submissionMode()==BotSubmissionMode.CODE_IN_PLATFORM_ONLY)throw new DemoRequestException("PLATFORM_CODE_REQUIRED");
         if(!tournament.participantPolicy.bots())throw new DemoRequestException("CONTROLLER_NOT_ALLOWED");
         if(tournament.status==TournamentStatus.REGISTRATION){register(auth,id,botId);return;}
@@ -249,6 +250,7 @@ public class OwnedTournamentService {
     }
     private void registrationPhase(Tournament t) {
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("TOURNAMENT_LOCKED");
+        if(t.timeline!=null&&TournamentPhaseResolver.resolve(t.status,t.timeline,clock.instant(),null,false).phase()!=TournamentPhase.REGISTRATION_OPEN)throw new AuthException("REGISTRATION_NOT_OPEN",409);
         if(t.timing.registrationDeadline()!=null&&!clock.instant().isBefore(t.timing.registrationDeadline()))throw new DemoRequestException("REGISTRATION_CLOSED");
     }
     private int registrationIndex(Tournament t,String registrationId) {
@@ -257,6 +259,7 @@ public class OwnedTournamentService {
     }
     public void register(Authentication auth,String id,String botId) {
         var actor=accounts.requireUser(auth);var t=tournaments.find(id);
+        if(t.timeline!=null)throw new AuthException("REGISTRATION_PARTICIPANT_ONLY",409);
         mutate(t,auth,()->{
             registrationPhase(t);
             if(!t.participantPolicy.bots())throw new DemoRequestException("CONTROLLER_NOT_ALLOWED");
@@ -274,6 +277,7 @@ public class OwnedTournamentService {
     }
     public void registerHuman(Authentication auth,String id,boolean accepted){
         var actor=accounts.requireUser(auth);var t=tournaments.find(id);
+        if(t.timeline!=null)throw new AuthException("REGISTRATION_PARTICIPANT_ONLY",409);
         if(!accepted)throw new DemoRequestException("RULES_ACCEPTANCE_REQUIRED");
         mutate(t,auth,()->{registrationPhase(t);if(!t.participantPolicy.humans())throw new DemoRequestException("CONTROLLER_NOT_ALLOWED");
             var previous=t.registrations.stream().filter(r->r.botId()==null&&r.userId().equals(actor.id().value())).findFirst();

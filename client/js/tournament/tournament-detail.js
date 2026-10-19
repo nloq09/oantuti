@@ -50,6 +50,7 @@ function render(t) {
   if (t.revision < latest) return;
   latest = t.revision;currentTournament = t;
   const owner = canManageTournament(t, account);
+  if(t.timeline&&!owner){location.replace("/tournament-detail.html?id="+encodeURIComponent(t.id));return;}
   document.querySelector("#name").textContent = t.name;
   const p = t.progress;
   const draft = ["DRAFT", "REGISTRATION"].includes(t.status);

@@ -13,13 +13,14 @@ import java.util.*;
 
 @Service
 public class TournamentSubmissionService {
+ @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.timeline.TimelineAccessGuard timelineAccess;
  private final AccountAuthorizationService accounts;private final TournamentService tournaments;private final OwnedTournamentService owned;private final TournamentAuthorizationService authorization;private final SubmissionStore store;private final UserRepository users;private final TournamentRegistry registry;
  public TournamentSubmissionService(AccountAuthorizationService a,TournamentService t,OwnedTournamentService o,TournamentAuthorizationService z,SubmissionStore s,UserRepository u,TournamentRegistry r){accounts=a;tournaments=t;owned=o;authorization=z;store=s;users=u;registry=r;}
  public SubmissionStore.Summary mine(Authentication auth,String id){return store.mine(id,accounts.requireUser(auth).id().value());}
  public List<Map<String,Object>> versions(Authentication auth,String id){return store.versions(id,accounts.requireUser(auth).id().value());}
  public void submit(Authentication auth,String id,UUID version,long revision,boolean accepted){submit(auth,id,version,revision,accepted,false);}
  private void submit(Authentication auth,String id,UUID version,long revision,boolean accepted,boolean auto){var user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){
-  Instant now=Instant.now();if(!accepted)throw new AuthException("RULES_ACCEPTANCE_REQUIRED",400);if(t.status!=TournamentStatus.REGISTRATION||t.botPolicy.submissionOpenAt()!=null&&now.isBefore(t.botPolicy.submissionOpenAt())||!auto&&t.botPolicy.submissionDeadline()!=null&&!now.isBefore(t.botPolicy.submissionDeadline()))throw new AuthException("WORKSPACE_CLOSED",409);if(revision!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
+  if(t.timeline!=null)timelineAccess.coding(t,user);Instant now=Instant.now();if(!accepted)throw new AuthException("RULES_ACCEPTANCE_REQUIRED",400);if(t.status!=TournamentStatus.REGISTRATION||t.botPolicy.submissionOpenAt()!=null&&now.isBefore(t.botPolicy.submissionOpenAt())||!auto&&t.botPolicy.submissionDeadline()!=null&&!now.isBefore(t.botPolicy.submissionDeadline()))throw new AuthException("WORKSPACE_CLOSED",409);if(revision!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
   owned.submissionMutation(t,auth,()->{store.enable(id);var old=store.mine(id,user);if(old==null&&t.registrations.stream().filter(TournamentRegistration::active).count()>=t.maxParticipants)throw new AuthException("PARTICIPANT_LIMIT",400);
    var registration=store.submit(t,user,version,auto);t.registrations.removeIf(r->r.id().equals(registration.id()));t.registrations.add(registration);
    // Approved roster retains its stable execution identity across resubmits.

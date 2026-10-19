@@ -1,4 +1,9 @@
 const errors = {
+  REGISTRATION_NOT_OPEN:"Chưa đến giờ đăng ký hoặc thời gian đăng ký đã kết thúc.",
+  REGISTRATION_PARTICIPANT_ONLY:"Giải theo timeline chỉ đăng ký người chơi ở bước này; bot được chọn sau.",
+  REGISTRATION_NOT_APPROVED:"Bạn cần được chủ giải duyệt đăng ký trước khi vào phần lập trình.",
+  CODING_NOT_OPEN:"Phần lập trình chưa mở hoặc đã hết giờ.",
+  INVALID_AFFILIATION:"Trường/Đội tối đa 80 ký tự và không được chứa ký tự điều khiển.",
   WORKSPACE_NOT_FOUND:"Chưa có workspace cho ngôn ngữ này.",
   WORKSPACE_CONFLICT:"Bản nháp trên server đã thay đổi. Hãy so sánh hai bản trước khi lưu.",
   WORKSPACE_BUSY:"Workspace đang build hoặc kiểm thử. Hãy chờ kết quả.",
