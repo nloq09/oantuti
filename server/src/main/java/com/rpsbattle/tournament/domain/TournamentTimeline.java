@@ -7,11 +7,14 @@ import com.rpsbattle.online.DemoRequestException;
 public record TournamentTimeline(Instant registrationOpenAt, Instant registrationCloseAt,
         Instant codingOpenAt, Instant codingCloseAt, Instant validationStartAt,
         Instant validationDeadline, Instant checkInOpenAt, Instant checkInCloseAt,
-        Instant tournamentStartAt, Instant estimatedEndAt, Instant resultPublishAt, DeadlinePolicy deadlinePolicy) {
+        Instant tournamentStartAt, Instant estimatedEndAt, Instant resultPublishAt, DeadlinePolicy deadlinePolicy, ValidationFailurePolicy validationFailurePolicy) {
     public enum DeadlinePolicy { REQUIRE_EXPLICIT_SUBMIT, AUTO_SUBMIT_LATEST_READY }
+    public enum ValidationFailurePolicy { DISQUALIFY, USE_LAST_VALID_VERSION, ALLOW_EMERGENCY_RESUBMISSION }
+    public TournamentTimeline(Instant registrationOpenAt,Instant registrationCloseAt,Instant codingOpenAt,Instant codingCloseAt,Instant validationStartAt,Instant validationDeadline,Instant checkInOpenAt,Instant checkInCloseAt,Instant tournamentStartAt,Instant estimatedEndAt,Instant resultPublishAt,DeadlinePolicy deadlinePolicy){this(registrationOpenAt,registrationCloseAt,codingOpenAt,codingCloseAt,validationStartAt,validationDeadline,checkInOpenAt,checkInCloseAt,tournamentStartAt,estimatedEndAt,resultPublishAt,deadlinePolicy,null);}
     public TournamentTimeline(Instant registrationOpenAt,Instant registrationCloseAt,Instant codingOpenAt,Instant codingCloseAt,Instant validationStartAt,Instant validationDeadline,Instant checkInOpenAt,Instant checkInCloseAt,Instant tournamentStartAt,Instant estimatedEndAt,Instant resultPublishAt){this(registrationOpenAt,registrationCloseAt,codingOpenAt,codingCloseAt,validationStartAt,validationDeadline,checkInOpenAt,checkInCloseAt,tournamentStartAt,estimatedEndAt,resultPublishAt,null);}
     public TournamentTimeline {
         deadlinePolicy=deadlinePolicy==null?DeadlinePolicy.AUTO_SUBMIT_LATEST_READY:deadlinePolicy;
+        validationFailurePolicy=validationFailurePolicy==null?ValidationFailurePolicy.DISQUALIFY:validationFailurePolicy;
         if (registrationOpenAt == null || registrationCloseAt == null || codingOpenAt == null
                 || codingCloseAt == null || validationStartAt == null || validationDeadline == null
                 || checkInOpenAt == null || checkInCloseAt == null || tournamentStartAt == null

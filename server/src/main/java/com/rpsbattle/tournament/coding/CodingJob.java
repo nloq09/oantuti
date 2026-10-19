@@ -15,5 +15,6 @@ public class CodingJob {
  @Column(name="created_at",nullable=false) Instant createdAt;
  @Column(name="finished_at") Instant finishedAt;
  @Column(name="hidden_required",nullable=false) boolean hiddenRequired;
+ @Column(name="final_validation_id") UUID finalValidationId;
  protected CodingJob(){}
 }

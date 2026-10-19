@@ -18,20 +18,28 @@ public class TimelineRegistrationService {
     private final Clock clock;
     @org.springframework.beans.factory.annotation.Autowired TournamentAuthorizationService authorization;
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.coding.SubmissionStore submissions;
+    @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.coding.FinalValidationStore finals;
     public TimelineRegistrationService(AccountAuthorizationService a,TournamentService t,OwnedTournamentService o,TimelineRegistrationStore s,Clock c){accounts=a;tournaments=t;owned=o;store=s;clock=c;}
     public record Signup(Boolean rulesAccepted,String intendedLanguage,String affiliation,String botId,String sourceCode,String versionId) {}
-    public record Flow(TournamentPhase phase,String registrationStatus,TimelineRegistrationStore.View registration,String nextAction,Instant serverNow,Instant phaseEndsAt,Instant codingOpenAt,Set<String> allowedLanguages,long revision,Instant codingCloseAt,boolean canAccessWorkspace,boolean canModifyWorkspace,String submissionStatus,com.rpsbattle.tournament.coding.CodingFreeze.View frozenSubmission) {}
+    public record Flow(TournamentPhase phase,String registrationStatus,TimelineRegistrationStore.View registration,String nextAction,Instant serverNow,Instant phaseEndsAt,Instant codingOpenAt,Set<String> allowedLanguages,long revision,Instant codingCloseAt,boolean canAccessWorkspace,boolean canModifyWorkspace,String submissionStatus,com.rpsbattle.tournament.coding.CodingFreeze.View frozenSubmission,com.rpsbattle.tournament.coding.FinalValidationStore.View finalValidation) {}
     private TournamentPhaseResolver.Resolution resolve(Tournament t,Instant now){if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);return TournamentPhaseResolver.resolve(t.status,t.timeline,now,null,store.reviewComplete(UUID.fromString(t.id)));}
     private void registrationOpen(Tournament t){if(resolve(t,clock.instant()).phase()!=TournamentPhase.REGISTRATION_OPEN)throw new AuthException("REGISTRATION_NOT_OPEN",409);}
     public Flow read(Authentication auth,String id){var user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){return flow(t,user);}}
     private Flow flow(Tournament t,UUID user){
         var now=clock.instant();var phase=resolve(t,now);var registration=store.mine(UUID.fromString(t.id),user);String status=registration==null?"NOT_REGISTERED":registration.status();
-        boolean approved=status.equals("APPROVED"),closed=!now.isBefore(t.timeline.codingCloseAt());
-        var frozen=approved&&closed?submissions.frozenMine(t.id,user,t.timeline.codingCloseAt()):null;
+        var emergency=status.equals("APPROVED")?finals.emergencyCutoff(t.id,user):null;
+        var cutoff=emergency==null?t.timeline.codingCloseAt():emergency;
+        boolean emergencyOpen=emergency!=null&&now.isBefore(emergency)&&t.status==TournamentStatus.REGISTRATION&&t.startedAt==null;
+        if(emergencyOpen)phase=new TournamentPhaseResolver.Resolution(TournamentPhase.CODING_OPEN,emergency);
+        boolean approved=status.equals("APPROVED"),closed=!now.isBefore(cutoff);
+        var frozen=approved&&closed?submissions.frozenMine(t.id,user,cutoff):null;
+        var validation=approved&&closed?finals.mine(t.id,user,cutoff):null;
         var submission=approved&&!closed?submissions.mine(t.id,user):null;
         String submissionStatus=frozen!=null?(frozen.decision().equals("MISSING")?"SUBMISSION_MISSING":"SUBMISSION_FROZEN"):approved&&closed?"FREEZE_PENDING":submission==null?"NO_SUBMISSION":submission.status();
+        if(validation!=null)submissionStatus=validation.status().equals("PASSED")&&validation.applied()?"BOT_READY":validation.status().equals("FAILED")?"VALIDATION_FAILED":validation.status().equals("INFRA_ERROR")?"VALIDATION_INFRA_ERROR":"VALIDATING";
         String action=phase.phase()==TournamentPhase.REGISTRATION_OPEN&&(registration==null||status.equals("CANCELLED"))?"REGISTER":switch(status){case "PENDING"->"WAIT_FOR_APPROVAL";case "APPROVED"->closed?"VIEW_FROZEN_SUBMISSION":phase.phase()==TournamentPhase.CODING_OPEN?"OPEN_CODE_WORKSPACE":"WAIT_FOR_CODING";case "REJECTED"->"REGISTRATION_REJECTED";case "WAITLISTED"->"WAITLISTED";default->"VIEW_REGISTRATION_STATUS";};
-        return new Flow(phase.phase(),status,registration,action,now,phase.phaseEndsAt(),t.timeline.codingOpenAt(),t.botPolicy.allowedLanguages(),t.revision,t.timeline.codingCloseAt(),approved&&t.status!=TournamentStatus.DRAFT&&!now.isBefore(t.timeline.codingOpenAt()),approved&&phase.phase()==TournamentPhase.CODING_OPEN,submissionStatus,frozen);
+        if(validation!=null)action="VIEW_FINAL_VALIDATION";
+        return new Flow(phase.phase(),status,registration,action,now,phase.phaseEndsAt(),t.timeline.codingOpenAt(),t.botPolicy.allowedLanguages(),t.revision,cutoff,approved&&t.status!=TournamentStatus.DRAFT&&!now.isBefore(t.timeline.codingOpenAt()),approved&&phase.phase()==TournamentPhase.CODING_OPEN,submissionStatus,frozen,validation);
     }
     private boolean reviewOpen(Tournament t){var phase=resolve(t,clock.instant()).phase();return Set.of(TournamentPhase.REGISTRATION_OPEN,TournamentPhase.REGISTRATION_REVIEW,TournamentPhase.WAITING_FOR_CODING).contains(phase);}
     public record Applications(List<TimelineRegistrationStore.View> items,int page,int size,long revision,boolean reviewOpen,Instant codingOpenAt) {}

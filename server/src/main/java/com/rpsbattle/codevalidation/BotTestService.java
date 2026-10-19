@@ -27,7 +27,7 @@ public class BotTestService {
  private Map<String,Object> resources(){return Map.of("cpuLimit",0.5,"memoryLimitMiB",384,"pidsLimit",64,"tempBytes",67108864,"stdoutLineBytes",65536,"stderrBytes",32768,"turnTimeoutMs",2000,"testTimeoutMs",60000,"network","none","rootFilesystem","read-only");}
  private static String error(Throwable error){if(error instanceof WorkspaceSandbox.Failure f)return f.code;if(error instanceof InvalidActionException||error instanceof IllegalArgumentException)return "INVALID_ACTION";if(error instanceof BotProtocolException)return "PROTOCOL_ERROR";return "TEST_ERROR";}
  public record HiddenCase(String id,String status){}
- public record HiddenResult(boolean passed,List<HiddenCase> cases){}
+ public record HiddenResult(boolean passed,List<HiddenCase> cases,String failure){public HiddenResult(boolean passed,List<HiddenCase> cases){this(passed,cases,null);}}
  /** No hidden state, request, exception text, timing or stderr crosses this return boundary. */
  public HiddenResult hidden(WorkspaceStore.Work work){var results=new ArrayList<HiddenCase>();boolean passed=true;long deadline=System.nanoTime()+Duration.ofSeconds(55).toNanos();try(var session=sandbox.open(work)){
   var f=fixture();var state=f.state;var protocol=new BotProtocol();var generator=new LegalActionGenerator(f.rules);var engine=new GameEngine(f.rules);var random=new RandomBotAgent(new java.security.SecureRandom().nextLong());
@@ -36,7 +36,7 @@ public class BotTestService {
     if(System.nanoTime()>deadline)throw new IllegalStateException();var player=state.currentPlayerId();String request=protocol.encodeTurn(new PlayerView(state,player),generator.getLegalActions(state,player));var action=protocol.decodeResponse(session.exchange(request,Duration.ofSeconds(2)),state.sequence(),player);engine.applyAction(state,player,action);results.add(new HiddenCase("Hidden Test "+(i+1),"PASS"));
    }catch(RuntimeException failure){passed=false;results.add(new HiddenCase("Hidden Test "+(i+1),"FAIL"));break;}
   }
- }catch(RuntimeException failure){passed=false;results.add(new HiddenCase("Hidden Test 1","FAIL"));}return new HiddenResult(passed,List.copyOf(results));}
+ }catch(RuntimeException failure){passed=false;results.add(new HiddenCase("Hidden Test 1","FAIL"));return new HiddenResult(false,List.copyOf(results),failure instanceof WorkspaceSandbox.Failure f&&f.code.equals("SANDBOX_UNAVAILABLE")?"SANDBOX_UNAVAILABLE":"TEST_FAILED");}return new HiddenResult(passed,List.copyOf(results),passed?null:"TEST_FAILED");}
  public Result test(WorkspaceStore.Work work){long started=System.nanoTime();var cases=new ArrayList<Case>();String debug="";boolean pass=true;int timeouts=0,invalid=0;
   try(var session=sandbox.open(work)){
    var protocol=new BotProtocol();var generator=new LegalActionGenerator(new ClassicRuleSet(P1,P2));var engine=new GameEngine(new ClassicRuleSet(P1,P2));int number=0;

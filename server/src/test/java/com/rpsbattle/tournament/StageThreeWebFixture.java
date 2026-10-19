@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Predicate;
 import static org.assertj.core.api.Assertions.*;
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties="rps.bots.directory=${java.io.tmpdir}/rps-stage3-bots-${random.uuid}")
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"rps.bots.directory=${java.io.tmpdir}/rps-stage3-bots-${random.uuid}","rps.final-validation.initial-delay-ms=3600000"})
 abstract class StageThreeWebFixture {
     @LocalServerPort int port;
     @Autowired ObjectMapper json;

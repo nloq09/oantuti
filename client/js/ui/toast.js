@@ -1,4 +1,10 @@
 const errors = {
+  FINAL_VALIDATION_REQUIRED:"Bot phải qua kiểm thử chính thức trước khi check-in hoặc thi đấu.",
+  FINAL_VALIDATION_NOT_FOUND:"Không tìm thấy kết quả kiểm thử chính thức.",
+  FINAL_RETRY_NOT_ALLOWED:"Chỉ chạy lại lỗi hạ tầng khi vẫn còn trong hạn kiểm thử.",
+  VALIDATION_NOT_OPEN:"Chưa đến thời gian kiểm thử chính thức.",
+  EMERGENCY_NOT_ALLOWED:"Chưa đủ điều kiện mở lượt nộp khẩn cấp, hoặc hạn mới không hợp lệ.",
+  USE_FINAL_VALIDATION_ACTIONS:"Dùng trang Kiểm thử chính thức để xử lý bài theo timeline.",
   REGISTRATION_NOT_OPEN:"Chưa đến giờ đăng ký hoặc thời gian đăng ký đã kết thúc.",
   REGISTRATION_PARTICIPANT_ONLY:"Giải theo timeline chỉ đăng ký người chơi ở bước này; bot được chọn sau.",
   REGISTRATION_NOT_APPROVED:"Bạn cần được chủ giải duyệt đăng ký trước khi vào phần lập trình.",

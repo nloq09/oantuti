@@ -1,4 +1,5 @@
 import {renderTeams} from "../tournament/team-view.js";
+import {renderDeadlinePolicy} from '../tournament/deadline-policy-editor.js';
 import {renderSwiss} from "../tournament/swiss-view.js";
 import {isKnockout} from "../tournament/bracket-renderer.js";
 import {node,link,date,message} from "./admin-shell.js";
@@ -15,7 +16,9 @@ async function detail(root){
   root.replaceChildren(node("h1",t.name),link("← Danh sách giải","/admin/tournaments.html"));
   root.append(link("Bài nộp bot và hàng đợi","/admin/submissions.html?id="+encodeURIComponent(id)));
   if(t.timeline)root.append(link("Duyệt đăng ký người chơi","/admin/applications.html?id="+encodeURIComponent(id)));
+  if(t.timeline)root.append(link("Kiểm thử chính thức","/admin/final-validation.html?id="+encodeURIComponent(id)));
   const reload=()=>detail(root),action=(label,operation)=>{const button=node("button",label);button.onclick=()=>confirmAction(label,async reason=>{await operation(reason);await reload();});return button;};
+  if(t.timeline){const policy=node('section',undefined,'panel');renderDeadlinePolicy(policy,t,reload);root.append(policy);}
   const lifecycle=(operation,reason,extra={})=>adminRequest(`tournaments/${encodeURIComponent(id)}/actions/${operation}`,{revision:t.revision,reason,...extra});
   tabs(root,[
     ["overview","Tổng quan",panel=>{panel.append(details("Giải đấu",t,[["ID","id"],["Chủ giải","ownerName"],["Thể thức","format"],["Trạng thái","status"],["Bắt đầu","startedAt",date],["Vòng","currentRound"],["Worker tối đa","maxConcurrentMatches"]]));for(const [label,value]of [["Đang chạy",t.progress.running],["Chờ chạy",t.progress.pending],["Hoàn thành",t.progress.completed],["Trận lỗi",t.progress.failed],["Đang xem xét",Object.keys(t.reviews||{}).length]])panel.append(node("p",label+": "+value));}],

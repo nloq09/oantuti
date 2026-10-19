@@ -35,7 +35,7 @@ public class CodeWorkspaceService {
  public WorkspaceStore.View job(Authentication auth,String id,String value,Long revision,String source,String type){UUID user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){
   if(t.timeline!=null)timelineAccess.coding(t,user);if(t.botPolicy.submissionMode()==BotSubmissionMode.PRE_UPLOADED_ONLY&&!type.equals("BUILD")){Instant now=Instant.now();if(t.timeline==null&&(t.status!=TournamentStatus.REGISTRATION||t.botPolicy.submissionDeadline()!=null&&!now.isBefore(t.botPolicy.submissionDeadline())))throw new AuthException("WORKSPACE_CLOSED",409);}else writable(t);String l=language(t,value);if(revision==null)throw new DemoRequestException("WORKSPACE_REVISION_REQUIRED");if(type.equals("TEST")&&!t.botPolicy.allowPublicTests()||type.equals("SAMPLE")&&!t.botPolicy.allowCustomTestMatch())throw new AuthException("WORKSPACE_TEST_DISABLED",403);
   if(type.equals("BUILD"))validateSource(source,t.botPolicy,l);
-  store.claim(UUID.fromString(t.id),user,l,revision,source,t.botPolicy.maxSubmissionVersions(),type);
+  store.claim(UUID.fromString(t.id),user,l,revision,source,timelineAccess.versionLimit(t,user),type);
   return store.read(UUID.fromString(t.id),user,l);
  }}
  public List<Map<String,String>> publicCases(Authentication auth,String id){var user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){if(t.timeline!=null)timelineAccess.readable(t,user);if(!t.participantPolicy.bots())throw new AuthException("CODING_NOT_ALLOWED",403);if(!t.botPolicy.allowPublicTests())throw new AuthException("WORKSPACE_TEST_DISABLED",403);return tests.publicCases();}}

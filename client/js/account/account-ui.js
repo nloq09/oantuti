@@ -1,4 +1,4 @@
-const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html", "/admin/tournaments.html", "/admin/tournament-detail.html", "/admin/disputes.html", "/admin/dispute-detail.html", "/admin/replays.html", "/admin/replay-detail.html", "/admin/audit.html", "/admin/system.html", "/admin/profile.html", "/tournament-detail.html", "/tournament-lobby.html", "/tournament-code.html", "/tournament-submissions.html", "/admin/submissions.html", "/tournament-applications.html", "/admin/applications.html"]);
+const destinations = new Set(["/", "/lobby.html", "/bots.html", "/tournaments.html", "/tournament.html", "/profile.html", "/history.html", "/game.html", "/replay.html", "/result.html", "/admin/index.html", "/admin/users.html", "/admin/user-detail.html", "/admin/bots.html", "/admin/bot-detail.html", "/admin/matches.html", "/admin/match-detail.html", "/admin/replay.html", "/admin/spectator.html", "/admin/tournaments.html", "/admin/tournament-detail.html", "/admin/disputes.html", "/admin/dispute-detail.html", "/admin/replays.html", "/admin/replay-detail.html", "/admin/audit.html", "/admin/system.html", "/admin/profile.html", "/tournament-detail.html", "/tournament-lobby.html", "/tournament-code.html", "/tournament-submissions.html", "/admin/submissions.html", "/tournament-applications.html", "/admin/applications.html", "/tournament-final-validation.html", "/admin/final-validation.html"]);
 export function safeNext(value, origin = "https://rps.invalid") {
   try {
     const url = new URL(value || "/", origin);
@@ -22,6 +22,7 @@ export function adminDestination(account,pathname,search="") {
   if(["/tournament.html","/tournament-detail.html","/tournament-lobby.html"].includes(pathname)&&query.get("id"))return "/admin/tournament-detail.html?id="+encodeURIComponent(query.get("id"));
   if(pathname==="/tournament-applications.html")return "/admin/applications.html"+search;
   if(pathname==="/tournament-submissions.html")return "/admin/submissions.html"+search;
+  if(pathname==="/tournament-final-validation.html")return "/admin/final-validation.html"+search;
   if(pathname==="/profile.html")return "/admin/profile.html";
   return "/admin/index.html";
 }

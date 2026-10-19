@@ -164,3 +164,4 @@ th {
 .participant-row {flex-wrap:wrap;} .participant-row small {flex-basis:100%;}
 .tab-bar {flex-wrap:wrap;gap:.5rem;}
 .tournament-filters {margin-bottom:1rem;}
+.validation-panel p,.frozen-submission p{overflow-wrap:anywhere}

@@ -27,6 +27,6 @@ public class PreuploadedSubmissionService {
   if(bytes.length==0||bytes.length>(meta.language()==BotLanguage.JAR?5*1024*1024:t.botPolicy.maxSourceBytes()))throw new AuthException("INVALID_WORKSPACE_SOURCE",400);
   String language=meta.language()==BotLanguage.JAR?"JAVA":meta.language().name(),text=meta.language()==BotLanguage.JAR?Base64.getEncoder().encodeToString(bytes):new String(bytes,StandardCharsets.UTF_8);
   if(meta.language()!=BotLanguage.JAR)CodeWorkspaceService.validateSource(text,t.botPolicy,language);
-  queue.admit();submissions.enable(id);var w=store.create(UUID.fromString(id),user,language,text);w=store.save(UUID.fromString(id),user,language,w.revision(),text);var work=store.claim(UUID.fromString(id),user,language,w.revision(),text,t.botPolicy.maxSubmissionVersions(),"BUILD");var version=db.find(CodeVersion.class,work.versionId());version.importedBotId=meta.id();version.runtimeLanguage=meta.language().name();return store.read(UUID.fromString(id),user,language);
+  queue.admit();submissions.enable(id);var w=store.create(UUID.fromString(id),user,language,text);w=store.save(UUID.fromString(id),user,language,w.revision(),text);var work=store.claim(UUID.fromString(id),user,language,w.revision(),text,timelineAccess.versionLimit(t,user),"BUILD");var version=db.find(CodeVersion.class,work.versionId());version.importedBotId=meta.id();version.runtimeLanguage=meta.language().name();return store.read(UUID.fromString(id),user,language);
  }}
 }
