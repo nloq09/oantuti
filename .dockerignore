@@ -8,6 +8,7 @@
 .env.*
 infra/.env*
 backups
+**/worker-state
 .codex
 .agents
 *.log

@@ -1,1 +1,3 @@
 rootProject.name = 'rps-battle'
+include 'worker'
+project(':worker').projectDir = file('../worker')

@@ -38,7 +38,7 @@ public class SecurityConfig {
     @Bean SessionAuthenticationStrategy sessionAuthenticationStrategy(CsrfTokenRepository csrfTokens) {
         return new CompositeSessionAuthenticationStrategy(List.of(new ChangeSessionIdAuthenticationStrategy(),new CsrfAuthenticationStrategy(csrfTokens)));
     }
-    @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contexts,
+    @Bean @org.springframework.core.annotation.Order(2) SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contexts,
             CsrfTokenRepository tokens, ObjectMapper json,AuthService authService,com.rpsbattle.operations.RequestLimits limits,com.rpsbattle.operations.RuntimeMetrics metrics,com.rpsbattle.admin.AdminOperationJournal journal) throws Exception {
         http.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable);

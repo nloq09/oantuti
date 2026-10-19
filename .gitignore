@@ -34,4 +34,6 @@ match-*.json
 **/data/replays/
 backups/
 __pycache__/
+worker-state/
+**/worker-state/
 *.py[cod]
