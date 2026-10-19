@@ -12,6 +12,9 @@ import java.util.*;
 
 @Repository
 public class SubmissionStore {
+ @org.springframework.beans.factory.annotation.Autowired FinalValidationStore timelineFinals;
+ /** Explicit manager-authorized new coding window; old versions/freezes remain immutable. */
+ @Transactional public void reopenTimeline(Tournament t,UUID actor){UUID tid=UUID.fromString(t.id);db.createNativeQuery("select id from coding_queue_guard where id=1 for update").getSingleResult();db.createNativeQuery("update bot_coding_jobs set status='FAILED',finished_at=CURRENT_TIMESTAMP where workspace_id in (select id from tournament_code_workspaces where tournament_id=:t) and status in ('QUEUED','RUNNING')").setParameter("t",tid).executeUpdate();timelineFinals.suspendForExtension(tid);for(var s:db.createQuery("select s from BotSubmission s where s.tournamentId=:t",BotSubmission.class).setParameter("t",tid).getResultList()){s.status="REJECTED";audit(tid,actor,"ALLOW-RESUBMIT",s.versionId,"TIMELINE_EXTENDED");}for(var w:db.createQuery("select w from CodeWorkspace w where w.tournamentId=:t",CodeWorkspace.class).setParameter("t",tid).getResultList()){w.status="DRAFT";w.currentVersionId=null;w.touch();}}
  @PersistenceContext EntityManager db;
  private final BotUploadService uploads;private final BotRepository bots;private final WorkspaceSandbox sandbox;
  @org.springframework.beans.factory.annotation.Autowired CodingQueueStore queue;
@@ -78,8 +81,9 @@ public class SubmissionStore {
   var previous=frozenMine(t.id,user,cutoff);if(previous!=null)return new FreezeResult(previous,null);
   if(now.isBefore(cutoff))throw new AuthException("CODING_STILL_OPEN",409);
   var old=submission(tid,user,true);TournamentRegistration registration=null;String decision="EXPLICIT_SUBMIT",reason=null;
-  boolean eligible=active&&(old==null||Set.of("SUBMITTED","LOCKED").contains(old.status)||emergency&&old.status.equals("REJECTED"));
-  if(eligible&&t.timeline.deadlinePolicy()==TournamentTimeline.DeadlinePolicy.AUTO_SUBMIT_LATEST_READY&&(old==null||emergency&&old.status.equals("REJECTED")||old.status.equals("SUBMITTED")&&t.botPolicy.allowResubmitBeforeDeadline())){
+  boolean reopened=old!=null&&old.status.equals("REJECTED")&&t.operations.audit().stream().anyMatch(a->a.type().equals("TIMELINE_OVERRIDE_EXTEND_CODING"));
+  boolean eligible=active&&(old==null||Set.of("SUBMITTED","LOCKED").contains(old.status)||(emergency||reopened)&&old.status.equals("REJECTED"));
+  if(eligible&&t.timeline.deadlinePolicy()==TournamentTimeline.DeadlinePolicy.AUTO_SUBMIT_LATEST_READY&&(old==null||(emergency||reopened)&&old.status.equals("REJECTED")||old.status.equals("SUBMITTED")&&t.botPolicy.allowResubmitBeforeDeadline())){
    var candidates=db.createQuery("select v from CodeVersion v,CodeWorkspace w where v.workspaceId=w.id and w.tournamentId=:t and w.userId=:u and v.status='READY' and v.createdAt<:c and v.updatedAt<:c order by v.createdAt desc,v.id desc",CodeVersion.class).setParameter("t",tid).setParameter("u",user).setParameter("c",cutoff).setMaxResults(1).getResultList();
    if(!candidates.isEmpty()){
     var v=candidates.getFirst();var existingVersion=old==null?null:db.find(CodeVersion.class,old.versionId);

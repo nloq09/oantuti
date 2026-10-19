@@ -12,6 +12,7 @@ import java.util.*;
 
 @Service
 public class OwnedTournamentService {
+    private final FairTournamentScan checkInScan=new FairTournamentScan();
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.account.repository.UserRepository timelineUsers;
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.coding.WorkspaceSandbox timelineSandbox;
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.timeline.TimelineRegistrationStore timelineRegistrations;
@@ -60,12 +61,12 @@ public class OwnedTournamentService {
     }
     /** Persist missed check-ins without preparing matches or starting the tournament. */
     public void expireTimelineCheckIns(){
-        for(var t:registry.findAll())synchronized(t){
+        int remaining=50;for(var t:checkInScan.next(registry.findAll()))synchronized(t){
             if(t.timeline==null||t.startedAt!=null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY).contains(t.status)||clock.instant().isBefore(t.timeline.checkInCloseAt()))continue;
-            var missed=t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.APPROVED).limit(50).toList();
+            var missed=t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.APPROVED).limit(remaining).toList();
             if(missed.isEmpty())continue;
             try{submissionMutation(t,null,()->{for(var r:missed){int index=t.registrations.indexOf(r);t.registrations.set(index,r.withStatus(TournamentRegistration.Status.NOT_CHECKED_IN,clock.instant()));t.participants.removeIf(p->p.participantId().equals(r.id().toString()));TournamentAudit.append(t,"CHECK_IN_MISSED",null,r.id().toString(),"CHECK_IN_DEADLINE",null,"NOT_CHECKED_IN");}tournaments.changed(t);});}
-            catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=timeline_check_in_expiry_failed tournamentId={}",t.id);}
+            catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=timeline_check_in_expiry_failed tournamentId={}",t.id);}remaining-=missed.size();if(remaining<=0)return;
         }
     }
     private com.rpsbattle.worker.ExecutionQueue queue;
@@ -91,7 +92,7 @@ public class OwnedTournamentService {
         if(policy==ParticipantPolicy.HUMAN_ONLY&&botPolicy.submissionMode()!=BotSubmissionMode.PRE_UPLOADED_ONLY)throw new DemoRequestException("INVALID_BOT_SUBMISSION_POLICY");
         validateRules(concurrency==null?4:concurrency,order);
         int limit=maxParticipants==null?10:maxParticipants;
-        if(limit<(format==TournamentFormat.GROUP_KNOCKOUT?4:format==TournamentFormat.TEAM_ROUND_ROBIN?6:2) || limit>32)throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
+        if(limit<(format==TournamentFormat.GROUP_KNOCKOUT?4:format==TournamentFormat.TEAM_ROUND_ROBIN?6:2) || limit>2000 || limit>32&&(!enroll||!Set.of(TournamentFormat.SINGLE_ELIMINATION,TournamentFormat.SWISS).contains(format)))throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
         if(visibility!=null && !visibility.equals("PUBLIC")) throw new AuthException("UNSUPPORTED_TOURNAMENT_VISIBILITY",400);
         var t=tournaments.create(name,format==null?TournamentFormat.ROUND_ROBIN:format);
         synchronized(t) {
@@ -107,6 +108,7 @@ public class OwnedTournamentService {
     }
     public void configureBotPolicy(Authentication auth,String id,Long revision,TournamentBotPolicy policy){var t=tournaments.find(id);managedMutation(auth,t,revision,()->{if(policy==null)throw new DemoRequestException("INVALID_BOT_SUBMISSION_POLICY");if(t.status!=TournamentStatus.DRAFT||!t.registrations.isEmpty()||!t.participants.isEmpty())throw new DemoRequestException("BOT_POLICY_LOCKED");if(t.participantPolicy==ParticipantPolicy.HUMAN_ONLY&&policy.submissionMode()!=BotSubmissionMode.PRE_UPLOADED_ONLY)throw new DemoRequestException("INVALID_BOT_SUBMISSION_POLICY");t.botPolicy=policy;TournamentAudit.append(t,"BOT_POLICY_UPDATED",actor(auth),id,null,null,policy.submissionMode().name());tournaments.changed(t);});}
     public UUID actor(Authentication auth){return accounts.requireUser(auth).id().value();}
+    com.rpsbattle.bot.upload.BotUploadService.Upload timelineBot(String id){return bots.registrationExecution(id);}
     public void stagePlan(Authentication auth,String id,Long revision,List<GroupRoundPlan> plans){var t=tournaments.find(id);managedMutation(auth,t,revision,()->{if(t.format!=TournamentFormat.GROUP_KNOCKOUT||t.status!=TournamentStatus.DRAFT||!t.registrations.isEmpty()||!t.matches.isEmpty())throw new DemoRequestException("TOURNAMENT_LOCKED");GroupRoundPlan.validate(plans,t.maxParticipants);t.groupPlans=List.copyOf(plans);TournamentAudit.append(t,"STAGE_PLAN_UPDATED",actor(auth),id,null,null,Integer.toString(plans.size()));tournaments.changed(t);});}
     void systemMutation(Tournament t,Runnable operation){mutate(t,null,operation);}
     public void managedMutation(Authentication auth,Tournament t,Long expected,Runnable operation){
@@ -217,7 +219,7 @@ public class OwnedTournamentService {
                 prepare(t,scores);lockRules(t);
                 if(t.status!=TournamentStatus.READY)TournamentStateMachine.transition(t,TournamentStatus.READY,now);
                 tournaments.start(t.id,now);
-                if(queue!=null){var existing=queue.reservedIds();var ids=t.format==TournamentFormat.SINGLE_ELIMINATION?t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).toList():t.matches.stream().map(m->m.id).toList();queue.reserve(ids);ids.stream().filter(id->!existing.contains(id)).forEach(fresh::add);}
+                if(queue!=null){var existing=queue.reservedIds();var ids=t.matches.stream().limit(Math.min(t.maxConcurrentMatches,Math.max(1,queue.capacity()))).map(m->m.id).toList();queue.reserve(ids);ids.stream().filter(id->!existing.contains(id)).forEach(fresh::add);}
                 TournamentAudit.append(t,"TOURNAMENT_STARTED",auth==null?null:actor(auth),t.id,"TIMELINE_START",null,"RUNNING");
             });}catch(RuntimeException failure){if(queue!=null)queue.release(fresh);throw failure;}
         }

@@ -16,12 +16,13 @@ import org.springframework.security.core.Authentication;
 
 @Service
 public class FinalValidationService {
+ private final com.rpsbattle.tournament.FairTournamentScan fairScan=new com.rpsbattle.tournament.FairTournamentScan();
  private final FinalValidationStore store;private final SubmissionStore submissions;private final TournamentRegistry registry;private final TournamentService tournaments;private final OwnedTournamentService owned;private final TournamentAuthorizationService authorization;private final AccountAuthorizationService accounts;private final OwnedBotService bots;private final UserRepository users;private final Clock clock;
  public FinalValidationService(FinalValidationStore s,SubmissionStore b,TournamentRegistry r,TournamentService t,OwnedTournamentService o,TournamentAuthorizationService a,AccountAuthorizationService c,OwnedBotService bots,UserRepository u,Clock k){store=s;submissions=b;registry=r;tournaments=t;owned=o;authorization=a;accounts=c;this.bots=bots;users=u;clock=k;}
  private boolean mutable(Tournament t){return t.timeline!=null&&t.startedAt==null&&Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY,TournamentStatus.PAUSED,TournamentStatus.RECOVERY_REQUIRED).contains(t.status);}
  @Scheduled(fixedDelay=1000,initialDelayString="${rps.final-validation.initial-delay-ms:2000}") public void tick(){process();}
  public void process(){process(null);}
- public void process(String only){int remaining=50;for(var t:registry.findAll())synchronized(t){if(only!=null&&!t.id.equals(only)||!mutable(t)||clock.instant().isBefore(t.timeline.validationStartAt()))continue;
+ public void process(String only){int remaining=50;for(var t:fairScan.next(registry.findAll()))synchronized(t){if(only!=null&&!t.id.equals(only)||!mutable(t)||clock.instant().isBefore(t.timeline.validationStartAt()))continue;
   try{
    for(var user:store.expiredEmergencies(t.id,Math.min(10,remaining))){owned.submissionMutation(t,null,()->{var cutoff=store.emergencyCutoff(t.id,user);boolean active=users.findById(new UserId(user)).map(a->a.status()==AccountStatus.ACTIVE).orElse(false);var result=submissions.freezeAtDeadline(t,user,active,clock.instant(),cutoff,true);var r=result.registration();if(r!=null){t.registrations.removeIf(old->old.id().equals(r.id()));t.registrations.add(r);}TournamentAudit.append(t,"EMERGENCY_SUBMISSION_FROZEN",null,user.toString(),null,null,result.freeze().decision());tournaments.changed(t);});if(--remaining==0)return;}
    for(var freeze:store.pendingFreezes(t.id,Math.min(20,remaining))){owned.submissionMutation(t,null,()->{store.create(t,freeze);TournamentAudit.append(t,"FINAL_VALIDATION_QUEUED",null,freeze.toString(),null,null,null);tournaments.changed(t);});if(--remaining==0)return;}

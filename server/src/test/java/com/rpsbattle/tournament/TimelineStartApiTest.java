@@ -13,6 +13,7 @@ import static org.mockito.Mockito.*;
 
 /** Full registration -> frozen version -> official PASS -> check-in -> lifecycle/queue admission. */
 class TimelineStartApiTest extends FinalValidationApiTest {
+ @Test void runningTournamentRejectsTimelineOverride()throws Exception{var cup=entrants(2,2);var t=tournament(cup.base());when(clock.instant()).thenReturn(START.plusSeconds(720));starts.process(t.id);request(cup.base()+"/timeline/override","POST",Map.of("revision",t.revision,"action","DELAY_START","value",START.plusSeconds(1000),"reason","Cannot change a running cup"),409);assertThat(t.timeline.tournamentStartAt()).isEqualTo(START.plusSeconds(720));}
  @Autowired TimelineStartService starts;
  @Autowired com.rpsbattle.worker.ExecutionQueue matchQueue;
  @MockitoBean TournamentExecutionService execution;

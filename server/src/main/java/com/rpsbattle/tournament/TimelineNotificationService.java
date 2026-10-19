@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 /** Durable, idempotent in-app reminders. Reads never emit events; obsolete reminders are not replayed. */
 @Service public class TimelineNotificationService {
+ private final com.rpsbattle.tournament.FairTournamentScan fairScan=new com.rpsbattle.tournament.FairTournamentScan();
  private final TournamentRegistry registry;private final OwnedTournamentService owned;private final TournamentService tournaments;private final Clock clock;
  public TimelineNotificationService(TournamentRegistry r,OwnedTournamentService o,TournamentService t,Clock c){registry=r;owned=o;tournaments=t;clock=c;}
  public record Notice(String type,Instant at){}
@@ -29,7 +30,7 @@ import org.springframework.scheduling.annotation.Scheduled;
   return List.copyOf(result);
  }
  @Scheduled(fixedDelay=1000,initialDelayString="${rps.timeline-notifications.initial-delay-ms:2000}") public void tick(){process(null);}
- public void process(String only){int budget=25;for(var t:registry.findAll())synchronized(t){if(only!=null&&!only.equals(t.id))continue;var pending=due(t,clock.instant()).stream().filter(n->t.operations.audit().stream().noneMatch(a->a.type().equals(n.type())&&a.target().equals(n.at().toString()))).toList();if(pending.isEmpty())continue;
+ public void process(String only){int budget=25;for(var t:fairScan.next(registry.findAll()))synchronized(t){if(only!=null&&!only.equals(t.id))continue;var pending=due(t,clock.instant()).stream().filter(n->t.operations.audit().stream().noneMatch(a->a.type().equals(n.type())&&a.target().equals(n.at().toString()))).toList();if(pending.isEmpty())continue;
   try{owned.submissionMutation(t,null,()->{for(var n:pending)TournamentAudit.append(t,n.type(),null,n.at().toString(),null,null,null);tournaments.changed(t);});}catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=timeline_notification_retry tournamentId={}",t.id);}
   if(--budget==0)return;
  }}

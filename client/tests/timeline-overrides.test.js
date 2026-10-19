@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {renderTimelineOverrides} from '../js/tournament/timeline-overrides.js';
+class Element{constructor(tag){this.tag=tag;this.children=[];this.value='';}append(...nodes){this.children.push(...nodes);if(this.tag==='select'&&!this.value)this.value=nodes[0]?.value||'';}setAttribute(){}}
+const setup=()=>{globalThis.document={createElement:tag=>new Element(tag)};globalThis.Option=class extends Element{constructor(text,value){super('option');this.textContent=text;this.value=value;}};return new Element('main');};
+const all=e=>[e,...e.children.flatMap(all)];
+const cup={id:'override-form',status:'REGISTRATION',timeline:{registrationCloseAt:'2026-10-19T10:00:00Z',codingCloseAt:'2026-10-19T12:00:00Z',codingOpenAt:'2026-10-19T11:00:00Z',checkInCloseAt:'2026-10-19T13:00:00Z',tournamentStartAt:'2026-10-19T14:00:00Z'}};
+test('manager form preserves reason and selected date across live refresh',()=>{const root=setup();renderTimelineOverrides(root,cup,()=>{});let nodes=all(root);const action=nodes.find(n=>n.tag==='select'),reason=nodes.find(n=>n.tag==='textarea'),time=nodes.find(n=>n.tag==='input');action.value='EXTEND_CODING';action.onchange();reason.value='Reviewed outage';time.value='2026-10-19T12:15';reason.oninput();const second=setup();renderTimelineOverrides(second,{...cup,revision:2},()=>{});nodes=all(second);assert.equal(nodes.find(n=>n.tag==='select').value,'EXTEND_CODING');assert.equal(nodes.find(n=>n.tag==='textarea').value,'Reviewed outage');assert.equal(nodes.find(n=>n.tag==='input').value,'2026-10-19T12:15');});
+test('running or finished tournaments expose no override controls',()=>{for(const status of ['RUNNING','FINISHED','CANCELLED']){const root=setup();renderTimelineOverrides(root,{...cup,status},()=>{});assert.equal(root.children.length,0);}});

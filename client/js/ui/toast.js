@@ -62,6 +62,8 @@ const errors = {
   INVALID_REGISTRATION_TRANSITION: "Đơn đăng ký đã thay đổi trạng thái. Hãy tải lại giải.",
   CHECK_IN_NOT_CLOSED: "Chưa hết thời gian check-in theo lịch giải.",
   TOURNAMENT_START_NOT_DUE: "Chưa đến giờ bắt đầu giải theo lịch server.",
+  INVALID_TIMELINE_OVERRIDE: "Mốc giờ điều chỉnh không hợp lệ.",
+  TIMELINE_OVERRIDE_CLOSED: "Không thể điều chỉnh lịch ở trạng thái này hoặc chính sách không cho mở lại coding.",
   CHECK_IN_NOT_OPEN: "Giải chưa mở check-in hoặc đã khóa check-in.",
   CHECK_IN_REQUIRED: "Cần mở đăng ký và hoàn tất check-in trước khi bắt đầu giải.",
   NO_APPROVED_REGISTRATION: "Bạn chưa có bot được duyệt để check-in.",
