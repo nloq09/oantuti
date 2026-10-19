@@ -13,6 +13,7 @@ import static org.mockito.Mockito.*;
 
 @TestPropertySource(properties="rps.coding.worker-auto-dispatch=false")
 class FinalValidationApiTest extends TimelineDeadlineApiTest {
+ @Test void officialValidationNoticeIsPersonalAndCannotExposeHiddenDetails()throws Exception{String base=exam("DISQUALIFY");ready(base,130);freeze(base);enqueue(base);finalDone(base);assertThat(request(base+"/notifications","GET",null,200).toString()).contains("TIMELINE_BOT_VALIDATION_PASSED").doesNotContain("sourceCode","sourceHash","artifactHash","Hidden Test","reason");request("/api/auth/logout","POST",Map.of(),200);account=null;loginAccount();request(base+"/notifications","GET",null,403);}
  @Test void timelineCheckInUsesExactServerWindowAndIsIdempotent()throws Exception{
   String base=exam("DISQUALIFY");ready(base,130);freeze(base);enqueue(base);finalDone(base);
   when(clock.instant()).thenReturn(START.plusSeconds(600).minusNanos(1));request(base+"/check-in","POST",Map.of(),400);

@@ -165,3 +165,5 @@ th {
 .tab-bar {flex-wrap:wrap;gap:.5rem;}
 .tournament-filters {margin-bottom:1rem;}
 .validation-panel p,.frozen-submission p{overflow-wrap:anywhere}
+
+.tournament-progress{margin:1rem 0;padding:.8rem;border:1px solid #c5a265;border-radius:12px;background:#172c3deb;color:#eee}.tournament-progress ol{display:flex;flex-wrap:wrap;gap:.6rem;list-style:none;margin:0;padding:0}.tournament-progress li{flex:1 1 135px;padding:.65rem;border-radius:8px}.tournament-progress .progress-current{background:#235781;color:#fff3ce;font-weight:700;outline:2px solid #efc66e}.tournament-progress .progress-done{color:#b9dfc8}.tournament-progress .progress-locked,.tournament-progress .progress-cancelled{color:#c1c9d2}.tournament-progress p{margin:.6rem 0 0}
