@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.*;
 
 public final class CentralClient implements AutoCloseable {
-    public static final String VERSION="0.2.0";
+    public static final String VERSION="0.3.0";
     private final URI central;
     private final ObjectMapper json=new ObjectMapper();
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NEVER).build();
@@ -31,7 +31,7 @@ public final class CentralClient implements AutoCloseable {
         return result;
     }
     public JsonNode post(IdentityStore.Identity identity,String route,Object payload)throws IOException,InterruptedException {
-        if(!central.toString().equals(identity.central()) || !Set.of("capabilities","heartbeat").contains(route))throw new IOException("Invalid worker request");
+        if(!central.toString().equals(identity.central()) || !(Set.of("capabilities","heartbeat","jobs/claim").contains(route)||route.matches("jobs/[a-f0-9-]{36}/decline")))throw new IOException("Invalid worker request");
         return send(HttpRequest.newBuilder(central.resolve("/internal/workers/"+identity.workerId()+"/"+route)).timeout(Duration.ofSeconds(15)).header("Authorization","Bearer "+identity.workerCredential()).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(payload))).build(),200);
     }
     public static class CentralFailure extends IOException {

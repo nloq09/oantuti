@@ -4,6 +4,7 @@ import com.rpsbattle.account.AccountAuthorizationService;
 import com.rpsbattle.auth.AuthException;
 import com.rpsbattle.worker.remote.WorkerIdentityService;
 import com.rpsbattle.worker.remote.WorkerTelemetryService;
+import com.rpsbattle.worker.remote.RemoteMatchQueue;
 import java.util.*;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -14,7 +15,8 @@ public class RemoteWorkerController {
     private final WorkerIdentityService workers;
     private final AccountAuthorizationService accounts;
     private final WorkerTelemetryService telemetry;
-    public RemoteWorkerController(WorkerIdentityService workers, AccountAuthorizationService accounts,WorkerTelemetryService telemetry){this.workers=workers;this.accounts=accounts;this.telemetry=telemetry;}
+    private final RemoteMatchQueue queue;
+    public RemoteWorkerController(WorkerIdentityService workers, AccountAuthorizationService accounts,WorkerTelemetryService telemetry,RemoteMatchQueue queue){this.workers=workers;this.accounts=accounts;this.telemetry=telemetry;this.queue=queue;}
     public record Issue(Integer uses,Integer lifetimeMinutes) {}
     @PostMapping("/api/admin/workers/registration-tokens")
     public ResponseEntity<?> issue(Authentication auth,@RequestBody Issue body){var actor=accounts.requireAdmin(auth).id().value();return response(201,workers.issue(actor,body.uses()==null?1:body.uses(),body.lifetimeMinutes()==null?15:body.lifetimeMinutes()));}
@@ -39,6 +41,9 @@ public class RemoteWorkerController {
     @GetMapping("/api/admin/workers/download")
     public ResponseEntity<org.springframework.core.io.Resource> download(Authentication auth){accounts.requireAdmin(auth);var jar=new org.springframework.core.io.ClassPathResource("worker-distribution/rps-worker.jar");if(!jar.exists())throw new AuthException("WORKER_DOWNLOAD_UNAVAILABLE",503);return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\"rps-worker.jar\"").contentType(MediaType.APPLICATION_OCTET_STREAM).body(jar);}
     private static void own(Authentication auth,UUID id){if(auth==null||!id.equals(auth.getPrincipal()))throw new AuthException("WORKER_FORBIDDEN",403);}
+    @PostMapping("/internal/workers/{id}/jobs/claim") public ResponseEntity<?> claim(Authentication auth,@PathVariable UUID id,@RequestBody RemoteMatchQueue.Claim body){own(auth,id);return response(200,queue.claim(id,body));}
+    @GetMapping("/internal/workers/{id}/jobs/assigned") public ResponseEntity<?> assigned(Authentication auth,@PathVariable UUID id){own(auth,id);return response(200,queue.assigned(id));}
+    @PostMapping("/internal/workers/{id}/jobs/{job}/decline") public ResponseEntity<?> decline(Authentication auth,@PathVariable UUID id,@PathVariable UUID job,@RequestBody RemoteMatchQueue.Decline body){own(auth,id);return response(200,queue.decline(id,job,body));}
     @GetMapping("/admin/workers") public ResponseEntity<Void> workerPage(){return ResponseEntity.status(302).location(java.net.URI.create("/admin/workers.html")).build();}
     @GetMapping("/admin/workers/setup") public ResponseEntity<Void> setupPage(){return ResponseEntity.status(302).location(java.net.URI.create("/admin/worker-setup.html")).build();}
     private static ResponseEntity<?> response(int status,Object body){return ResponseEntity.status(status).cacheControl(CacheControl.noStore()).body(body);}

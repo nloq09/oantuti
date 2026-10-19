@@ -66,7 +66,7 @@ class WorkerRegistrationTest {
             assertThat(result.body().toString()).doesNotContain(credential,token,"credentialHash");
             assertThat(guest.call(endpoint,"GET",null,credential,false).status()).isEqualTo(401);
             assertThat(guest.call("/internal/workers/"+UUID.randomUUID()+"/identity","GET",null,credential,false).status()).isEqualTo(403);
-            assertThat(guest.call("/internal/workers/"+enrolled.body().path("worker").path("workerId").asText()+"/jobs/claim","POST",Map.of(),credential,false).status()).isEqualTo(403);
+            assertThat(guest.call("/internal/workers/"+enrolled.body().path("worker").path("workerId").asText()+"/jobs/complete","POST",Map.of(),credential,false).status()).isEqualTo(403);
             var listed=admin.call(endpoint,"GET",null,null,false);assertThat(listed.body().toString()).doesNotContain(token,credential,"token_hash","credential_hash");
             assertThat(db.queryForObject("select token_hash from worker_registration_tokens where id=?",String.class,UUID.fromString(issued.body().path("id").asText()))).isEqualTo(WorkerIdentityService.hash(token));
         }

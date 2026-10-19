@@ -16,7 +16,7 @@ public class WorkerTelemetryService {
     public record Capabilities(Integer cpuCores,Long memoryMb,String os,Boolean docker,Set<String> supportedLanguages,Integer maxConcurrentMatches,Integer maxBotProcesses,String workerVersion,Integer protocolVersion) {}
     public record Heartbeat(Long epoch,Long sequence,Integer activeMatches,Integer freeSlots,Integer activeBotProcesses,Double cpuUsage,Double memoryUsage,Long diskFreeMb,Long cacheSizeMb) {}
     public record Session(long epoch,int heartbeatIntervalSeconds,int offlineAfterSeconds) {}
-    public record View(UUID id,String name,String status,String approvalStatus,String trustLevel,long revision,String remoteAddress,String workerVersion,int protocolVersion,Instant lastHeartbeatAt,Capabilities capabilities,Heartbeat heartbeat,int effectiveFreeSlots) {}
+    public record View(UUID id,String name,String status,String approvalStatus,String trustLevel,long revision,String remoteAddress,String workerVersion,int protocolVersion,Instant lastHeartbeatAt,Capabilities capabilities,Heartbeat heartbeat,int effectiveFreeSlots,int reservedSlots) {}
     public record Page(List<View> items,long total,int page,int size) {}
     public record Review(long revision,String decision,String trustLevel,String reason) {}
     private static java.sql.Timestamp at(Instant instant){return java.sql.Timestamp.from(instant);}
@@ -37,7 +37,7 @@ public class WorkerTelemetryService {
     }
     @Transactional
     public Session capabilities(UUID id,Capabilities body) {
-        validate(body);lock(id);var now=clock.instant();
+        validate(body);lock(id);var reserved=db.queryForMap("select count(*) as occupied,coalesce(max(active_slot),0) as highest from match_execution_attempts where worker_id=? and active_marker=1",id);if(((Number)reserved.get("highest")).intValue()>body.maxConcurrentMatches()||((Number)reserved.get("occupied")).intValue()*2>body.maxBotProcesses())throw new AuthException("WORKER_CAPACITY_RESERVED",409);var now=clock.instant();
         // A new startup invalidates delayed heartbeat packets from any prior agent instance.
         db.update("delete from worker_heartbeats where worker_id=?",id);
         db.update("delete from worker_capabilities where worker_id=?",id);
@@ -71,14 +71,14 @@ public class WorkerTelemetryService {
             Instant last=r.getTimestamp("last_heartbeat_at")==null?null:r.getTimestamp("last_heartbeat_at").toInstant();
             Instant first=r.getTimestamp("registered_at").toInstant();String status=r.getString("status");
             if(!Set.of("DISABLED","DRAINING").contains(status)&&!clock.instant().isBefore((last==null?first:last).plusSeconds(30)))status="OFFLINE";
-            return new View(id,r.getString("name"),status,r.getString("approval_status"),r.getString("trust_level"),r.getLong("revision"),r.getString("remote_address"),r.getString("worker_version"),r.getInt("protocol_version"),last,null,null,0);
+            return new View(id,r.getString("name"),status,r.getString("approval_status"),r.getString("trust_level"),r.getLong("revision"),r.getString("remote_address"),r.getString("worker_version"),r.getInt("protocol_version"),last,null,null,0,0);
         },id);
         if(rows.isEmpty())throw new AuthException("WORKER_NOT_FOUND",404);
         var w=rows.getFirst();var c=capabilitiesOf(id);
         var samples=db.query("select * from worker_heartbeats where worker_id=?",(r,n)->new Heartbeat(r.getLong("heartbeat_epoch"),r.getLong("sequence_number"),r.getInt("active_matches"),r.getInt("offered_slots"),r.getInt("active_bot_processes"),(Double)r.getObject("cpu_usage"),(Double)r.getObject("memory_usage"),r.getLong("disk_free_mb"),r.getLong("cache_size_mb")),id);
-        var h=samples.isEmpty()?null:samples.getFirst();int free=0;
-        if(w.approvalStatus().equals("APPROVED")&&Set.of("ONLINE","BUSY").contains(w.status())&&c!=null&&h!=null)free=Math.max(0,Math.min(h.freeSlots(),Math.min(c.maxConcurrentMatches()-h.activeMatches(),(c.maxBotProcesses()-h.activeBotProcesses())/2)));
-        return new View(w.id(),w.name(),w.status(),w.approvalStatus(),w.trustLevel(),w.revision(),w.remoteAddress(),w.workerVersion(),w.protocolVersion(),w.lastHeartbeatAt(),c,h,free);
+        var h=samples.isEmpty()?null:samples.getFirst();int free=0;int reserved=db.queryForObject("select count(*) from match_execution_attempts where worker_id=? and active_marker=1",Integer.class,id);
+        if(w.approvalStatus().equals("APPROVED")&&Set.of("ONLINE","BUSY").contains(w.status())&&c!=null&&h!=null)free=Math.max(0,Math.min(h.freeSlots(),Math.min(c.maxConcurrentMatches()-Math.max(h.activeMatches(),reserved),(c.maxBotProcesses()-Math.max(h.activeBotProcesses(),reserved*2))/2)));
+        return new View(w.id(),w.name(),w.approvalStatus().equals("APPROVED")&&Set.of("ONLINE","BUSY").contains(w.status())&&free==0?"BUSY":w.status(),w.approvalStatus(),w.trustLevel(),w.revision(),w.remoteAddress(),w.workerVersion(),w.protocolVersion(),w.lastHeartbeatAt(),c,h,free,reserved);
     }
     public Page list(int page,int size) {
         if(page<0||page>100000||size<1||size>100)throw new AuthException("INVALID_PAGE",400);

@@ -7,7 +7,7 @@ public final class WorkerApplication {
     }
     static int run(String[] args,java.util.Map<String,String> env,java.io.PrintStream out) {
         if(args.length==1 && args[0].equals("--help")) {
-            out.println("RPS Worker 0.2.0\nJava 21+. Set WORKER_REGISTRATION_TOKEN for first enrollment.\njava -jar rps-worker.jar --central=https://central.example --name=LAB-PC-01 --state-dir=./worker-state --max-matches=1 --max-bots=2\nLAN/local only: add --allow-insecure-http. Use --once for one heartbeat, --identity-only to check credentials. Keep worker-state private and persistent.");return 0;
+            out.println("RPS Worker 0.3.0\nJava 21+. Set WORKER_REGISTRATION_TOKEN for first enrollment.\njava -jar rps-worker.jar --central=https://central.example --name=LAB-PC-01 --state-dir=./worker-state --max-matches=1 --max-bots=2\nLAN/local only: add --allow-insecure-http. Use --once for one heartbeat, --identity-only to check credentials. Keep worker-state private and persistent.");return 0;
         }
         WorkerConfig config;
         try{config=WorkerConfig.parse(args,env);}catch(RuntimeException e){out.println("Invalid configuration. Use --help; HTTPS is required except explicit LAN/local HTTP.");return 2;}

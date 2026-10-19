@@ -31,7 +31,8 @@ public class WorkerSecurityConfig {
             .securityContext(s->s.securityContextRepository(new NullSecurityContextRepository()))
             .authorizeHttpRequests(a->a.requestMatchers(HttpMethod.POST,"/internal/workers/register").permitAll()
                 .requestMatchers(HttpMethod.GET,"/internal/workers/*/identity").hasAuthority("REMOTE_WORKER")
-                .requestMatchers(HttpMethod.POST,"/internal/workers/*/capabilities","/internal/workers/*/heartbeat").hasAuthority("REMOTE_WORKER")
+                .requestMatchers(HttpMethod.POST,"/internal/workers/*/capabilities","/internal/workers/*/heartbeat","/internal/workers/*/jobs/claim","/internal/workers/*/jobs/*/decline").hasAuthority("REMOTE_WORKER")
+                .requestMatchers(HttpMethod.GET,"/internal/workers/*/jobs/assigned").hasAuthority("REMOTE_WORKER")
                 .anyRequest().denyAll())
             .exceptionHandling(e->e.authenticationEntryPoint((q,r,x)->error(r,json,401,"WORKER_CREDENTIAL_REQUIRED"))
                 .accessDeniedHandler((q,r,x)->error(r,json,403,"WORKER_FORBIDDEN")));
@@ -48,6 +49,7 @@ public class WorkerSecurityConfig {
                         try {
                             if(!header.startsWith("Bearer ")) throw new AuthException("WORKER_CREDENTIAL_INVALID",401);
                             UUID id=identities.authenticate(header.substring(7));
+                            if(q.getMethod().equals("POST")&&path.endsWith("/jobs/claim")){var decision=limits.take("worker-claim:"+id,120,60);if(!decision.allowed()){r.setHeader("Retry-After",Long.toString(decision.retryAfterSeconds()));error(r,json,429,"RATE_LIMITED");return;}}
                             SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(id,null,List.of(new SimpleGrantedAuthority("REMOTE_WORKER"))));
                         } catch(AuthException e) {error(r,json,e.status(),e.code());return;}
                         catch(org.springframework.dao.DataAccessException e){error(r,json,503,"DATABASE_UNAVAILABLE");return;}
