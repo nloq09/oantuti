@@ -13,6 +13,29 @@ import static org.mockito.Mockito.*;
 
 @TestPropertySource(properties="rps.coding.worker-auto-dispatch=false")
 class FinalValidationApiTest extends TimelineDeadlineApiTest {
+ @Test void timelineCheckInUsesExactServerWindowAndIsIdempotent()throws Exception{
+  String base=exam("DISQUALIFY");ready(base,130);freeze(base);enqueue(base);finalDone(base);
+  when(clock.instant()).thenReturn(START.plusSeconds(600).minusNanos(1));request(base+"/check-in","POST",Map.of(),400);
+  when(clock.instant()).thenReturn(START.plusSeconds(600));var flow=request(base+"/participant-flow","GET",null,200);assertThat(flow.path("nextAction").asText()).isEqualTo("CHECK_IN");
+  request(base+"/check-in","POST",Map.of(),200);flow=request(base+"/participant-flow","GET",null,200);assertThat(flow.path("nextAction").asText()).isEqualTo("OPEN_WAITING_ROOM");assertThat(flow.path("checkIn").path("checkedInAt").asText()).isEqualTo(START.plusSeconds(600).toString());
+  long revision=tournament(base).revision;when(clock.instant()).thenReturn(START.plusSeconds(610));request(base+"/check-in","POST",Map.of(),200);assertThat(tournament(base).revision).isEqualTo(revision);
+  when(clock.instant()).thenReturn(START.plusSeconds(660));request(base+"/check-in","POST",Map.of(),400);ownedTournaments.expireTimelineCheckIns();assertThat(tournament(base).registrations.getFirst().status()).isEqualTo(TournamentRegistration.Status.CHECKED_IN);assertThat(tournament(base).participants).hasSize(1);assertThat(tournament(base).startedAt).isNull();
+ }
+ @Test void timelineCheckInRejectsMissingOfficialPassAndForeignOwner()throws Exception{
+  String base=exam("DISQUALIFY");ready(base,130);freeze(base);when(clock.instant()).thenReturn(START.plusSeconds(600));request(base+"/check-in","POST",Map.of(),400);
+  when(clock.instant()).thenReturn(START.plusSeconds(190));enqueue(base);finalDone(base);String registrationId=tournament(base).registrations.getFirst().id().toString();
+  request("/api/auth/logout","POST",Map.of(),200);account=null;loginAccount();when(clock.instant()).thenReturn(START.plusSeconds(600));request(base+"/check-in","POST",Map.of("registrationId",registrationId),400);assertThat(tournament(base).registrations.getFirst().status()).isEqualTo(TournamentRegistration.Status.APPROVED);
+ }
+ @Test void missedTimelineCheckInIsPersistedOnceWithoutInventingMatches()throws Exception{
+  String base=exam("DISQUALIFY");ready(base,130);freeze(base);enqueue(base);finalDone(base);when(clock.instant()).thenReturn(START.plusSeconds(660));
+  var flow=request(base+"/participant-flow","GET",null,200);assertThat(flow.path("nextAction").asText()).isEqualTo("CHECK_IN_MISSED");request(base+"/check-in","POST",Map.of(),400);
+  ownedTournaments.expireTimelineCheckIns();assertThat(tournament(base).registrations.getFirst().status()).isEqualTo(TournamentRegistration.Status.NOT_CHECKED_IN);assertThat(tournament(base).participants).isEmpty();assertThat(tournament(base).matches).isEmpty();long revision=tournament(base).revision;ownedTournaments.expireTimelineCheckIns();assertThat(tournament(base).revision).isEqualTo(revision);
+  assertThat(request(base+"/notifications","GET",null,200).toString()).contains("CHECK_IN_MISSED");
+ }
+ @Test void managerCannotCloseCheckInOrStartBeforeTheTimelineWindow()throws Exception{
+  String base=exam("DISQUALIFY");ready(base,130);freeze(base);enqueue(base);finalDone(base);when(clock.instant()).thenReturn(START.plusSeconds(600));
+  request(base+"/close-registration","POST",Map.of(),400);request(base+"/close-check-in","POST",Map.of(),400);request(base+"/start","POST",Map.of(),400);assertThat(tournament(base).startedAt).isNull();
+ }
  @Autowired FinalValidationService finalService;
  @Autowired FinalValidationStore finalStore;
  @Autowired CodingWorker worker;

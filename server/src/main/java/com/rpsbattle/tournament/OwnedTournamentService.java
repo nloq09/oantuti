@@ -12,6 +12,7 @@ import java.util.*;
 
 @Service
 public class OwnedTournamentService {
+    @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.timeline.TimelineRegistrationStore timelineRegistrations;
     private com.rpsbattle.tournament.coding.SubmissionStore submissions;
     private org.springframework.transaction.support.TransactionTemplate submissionTransactions;
     private final ThreadLocal<Boolean> submissionTransaction=new ThreadLocal<>();
@@ -46,13 +47,24 @@ public class OwnedTournamentService {
             TournamentAudit.append(t,"TIMELINE_CONFIGURED",actor(auth),id,null,before,timeline.toString());tournaments.changed(t);
         });
     }
-    @org.springframework.scheduling.annotation.Scheduled(fixedDelay=1000) public void expireCheckIns(){
-        for(var t:registry.findAll()){if(t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;var scores=historicalScores();synchronized(t){
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay=1000,initialDelayString="${rps.check-in.initial-delay-ms:2000}") public void expireCheckIns(){
+        expireTimelineCheckIns();
+        for(var t:registry.findAll()){if(t.timeline!=null||t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;var scores=historicalScores();synchronized(t){
             if(t.status!=TournamentStatus.CHECK_IN||t.timing.checkInDeadline()==null||clock.instant().isBefore(t.timing.checkInDeadline()))continue;
             try{mutate(t,null,()->{for(int i=0;i<t.registrations.size();i++){var r=t.registrations.get(i);if(r.status()==TournamentRegistration.Status.APPROVED){t.registrations.set(i,r.withStatus(TournamentRegistration.Status.NOT_CHECKED_IN,clock.instant()));t.participants.removeIf(p->p.participantId().equals(r.id().toString()));}}
                 boolean enough=t.participants.size()>=(t.format==TournamentFormat.GROUP_KNOCKOUT?4:t.format==TournamentFormat.TEAM_ROUND_ROBIN?6:2);if(enough&&t.format==TournamentFormat.TEAM_ROUND_ROBIN){try{com.rpsbattle.tournament.scheduler.TeamScheduler.validateRoster(t);}catch(DemoRequestException incomplete){enough=false;}}if(enough&&t.format==TournamentFormat.GROUP_KNOCKOUT){try{GroupRoundPlan.validate(t.groupPlans,t.participants.size());}catch(DemoRequestException incomplete){enough=false;}}if(enough){prepare(t,scores);lockRules(t);}TournamentStateMachine.transition(t,enough?TournamentStatus.READY:TournamentStatus.CANCELLED,clock.instant());TournamentAudit.append(t,enough?"TOURNAMENT_READY":"TOURNAMENT_CANCELLED",null,t.id,"CHECK_IN_DEADLINE",null,t.status.name());tournaments.changed(t);
             });}catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=check_in_expiry_failed tournamentId={}",t.id);}
         }}
+    }
+    /** Persist missed check-ins without preparing matches or starting the tournament. */
+    public void expireTimelineCheckIns(){
+        for(var t:registry.findAll())synchronized(t){
+            if(t.timeline==null||t.startedAt!=null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY).contains(t.status)||clock.instant().isBefore(t.timeline.checkInCloseAt()))continue;
+            var missed=t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.APPROVED).limit(50).toList();
+            if(missed.isEmpty())continue;
+            try{submissionMutation(t,null,()->{for(var r:missed){int index=t.registrations.indexOf(r);t.registrations.set(index,r.withStatus(TournamentRegistration.Status.NOT_CHECKED_IN,clock.instant()));t.participants.removeIf(p->p.participantId().equals(r.id().toString()));TournamentAudit.append(t,"CHECK_IN_MISSED",null,r.id().toString(),"CHECK_IN_DEADLINE",null,"NOT_CHECKED_IN");}tournaments.changed(t);});}
+            catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=timeline_check_in_expiry_failed tournamentId={}",t.id);}
+        }
     }
     private com.rpsbattle.worker.ExecutionQueue queue;
     @org.springframework.beans.factory.annotation.Autowired
@@ -169,6 +181,7 @@ public class OwnedTournamentService {
             var reserved=new ArrayList<String>();
             try {
                 mutate(t,auth,()-> {
+                    if(t.timeline!=null&&(clock.instant().isBefore(t.timeline.tournamentStartAt())||t.registrations.stream().anyMatch(r->r.status()==TournamentRegistration.Status.APPROVED)))throw new DemoRequestException("CHECK_IN_REQUIRED");
                     if(t.checkInRequired && t.status!=TournamentStatus.READY)throw new DemoRequestException("CHECK_IN_REQUIRED");
                     prepare(t,scores);lockRules(t);tournaments.start(id);
                     if(queue!=null) {var ids=t.format==TournamentFormat.SINGLE_ELIMINATION?t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).toList():t.matches.stream().map(m->m.id).toList();queue.reserve(ids);reserved.addAll(ids);}
@@ -179,6 +192,7 @@ public class OwnedTournamentService {
     public void cancel(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,auth,()->tournaments.cancel(id));}
     public void openRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,auth,()->tournaments.openRegistration(id));}
     public void closeRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);var scores=historicalScores();mutate(t,auth,()->{
+        if(t.timeline!=null&&clock.instant().isBefore(t.timeline.checkInCloseAt()))throw new DemoRequestException("CHECK_IN_NOT_CLOSED");
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("INVALID_TOURNAMENT_TRANSITION");
         if(t.participants.size()<2)throw new DemoRequestException("NOT_ENOUGH_BOTS");
         for(int i=0;i<t.registrations.size();i++)if(t.registrations.get(i).status()==TournamentRegistration.Status.PENDING)t.registrations.set(i,t.registrations.get(i).withStatus(TournamentRegistration.Status.REJECTED,java.time.Instant.now()));
@@ -317,6 +331,7 @@ public class OwnedTournamentService {
     }
     public void checkIn(Authentication auth,String id,String registrationId) {
         var actor=accounts.requireUser(auth);var t=tournaments.find(id);
+        if(t.timeline!=null){timelineCheckIn(auth,t,actor.id().value(),registrationId);return;}
         mutate(t,auth,()->{
             if(t.status!=TournamentStatus.CHECK_IN || !t.checkInRequired)throw new DemoRequestException("CHECK_IN_NOT_OPEN");
             if(t.timing.checkInDeadline()!=null&&!clock.instant().isBefore(t.timing.checkInDeadline()))throw new DemoRequestException("CHECK_IN_NOT_OPEN");
@@ -335,9 +350,22 @@ public class OwnedTournamentService {
             if(!found)throw new DemoRequestException("NO_APPROVED_REGISTRATION");tournaments.changed(t);
         });
     }
+    private void timelineCheckIn(Authentication auth,Tournament t,UUID user,String registrationId){synchronized(t){
+        var now=clock.instant();
+        if(t.startedAt!=null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN).contains(t.status)||now.isBefore(t.timeline.checkInOpenAt())||!now.isBefore(t.timeline.checkInCloseAt()))throw new DemoRequestException("CHECK_IN_NOT_OPEN");
+        var application=timelineRegistrations.mine(UUID.fromString(t.id),user);
+        if(application==null||!application.status().equals("APPROVED"))throw new DemoRequestException("NO_APPROVED_REGISTRATION");
+        if(registrationId!=null&&!t.registrations.get(registrationIndex(t,registrationId)).userId().equals(user))throw new AuthException("TOURNAMENT_FORBIDDEN",403);
+        var entries=t.registrations.stream().filter(r->r.userId().equals(user)&&(registrationId==null||r.id().toString().equals(registrationId))&&(r.status()==TournamentRegistration.Status.APPROVED||r.status()==TournamentRegistration.Status.CHECKED_IN)).toList();
+        if(entries.isEmpty())throw new DemoRequestException("NO_APPROVED_REGISTRATION");
+        for(var r:entries)submissions.requireLocked(t.id,r.id().toString());
+        if(entries.stream().allMatch(r->r.status()==TournamentRegistration.Status.CHECKED_IN))return;
+        submissionMutation(t,auth,()->{for(var r:entries)if(r.status()==TournamentRegistration.Status.APPROVED){t.registrations.set(t.registrations.indexOf(r),r.withStatus(TournamentRegistration.Status.CHECKED_IN,now));TournamentAudit.append(t,"PARTICIPANT_CHECKED_IN",user,r.id().toString(),null,"APPROVED","CHECKED_IN");}tournaments.changed(t);});
+    }}
     public void closeCheckIn(Authentication auth,String id) {
         var t=tournaments.find(id);authorization.requireManager(auth,t);var scores=historicalScores();
         mutate(t,auth,()->{
+            if(t.timeline!=null&&clock.instant().isBefore(t.timeline.checkInCloseAt()))throw new DemoRequestException("CHECK_IN_NOT_CLOSED");
             if(t.status!=TournamentStatus.CHECK_IN)throw new DemoRequestException("CHECK_IN_NOT_OPEN");
             if(t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.CHECKED_IN).count()<2)throw new DemoRequestException("NOT_ENOUGH_CHECKED_IN_BOTS");
             for(int i=0;i<t.registrations.size();i++) {

@@ -1,3 +1,4 @@
+import {checkInScreen,renderTimelineCheckIn} from './timeline-check-in.js';
 import {node,link,date} from './player-dom.js';
 import {sessionRequest} from '../api/auth-api.js';
 import {loginLink} from '../account/account-session.js';
@@ -7,6 +8,7 @@ import {renderFrozenSubmission} from './frozen-submission.js';
 import {renderFinalValidation} from './final-validation-view.js';
 
 export function renderTimelineRegistration(root,t,account,flow,refresh){
+ if(account&&checkInScreen(flow)){renderTimelineCheckIn(root,t,flow,refresh);return;}
  if(account&&flow.finalValidation){renderFinalValidation(root,t,flow);return;}
  if(account&&flow.registrationStatus==='APPROVED'&&['FREEZE_PENDING','SUBMISSION_MISSING','SUBMISSION_FROZEN'].includes(flow.submissionStatus)){renderFrozenSubmission(root,t,flow);return;}
  const panel=node('section',undefined,'panel timeline-registration-panel');root.append(panel);

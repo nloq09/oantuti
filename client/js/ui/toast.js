@@ -60,6 +60,7 @@ const errors = {
   BOT_BUILD_ERROR: "Bot không qua được kiểm tra cú pháp/biên dịch trong Docker. Hãy sửa source rồi tải lại.",
   REGISTRATION_NOT_FOUND: "Không tìm thấy đơn đăng ký trong giải này.",
   INVALID_REGISTRATION_TRANSITION: "Đơn đăng ký đã thay đổi trạng thái. Hãy tải lại giải.",
+  CHECK_IN_NOT_CLOSED: "Chưa hết thời gian check-in theo lịch giải.",
   CHECK_IN_NOT_OPEN: "Giải chưa mở check-in hoặc đã khóa check-in.",
   CHECK_IN_REQUIRED: "Cần mở đăng ký và hoàn tất check-in trước khi bắt đầu giải.",
   NO_APPROVED_REGISTRATION: "Bạn chưa có bot được duyệt để check-in.",
