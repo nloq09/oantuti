@@ -16,7 +16,8 @@
       <div class="tournament-grid">
         <section class="panel">
           <h2>Tạo giải đấu</h2>
-          <p id="tournament-account-notice" role="status"></p><form id="create-tournament">
+          <p id="tournament-account-notice" role="status"></p><form id="create-tournament" class="create-tournament-form" novalidate>
+            <fieldset><legend>1. Thể thức giải</legend>
             <label for="tournament-name">Tên giải đấu</label
             ><input
               id="tournament-name"
@@ -25,16 +26,26 @@
               placeholder="RPS Championship"
             />
             <label for="tournament-format">Thể thức</label><select id="tournament-format"><option value="ROUND_ROBIN">Vòng tròn (Round Robin)</option><option value="SWISS">Swiss · Ghép theo điểm, không gặp lại</option><option value="TEAM_ROUND_ROBIN">Đồng đội / Trường học · 3 vị trí mỗi cặp đội</option><option value="GROUP_KNOCKOUT">Vòng bảng nhiều giai đoạn → Loại trực tiếp</option><option value="SINGLE_ELIMINATION">Loại trực tiếp (Single Elimination)</option></select>
-            <p id="format-help">Mỗi cặp gặp nhau một lần; thắng 3, hòa 1, thua 0 điểm.</p><label for="tournament-best-of">Số ván mỗi cặp đấu</label><select id="tournament-best-of"><option value="1">BO1 · Một ván</option><option value="3">BO3 · Tối đa 3 ván</option><option value="5">BO5 · Tối đa 5 ván</option></select><label for="participant-policy">Người tham gia</label><select id="participant-policy"><option value="BOT_ONLY">Chỉ bot</option><option value="HUMAN_ONLY">Chỉ người tự chơi</option><option value="HUMAN_OR_BOT">Người tự chơi hoặc bot</option></select><label for="match-concurrency">Số trận chạy đồng thời</label><input id="match-concurrency" type="number" min="1" max="4" value="2" required />
-            <label for="max-participants">Số participant tối đa</label><input id="max-participants" type="number" min="2" max="32" value="10" required />
-            <label><input id="check-in-required" type="checkbox" /> Yêu cầu người tham gia check-in trước khi bắt đầu</label>
-            <details><summary>Thời gian dự kiến (không bắt buộc)</summary><label>Hạn đăng ký<input id="registration-deadline" type="datetime-local"></label><label>Hạn check-in<input id="check-in-deadline" type="datetime-local"></label><label>Bắt đầu dự kiến<input id="scheduled-start" type="datetime-local"></label><p>Chủ giải mở/đóng đăng ký và bắt đầu giải. Hạn check-in được server xử lý khi đang ở giai đoạn check-in.</p></details><h3>Bot của bạn (không bắt buộc)</h3>
+            <p id="format-help">Mỗi cặp gặp nhau một lần; thắng 3, hòa 1, thua 0 điểm.</p><label for="tournament-best-of">Số ván mỗi cặp đấu</label><select id="tournament-best-of"><option value="1">BO1 · Một ván</option><option value="3">BO3 · Tối đa 3 ván</option><option value="5">BO5 · Tối đa 5 ván</option></select></fieldset>
+            <fieldset><legend>2. Người tham gia</legend><label for="participant-policy">Người tham gia</label><select id="participant-policy"><option value="BOT_ONLY">Chỉ bot</option><option value="HUMAN_ONLY">Chỉ người tự chơi</option><option value="HUMAN_OR_BOT">Người tự chơi hoặc bot</option></select></fieldset>
+            <div id="create-bot-policy"></div>
+            <fieldset><legend>4. Timeline</legend>
+              <label><input id="use-full-timeline" type="checkbox" checked> Lập lịch đầy đủ cho cuộc thi bot</label>
+              <p id="timeline-mode-help">Người chơi đăng ký trước, chọn hoặc viết bot trong giờ coding; server khóa bài và xử lý các giai đoạn theo lịch sau khi chủ giải mở đăng ký.</p>
+              <div id="create-timeline"></div>
+              <div id="manual-timing" hidden><p>Chủ giải tự mở/đóng đăng ký và bắt đầu giải.</p><label>Hạn đăng ký<input id="registration-deadline" type="datetime-local"></label><label>Hạn check-in<input id="check-in-deadline" type="datetime-local"></label><label>Bắt đầu dự kiến<input id="scheduled-start" type="datetime-local"></label></div>
+            </fieldset>
+            <fieldset><legend>5. Sức chứa và đồng thời</legend><label for="max-participants">Số participant tối đa</label><input id="max-participants" type="number" min="2" max="32" value="10" required />
+            <label for="match-concurrency">Số trận chạy đồng thời</label><input id="match-concurrency" type="number" min="1" max="4" value="2" required />
+            <label><input id="check-in-required" type="checkbox" /> Yêu cầu người tham gia check-in trước khi bắt đầu</label></fieldset>
+            <div id="create-existing-bots"><h3>Bot của bạn (không bắt buộc)</h3>
             <div id="bot-options"></div>
             <p id="bot-empty" hidden>
               Bạn có thể tạo giải trước rồi mời mọi người đăng ký bot.
               <a href="/bots.html">Đi tới Bot của tôi →</a>
             </p>
-            <button class="primary wide" id="create">Tạo giải đấu</button>
+            </div><p id="create-error" role="alert" hidden></p><div id="created-draft" hidden></div>
+            <button class="primary wide" id="create">Tạo bản nháp giải đấu</button>
           </form>
           <h2>Tham gia giải đấu</h2>
           <form id="join-tournament">

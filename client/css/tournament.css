@@ -3,6 +3,13 @@
   margin: 32px auto;
   color: var(--text);
 }
+.create-tournament-form fieldset{min-width:0;margin:20px 0;padding:16px;border:1px solid #a98d53;border-radius:10px;}
+.create-tournament-form legend{padding:0 8px;font-weight:700;color:var(--gold,#f5cc76);}
+.create-timeline-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px;}
+.create-timeline-grid input[aria-invalid="true"]{border:2px solid #ed8a89;}
+.create-timeline-grid .field-error{margin:0 0 12px;color:#ffb3af;font-size:.9rem;}
+.create-timeline-preview{padding-left:22px;}.create-timeline-preview li{padding:8px 0;}.create-timeline-preview span{display:block;overflow-wrap:anywhere;}
+@media(max-width:650px){.create-timeline-grid{grid-template-columns:1fr;}}
 .tournament-page h1 {
   font-size: clamp(28px, 4vw, 44px);
 }

@@ -60,6 +60,8 @@ Nhóm 10 bổ sung capacity 4.000 người cho Loại trực tiếp/Swiss, metri
 
 Nhóm 2 bổ sung giao diện trước giải: lịch/luật trước đăng ký, trạng thái đơn và chờ coding, bài đã khóa, các bước kiểm thử chính thức, check-in và phòng chờ. Liên kết xem source mở snapshot đúng phiên bản ở chế độ chỉ đọc, có kiểm tra tài khoản/giải; không mở nhầm draft đang sửa. [Phạm vi, API và kiểm chứng](docs/CHANG-12-NHOM-2-PRE-TOURNAMENT.md).
 
+Nhóm 3 bổ sung form tạo cuộc thi bot với timeline đầy đủ, xem trước lịch theo múi giờ thiết bị, kiểm tra thứ tự các mốc ngay dưới field và đồng bộ giờ nhận/nộp bot với coding. Tạo giải giữ trạng thái nháp; chủ giải mở đăng ký sau khi kiểm tra cấu hình. Giải có người tự chơi giữ lịch thủ công. [Hướng dẫn và kiểm chứng](docs/CHANG-12-NHOM-3-CREATE-TIMELINE.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.

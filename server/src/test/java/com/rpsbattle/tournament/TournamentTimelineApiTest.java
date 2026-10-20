@@ -9,6 +9,16 @@ import static org.assertj.core.api.Assertions.*;
 
 class TournamentTimelineApiTest extends StageThreeWebFixture {
     @Autowired TournamentRepository repository;
+    @Test void fullCreateFlowKeepsDraftAndAlignedBotPolicyUntilOwnerOpensRegistration()throws Exception{
+        loginAccount();var schedule=TournamentTimelineTest.timeline();
+        var t=request("/api/tournaments","POST",Map.of("name","Full timeline create","format","SINGLE_ELIMINATION","participantPolicy","BOT_ONLY","checkInRequired",true,"maxParticipants",64,"maxConcurrentMatches",2,"botPolicy",Map.of("submissionMode","BOTH","allowedLanguages",List.of("PYTHON","CPP"),"submissionOpenAt",schedule.codingOpenAt().toString(),"submissionDeadline",schedule.codingCloseAt().toString(),"deadlineBehavior","AUTO_SUBMIT_LATEST_READY","lockAtDeadline",true)),201);
+        String base="/api/tournaments/"+t.path("id").asText();
+        var invalid=json.valueToTree(schedule);((com.fasterxml.jackson.databind.node.ObjectNode)invalid).put("codingOpenAt",schedule.registrationOpenAt().toString());
+        request(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",invalid),400);
+        var unchanged=request(base,"GET",null,200);assertThat(unchanged.path("status").asText()).isEqualTo("DRAFT");assertThat(unchanged.path("revision").asLong()).isEqualTo(t.path("revision").asLong());
+        request(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",schedule),200);
+        var saved=request(base,"GET",null,200);assertThat(saved.path("status").asText()).isEqualTo("DRAFT");assertThat(saved.path("timeline").path("codingCloseAt").asText()).isEqualTo(saved.path("botPolicy").path("submissionDeadline").asText());assertThat(saved.path("participants").size()).isZero();assertThat(saved.path("registrations").size()).isZero();assertThat(saved.path("checkInRequired").asBoolean()).isTrue();
+    }
     @Test void ownerConfigurationCommitsAuditAndScheduleWithRevisionAndRestoresFromDatabase()throws Exception{
         loginAccount();var t=request("/api/tournaments","POST",Map.of("name","Scheduled exam"),201);String id=t.path("id").asText(),base="/api/tournaments/"+id;
         request(base+"/timeline","PUT",Map.of("revision",999,"timeline",TournamentTimelineTest.timeline()),409);

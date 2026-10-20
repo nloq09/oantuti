@@ -1,4 +1,7 @@
 import {participantLimitForFormat} from './capacity.js';
+import {timelineEditor} from './create-timeline-editor.js';
+import {timelineBotPolicy} from './create-timeline-model.js';
+import {createConfiguredTournament} from './create-configured-tournament.js';
 import {botPolicyEditor} from "./bot-policy.js";
 import {stagePlanEditor,validateStagePlan} from "./stage-plan.js";
 import{sessionRequest}from "../api/auth-api.js";
@@ -33,12 +36,29 @@ for (const bot of bots) {
   options.append(row);
 }
 document.querySelector("#bot-empty").hidden = bots.length > 0;
-const stageBox=document.createElement("fieldset");const legend=document.createElement("legend");legend.textContent="Các giai đoạn vòng bảng";stageBox.append(legend);document.querySelector("#format-help").after(stageBox);const readStages=stagePlanEditor(stageBox);const syncStages=()=>stageBox.hidden=document.querySelector("#tournament-format").value!=="GROUP_KNOCKOUT";document.querySelector("#tournament-format").addEventListener("change",syncStages);syncStages();
-const policyEditor=botPolicyEditor(document.querySelector("#create-tournament"));document.querySelector("#create").before(policyEditor.box);policyEditor.box.disabled=!account;const syncBotPolicy=()=>policyEditor.box.hidden=document.querySelector("#participant-policy").value==="HUMAN_ONLY";document.querySelector("#participant-policy").addEventListener("change",syncBotPolicy);syncBotPolicy();
-let busy=false;
+const stageBox=document.createElement("fieldset");const legend=document.createElement("legend");legend.textContent="Các giai đoạn vòng bảng";stageBox.append(legend);document.querySelector("#format-help").after(stageBox);const readStages=stagePlanEditor(stageBox);const syncStages=()=>{stageBox.hidden=document.querySelector("#tournament-format").value!=="GROUP_KNOCKOUT";stageBox.disabled=stageBox.hidden||!account;};document.querySelector("#tournament-format").addEventListener("change",syncStages);syncStages();
+const policyEditor=botPolicyEditor(document.querySelector('#create-bot-policy'));policyEditor.box.querySelector('legend').textContent='3. Chính sách nộp bot';policyEditor.box.disabled=!account;
+const fullTimeline=document.querySelector('#use-full-timeline'),timeline=timelineEditor(document.querySelector('#create-timeline')),form=document.querySelector('#create-tournament'),errorBox=document.querySelector('#create-error');
+let manualCheckIn=false,previousTimeline=true;
+function syncCreateMode(){
+ const participantPolicy=document.querySelector('#participant-policy').value,humanOnly=participantPolicy==='HUMAN_ONLY',supportsTimeline=participantPolicy==='BOT_ONLY';
+ if(!supportsTimeline)fullTimeline.checked=false;fullTimeline.disabled=!account||!supportsTimeline;
+ const enabled=fullTimeline.checked&&supportsTimeline;
+ policyEditor.box.hidden=humanOnly;policyEditor.box.disabled=humanOnly||!account;policyEditor.setTimeline(enabled);timeline.setEnabled(enabled);
+ document.querySelector('#manual-timing').hidden=enabled;for(const input of document.querySelectorAll('#manual-timing input'))input.disabled=enabled||!account;
+ const checkIn=document.querySelector('#check-in-required');if(enabled&&!previousTimeline)manualCheckIn=checkIn.checked;if(!enabled&&previousTimeline)checkIn.checked=manualCheckIn;if(enabled)checkIn.checked=true;checkIn.disabled=enabled||!account;previousTimeline=enabled;
+ document.querySelector('#create-existing-bots').hidden=enabled||humanOnly;for(const input of options.querySelectorAll('input')){input.disabled=enabled||humanOnly||!account;if(enabled||humanOnly)input.checked=false;}
+ document.querySelector('#timeline-mode-help').textContent=supportsTimeline?'Người chơi đăng ký trước, chọn hoặc viết bot trong giờ coding; server khóa bài theo lịch sau khi chủ giải mở đăng ký. Bỏ chọn để quản lý thời gian thủ công.':'Lịch coding dành cho cuộc thi chỉ bot. Chế độ có người tự chơi giữ quy trình đăng ký và bắt đầu thủ công.';
+}
+fullTimeline.addEventListener('change',syncCreateMode);document.querySelector('#participant-policy').addEventListener('change',syncCreateMode);syncCreateMode();
+if(!account)form.querySelectorAll('input,select,button,fieldset').forEach(element=>element.disabled=true);
+let busy=false,createdDraft=null;
 document.querySelector("#create-tournament").onsubmit = async (event) => {
   event.preventDefault();
-  if (busy) return;
+  if (busy||!account||createdDraft) return;
+  errorBox.hidden=true;
+  let schedule;try{schedule=fullTimeline.checked?timeline.read():null;}catch(error){errorBox.hidden=false;errorBox.textContent='Kiểm tra các mốc giờ được đánh dấu bên dưới Timeline.';return;}
+  if(!form.reportValidity())return;
   const chosen = [...options.querySelectorAll("input:checked")].map((input) =>
     bots.find((bot) => bot.id === input.value),
   );
@@ -51,19 +71,14 @@ document.querySelector("#create-tournament").onsubmit = async (event) => {
   document.querySelector("#create").disabled = true;
   let t;
   try {
-    const botPolicy=document.querySelector("#participant-policy").value==="HUMAN_ONLY"?null:policyEditor.read();if(botPolicy&&chosen.length&&(botPolicy.submissionMode==="CODE_IN_PLATFORM_ONLY"||chosen.some(b=>!botPolicy.allowedLanguages.includes(b.language==="JAR"?"JAVA":b.language))))throw Error("BOT_SUBMISSION_POLICY_MISMATCH");
+    const botPolicy=document.querySelector("#participant-policy").value==="HUMAN_ONLY"?null:timelineBotPolicy(policyEditor.read(),schedule);if(botPolicy&&chosen.length&&(botPolicy.submissionMode==="CODE_IN_PLATFORM_ONLY"||chosen.some(b=>!botPolicy.allowedLanguages.includes(b.language==="JAR"?"JAVA":b.language))))throw Error("BOT_SUBMISSION_POLICY_MISMATCH");
     const plans=document.querySelector("#tournament-format").value==="GROUP_KNOCKOUT"?validateStagePlan(readStages(),maxParticipants):null;
-    t = await createTournament(
-      document.querySelector("#tournament-name").value.trim(),
-      {botPolicy,bestOf:Number(document.querySelector("#tournament-best-of").value),participantPolicy:document.querySelector("#participant-policy").value,maxParticipants, format:document.querySelector("#tournament-format").value, maxConcurrentMatches:Number(document.querySelector("#match-concurrency").value), checkInRequired: document.querySelector("#check-in-required").checked},
-    );
-    if(plans)t=await sessionRequest("/api/tournaments/"+encodeURIComponent(t.id)+"/stage-plan",{revision:t.revision,stages:plans});
-    const stamp=id=>document.querySelector("#"+id).value?new Date(document.querySelector("#"+id).value).toISOString():null;const timing={revision:t.revision,registrationDeadline:stamp("registration-deadline"),checkInDeadline:stamp("check-in-deadline"),startTime:stamp("scheduled-start")};if(timing.registrationDeadline||timing.checkInDeadline||timing.startTime)await sessionRequest("/api/tournaments/"+encodeURIComponent(t.id)+"/timing",timing);
-    for (const bot of chosen) await addParticipant(t.id, bot);
+    const stamp=id=>document.querySelector('#'+id).value?new Date(document.querySelector('#'+id).value).toISOString():null;
+    t=await createConfiguredTournament({name:document.querySelector('#tournament-name').value.trim(),settings:{botPolicy,bestOf:Number(document.querySelector('#tournament-best-of').value),participantPolicy:document.querySelector('#participant-policy').value,maxParticipants,format:document.querySelector('#tournament-format').value,maxConcurrentMatches:Number(document.querySelector('#match-concurrency').value),checkInRequired:document.querySelector('#check-in-required').checked},stages:plans,timeline:schedule,timing:schedule?null:{registrationDeadline:stamp('registration-deadline'),checkInDeadline:stamp('check-in-deadline'),startTime:stamp('scheduled-start')},bots:chosen},{create:createTournament,request:sessionRequest,add:addParticipant,onCreated:draft=>createdDraft=draft});
     location.href = "/tournament.html?id=" + encodeURIComponent(t.id);
   } catch (error) {
     toast(error.message, true);
-    if (t) location.href = "/tournament.html?id=" + encodeURIComponent(t.id);
+    if (createdDraft) {errorBox.hidden=false;errorBox.textContent='Đã tạo bản nháp nhưng chưa hoàn tất cấu hình. Giải chưa được mở đăng ký. Mở bản nháp để kiểm tra; không bấm tạo lại.';const box=document.querySelector('#created-draft'),link=document.createElement('a');link.className='button';link.textContent='Mở bản nháp đã tạo';link.href='/tournament.html?id='+encodeURIComponent(createdDraft.id);box.replaceChildren(link);box.hidden=false;}
     else {
       busy = false;
       document.querySelector("#create").disabled = false;
@@ -83,7 +98,6 @@ document.querySelector("#join-tournament").onsubmit = (event) => {
 };
 
 mountHub(document.querySelector("#tournament-list"));
-document.querySelector("#participant-policy").onchange=()=>{const humanOnly=document.querySelector("#participant-policy").value==="HUMAN_ONLY";for(const input of options.querySelectorAll("input")){input.disabled=humanOnly;if(humanOnly)input.checked=false;}};
 
 const formatControl=document.querySelector("#tournament-format"),formatHelp=document.querySelector("#format-help"),capacityControl=document.querySelector("#max-participants");
 function showFormatHelp(){const format=formatControl.value;capacityControl.max=participantLimitForFormat(format);if(Number(capacityControl.value)>Number(capacityControl.max))capacityControl.value=capacityControl.max;formatHelp.textContent=({ROUND_ROBIN:"Mỗi cặp gặp nhau một lần; thắng 3, hòa 1, thua 0 điểm.",SINGLE_ELIMINATION:"Thua một cặp đấu sẽ dừng bước; người thắng đi tiếp theo nhánh.",GROUP_KNOCKOUT:"Cần ít nhất 4 người/bot. Chọn số bảng và top N cho từng giai đoạn bên dưới; sau đó thi đấu loại trực tiếp.",SWISS:"Ghép các đối thủ gần điểm qua nhiều vòng, không gặp lại. BYE được 3 điểm và không tạo phòng đấu.",TEAM_ROUND_ROBIN:"Cần ít nhất 2 đội đủ 3 người/bot. Sau khi được duyệt, vào Chi tiết giải → Đồng đội để tạo/gia nhập đội. Đội trưởng nộp đội hình trước mỗi cặp đấu."})[format];capacityControl.min=format==="TEAM_ROUND_ROBIN"?6:format==="GROUP_KNOCKOUT"?4:2;if(Number(capacityControl.value)<Number(capacityControl.min))capacityControl.value=capacityControl.min;}
