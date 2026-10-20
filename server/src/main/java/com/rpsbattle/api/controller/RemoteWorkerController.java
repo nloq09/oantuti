@@ -17,8 +17,8 @@ public class RemoteWorkerController {
     private final AccountAuthorizationService accounts;
     private final WorkerTelemetryService telemetry;
     private final RemoteMatchQueue queue;
-    private final RemoteArtifactService artifacts;
-    public RemoteWorkerController(WorkerIdentityService workers, AccountAuthorizationService accounts,WorkerTelemetryService telemetry,RemoteMatchQueue queue,RemoteArtifactService artifacts){this.workers=workers;this.accounts=accounts;this.telemetry=telemetry;this.queue=queue;this.artifacts=artifacts;}
+    private final RemoteArtifactService artifacts; private final com.rpsbattle.worker.remote.WorkerControlService controls;
+    public RemoteWorkerController(WorkerIdentityService workers, AccountAuthorizationService accounts,WorkerTelemetryService telemetry,RemoteMatchQueue queue,RemoteArtifactService artifacts,com.rpsbattle.worker.remote.WorkerControlService controls){this.workers=workers;this.accounts=accounts;this.telemetry=telemetry;this.queue=queue;this.artifacts=artifacts;this.controls=controls;}
     public record Issue(Integer uses,Integer lifetimeMinutes) {}
     @PostMapping("/api/admin/workers/registration-tokens")
     public ResponseEntity<?> issue(Authentication auth,@RequestBody Issue body){var actor=accounts.requireAdmin(auth).id().value();return response(201,workers.issue(actor,body.uses()==null?1:body.uses(),body.lifetimeMinutes()==null?15:body.lifetimeMinutes()));}
@@ -40,6 +40,10 @@ public class RemoteWorkerController {
     public ResponseEntity<?> detail(Authentication auth,@PathVariable UUID id){accounts.requireAdmin(auth);return response(200,telemetry.view(id));}
     @PostMapping("/api/admin/workers/{id}/review")
     public ResponseEntity<?> review(Authentication auth,@PathVariable UUID id,@RequestBody WorkerTelemetryService.Review body){return response(200,telemetry.review(id,accounts.requireAdmin(auth).id().value(),body));}
+    @PostMapping("/api/admin/workers/{id}/control")
+    public ResponseEntity<?> control(Authentication auth,@PathVariable UUID id,@RequestBody com.rpsbattle.worker.remote.WorkerControlService.Command body){return response(200,controls.control(id,accounts.requireAdmin(auth).id().value(),body));}
+    @GetMapping("/api/admin/workers/{id}/events")
+    public ResponseEntity<?> events(Authentication auth,@PathVariable UUID id){accounts.requireAdmin(auth);return response(200,Map.of("items",controls.events(id)));}
     @GetMapping("/api/admin/workers/download")
     public ResponseEntity<org.springframework.core.io.Resource> download(Authentication auth){accounts.requireAdmin(auth);var jar=new org.springframework.core.io.ClassPathResource("worker-distribution/rps-worker.jar");if(!jar.exists())throw new AuthException("WORKER_DOWNLOAD_UNAVAILABLE",503);return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\"rps-worker.jar\"").contentType(MediaType.APPLICATION_OCTET_STREAM).body(jar);}
     private static void own(Authentication auth,UUID id){if(auth==null||!id.equals(auth.getPrincipal()))throw new AuthException("WORKER_FORBIDDEN",403);}

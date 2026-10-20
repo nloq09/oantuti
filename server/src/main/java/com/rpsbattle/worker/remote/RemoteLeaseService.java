@@ -64,6 +64,11 @@ public class RemoteLeaseService {
         db.update("update match_execution_jobs set status=? where id=? and status='LEASED'",pending&&!terminal?"QUEUED":"CANCELLED",job);
         db.update("insert into worker_execution_recoveries(execution_id,job_id,match_id,tournament_id,reason,attempt_count,terminal,recorded_at) values(?,?,?,?,?,?,?,?)",execution,job,row.get("match_id"),row.get("tournament_id"),pending?reason:"MATCH_NOT_PENDING",count,terminal,at(clock.instant()));
     }
+    // Caller holds the queue guard. Reuse the durable infrastructure retry path, never a forfeit.
+    void fenceWorker(UUID worker){
+        var rows=db.queryForList("select a.*,j.tournament_id from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id where a.worker_id=? and a.active_marker=1 order by a.id",worker);
+        for(var row:rows)expire(row,"WORKER_RESTART");
+    }
     @Scheduled(fixedDelayString="${rps.worker.lease-reap-millis:1000}")
     @Transactional
     public int expire(){

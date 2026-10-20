@@ -17,8 +17,9 @@ public class RemoteArtifactService {
     private final JdbcTemplate db;private final ObjectMapper json;private final Clock clock;private final Path root;
     public RemoteArtifactService(JdbcTemplate db,ObjectMapper json,Clock clock,@Value("${rps.bots.directory:data/bots}")String directory){this.db=db;this.json=json;this.clock=clock;this.root=Path.of(directory).toAbsolutePath().normalize();}
     public record Download(byte[] bytes,String hash,String language,String format) {}
-    @Transactional(readOnly=true)
+    @Transactional
     public Download download(UUID worker,UUID execution,UUID artifact) {
+        db.queryForObject("select id from remote_match_queue_guard where id=1 for update",Integer.class);
         // Authorization precedes registry/file access; arbitrary artifact enumeration returns nothing.
         var rows=db.queryForList("select a.lease_until,j.spec_json,j.spec_hash,w.trust_level from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id join workers w on w.id=a.worker_id where a.id=? and a.worker_id=? and a.active_marker=1 and a.status in ('CLAIMED','RUNNING') and j.status='LEASED' and w.approval_status='APPROVED' and w.status<>'DISABLED'",execution,worker);
         if(rows.isEmpty())throw new AuthException("ARTIFACT_NOT_ASSIGNED",404);var row=rows.getFirst();
