@@ -1,4 +1,5 @@
 import {allowsPreuploaded,allowedPolicyBot,renderBotPolicy} from "./bot-policy.js";
+import {mountOrganizerShell} from './organizer-shell.js';
 import {renderDeadlinePolicy} from './deadline-policy-editor.js';
 import {stagePlanText} from "./stage-plan.js";
 import {isKnockout} from "./bracket-renderer.js";
@@ -32,6 +33,7 @@ if (!account) {
   link.href = loginLink(); link.textContent = "Đăng nhập để đăng ký bot của bạn vào giải."; notice.append(link);
   document.querySelector("#registration").before(notice);
 }
+let organizerShell;
 let latest = -1,
   busy = false, currentTournament;
 async function action(operation) {
@@ -62,15 +64,15 @@ function render(t) {
     ? `Giải tối đa ${t.maxParticipants} bot. Đăng ký trong giai đoạn mở sẽ chờ chủ giải duyệt.`
     : t.status === "CHECK_IN" ? "Check-in đã mở. Chủ bot cần xác nhận có mặt trước khi chủ giải hoàn tất." : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
   document.querySelector("#open-registration").hidden = !owner || t.status !== "DRAFT";
-  document.querySelector("#close-registration").hidden = !owner || t.status !== "REGISTRATION";
+  document.querySelector("#close-registration").hidden = !owner || Boolean(t.timeline) || t.status !== "REGISTRATION";
   document.querySelector("#close-registration").disabled = t.participants.length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);
-  document.querySelector("#start").hidden = !owner || !(["DRAFT", "READY"].includes(t.status) && !(t.status === "DRAFT" && t.checkInRequired));
+  document.querySelector("#start").hidden = !owner || Boolean(t.timeline) || !(["DRAFT", "READY"].includes(t.status) && !(t.status === "DRAFT" && t.checkInRequired));
   document.querySelector("#start").textContent = t.status === "DRAFT" ? "Bắt đầu nhanh" : "Bắt đầu giải";
   document.querySelector("#start").disabled = t.participants.length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);
   document.querySelector("#cancel").hidden = !owner || ["FINISHED", "CANCELLED"].includes(
     t.status,
   );
-  document.querySelector("#close-check-in").hidden = !owner || t.status !== "CHECK_IN";
+  document.querySelector("#close-check-in").hidden = !owner || Boolean(t.timeline) || t.status !== "CHECK_IN";
   document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);
   let submissionLink=document.querySelector("#submission-dashboard-link");if(!submissionLink){submissionLink=document.createElement("a");submissionLink.id="submission-dashboard-link";submissionLink.className="button";submissionLink.textContent="Bài nộp bot và hàng đợi →";document.querySelector("#admin-tab").prepend(submissionLink);}submissionLink.hidden=!owner;submissionLink.href="/tournament-submissions.html?id="+encodeURIComponent(id);
   let applicationLink=document.querySelector("#application-review-link");if(!applicationLink){applicationLink=document.createElement("a");applicationLink.id="application-review-link";applicationLink.className="button";applicationLink.textContent="Duyệt đăng ký người chơi →";document.querySelector("#admin-tab").prepend(applicationLink);}applicationLink.hidden=!owner||!t.timeline;applicationLink.href="/tournament-applications.html?id="+encodeURIComponent(id);
@@ -193,6 +195,15 @@ function render(t) {
   }
   let groups=document.querySelector("#group-standings");if(!groups){groups=document.createElement("div");groups.id="group-standings";document.querySelector("#ranking-policy").after(groups);}groups.replaceChildren();renderSwiss(groups,t);renderGroups(groups,t);if(t.teamCompetition){const teamLink=document.createElement("a");teamLink.href="/tournament-detail.html?id="+encodeURIComponent(t.id)+"#teams";teamLink.textContent="Đội, đội hình và bảng điểm đồng đội →";groups.append(teamLink);}
   renderRanking(document.querySelector("#ranking-rows"), t.ranking);renderDashboard(t,owner);
+  if(owner){
+    if(!organizerShell){
+      document.querySelector('#name').hidden=true;document.querySelector('.tab-bar').hidden=true;
+      document.querySelector('#overview').prepend(document.querySelector('.tournament-invite'));
+      document.querySelector('#ranking').prepend(document.querySelector('#champion'));
+      const selectPanel=target=>{for(const key of ['overview','participants-tab','matches','bracket','ranking','replays-tab','admin-tab','organizer-audit'])document.getElementById(key).hidden=key!==target;document.querySelectorAll('[data-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.tab===target)));};
+      organizerShell=mountOrganizerShell(document.querySelector('main'),{tournament:t,account,section:new URLSearchParams(location.search).get('view'),selectPanel});
+    }else organizerShell.update(t);
+  }
 }
 document.querySelectorAll("[data-tab]").forEach(
   (button) =>

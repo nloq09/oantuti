@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/css/battle-theme.css" />
     <link rel="stylesheet" href="/css/tournament.css" />
     <link rel="stylesheet" href="/css/account.css">
+    <link rel="stylesheet" href="/css/tournament-mode.css">
   </head>
   <body>
     <nav class="account-nav site-account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/">Trang chủ</a><div class="account-actions"><a class="button" href="/login.html">Đăng nhập</a><a class="button" href="/register.html">Đăng ký</a></div></nav>
@@ -62,7 +63,7 @@
         </details>
         </div>
 </section>
-      <section id="admin-tab" class="panel" hidden><h2>Quản trị giải đấu</h2>        <div class="actions" aria-label="Quản lý giải đấu">
+      <section id="admin-tab" class="panel" hidden><h2>Cài đặt và điều khiển giải</h2>        <div class="actions" aria-label="Quản lý giải đấu">
           <button id="open-registration" hidden>Mở đăng ký</button>
           <button id="close-registration" hidden>Khóa đăng ký</button>
           <button id="close-check-in" hidden>Hoàn tất check-in</button>
@@ -91,8 +92,9 @@
           <label for="admin-match">Review trận</label><select id="admin-match"></select><p id="review-details"></p><details><summary>Nhật ký xử lý trận</summary><ol id="match-execution-log"></ol></details>
           <div class="actions"><button id="request-review">Đánh dấu review</button><button id="keep-result">Giữ kết quả</button><button id="retry-match">Chạy lại trận lỗi</button></div>
           <label for="override-winner">Quyết định kết quả</label><select id="override-winner"></select><button id="override-result" class="danger">Sửa kết quả có audit</button>
-        </section><h3>Luật đã khóa</h3><pre id="rules-snapshot"></pre><h3>Audit</h3><ol id="tournament-audit" class="audit-list"></ol>
+        </section><h3>Luật đã khóa</h3><pre id="rules-snapshot"></pre>
       </section>
+      <section id="organizer-audit" class="panel" hidden><h2>Lịch sử quản lý giải</h2><ol id="tournament-audit" class="audit-list"></ol></section>
       <section id="replays-tab" hidden><h2>Replay các trận</h2><div id="replay-list" class="dashboard-cards"></div></section>
       <section id="matches" hidden><div id="match-list"></div></section>
       <section id="bracket" hidden><div id="bracket-tree" class="bracket-tree"></div></section>

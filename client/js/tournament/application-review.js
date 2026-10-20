@@ -1,4 +1,5 @@
 import {node,link,date} from './player-dom.js';
+import {organizerPageShell} from './organizer-shell.js';
 import {sessionRequest} from '../api/auth-api.js';
 import {errorText} from '../ui/toast.js';
 import {reviewDecisions,reviewPayload} from './application-review-model.js';
@@ -6,6 +7,7 @@ import {applicationLabels} from './timeline-registration-model.js';
 const id=new URLSearchParams(location.search).get('id'),base='/api/tournaments/'+encodeURIComponent(id),root=document.querySelector('#applications'),notice=document.querySelector('#review-notice'),filter=document.querySelector('#application-status');let page=0,loading=false,acting=false;
 async function load(){if(loading||acting)return;loading=true;notice.textContent='';try{
  const data=await sessionRequest(base+'/participant-applications?page='+page+(filter.value?'&status='+encodeURIComponent(filter.value):''));
+ await organizerPageShell(await sessionRequest(base),'registration');
  root.replaceChildren(node('p',data.reviewOpen?'Có thể xét duyệt đến giờ bắt đầu lập trình: '+date(data.codingOpenAt):'Đã khóa xét duyệt. Chỉ xem danh sách.'));
  if(!data.items.length)root.append(node('p','Không có đơn đăng ký ở trang này.'));
  for(const entry of data.items){const card=node('article',undefined,'panel');card.append(node('h2',entry.displayName),node('p',(applicationLabels[entry.status]||entry.status)+' · '+entry.intendedLanguage),node('p','Trường/Đội: '+(entry.affiliation||'—')),node('p','Đăng ký lúc: '+date(entry.registeredAt)));if(entry.reviewReason)card.append(node('p','Lý do gần nhất: '+entry.reviewReason),node('p','Xét duyệt lúc: '+date(entry.reviewedAt)));

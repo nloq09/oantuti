@@ -62,6 +62,8 @@ Nhóm 2 bổ sung giao diện trước giải: lịch/luật trước đăng ký
 
 Nhóm 3 bổ sung form tạo cuộc thi bot với timeline đầy đủ, xem trước lịch theo múi giờ thiết bị, kiểm tra thứ tự các mốc ngay dưới field và đồng bộ giờ nhận/nộp bot với coding. Tạo giải giữ trạng thái nháp; chủ giải mở đăng ký sau khi kiểm tra cấu hình. Giải có người tự chơi giữ lịch thủ công. [Hướng dẫn và kiểm chứng](docs/CHANG-12-NHOM-3-CREATE-TIMELINE.md).
 
+Nhóm 4 bổ sung khung quản lý cho chủ giải: header với giai đoạn/hạn giờ từ server, sidebar trên desktop và menu thu gọn trên màn hình nhỏ. Các trang duyệt đơn, bài nộp và kiểm thử dùng chung điều hướng; audit có mục riêng và các mục chính hỗ trợ link trực tiếp. Chưa có dữ liệu sức khỏe hạ tầng tổng hợp thì hiển thị rõ chưa xác minh. [Phạm vi và kiểm chứng](docs/CHANG-12-NHOM-4-ORGANIZER-SHELL.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.
