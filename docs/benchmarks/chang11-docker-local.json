@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "mode": "LIVE_OBSERVATION_OF_REAL_CENTRAL_AND_WORKER_HEARTBEATS",
+  "elapsedSeconds": 45.1009315,
+  "sampleCount": 16,
+  "acceptedResultDelta": 2,
+  "acceptedResultsPerSecond": 0.04434498209865133,
+  "peakReservedSlots": 2,
+  "lastQueueWait": {
+    "scope": "latest up to 1024 execution attempts, not whole-run percentiles",
+    "sampleCount": 14,
+    "p50Ms": 9465,
+    "p95Ms": 270141,
+    "p99Ms": 270141
+  },
+  "expiredAttemptDelta": 0,
+  "cache": {
+    "scope": "all workers, latest heartbeat counters; process/epoch resets may invalidate deltas",
+    "hits": 2,
+    "misses": 2,
+    "hitRatio": 0.5
+  },
+  "workers": [
+    {
+      "reportedVersion": "0.10.0",
+      "configuredSlots": 1,
+      "peakReservedSlots": 0,
+      "cpuPercent": {
+        "samples": 14,
+        "average": 40.94305677894432,
+        "max": 100
+      },
+      "ramPercent": {
+        "samples": 14,
+        "average": 64.6249485190889,
+        "max": 65.4619044177969
+      },
+      "fixtureWorker": 3
+    },
+    {
+      "reportedVersion": "0.10.0",
+      "configuredSlots": 1,
+      "peakReservedSlots": 1,
+      "cpuPercent": {
+        "samples": 14,
+        "average": 40.966610938762834,
+        "max": 100
+      },
+      "ramPercent": {
+        "samples": 14,
+        "average": 64.60221163557136,
+        "max": 65.40600607222682
+      },
+      "fixtureWorker": 2
+    },
+    {
+      "reportedVersion": "0.10.0",
+      "configuredSlots": 1,
+      "peakReservedSlots": 1,
+      "cpuPercent": {
+        "samples": 13,
+        "average": 26.874062595565963,
+        "max": 48.24094748151363
+      },
+      "ramPercent": {
+        "samples": 13,
+        "average": 64.60634813084883,
+        "max": 65.53550170177938
+      },
+      "fixtureWorker": 1
+    }
+  ],
+  "tournamentId": null,
+  "note": "Worker CPU/RAM are host-level heartbeat observations; no claim about independent physical machines or full-match throughput.",
+  "physicalHosts": 1,
+  "realTournamentMatches": 2,
+  "inGroupWorkers": 2,
+  "outsideGroupWorkers": 1,
+  "measuredDate": "2026-10-20"
+}

@@ -14,7 +14,9 @@ public class WorkerTelemetryService {
     private final Clock clock;
     public WorkerTelemetryService(JdbcTemplate db,Clock clock){this.db=db;this.clock=clock;}
     public record Capabilities(Integer cpuCores,Long memoryMb,String os,Boolean docker,Set<String> supportedLanguages,Integer maxConcurrentMatches,Integer maxBotProcesses,String workerVersion,Integer protocolVersion) {}
-    public record Heartbeat(Long epoch,Long sequence,Integer activeMatches,Integer freeSlots,Integer activeBotProcesses,Double cpuUsage,Double memoryUsage,Long diskFreeMb,Long cacheSizeMb) {}
+    public record Heartbeat(Long epoch,Long sequence,Integer activeMatches,Integer freeSlots,Integer activeBotProcesses,Double cpuUsage,Double memoryUsage,Long diskFreeMb,Long cacheSizeMb,Long cacheHits,Long cacheMisses) {
+        public Heartbeat(Long epoch,Long sequence,Integer activeMatches,Integer freeSlots,Integer activeBotProcesses,Double cpuUsage,Double memoryUsage,Long diskFreeMb,Long cacheSizeMb){this(epoch,sequence,activeMatches,freeSlots,activeBotProcesses,cpuUsage,memoryUsage,diskFreeMb,cacheSizeMb,0L,0L);}
+    }
     public record Session(long epoch,int heartbeatIntervalSeconds,int offlineAfterSeconds) {}
     public record View(UUID id,String name,String status,String approvalStatus,String trustLevel,long revision,String remoteAddress,String workerVersion,int protocolVersion,Instant lastHeartbeatAt,Capabilities capabilities,Heartbeat heartbeat,int effectiveFreeSlots,int reservedSlots,boolean credentialRevoked,Integer adminMaxMatches,int capacityBudget) {}
     public record Page(List<View> items,long total,int page,int size) {}
@@ -48,7 +50,7 @@ public class WorkerTelemetryService {
     @Transactional
     public View heartbeat(UUID id,Heartbeat h,String remoteAddress) {
         var worker=lock(id);long epoch=((Number)worker.get("heartbeat_epoch")).longValue();
-        if(h==null||!positive(h.epoch(),Long.MAX_VALUE)||!positive(h.sequence(),Long.MAX_VALUE)||!integer(h.activeMatches(),0,256)||!integer(h.freeSlots(),0,256)||!integer(h.activeBotProcesses(),0,512)||!percent(h.cpuUsage())||!percent(h.memoryUsage())||h.diskFreeMb()==null||h.diskFreeMb()<0||h.cacheSizeMb()==null||h.cacheSizeMb()<0)throw new AuthException("INVALID_WORKER_HEARTBEAT",400);
+        if(h==null||!positive(h.epoch(),Long.MAX_VALUE)||!positive(h.sequence(),Long.MAX_VALUE)||!integer(h.activeMatches(),0,256)||!integer(h.freeSlots(),0,256)||!integer(h.activeBotProcesses(),0,512)||!percent(h.cpuUsage())||!percent(h.memoryUsage())||h.diskFreeMb()==null||h.diskFreeMb()<0||h.cacheSizeMb()==null||h.cacheSizeMb()<0||h.cacheHits()!=null&&(h.cacheHits()<0||h.cacheHits()>1000000000L)||h.cacheMisses()!=null&&(h.cacheMisses()<0||h.cacheMisses()>1000000000L))throw new AuthException("INVALID_WORKER_HEARTBEAT",400);
         if(h.epoch()!=epoch)throw new AuthException("STALE_WORKER_SESSION",409);
         var c=capabilitiesOf(id);if(c==null)throw new AuthException("WORKER_CAPABILITIES_REQUIRED",409);
         if(h.activeMatches()>c.maxConcurrentMatches()||h.freeSlots()>c.maxConcurrentMatches()-h.activeMatches()||h.activeBotProcesses()>c.maxBotProcesses())throw new AuthException("INVALID_WORKER_HEARTBEAT",400);
@@ -58,7 +60,7 @@ public class WorkerTelemetryService {
         var now=clock.instant();String status=!c.docker()||c.supportedLanguages().isEmpty()?"DEGRADED":h.freeSlots()==0?"BUSY":"ONLINE";
         if(Set.of("DRAINING","DISABLED").contains(worker.get("status")))status=worker.get("status").toString();
         db.update("delete from worker_heartbeats where worker_id=?",id);
-        db.update("insert into worker_heartbeats values(?,?,?,?,?,?,?,?,?,?,?)",id,epoch,h.sequence(),h.activeMatches(),h.freeSlots(),h.activeBotProcesses(),h.cpuUsage(),h.memoryUsage(),h.diskFreeMb(),h.cacheSizeMb(),at(now));
+        db.update("insert into worker_heartbeats(worker_id,heartbeat_epoch,sequence_number,active_matches,offered_slots,active_bot_processes,cpu_usage,memory_usage,disk_free_mb,cache_size_mb,received_at,cache_hits,cache_misses) values(?,?,?,?,?,?,?,?,?,?,?,?,?)",id,epoch,h.sequence(),h.activeMatches(),h.freeSlots(),h.activeBotProcesses(),h.cpuUsage(),h.memoryUsage(),h.diskFreeMb(),h.cacheSizeMb(),at(now),h.cacheHits()==null?0L:h.cacheHits(),h.cacheMisses()==null?0L:h.cacheMisses());
         db.update("update workers set status=?,last_heartbeat_at=?,remote_address=? where id=?",status,at(now),remoteAddress==null?null:remoteAddress.substring(0,Math.min(64,remoteAddress.length())),id);
         return view(id);
     }
@@ -75,7 +77,7 @@ public class WorkerTelemetryService {
         },id);
         if(rows.isEmpty())throw new AuthException("WORKER_NOT_FOUND",404);
         var w=rows.getFirst();var c=capabilitiesOf(id);
-        var samples=db.query("select * from worker_heartbeats where worker_id=?",(r,n)->new Heartbeat(r.getLong("heartbeat_epoch"),r.getLong("sequence_number"),r.getInt("active_matches"),r.getInt("offered_slots"),r.getInt("active_bot_processes"),(Double)r.getObject("cpu_usage"),(Double)r.getObject("memory_usage"),r.getLong("disk_free_mb"),r.getLong("cache_size_mb")),id);
+        var samples=db.query("select * from worker_heartbeats where worker_id=?",(r,n)->new Heartbeat(r.getLong("heartbeat_epoch"),r.getLong("sequence_number"),r.getInt("active_matches"),r.getInt("offered_slots"),r.getInt("active_bot_processes"),(Double)r.getObject("cpu_usage"),(Double)r.getObject("memory_usage"),r.getLong("disk_free_mb"),r.getLong("cache_size_mb"),r.getLong("cache_hits"),r.getLong("cache_misses")),id);
         var h=samples.isEmpty()?null:samples.getFirst();int free=0;int reserved=db.queryForObject("select count(*) from match_execution_attempts where worker_id=? and active_marker=1",Integer.class,id);
         if(w.approvalStatus().equals("APPROVED")&&Set.of("ONLINE","BUSY").contains(w.status())&&c!=null&&h!=null)free=Math.max(0,Math.min(h.freeSlots(),Math.min(c.maxConcurrentMatches()-Math.max(h.activeMatches(),reserved),(c.maxBotProcesses()-Math.max(h.activeBotProcesses(),reserved*2))/2)));
         int budget=0;Integer adminLimit=null;

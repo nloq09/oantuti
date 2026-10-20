@@ -77,10 +77,23 @@ tasks.named('processResources') {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform { excludeTags 'remote-load' }
     systemProperty 'spring.profiles.active', 'test'
     testLogging {
         events "passed", "skipped", "failed"
         showStandardStreams = false
     }
+}
+
+tasks.register('remoteLoadTest', Test) {
+    description = 'Synthetic 4000-entrant/10-worker/80-slot control-plane benchmark (not Docker throughput)'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'remote-load' }
+    systemProperty 'spring.profiles.active', 'test'
+    systemProperty 'rps.load.report', layout.buildDirectory.file('reports/remote-load.json').get().asFile.absolutePath
+    testLogging { events 'passed', 'failed', 'skipped'; showStandardStreams = false }
+    maxHeapSize = '1536m'
+    outputs.upToDateWhen { false }
 }

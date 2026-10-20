@@ -93,7 +93,7 @@ public class OwnedTournamentService {
         if(policy==ParticipantPolicy.HUMAN_ONLY&&botPolicy.submissionMode()!=BotSubmissionMode.PRE_UPLOADED_ONLY)throw new DemoRequestException("INVALID_BOT_SUBMISSION_POLICY");
         validateRules(concurrency==null?4:concurrency,order);
         int limit=maxParticipants==null?10:maxParticipants;
-        if(limit<(format==TournamentFormat.GROUP_KNOCKOUT?4:format==TournamentFormat.TEAM_ROUND_ROBIN?6:2) || limit>2000 || limit>32&&(!enroll||!Set.of(TournamentFormat.SINGLE_ELIMINATION,TournamentFormat.SWISS).contains(format)))throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
+        if(limit<(format==TournamentFormat.GROUP_KNOCKOUT?4:format==TournamentFormat.TEAM_ROUND_ROBIN?6:2) || limit>4000 || limit>32&&(!enroll||!Set.of(TournamentFormat.SINGLE_ELIMINATION,TournamentFormat.SWISS).contains(format)))throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
         if(visibility!=null && !visibility.equals("PUBLIC")) throw new AuthException("UNSUPPORTED_TOURNAMENT_VISIBILITY",400);
         var t=tournaments.create(name,format==null?TournamentFormat.ROUND_ROBIN:format);
         synchronized(t) {

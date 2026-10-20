@@ -16,3 +16,5 @@ export function workerControls(row){
  if(row.status!=='DISABLED')actions.push(['Vô hiệu hóa · hủy execution hiện tại','DISABLE']);
  actions.push(['Thu hồi quyền vĩnh viễn · hủy execution','REVOKE']);return actions;
 }
+
+export const workerMetrics=(tournamentId)=>adminRequest('workers/metrics'+(tournamentId?'?tournamentId='+encodeURIComponent(tournamentId):''));

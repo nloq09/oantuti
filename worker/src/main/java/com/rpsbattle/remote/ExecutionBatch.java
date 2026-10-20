@@ -31,7 +31,7 @@ public final class ExecutionBatch {
         }
         var heartbeat=new HeartbeatAgent(central,identity,probe.capabilities(),()->{
             var sample=new HashMap<>(probe.heartbeat());sample.put("activeMatches",active.get());sample.put("activeBotProcesses",bots.get());
-            sample.put("freeSlots",Math.max(0,config.maxMatches()-active.get()));sample.put("cacheSizeMb",cache.stats().bytes()/1048576);return sample;
+            sample.put("freeSlots",Math.max(0,config.maxMatches()-active.get()));sample.put("cacheSizeMb",cache.stats().bytes()/1048576);sample.put("cacheHits",cache.stats().hits());sample.put("cacheMisses",cache.stats().misses());return sample;
         },log);
         heartbeat.tick();long epoch=heartbeat.epoch();
         var claims=new ClaimClient(central,identity);

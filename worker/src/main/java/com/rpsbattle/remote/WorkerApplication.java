@@ -6,8 +6,13 @@ public final class WorkerApplication {
         if(result!=0)System.exit(result);
     }
     static int run(String[] args,java.util.Map<String,String> env,java.io.PrintStream out) {
+        if(args.length>0&&args[0].equals("benchmark")){
+            try{var options=new java.util.ArrayList<String>();options.add("--central=https://benchmark.invalid");for(int i=1;i<args.length;i++){if(!args[i].startsWith("--state-dir="))throw new IllegalArgumentException();options.add(args[i]);}new LocalBenchmark().run(WorkerConfig.parse(options.toArray(String[]::new),java.util.Map.of()),out);return 0;}
+            catch(InterruptedException e){Thread.currentThread().interrupt();out.println("Benchmark interrupted; sandbox cleanup requested.");return 1;}
+            catch(Exception e){out.println("Benchmark failed. Stop the agent using this state; check Docker Linux and python:3.12-slim. No credentials were sent.");return 1;}
+        }
         if(args.length==1 && args[0].equals("--help")) {
-            out.println("RPS Worker 0.9.0\nJava 21+. Set WORKER_REGISTRATION_TOKEN for first enrollment.\njava -jar rps-worker.jar --central=https://central.example --name=LAB-PC-01 --state-dir=./worker-state --max-matches=1 --max-bots=2\nLAN/local only: add --allow-insecure-http. Use --once for one heartbeat, --identity-only to check credentials, --prefetch for assigned artifacts only. --serve continuously claims compatible jobs; --run-once executes/uploads one batch; --upload-pending retries completed results; --recover reconciles interrupted state without replaying bots. Cache: --cache-dir=PATH --cache-mb=20480. Keep worker-state private and persistent.");return 0;
+            out.println("RPS Worker 0.10.0\nLocal baseline: java -jar rps-worker.jar benchmark --state-dir=./benchmark-state\nJava 21+. Set WORKER_REGISTRATION_TOKEN for first enrollment.\njava -jar rps-worker.jar --central=https://central.example --name=LAB-PC-01 --state-dir=./worker-state --max-matches=1 --max-bots=2\nLAN/local only: add --allow-insecure-http. Use --once for one heartbeat, --identity-only to check credentials, --prefetch for assigned artifacts only. --serve continuously claims compatible jobs; --run-once executes/uploads one batch; --upload-pending retries completed results; --recover reconciles interrupted state without replaying bots. Cache: --cache-dir=PATH --cache-mb=20480. Keep worker-state private and persistent.");return 0;
         }
         WorkerConfig config;
         try{config=WorkerConfig.parse(args,env);}catch(RuntimeException e){out.println("Invalid configuration. Use --help; HTTPS is required except explicit LAN/local HTTP.");return 2;}
@@ -35,7 +40,7 @@ public final class WorkerApplication {
                     retries.scheduleWithFixedDelay(()->{try{int count=recovery.reconcile(true);if(count>0)out.println("Recovered persisted execution state: "+count);}catch(java.io.IOException ignored){}catch(InterruptedException e){Thread.currentThread().interrupt();}},10,10,java.util.concurrent.TimeUnit.SECONDS);
                 }
                 out.println("Heartbeat-only mode. Use --serve to claim configured remote tournaments. Ctrl+C to stop.");
-                try{return new HeartbeatAgent(central,identity,probe.capabilities(),()->{var sample=new java.util.HashMap<>(probe.heartbeat());sample.put("cacheSizeMb",cache.stats().bytes()/1048576);return sample;},out).run(config.once());}finally{if(retries!=null){retries.shutdownNow();retries.awaitTermination(10,java.util.concurrent.TimeUnit.SECONDS);}}
+                try{return new HeartbeatAgent(central,identity,probe.capabilities(),()->{var sample=new java.util.HashMap<>(probe.heartbeat());sample.put("cacheSizeMb",cache.stats().bytes()/1048576);sample.put("cacheHits",cache.stats().hits());sample.put("cacheMisses",cache.stats().misses());return sample;},out).run(config.once());}finally{if(retries!=null){retries.shutdownNow();retries.awaitTermination(10,java.util.concurrent.TimeUnit.SECONDS);}}
             }
         } catch(InterruptedException e){Thread.currentThread().interrupt();out.println("Worker interrupted; persisted identity retained.");return 1;}
         catch(Exception e){out.println("Worker connection or private identity storage failed. Check Central, credentials and state directory. If initial enrollment response was lost, ask admin for a new token; do not retry enrollment automatically.");return 1;}

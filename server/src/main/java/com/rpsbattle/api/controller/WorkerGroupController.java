@@ -7,6 +7,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 @RestController
 public class WorkerGroupController {
+    @org.springframework.beans.factory.annotation.Autowired private WorkerMetricsService metrics;
+    @GetMapping("/api/admin/workers/metrics") public ResponseEntity<?> metrics(Authentication auth,@RequestParam(required=false) UUID tournamentId){accounts.requireAdmin(auth);return ok(metrics.read(tournamentId));}
     private final AccountAuthorizationService accounts;private final WorkerGroupService groups;private final RemoteRoutingService routing;private final WorkerTelemetryService telemetry;
     public WorkerGroupController(AccountAuthorizationService accounts,WorkerGroupService groups,RemoteRoutingService routing,WorkerTelemetryService telemetry){this.accounts=accounts;this.groups=groups;this.routing=routing;this.telemetry=telemetry;}
     public record Create(String name,String reason){}
