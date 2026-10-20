@@ -25,7 +25,27 @@ public class RemoteResultProjector {
     private final ReplayArchiveStore archives;private final GameStateMapper mapper;private final TransactionTemplate tx;
     public RemoteResultProjector(JdbcTemplate db,ObjectMapper json,TournamentRegistry registry,TournamentService tournaments,TournamentPersistenceCoordinator persistence,ReplayArchiveStore archives,GameStateMapper mapper,PlatformTransactionManager manager){this.db=db;this.json=json;this.registry=registry;this.tournaments=tournaments;this.persistence=persistence;this.archives=archives;this.mapper=mapper;this.tx=new TransactionTemplate(manager);}
     @Scheduled(fixedDelayString="${rps.worker.result-project-millis:500}")
-    public void synchronize(){for(var id:db.query("select execution_id from worker_result_receipts where projection_status='PENDING' order by received_at limit 32",(r,n)->r.getObject(1,UUID.class)))try{project(id);}catch(RuntimeException e){db.update("update worker_result_receipts set projection_error='PROJECTION_RETRY_REQUIRED' where execution_id=? and projection_status='PENDING'",id);}}
+    public void synchronize(){for(var id:db.query("select execution_id from worker_result_receipts where projection_status='PENDING' order by received_at limit 32",(r,n)->r.getObject(1,UUID.class)))try{project(id);}catch(RuntimeException e){db.update("update worker_result_receipts set projection_error='PROJECTION_RETRY_REQUIRED' where execution_id=? and projection_status='PENDING'",id);}
+        for(var id:db.query("select execution_id from worker_execution_recoveries where terminal=true and projected_at is null order by recorded_at limit 32",(r,n)->r.getObject(1,UUID.class)))try{projectFailure(id);}catch(RuntimeException ignored){/* Durable failure stays pending. */}
+    }
+    public void projectFailure(UUID execution){
+        var rows=db.queryForList("select tournament_id,match_id from worker_execution_recoveries where execution_id=? and terminal=true and projected_at is null",execution);if(rows.isEmpty())return;
+        var t=registry.findById(rows.getFirst().get("tournament_id").toString()).orElse(null);if(t==null)return;
+        synchronized(t){
+            var m=t.matches.stream().filter(v->v.id.equals(rows.getFirst().get("match_id").toString())).findFirst().orElse(null);if(m==null)return;
+            var before=m.copy();var operations=t.operations;long revision=t.revision;boolean defer=t.deferNotifications;var oldStatus=t.status;var oldChanged=t.statusChangedAt;t.deferNotifications=true;
+            try{tx.executeWithoutResult(status->{
+                var record=db.queryForList("select * from worker_execution_recoveries where execution_id=? for update",execution).getFirst();if(record.get("projected_at")!=null)return;
+                if(m.status==TournamentMatch.Status.PENDING&&Set.of(TournamentStatus.RUNNING,TournamentStatus.PAUSED,TournamentStatus.RECOVERY_REQUIRED).contains(t.status)){
+                    m.status=TournamentMatch.Status.FAILED;m.failure="REMOTE_WORKER_INFRASTRUCTURE_ERROR";m.finishedAt=Instant.now();m.winnerParticipantId=null;m.result=null;
+                    if(t.status!=TournamentStatus.RECOVERY_REQUIRED)TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());
+                    TournamentAudit.append(t,"MATCH_ERROR",null,m.id,"REMOTE_RETRY_EXHAUSTED",TournamentAudit.result(before),TournamentAudit.result(m));tournaments.changed(t);persistence.persistNow(t);
+                }
+                db.update("update worker_execution_recoveries set projected_at=CURRENT_TIMESTAMP where execution_id=?",execution);
+            });}catch(RuntimeException e){m.restore(before);t.operations=operations;t.revision=revision;t.status=oldStatus;t.statusChangedAt=oldChanged;throw e;}finally{t.deferNotifications=defer;}
+            tournaments.notifyChanged(t);
+        }
+    }
     public void project(UUID execution) {
         var rows=db.queryForList("select tournament_id from worker_result_receipts where execution_id=?",execution);if(rows.isEmpty())return;
         var t=registry.findById(rows.getFirst().get("tournament_id").toString()).orElse(null);if(t==null)return;

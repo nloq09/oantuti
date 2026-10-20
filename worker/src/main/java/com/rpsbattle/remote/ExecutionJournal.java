@@ -17,7 +17,10 @@ public final class ExecutionJournal {
         Files.createDirectories(this.root);IdentityStore.secure(this.root);
     }
     public java.util.List<Path> entries()throws IOException {try(var entries=Files.list(root)){var list=entries.sorted().toList();for(var path:list){safe(path);if(!Files.isDirectory(path,LinkOption.NOFOLLOW_LINKS)||!path.getFileName().toString().matches("[a-f0-9-]{36}"))throw new IOException("Unsafe execution entry");}return list;}}
-    public boolean pending()throws IOException {for(var dir:entries())if(!"ACKNOWLEDGED".equals(outcome(dir).path("status").asText()))return true;return false;}
+    public boolean pending()throws IOException {for(var dir:entries())if(!Set.of("ACKNOWLEDGED","RECOVERED","SUPERSEDED").contains(outcome(dir).path("status").asText()))return true;return false;}
+    public boolean contains(UUID execution){return Files.exists(root.resolve(execution.toString()),LinkOption.NOFOLLOW_LINKS);}
+    public Path orphan(UUID execution,JsonNode assignment)throws IOException {Path dir=root.resolve(execution.toString());Files.createDirectory(dir);IdentityStore.secure(dir);write(dir.resolve("assignment.json"),assignment);write(dir.resolve("outcome.json"),Map.of("status","STARTING","executionId",execution));return dir;}
+    public void terminal(Path dir,UUID execution,String status)throws IOException {if(!Set.of("RECOVERED","SUPERSEDED").contains(status))throw new IllegalArgumentException();com.fasterxml.jackson.databind.node.ObjectNode stored;try{stored=(com.fasterxml.jackson.databind.node.ObjectNode)outcome(dir).deepCopy();}catch(IOException e){stored=json.createObjectNode();}stored.put("executionId",execution.toString());stored.put("status",status);write(dir.resolve("outcome.json"),stored);}
     public JsonNode outcome(Path dir)throws IOException{return read(dir.resolve("outcome.json"),65536);}
     public JsonNode assignment(Path dir)throws IOException{return read(dir.resolve("assignment.json"),65536);}
     private JsonNode read(Path file,int limit)throws IOException {safe(file);if(!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS)||Files.size(file)>limit)throw new IOException("Invalid execution state");return json.readTree(Files.readAllBytes(file));}
@@ -41,7 +44,7 @@ public final class ExecutionJournal {
     public void finish(Path dir,ExecutionJob job,HeadlessMatch.Result result)throws IOException {
         safe(dir);Path replay=dir.resolve("replay.json");Files.createFile(replay);IdentityStore.secure(replay);
         new ReplayService().write(replay,result.replay());try(var channel=FileChannel.open(replay,StandardOpenOption.WRITE)){channel.force(true);}
-        if(Files.size(replay)>32*1024*1024)throw new IOException("REPLAY_SIZE_LIMIT");
+        if(Files.size(replay)>15*1024*1024)throw new IOException("REPLAY_SIZE_LIMIT");
         var summary=new LinkedHashMap<String,Object>();summary.put("status","READY_FOR_UPLOAD");summary.put("executionId",job.executionId());summary.put("jobId",job.jobId());summary.put("matchId",job.match().matchId());
         summary.put("winner",result.winner());summary.put("loser",result.loser());summary.put("reason",result.reason());summary.put("turnCount",result.turnCount());summary.put("durationMs",result.durationMs());
         summary.put("artifactHashA",job.match().botA().artifactHash());summary.put("artifactHashB",job.match().botB().artifactHash());summary.put("seed",job.match().seed());
@@ -51,7 +54,7 @@ public final class ExecutionJournal {
     public void failure(Path dir,ExecutionJob job,String code)throws IOException {write(dir.resolve("outcome.json"),Map.of("status","FAILED","executionId",job.executionId(),"reason",code));}
     private void safe(Path path)throws IOException {if(!path.toAbsolutePath().normalize().startsWith(root)||Files.isSymbolicLink(path)||Files.isSymbolicLink(path.getParent()))throw new IOException("Unsafe execution state");}
     private void write(Path file,Object value)throws IOException {
-        safe(file);Path tmp=file.resolveSibling(file.getFileName()+".tmp");safe(tmp);Files.createFile(tmp);IdentityStore.secure(tmp);
+        safe(file);Path tmp=file.resolveSibling(file.getFileName()+".tmp");safe(tmp);Files.deleteIfExists(tmp);Files.createFile(tmp);IdentityStore.secure(tmp);
         try {byte[] bytes=json.writeValueAsBytes(value);try(var out=FileChannel.open(tmp,StandardOpenOption.WRITE)){var b=java.nio.ByteBuffer.wrap(bytes);while(b.hasRemaining())out.write(b);out.force(true);}Files.move(tmp,file,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}finally{Files.deleteIfExists(tmp);}
     }
 }

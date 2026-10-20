@@ -85,7 +85,7 @@ public class RemoteMatchQueue {
         if(((Number)row.get("heartbeat_epoch")).longValue()!=body.epoch()||!"LEASED".equals(row.get("job_status"))||!Set.of("CLAIMED","RUNNING").contains(row.get("status"))||!clock.instant().isBefore(assignment(body.executionId()).leaseUntil()))throw new AuthException("EXECUTION_NOT_STARTABLE",409);
         var view=telemetry.view(id);
         if(!"APPROVED".equals(w.get("approval_status"))||!Set.of("ONLINE","BUSY").contains(view.status())||!Set.of("TRUSTED","COMMUNITY").contains(w.get("trust_level"))||"TRUSTED".equals(row.get("minimum_trust"))&&!"TRUSTED".equals(w.get("trust_level")))throw new AuthException("WORKER_NOT_AVAILABLE",409);
-        db.update("update match_execution_attempts set status='RUNNING' where id=?",body.executionId());return assignment(body.executionId());
+        db.update("update match_execution_attempts set status='RUNNING',started_at=coalesce(started_at,?) where id=?",at(clock.instant()),body.executionId());return assignment(body.executionId());
     }
     @Transactional
     public Assignment decline(UUID id,UUID job,Decline body) {

@@ -26,6 +26,16 @@ class SandboxBotDockerTest {
             bot.start();var json=new ObjectMapper();var first=json.readTree(bot.exchange("{}",Duration.ofSeconds(2)));var second=json.readTree(bot.exchange("{}",Duration.ofSeconds(2)));assertEquals(1,first.path("n").asInt());assertEquals(2,second.path("n").asInt());assertEquals(first.path("pid"),second.path("pid"));assertEquals(65534,first.path("uid").asInt());assertFalse(first.path("writable").asBoolean());assertFalse(first.path("socket").asBoolean());assertTrue(bot.isAlive());
         }noContainers(execution);
     }
+    @Test void recoveryOnlyRemovesContainersWithTheExactExecutionLabel()throws Exception {
+        UUID stale=UUID.randomUUID(),other=UUID.randomUUID();var containers=new ArrayList<String>();
+        try{
+            for(var execution:List.of(stale,other)){
+                var process=new ProcessBuilder("docker","run","-d","--rm","--network=none","--read-only","--user=65534:65534","--memory=64m","--cpus=0.25","--label","rps.scope=remote-worker","--label","rps.execution="+execution,"python:3.12-slim","python","-c","import time;time.sleep(60)").redirectError(ProcessBuilder.Redirect.DISCARD).start();assertTrue(process.waitFor(10,TimeUnit.SECONDS));assertEquals(0,process.exitValue());containers.add(new String(process.getInputStream().readAllBytes()).strip());
+            }
+            RecoveryAgent.removeContainers(stale);noContainers(stale);
+            var inspect=new ProcessBuilder("docker","inspect","--format","{{.State.Running}}",containers.get(1)).start();assertTrue(inspect.waitFor(5,TimeUnit.SECONDS));assertEquals("true",new String(inspect.getInputStream().readAllBytes()).strip());
+        }finally{for(String id:containers){var cleanup=new ProcessBuilder("docker","rm","-f",id).redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start();if(!cleanup.waitFor(5,TimeUnit.SECONDS))cleanup.destroyForcibly();}}
+    }
     @Test void timeoutAndOutputFloodAreBoundedAndCleanedUp()throws Exception {
         for(String source:List.of("import sys,time\nfor line in sys.stdin: time.sleep(10)\n","import sys\nfor line in sys.stdin: print('x'*70000,flush=True)\n","import sys\nfor line in sys.stdin: sys.stderr.write('x'*70000);sys.stderr.flush()\n")){
             UUID execution=UUID.randomUUID();Path file=temp.resolve(execution+".py");Files.writeString(file,source);

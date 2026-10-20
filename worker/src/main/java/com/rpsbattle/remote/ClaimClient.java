@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 
-/** Claim protocol component for the future execution loop. Heartbeat alone never claims matches. */
+/** Pull protocol for the execution loop. Heartbeat alone never claims matches. */
 public final class ClaimClient {
     private final CentralClient central;private final IdentityStore.Identity identity;
     public ClaimClient(CentralClient central,IdentityStore.Identity identity){this.central=central;this.identity=identity;}
