@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.*;
 
 public final class CentralClient implements AutoCloseable {
-    public static final String VERSION="0.7.0";
+    public static final String VERSION="0.9.0";
     private final URI central;
     private final ObjectMapper json=new ObjectMapper();
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NEVER).build();

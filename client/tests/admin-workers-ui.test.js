@@ -15,7 +15,7 @@ test('admin worker form masks one-time token, clears it on close and cleans poll
  globalThis.fetch=async(url,options)=>{calls.push({url,options});return{ok:true,status:200,json:async()=>url.endsWith('/auth/me')?{authenticated:false}:url.includes('/auth/csrf')?{headerName:'X-CSRF-TOKEN',token:'csrf'}:url.includes('registration-tokens')&&options.method==='POST'?{registrationToken:secret,expiresAt:'2026-11-01T00:00:00Z'}:url.includes('registration-tokens')?{items:[]}:{items:[],total:0,size:20}};};
  try {
   const {mountWorkers}=await import('../js/admin/workers.js');await mountWorkers('workers.html',root);let nodes=all(root);
-  assert.equal(nodes.filter(n=>n.tag==='form').length,1);const form=nodes.find(n=>n.tag==='form');assert.ok(form);nodes.find(n=>n.textContent==='Thêm worker').onclick();await form.onsubmit({preventDefault(){}});
+  assert.equal(nodes.filter(n=>n.tag==='form').length,2);const form=nodes.find(n=>n.tag==='form');assert.ok(form);nodes.find(n=>n.textContent==='Thêm worker').onclick();await form.onsubmit({preventDefault(){}});
   nodes=all(root);const token=nodes.find(n=>n.value===secret);assert.ok(token);assert.equal(token.type,'password');assert.equal(token.readOnly,true);assert.ok(nodes.every(n=>!n.textContent.includes(secret)));
   nodes.find(n=>n.textContent==='Đóng').onclick();assert.ok(!all(root).some(n=>n.value===secret));listeners.pagehide();assert.equal(cleared,true);
   assert.ok(calls.filter(c=>c.options.method==='POST'&&c.url.includes('/api/admin/')).every(c=>c.options.headers['X-CSRF-TOKEN']==='csrf'));

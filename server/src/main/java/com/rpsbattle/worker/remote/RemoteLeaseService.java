@@ -59,7 +59,8 @@ public class RemoteLeaseService {
     private void expire(Map<String,Object> row,String reason){
         UUID execution=(UUID)row.get("id"),job=(UUID)row.get("job_id");boolean pending=pending(row);
         int count=db.queryForObject("select count(*) from match_execution_attempts where job_id=?",Integer.class,job);
-        boolean terminal=pending&&count>=attempts;
+        var routes=db.queryForList("select retry_floor from remote_job_routes where job_id=?",job);int floor=routes.isEmpty()?0:((Number)routes.getFirst().get("retry_floor")).intValue();
+        boolean terminal=pending&&count-floor>=attempts;
         db.update("update match_execution_attempts set status='EXPIRED',active_marker=null,active_slot=null where id=? and active_marker=1",execution);
         db.update("update match_execution_jobs set status=? where id=? and status='LEASED'",pending&&!terminal?"QUEUED":"CANCELLED",job);
         db.update("insert into worker_execution_recoveries(execution_id,job_id,match_id,tournament_id,reason,attempt_count,terminal,recorded_at) values(?,?,?,?,?,?,?,?)",execution,job,row.get("match_id"),row.get("tournament_id"),pending?reason:"MATCH_NOT_PENDING",count,terminal,at(clock.instant()));
@@ -72,7 +73,9 @@ public class RemoteLeaseService {
     @Scheduled(fixedDelayString="${rps.worker.lease-reap-millis:1000}")
     @Transactional
     public int expire(){
-        guard();var rows=db.queryForList("select a.*,j.tournament_id from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id where a.active_marker=1 and a.lease_until<=? order by a.lease_until,a.id limit 32",at(clock.instant().minusSeconds(GRACE_SECONDS)));
+        // Cancelled/settled tournaments must not retain unclaimed queue capacity indefinitely.
+        guard();db.update("update match_execution_jobs set status='CANCELLED' where status='QUEUED' and not exists(select 1 from tournament_matches m join tournaments t on t.id=m.tournament_id where m.id=match_execution_jobs.match_id and m.status='PENDING' and t.status not in ('CANCELLED','FINISHED'))");
+        guard();var rows=db.queryForList("select a.*,j.tournament_id from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id where a.active_marker=1 and (a.lease_until<=? or not exists(select 1 from tournament_matches m join tournaments t on t.id=m.tournament_id where m.id=a.match_id and m.status='PENDING' and t.status not in ('CANCELLED','FINISHED'))) order by a.lease_until,a.id limit 32",at(clock.instant().minusSeconds(GRACE_SECONDS)));
         for(var row:rows)expire(row,"LEASE_EXPIRED");return rows.size();
     }
 }

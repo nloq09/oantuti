@@ -12,6 +12,7 @@ import java.util.*;
 
 @Service
 public class OwnedTournamentService {
+    @org.springframework.beans.factory.annotation.Autowired private com.rpsbattle.worker.remote.RemoteRoutingService remoteRouting;
     private final FairTournamentScan checkInScan=new FairTournamentScan();
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.account.repository.UserRepository timelineUsers;
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.coding.WorkspaceSandbox timelineSandbox;
@@ -115,7 +116,7 @@ public class OwnedTournamentService {
         authorization.requireManager(auth,t);synchronized(t){
             if(expected==null||expected!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
             var fresh=new ArrayList<String>();var before=t.status;
-            try{mutate(t,auth,()->{operation.run();if(queue!=null&&before!=TournamentStatus.RUNNING&&t.status==TournamentStatus.RUNNING){var already=queue.reservedIds();var ids=t.format==TournamentFormat.SINGLE_ELIMINATION?t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).filter(key->t.matches.stream().noneMatch(m->m.id.equals(key)&&m.status==TournamentMatch.Status.FINISHED)).toList():t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING).map(m->m.id).toList();queue.reserve(ids);ids.stream().filter(key->!already.contains(key)).forEach(fresh::add);}});}
+            try{mutate(t,auth,()->{operation.run();if(queue!=null&&(remoteRouting==null||!remoteRouting.remote(t.id))&&before!=TournamentStatus.RUNNING&&t.status==TournamentStatus.RUNNING){var already=queue.reservedIds();var ids=t.format==TournamentFormat.SINGLE_ELIMINATION?t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).filter(key->t.matches.stream().noneMatch(m->m.id.equals(key)&&m.status==TournamentMatch.Status.FINISHED)).toList():t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING).map(m->m.id).toList();queue.reserve(ids);ids.stream().filter(key->!already.contains(key)).forEach(fresh::add);}});}
             catch(RuntimeException failure){if(queue!=null)queue.release(fresh);throw failure;}
         }
     }
@@ -190,7 +191,7 @@ public class OwnedTournamentService {
                     if(t.timeline!=null&&(clock.instant().isBefore(t.timeline.tournamentStartAt())||t.registrations.stream().anyMatch(r->r.status()==TournamentRegistration.Status.APPROVED)))throw new DemoRequestException("CHECK_IN_REQUIRED");
                     if(t.checkInRequired && t.status!=TournamentStatus.READY)throw new DemoRequestException("CHECK_IN_REQUIRED");
                     prepare(t,scores);lockRules(t);tournaments.start(id);
-                    if(queue!=null) {var ids=t.format==TournamentFormat.SINGLE_ELIMINATION?t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).toList():t.matches.stream().map(m->m.id).toList();queue.reserve(ids);reserved.addAll(ids);}
+                    if(queue!=null&&(remoteRouting==null||!remoteRouting.remote(t.id))) {var ids=t.format==TournamentFormat.SINGLE_ELIMINATION?t.bracket.stream().map(BracketNode::matchId).filter(Objects::nonNull).toList():t.matches.stream().map(m->m.id).toList();queue.reserve(ids);reserved.addAll(ids);}
                 });
             } catch(RuntimeException failure) {if(queue!=null)queue.release(reserved);throw failure;}
         }
@@ -219,7 +220,7 @@ public class OwnedTournamentService {
                 prepare(t,scores);lockRules(t);
                 if(t.status!=TournamentStatus.READY)TournamentStateMachine.transition(t,TournamentStatus.READY,now);
                 tournaments.start(t.id,now);
-                if(queue!=null){var existing=queue.reservedIds();var ids=t.matches.stream().limit(Math.min(t.maxConcurrentMatches,Math.max(1,queue.capacity()))).map(m->m.id).toList();queue.reserve(ids);ids.stream().filter(id->!existing.contains(id)).forEach(fresh::add);}
+                if(queue!=null&&(remoteRouting==null||!remoteRouting.remote(t.id))){var existing=queue.reservedIds();var ids=t.matches.stream().limit(Math.min(t.maxConcurrentMatches,Math.max(1,queue.capacity()))).map(m->m.id).toList();queue.reserve(ids);ids.stream().filter(id->!existing.contains(id)).forEach(fresh::add);}
                 TournamentAudit.append(t,"TOURNAMENT_STARTED",auth==null?null:actor(auth),t.id,"TIMELINE_START",null,"RUNNING");
             });}catch(RuntimeException failure){if(queue!=null)queue.release(fresh);throw failure;}
         }

@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static org.assertj.core.api.Assertions.*;
 
 class RemoteJobClaimTest extends WorkerRegistrationTest {
-    @org.junit.jupiter.api.BeforeEach void clearIsolatedTestQueue(){for(String table:List.of("worker_execution_recoveries","worker_result_receipts","worker_claim_items","worker_claim_receipts","match_execution_attempts","match_execution_jobs"))db.update("delete from "+table);}
+    @org.junit.jupiter.api.BeforeEach void clearIsolatedTestQueue(){for(String table:List.of("remote_job_routes","worker_execution_recoveries","worker_result_receipts","worker_claim_items","worker_claim_receipts","match_execution_attempts","match_execution_jobs"))db.update("delete from "+table);}
     @Autowired RemoteMatchQueue queue;
     @Autowired WorkerTelemetryService telemetry;
     record Machine(WorkerIdentityService.Enrolled enrolled,long epoch) {UUID id(){return enrolled.worker().workerId();}}

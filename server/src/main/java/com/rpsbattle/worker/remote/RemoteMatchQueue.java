@@ -23,6 +23,7 @@ public class RemoteMatchQueue {
     public record Start(UUID executionId,Long epoch) {}
     private static java.sql.Timestamp at(Instant time){return java.sql.Timestamp.from(time);}
     private void guard(){db.queryForObject("select id from remote_match_queue_guard where id=1 for update",Integer.class);}
+    boolean hasCapacity(){return db.queryForObject("select count(*) from match_execution_jobs where status in ('QUEUED','LEASED')",Integer.class)<capacity;}
     private String encoded(Object object){try{return json.writeValueAsString(object);}catch(Exception e){throw new IllegalArgumentException("Invalid remote protocol data");}}
     private Spec decoded(String value){try{return json.readValue(value,Spec.class);}catch(Exception e){throw new IllegalStateException("Remote job metadata invalid");}}
     private static boolean version(String v){return v!=null&&v.matches("[A-Za-z0-9._+-]{1,64}");}
@@ -61,9 +62,11 @@ public class RemoteMatchQueue {
         var caps=view.capabilities();var occupied=new HashSet<>(db.query("select active_slot from match_execution_attempts where worker_id=? and active_slot is not null",(r,n)->r.getInt(1),workerId));
         // FIFO: cache hints cannot make a cache-miss job wait indefinitely. Global DB admission lock
         // serializes claims across Central instances; database unique constraints are the final fence.
-        var languages=caps.supportedLanguages().stream().sorted().toList();String marks=String.join(",",Collections.nCopies(languages.size(),"?"));var args=new ArrayList<Object>(List.of(c.gameCoreVersion(),c.ruleSetVersion()));args.addAll(languages);args.addAll(languages);args.add(worker.get("trust_level"));args.add(limit);
-        if(limit>0&&!languages.isEmpty())for(var row:db.queryForList("select j.id,j.spec_json from match_execution_jobs j where j.status='QUEUED' and exists(select 1 from tournament_matches m where m.id=j.match_id and m.tournament_id=j.tournament_id and m.status='PENDING') and j.game_core_version=? and j.rule_set_version=? and j.language_a in ("+marks+") and j.language_b in ("+marks+") and (j.minimum_trust='COMMUNITY' or ?='TRUSTED') order by j.created_at,j.id limit ?",args.toArray())) {
+        var languages=caps.supportedLanguages().stream().sorted().toList();String marks=String.join(",",Collections.nCopies(languages.size(),"?"));var args=new ArrayList<Object>(List.of(c.gameCoreVersion(),c.ruleSetVersion()));args.addAll(languages);args.addAll(languages);args.add(worker.get("trust_level"));args.add(workerId);args.add(256);
+        if(limit>0&&!languages.isEmpty())for(var row:preferred(db.queryForList("select j.id,j.spec_json,j.created_at,j.tournament_id from match_execution_jobs j where j.status='QUEUED' and exists(select 1 from tournament_matches m where m.id=j.match_id and m.tournament_id=j.tournament_id and m.status='PENDING') and j.game_core_version=? and j.rule_set_version=? and j.language_a in ("+marks+") and j.language_b in ("+marks+") and (j.minimum_trust='COMMUNITY' or ?='TRUSTED') and (not exists(select 1 from remote_job_routes r where r.job_id=j.id) or exists(select 1 from remote_job_routes r join worker_groups g on g.id=r.group_id join worker_group_members gm on gm.group_id=g.id join tournaments t on t.id=j.tournament_id where r.job_id=j.id and g.enabled=true and gm.worker_id=? and t.status='RUNNING')) order by j.created_at,j.id limit ?",args.toArray()),c,now)) {
             var spec=decoded(row.get("spec_json").toString());
+            var policies=db.queryForList("select max_matches from tournament_worker_policies where tournament_id=? and mode='REMOTE_REQUIRED'",row.get("tournament_id"));
+            if(!policies.isEmpty()&&db.queryForObject("select count(*) from match_execution_jobs where tournament_id=? and status='LEASED'",Integer.class,row.get("tournament_id"))>=((Number)policies.getFirst().get("max_matches")).intValue())continue;
             int slot=1;while(occupied.contains(slot))slot++;if(slot>caps.maxConcurrentMatches())break;
             UUID job=(UUID)row.get("id"),execution=UUID.randomUUID();Instant lease=now.plusMillis(Math.max(60000L,spec.matchHardTimeoutMs()+30000L));
             db.update("insert into match_execution_attempts(id,job_id,match_id,worker_id,heartbeat_epoch,status,active_marker,active_slot,assigned_slot,claimed_at,lease_until) values(?,?,?,?,?,'CLAIMED',1,?,?,?,?)",execution,job,spec.matchId(),workerId,c.epoch(),slot,slot,at(now),at(lease));
@@ -71,6 +74,13 @@ public class RemoteMatchQueue {
         }
         return batch(workerId,selected);
     }
+    private List<Map<String,Object>> preferred(List<Map<String,Object>> rows,Claim claim,Instant now){
+        var cache=new HashSet<>(claim.cachedArtifacts());
+        rows.sort((a,b)->{Instant x=instant(a.get("created_at")),y=instant(b.get("created_at"));boolean oldA=!x.isAfter(now.minusSeconds(30)),oldB=!y.isAfter(now.minusSeconds(30));if(oldA!=oldB)return oldA?-1:1;
+            if(!oldA){int hit=Integer.compare(hits(b,cache),hits(a,cache));if(hit!=0)return hit;}int time=x.compareTo(y);return time!=0?time:a.get("id").toString().compareTo(b.get("id").toString());});return rows;
+    }
+    private int hits(Map<String,Object> row,Set<String> cache){var spec=decoded(row.get("spec_json").toString());return (cache.contains(spec.botA().artifactHash())?1:0)+(cache.contains(spec.botB().artifactHash())?1:0);}
+    private static Instant instant(Object value){return value instanceof java.sql.Timestamp t?t.toInstant():((java.time.OffsetDateTime)value).toInstant();}
     private Assignment assignment(UUID id) {
         return db.queryForObject("select a.*,j.spec_json from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id where a.id=?",(r,n)->new Assignment(r.getObject("job_id",UUID.class),r.getObject("id",UUID.class),r.getObject("worker_id",UUID.class),r.getLong("heartbeat_epoch"),r.getInt("assigned_slot"),r.getString("status"),r.getTimestamp("lease_until").toInstant(),decoded(r.getString("spec_json"))),id);
     }

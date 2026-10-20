@@ -17,6 +17,8 @@ public class WorkerManager {
     private final Executor launches;
     private final Set<String> active = new HashSet<>();
     private boolean draining;
+    private com.rpsbattle.worker.remote.RemoteRoutingService routing;
+    @Autowired public void routing(com.rpsbattle.worker.remote.RemoteRoutingService routing){this.routing=routing;}
     private com.rpsbattle.tournament.TournamentReadyService readiness;
     private com.rpsbattle.worker.remote.RemoteResultService remote;
     @Autowired public void remote(com.rpsbattle.worker.remote.RemoteResultService remote){this.remote=remote;}
@@ -56,6 +58,7 @@ public class WorkerManager {
             if(readiness!=null&&!readiness.confirmed(t,m)){complete(m.id);return;}
             if(!t.operations.active(m.participantA.participantId())||!t.operations.active(m.participantB.participantId())||(!t.operations.autoAdvanceRounds()&&m.round>t.operations.releasedRound())||t.operations.reviews().containsKey(m.id)){complete(m.id);return;}
             try {
+                if(routing!=null&&routing.route(t,m)){complete(m.id);return;}
                 var result=Objects.requireNonNull(worker.execute(request));
                 m.onlineMatchId=result.roomId();m.historyMatchId=result.historyId();
                 m.status=TournamentMatch.Status.RUNNING;if(m.startedAt==null)m.startedAt=Instant.now();
