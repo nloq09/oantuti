@@ -64,6 +64,8 @@ Nhóm 3 bổ sung form tạo cuộc thi bot với timeline đầy đủ, xem tr�
 
 Nhóm 4 bổ sung khung quản lý cho chủ giải: header với giai đoạn/hạn giờ từ server, sidebar trên desktop và menu thu gọn trên màn hình nhỏ. Các trang duyệt đơn, bài nộp và kiểm thử dùng chung điều hướng; audit có mục riêng và các mục chính hỗ trợ link trực tiếp. Chưa có dữ liệu sức khỏe hạ tầng tổng hợp thì hiển thị rõ chưa xác minh. [Phạm vi và kiểm chứng](docs/CHANG-12-NHOM-4-ORGANIZER-SHELL.md).
 
+Nhóm 5 bổ sung thống kê theo giai đoạn từ API riêng có kiểm tra quyền: đăng ký, coding, validation, check-in và thi đấu. Đếm toàn giải thay vì một trang danh sách, tránh trùng người có nhiều workspace và bỏ validation đã bị thay thế. Bộ lọc validation chạy trước phân trang; thông tin worker chỉ giới hạn máy đang giữ assignment của giải. [Định nghĩa số liệu, API và kiểm chứng](docs/CHANG-12-NHOM-5-PHASE-METRICS.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.

@@ -5,6 +5,7 @@ import {errorText} from '../ui/toast.js';
 import {reviewDecisions,reviewPayload} from './application-review-model.js';
 import {applicationLabels} from './timeline-registration-model.js';
 const id=new URLSearchParams(location.search).get('id'),base='/api/tournaments/'+encodeURIComponent(id),root=document.querySelector('#applications'),notice=document.querySelector('#review-notice'),filter=document.querySelector('#application-status');let page=0,loading=false,acting=false;
+const requestedStatus=new URLSearchParams(location.search).get('status');if([...filter.options].some(option=>option.value===requestedStatus))filter.value=requestedStatus;
 async function load(){if(loading||acting)return;loading=true;notice.textContent='';try{
  const data=await sessionRequest(base+'/participant-applications?page='+page+(filter.value?'&status='+encodeURIComponent(filter.value):''));
  await organizerPageShell(await sessionRequest(base),'registration');
@@ -16,4 +17,4 @@ async function load(){if(loading||acting)return;loading=true;notice.textContent=
  }
  const controls=node('div',undefined,'actions'),prev=node('button','← Trước'),next=node('button','Sau →');prev.disabled=page===0;next.disabled=data.items.length<25;prev.onclick=()=>{page--;load();};next.onclick=()=>{page++;load();};controls.append(prev,node('span','Trang '+(page+1)),next);root.append(controls);
 }catch(error){notice.textContent=errorText(error.message);root.replaceChildren();}finally{loading=false;}}
-document.querySelector('#refresh-applications').onclick=load;filter.onchange=()=>{page=0;load();};const back=document.querySelector('#back-to-tournament');back.href=(location.pathname.startsWith('/admin/')?'/admin/tournament-detail.html?id=':'/tournament.html?id=')+encodeURIComponent(id);await load();
+document.querySelector('#refresh-applications').onclick=load;filter.onchange=()=>{page=0;const url=new URL(location.href);if(filter.value)url.searchParams.set('status',filter.value);else url.searchParams.delete('status');history.replaceState(null,'',url);load();};const back=document.querySelector('#back-to-tournament');back.href=(location.pathname.startsWith('/admin/')?'/admin/tournament-detail.html?id=':'/tournament.html?id=')+encodeURIComponent(id);await load();
