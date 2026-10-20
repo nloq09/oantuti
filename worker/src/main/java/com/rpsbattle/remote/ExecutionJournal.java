@@ -16,7 +16,13 @@ public final class ExecutionJournal {
         this.root=root.toAbsolutePath().normalize();for(Path p=this.root;p!=null;p=p.getParent())if(Files.isSymbolicLink(p))throw new IOException("Unsafe execution state");
         Files.createDirectories(this.root);IdentityStore.secure(this.root);
     }
-    public boolean pending()throws IOException {try(var entries=Files.list(root)){return entries.findAny().isPresent();}}
+    public java.util.List<Path> entries()throws IOException {try(var entries=Files.list(root)){var list=entries.sorted().toList();for(var path:list){safe(path);if(!Files.isDirectory(path,LinkOption.NOFOLLOW_LINKS)||!path.getFileName().toString().matches("[a-f0-9-]{36}"))throw new IOException("Unsafe execution entry");}return list;}}
+    public boolean pending()throws IOException {for(var dir:entries())if(!"ACKNOWLEDGED".equals(outcome(dir).path("status").asText()))return true;return false;}
+    public JsonNode outcome(Path dir)throws IOException{return read(dir.resolve("outcome.json"),65536);}
+    public JsonNode assignment(Path dir)throws IOException{return read(dir.resolve("assignment.json"),65536);}
+    private JsonNode read(Path file,int limit)throws IOException {safe(file);if(!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS)||Files.size(file)>limit)throw new IOException("Invalid execution state");return json.readTree(Files.readAllBytes(file));}
+    public byte[] replay(Path dir)throws IOException {Path file=dir.resolve("replay.json");safe(file);if(!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS)||Files.size(file)>15*1024*1024)throw new IOException("Invalid replay file");return Files.readAllBytes(file);}
+    public void acknowledge(Path dir,JsonNode outcome,String hash)throws IOException {var stored=(com.fasterxml.jackson.databind.node.ObjectNode)outcome.deepCopy();stored.put("status","ACKNOWLEDGED");stored.put("receiptHash",hash);write(dir.resolve("outcome.json"),stored);}
     public Path begin(ExecutionJob job,JsonNode assignment)throws IOException {
         Path dir=root.resolve(job.executionId().toString());Files.createDirectory(dir);IdentityStore.secure(dir);
         write(dir.resolve("assignment.json"),assignment);write(dir.resolve("outcome.json"),Map.of("status","STARTING","executionId",job.executionId()));return dir;

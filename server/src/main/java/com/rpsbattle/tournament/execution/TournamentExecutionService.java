@@ -29,6 +29,8 @@ public class TournamentExecutionService {
         }
     }
     private TournamentReadyService readiness;
+    private com.rpsbattle.worker.remote.RemoteResultService remote;
+    @org.springframework.beans.factory.annotation.Autowired public void remote(com.rpsbattle.worker.remote.RemoteResultService remote){this.remote=remote;}
     @org.springframework.beans.factory.annotation.Autowired public void readiness(TournamentReadyService readiness){this.readiness=readiness;}
     public TournamentExecutionService(TournamentRegistry registry,TournamentService tournaments,TournamentMatchExecutor executor,
         OnlineMatchService online,ReplayRegistry replays,@Value("${rps.tournament.max-concurrent-matches:4}") int maxConcurrent,
@@ -46,6 +48,7 @@ public class TournamentExecutionService {
     @Scheduled(fixedDelay=200)
     public synchronized void tick() {
         if(workers.draining())return;
+        var remotePending=remote==null?Set.<String>of():remote.pendingOwnership();
         var all=registry.findAll().stream().sorted(Comparator.comparing(t->t.createdAt)).toList();
         for(var t:all) synchronized(t) {
             boolean changed=false;t.deferNotifications=true;
@@ -94,7 +97,7 @@ public class TournamentExecutionService {
             if(t.status!=TournamentStatus.RUNNING)continue;
             int round=t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(0);
             int slots=t.maxConcurrentMatches-(int)t.matches.stream().filter(m->m.status==TournamentMatch.Status.RUNNING).count();
-            for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING && m.round==round && (t.operations.autoAdvanceRounds()||m.round<=t.operations.releasedRound()) && !t.operations.reviews().containsKey(m.id) && slots>0 && (readiness==null||readiness.permit(t,m)) && slots-->0) {
+            for(var m:t.matches) if(m.status==TournamentMatch.Status.PENDING && !remotePending.contains(m.id) && m.round==round && (t.operations.autoAdvanceRounds()||m.round<=t.operations.releasedRound()) && !t.operations.reviews().containsKey(m.id) && slots>0 && (readiness==null||readiness.permit(t,m)) && slots-->0) {
                 try {workers.offer(new com.rpsbattle.worker.MatchExecutionRequest(t,m));}
                 catch(com.rpsbattle.online.DemoRequestException full) {break;}
             }

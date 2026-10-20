@@ -33,6 +33,21 @@ public class ReplayArchiveStore {
     public void capture(MatchMetadata match,MatchLog log,OnlineSnapshot snapshot) {
         pending.putIfAbsent(match.id(),new Pending(match,new Archive(log,snapshot)));
     }
+    /** Synchronous remote projection; caller includes repository writes in its receipt transaction. */
+    public void persistRemote(MatchMetadata match,MatchLog log,OnlineSnapshot snapshot) {
+        try {
+            validate(new Archive(log,snapshot));var id=UUID.fromString(match.id());Files.createDirectories(root);
+            Path target=safePath(id+".json"),temporary=Files.createTempFile(root,"remote-replay-",".tmp");
+            try {
+                replay.write(temporary,log);var payload=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(temporary.toFile());
+                payload.put("archiveVersion",1);payload.put("archiveId",match.id());payload.set("snapshot",json.valueToTree(snapshot));
+                byte[] bytes=json.writeValueAsBytes(payload);if(bytes.length>16*1024*1024)throw new IllegalArgumentException("Oversized replay");
+                Files.write(temporary,bytes);try(var file=java.nio.channels.FileChannel.open(temporary,StandardOpenOption.WRITE)){file.force(true);}
+                Files.move(temporary,target,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
+                repository.save(new ReplayMetadata(id,match.id(),id+".json",log.events().size(),true,match.finishedAt(),digest(bytes)),match);
+            }finally{Files.deleteIfExists(temporary);}
+        }catch(Exception e){throw new IllegalStateException("Remote replay persistence unavailable",e);}
+    }
     public synchronized void flush() {
         RuntimeException failed=null;
         for(var item:pending.entrySet()) {

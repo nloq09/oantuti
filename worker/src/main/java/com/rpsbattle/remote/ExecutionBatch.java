@@ -22,8 +22,9 @@ public final class ExecutionBatch {
     }
     public int run()throws IOException,InterruptedException {
         var journal=new ExecutionJournal(config.stateDirectory().resolve("executions"));
+        new ResultUploader(central,identity,journal).pending();
         if(journal.pending()||!central.assigned(identity).path("jobs").isEmpty()){
-            log.println("Pending execution state exists; automatic replay/reclaim is blocked until result/recovery support is enabled.");return 1;
+            log.println("Unresolved execution state exists; automatic replay/reclaim is blocked. Keep state for recovery.");return 1;
         }
         var heartbeat=new HeartbeatAgent(central,identity,probe.capabilities(),()->{
             var sample=new HashMap<>(probe.heartbeat());sample.put("activeMatches",active.get());sample.put("activeBotProcesses",bots.get());
@@ -46,7 +47,7 @@ public final class ExecutionBatch {
             var tasks=new ArrayList<Future<Boolean>>();
             for(var node:jobs){var job=ExecutionJob.parse(node,identity.workerId(),epoch);tasks.add(pool.submit(()->execute(job,node,journal,timer)));}
             int failed=0;for(var task:tasks)try{if(!task.get())failed++;}catch(ExecutionException e){failed++;}
-            log.println("Batch prepared locally: "+(tasks.size()-failed)+" finished, "+failed+" failed. Results await Central upload support; reservations retained.");
+            log.println("Batch upload: "+(tasks.size()-failed)+" acknowledged, "+failed+" failed or pending. Unacknowledged state retained.");
             return failed==0?0:1;
         }finally{
             cancelled.set(true);children.forEach(SandboxBot::close);pool.shutdownNow();timer.shutdownNow();
@@ -55,7 +56,7 @@ public final class ExecutionBatch {
         }
     }
     private boolean execute(ExecutionJob job,com.fasterxml.jackson.databind.JsonNode node,ExecutionJournal journal,ScheduledExecutorService timer) {
-        Path directory=null;SandboxBot a=null,b=null;ScheduledFuture<?> watchdog=null;long deadline=Long.MAX_VALUE;
+        Path directory=null;SandboxBot a=null,b=null;ScheduledFuture<?> watchdog=null;long deadline=Long.MAX_VALUE;boolean finished=false;
         active.incrementAndGet();
         try {
             var client=new ArtifactClient(central,identity,cache);
@@ -71,11 +72,12 @@ public final class ExecutionBatch {
                 watchdog=timer.schedule(()->{first.close();second.close();},job.match().matchHardTimeoutMs(),TimeUnit.MILLISECONDS);
                 if(cancelled.get())throw new IOException("Execution cancelled");
                 var result=new HeadlessMatch().run(job.match(),a,b,deadline);
-                if(cancelled.get())throw new IOException("Execution cancelled");journal.finish(directory,job,result);return true;
+                if(cancelled.get())throw new IOException("Execution cancelled");journal.finish(directory,job,result);finished=true;
+                return new ResultUploader(central,identity,journal).upload(directory);
             }
         }catch(Exception e) {
             if(e instanceof InterruptedException)Thread.currentThread().interrupt();
-            if(directory!=null)try{journal.failure(directory,job,System.nanoTime()>=deadline?"MATCH_HARD_TIMEOUT":e instanceof com.rpsbattle.bot.BotInfrastructureException?"SANDBOX_UNAVAILABLE":"EXECUTION_FAILED");}catch(IOException ignored){}
+            if(directory!=null&&!finished)try{journal.failure(directory,job,System.nanoTime()>=deadline?"MATCH_HARD_TIMEOUT":e instanceof com.rpsbattle.bot.BotInfrastructureException?"SANDBOX_UNAVAILABLE":"EXECUTION_FAILED");}catch(IOException ignored){}
             // Started or ambiguous requests retain the reservation. Never decline a possibly running match.
             if(directory==null)try{new ClaimClient(central,identity).decline(job.jobId(),job.executionId(),"ARTIFACT_UNAVAILABLE");}catch(Exception ignored){}
             return false;

@@ -18,6 +18,8 @@ public class WorkerManager {
     private final Set<String> active = new HashSet<>();
     private boolean draining;
     private com.rpsbattle.tournament.TournamentReadyService readiness;
+    private com.rpsbattle.worker.remote.RemoteResultService remote;
+    @Autowired public void remote(com.rpsbattle.worker.remote.RemoteResultService remote){this.remote=remote;}
     @Autowired public void readiness(com.rpsbattle.tournament.TournamentReadyService readiness){this.readiness=readiness;}
     @Autowired public WorkerManager(ExecutionQueue queue, MatchWorker worker, TournamentService tournaments,
             @Value("${rps.worker.max-concurrent-matches:${rps.tournament.max-concurrent-matches:4}}") int maxConcurrent) {
@@ -46,6 +48,7 @@ public class WorkerManager {
     private void launch(MatchExecutionRequest request) {
         var t=request.tournament(); var m=request.match();
         synchronized(t) {
+            if(remote!=null&&remote.owns(m.id)){complete(m.id);return;}
             if (t.status!=TournamentStatus.RUNNING || m.status!=TournamentMatch.Status.PENDING || t.matches.stream().noneMatch(entry->entry==m) || draining()) {
                 complete(m.id); return;
             }
