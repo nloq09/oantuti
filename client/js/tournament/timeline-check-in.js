@@ -11,7 +11,7 @@ export function checkInScreen(flow){
  if(flow.nextAction==='CHECK_IN')return 'open';
  return null;
 }
-export function renderTimelineCheckIn(root,t,flow,refresh){
+export function renderTimelineCheckIn(root,t,flow,refresh,{primaryCheckIn=false}={}){
  const screen=checkInScreen(flow),panel=node('section',undefined,'panel timeline-check-in');root.append(panel);
  panel.append(node('h2',screen==='waiting'?'Phòng chờ giải đấu':screen==='missed'?'Đã hết hạn check-in':'Check-in đã mở'));
  panel.append(node('p',flow.registration.displayName));
@@ -22,7 +22,7 @@ export function renderTimelineCheckIn(root,t,flow,refresh){
   const deadline=node('p');deadline.dataset.deadline=flow.checkIn.closesAt;
   const button=node('button','Check-in ngay'),notice=node('p');notice.setAttribute('role','status');
   button.onclick=async()=>{if(button.disabled)return;button.disabled=true;try{await checkInRegistration(t.id,flow.checkIn.registrationId);await refresh();}catch(error){notice.textContent=errorText(error.message);button.disabled=false;}};
-  panel.append(deadline,button,notice);return;
+  if(primaryCheckIn)panel.append(node('p','Dùng nút Check-in trong “Việc của bạn” để xác nhận tham gia.'));else panel.append(deadline,button,notice);return;
  }
  if(screen==='missed'){panel.append(node('p','Bạn chưa check-in trong thời gian quy định nên không có tên trong danh sách thi đấu.'),node('p','Check-in kết thúc: '+date(flow.checkIn.closesAt)));return;}
  panel.append(node('strong','✓ Đã check-in'),node('p','Xác nhận lúc: '+date(flow.checkIn.checkedInAt)),node('p',`${flow.checkIn.checkedInCount} người đã check-in`));

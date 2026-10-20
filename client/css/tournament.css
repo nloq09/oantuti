@@ -166,4 +166,17 @@ th {
 .tournament-filters {margin-bottom:1rem;}
 .validation-panel p,.frozen-submission p{overflow-wrap:anywhere}
 
+.tournament-header{height:auto;align-items:start;justify-content:stretch;box-shadow:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.65rem 1.5rem;padding:1.25rem 1.5rem;background:var(--panel-bg,#172c3d);border:1px solid var(--gold,#c5a265);border-radius:12px;color:var(--text,#f4ecd9)}
+.tournament-header h1{grid-column:1/-1;margin:0;font-size:clamp(1.4rem,3vw,2rem);line-height:1.25;overflow-wrap:anywhere}
+.tournament-header-meta{display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;margin:0}
+.tournament-header .tournament-phase-badge{grid-column:2;grid-row:2;margin:0;font-weight:700;color:var(--gold,#efc66e)}
+.tournament-header-timer{grid-column:2;grid-row:3;margin:0;font-variant-numeric:tabular-nums}
+.player-next-action{display:flex;flex-direction:column;align-items:flex-start;gap:.65rem;margin:1rem 0}
+.player-next-action h2{font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;margin:0}
+.player-next-action h3,.player-next-action p{margin:0}.player-next-action h3{font-size:1.4rem}
+.player-next-action .next-action-reason{display:none}.player-next-action .button,.player-next-action button{max-width:100%;box-sizing:border-box;white-space:normal}
+.tournament-progress .progress-failed{color:#ffcfb7;text-decoration:underline;text-underline-offset:4px}.tournament-progress .progress-optional{font-style:italic}
+#tournament-phase-content{scroll-margin-top:1rem}#coding-shell{margin-bottom:1rem}
+@media(max-width:700px){.tournament-header{grid-template-columns:minmax(0,1fr);padding:1rem}.tournament-header .tournament-phase-badge,.tournament-header-timer{grid-column:1;grid-row:auto}.player-next-action .button,.player-next-action button{width:100%;text-align:center}}
+
 .tournament-progress{margin:1rem 0;padding:.8rem;border:1px solid #c5a265;border-radius:12px;background:#172c3deb;color:#eee}.tournament-progress ol{display:flex;flex-wrap:wrap;gap:.6rem;list-style:none;margin:0;padding:0}.tournament-progress li{flex:1 1 135px;padding:.65rem;border-radius:8px}.tournament-progress .progress-current{background:#235781;color:#fff3ce;font-weight:700;outline:2px solid #efc66e}.tournament-progress .progress-done{color:#b9dfc8}.tournament-progress .progress-locked,.tournament-progress .progress-cancelled{color:#c1c9d2}.tournament-progress p{margin:.6rem 0 0}
