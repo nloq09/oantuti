@@ -21,6 +21,11 @@ public class RemoteMatchQueue {
     public record Batch(List<Assignment> jobs,int occupiedSlots,int effectiveFreeSlots,Instant serverNow) {}
     public record Decline(UUID executionId,String reason) {}
     public record Start(UUID executionId,Long epoch) {}
+    @Transactional public Assignment gameplay(UUID worker,UUID job,Start body){
+        // Reuse the same ownership, epoch, trust, heartbeat, lease and queue guards as /start.
+        var assignment=start(worker,job,body);
+        db.update("update match_execution_attempts set gameplay_started_at=coalesce(gameplay_started_at,?) where id=?",at(clock.instant()),body.executionId());return assignment;
+    }
     private static java.sql.Timestamp at(Instant time){return java.sql.Timestamp.from(time);}
     private void guard(){db.queryForObject("select id from remote_match_queue_guard where id=1 for update",Integer.class);}
     boolean hasCapacity(){return db.queryForObject("select count(*) from match_execution_jobs where status in ('QUEUED','LEASED')",Integer.class)<capacity;}

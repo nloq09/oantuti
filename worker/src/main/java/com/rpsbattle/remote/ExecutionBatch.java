@@ -85,7 +85,7 @@ public final class ExecutionBatch {
                 processes.put(job.executionId(),Set.of(a,b));
                 watchdog=timer.schedule(()->{first.close();second.close();},job.match().matchHardTimeoutMs(),TimeUnit.MILLISECONDS);
                 if(cancelled.get()||lost.contains(job.executionId()))throw new IOException("Execution cancelled");
-                var result=new HeadlessMatch().run(job.match(),a,b,deadline);
+                var result=new HeadlessMatch().run(job.match(),a,b,deadline,()->{try{var running=central.post(identity,"jobs/"+job.jobId()+"/running",Map.of("executionId",job.executionId(),"epoch",job.epoch()));if(!running.path("executionId").asText().equals(job.executionId().toString()))throw new IOException("Invalid running acknowledgement");}catch(Exception unavailable){throw new IllegalStateException("Gameplay acknowledgement unavailable",unavailable);}});
                 if(cancelled.get()||lost.contains(job.executionId()))throw new IOException("Execution cancelled");journal.finish(directory,job,result);finished=true;
                 return new ResultUploader(central,identity,journal).upload(directory);
             }

@@ -10,6 +10,10 @@ import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class HeadlessMatchTest {
+    @Test void gameplaySignalOccursAfterBothBotsStartAndPreparationAndFailureDoesNotInventResult(){
+        var a=new Process();var b=new Process();var calls=new java.util.concurrent.atomic.AtomicInteger();new HeadlessMatch().run(spec(8),a,b,System.nanoTime()+Duration.ofSeconds(10).toNanos(),()->{assertEquals(1,a.starts);assertEquals(1,b.starts);calls.incrementAndGet();});assertEquals(1,calls.get());
+        var broken=new Process();var other=new Process();assertThrows(IllegalStateException.class,()->new HeadlessMatch().run(spec(8),broken,other,System.nanoTime()+Duration.ofSeconds(10).toNanos(),()->{throw new IllegalStateException("No ACK");}));assertEquals(1,broken.closes);assertEquals(1,other.closes);
+    }
     final ObjectMapper json=new ObjectMapper();
     ExecutionJob.Spec spec(int turns) {var ref=new ArtifactRef(UUID.randomUUID(),"a".repeat(64),"PYTHON","python:3.12-slim");return new ExecutionJob.Spec(UUID.randomUUID(),UUID.randomUUID(),ref,ref,"1","classic-online-v1",Long.MAX_VALUE,1000,60000,turns,"TRUSTED");}
     static class Process implements BotProcess {

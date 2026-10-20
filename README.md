@@ -68,6 +68,8 @@ Nhóm 5 bổ sung thống kê theo giai đoạn từ API riêng có kiểm tra q
 
 Nhóm 6 bổ sung bảng “Cần xử lý” theo phase với ba mức Thông tin/Cần chú ý/Khẩn cấp, liên kết tới đúng đơn, bài kiểm thử hoặc bộ lọc trận/check-in. Chỉ nhận snapshot cùng giải và revision; lỗi cập nhật được báo dữ liệu cũ. Không suy đoán trận treo hay thiếu capacity. [Quy tắc và kiểm chứng](docs/CHANG-12-NHOM-6-NEEDS-ATTENTION.md).
 
+Nhóm 7 bổ sung API read-only trạng thái remote theo giải, lọc/phân trang, thông tin attempt/worker/lease và phân biệt kết quả đang chờ áp dụng. Schema V36 và worker 0.11.0 thêm tín hiệu bắt đầu gameplay sau chuẩn bị sandbox, tách STARTING khỏi RUNNING_REMOTE. Nâng Central trước rồi cập nhật worker; worker cũ vẫn chạy nhưng chưa báo được gameplay. Màn hình My Match/Match Monitor dùng dữ liệu này ở nhóm 8. [API, chuyển trạng thái và kiểm chứng](docs/CHANG-12-NHOM-7-REMOTE-READ-MODEL.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.

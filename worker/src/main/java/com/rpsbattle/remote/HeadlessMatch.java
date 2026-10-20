@@ -13,6 +13,9 @@ import java.time.*;
 public final class HeadlessMatch {
     public record Result(String status,String winner,String loser,String reason,int turnCount,long durationMs,MatchLog replay) {}
     public Result run(ExecutionJob.Spec spec,BotProcess a,BotProcess b,long deadline) {
+        return run(spec,a,b,deadline,()->{});
+    }
+    public Result run(ExecutionJob.Spec spec,BotProcess a,BotProcess b,long deadline,Runnable onGameplay) {
         long began=System.nanoTime();
         try(a;b) {
             a.start();b.start();check(deadline);
@@ -20,7 +23,7 @@ public final class HeadlessMatch {
             var agentA=new BotAgent(a,Duration.ofMillis(spec.turnTimeoutMs()));var agentB=new BotAgent(b,Duration.ofMillis(spec.turnTimeoutMs()));
             room.attachBot(OnlineMatch.P1,agentA,"Bot A");room.join();room.attachBot(OnlineMatch.P2,agentB,"Bot B");room.prepareBots();
             var rules=new OnlineRuleSet(OnlineMatch.P1,OnlineMatch.P2,spec.maxTurns());
-            var match=new Match(room.state().withPhase(com.rpsbattle.game.state.GamePhase.READY),rules,agentA,agentB,spec.seed());match.start();
+            var match=new Match(room.state().withPhase(com.rpsbattle.game.state.GamePhase.READY),rules,agentA,agentB,spec.seed());match.start();onGameplay.run();check(deadline);
             var legal=new com.rpsbattle.game.engine.LegalActionGenerator(rules);
             String fault=null;
             while(match.status()==MatchStatus.RUNNING) {
