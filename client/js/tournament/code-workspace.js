@@ -23,7 +23,7 @@ function download(name,text){const a=node('a'),url=URL.createObjectURL(new Blob(
 function render(){
  renderFreeze();
  const busy=action||saving||reconciling||busyWorkspace(workspace),closed=!uploadable(),locked=workspace?.status==='LOCKED'||ownSubmission?.status==='LOCKED',code=entryMode==='CODE';
- $('work-area').hidden=!entryMode;$('source-pane').hidden=!code;$('coding-layout').classList.toggle('import-mode',!code);$('import-panel').hidden=entryMode!=='IMPORT';
+ $('work-area').hidden=!entryMode||Boolean(tournament.timeline&&!session.writable());if(tournament.timeline&&!session.writable())$('entry-choice').hidden=true;$('source-pane').hidden=!code;$('coding-layout').classList.toggle('import-mode',!code);$('import-panel').hidden=entryMode!=='IMPORT';
  $('language-label').hidden=!code;for(const key of ['save','build','compare','download'])$(key).hidden=!code;
  for(const key of ['choose-code','choose-import'])$(key).disabled=busy;
  $('import-source').disabled=busy||closed||locked||!$('import-bot').value;

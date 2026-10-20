@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderFinalValidation,validationStages} from '../js/tournament/final-validation-view.js';
 import {safeNext,adminDestination} from '../js/account/account-ui.js';
-class Element{constructor(tag){this.tag=tag;this.children=[];this.textContent='';}append(...nodes){this.children.push(...nodes);}}
+class Element{constructor(tag){this.tag=tag;this.children=[];this.dataset={};this.textContent='';}append(...nodes){this.children.push(...nodes);}}
 const setup=()=>{globalThis.document={createElement:tag=>new Element(tag)};return new Element('main');};
 const all=e=>[e,...e.children.filter(x=>x instanceof Element).flatMap(all)];
 const view={status:'RUNNING',applied:false,language:'PYTHON',version:2,originalVersionId:'v2',versionId:'v2',sourceHash:'hash-source',artifactHash:'hash-artifact',steps:Object.fromEntries(Object.keys(validationStages).map(s=>[s,'PENDING']))};

@@ -13,6 +13,15 @@ import static org.mockito.Mockito.*;
 
 @TestPropertySource(properties="rps.coding.worker-auto-dispatch=false")
 class FinalValidationApiTest extends TimelineDeadlineApiTest {
+ @Test void frozenSourceSnapshotIsImmutablePrivateAndTournamentScoped()throws Exception{
+  String base=exam("DISQUALIFY");var built=ready(base,130);String version=built.path("version").path("id").asText(),source=built.path("version").path("sourceCode").asText();
+  request(base+"/workspace/me","PUT",Map.of("language","PYTHON","revision",built.path("revision").asLong(),"sourceCode","print('different unsent draft')"),200);
+  freeze(base);String path=base+"/workspace/versions/"+version+"/source";
+  var snapshot=request(path,"GET",null,200);assertThat(snapshot.path("sourceCode").asText()).isEqualTo(source).doesNotContain("different unsent draft");assertThat(snapshot.path("versionId").asText()).isEqualTo(version);assertThat(snapshot.path("sourceAvailable").asBoolean()).isTrue();assertThat(snapshot.toString()).doesNotContain("hiddenResult","buildLog","botToken");
+  request(base+"/workspace/versions/"+UUID.randomUUID()+"/source","GET",null,404);
+  var another=request("/api/tournaments","POST",Map.of("name","Other source scope","botPolicy",Map.of("submissionMode","BOTH")),201);request("/api/tournaments/"+another.path("id").asText()+"/workspace/versions/"+version+"/source","GET",null,404);
+  request("/api/auth/logout","POST",Map.of(),200);account=null;request(path,"GET",null,401);loginAccount();request(path,"GET",null,403);
+ }
  @Test void officialValidationNoticeIsPersonalAndCannotExposeHiddenDetails()throws Exception{String base=exam("DISQUALIFY");ready(base,130);freeze(base);enqueue(base);finalDone(base);assertThat(request(base+"/notifications","GET",null,200).toString()).contains("TIMELINE_BOT_VALIDATION_PASSED").doesNotContain("sourceCode","sourceHash","artifactHash","Hidden Test","reason");request("/api/auth/logout","POST",Map.of(),200);account=null;loginAccount();request(base+"/notifications","GET",null,403);}
  @Test void timelineCheckInUsesExactServerWindowAndIsIdempotent()throws Exception{
   String base=exam("DISQUALIFY");ready(base,130);freeze(base);enqueue(base);finalDone(base);

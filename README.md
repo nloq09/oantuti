@@ -54,9 +54,11 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 Nhóm 10 bổ sung capacity 4.000 người cho Loại trực tiếp/Swiss, metrics hàng đợi/receipt/cache trên trang Worker, observer CLI và baseline Docker một trận. Benchmark PostgreSQL đã kiểm tra 3.999 receipt với 10 identity mô phỏng và đỉnh 80 reservation; đây không phải 10 máy Docker vật lý. Xem [cách chạy, kết quả và giới hạn kiểm chứng](docs/CHANG-11-NHOM-10-SCALE-BENCHMARK.md).
 
-### Chặng 12 — Player Shell
+### Chặng 12 — Luồng giao diện giải đấu
 
 Đã triển khai nhóm 1: header và stepper thống nhất trên detail/lobby/workspace, model Next Action và khối “Việc của bạn” theo quyền server. Các nhóm Organizer/timeline create/remote status tiếp tục theo lộ trình riêng. [Phạm vi, file thay đổi và kiểm chứng](docs/CHANG-12-NHOM-1-PLAYER-SHELL.md).
+
+Nhóm 2 bổ sung giao diện trước giải: lịch/luật trước đăng ký, trạng thái đơn và chờ coding, bài đã khóa, các bước kiểm thử chính thức, check-in và phòng chờ. Liên kết xem source mở snapshot đúng phiên bản ở chế độ chỉ đọc, có kiểm tra tài khoản/giải; không mở nhầm draft đang sửa. [Phạm vi, API và kiểm chứng](docs/CHANG-12-NHOM-2-PRE-TOURNAMENT.md).
 
 ### Bot của người chơi
 

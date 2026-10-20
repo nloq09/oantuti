@@ -15,6 +15,13 @@ public class WorkspaceStore {
  public record VersionView(UUID id,int number,String sourceCode,String sourceHash,String artifactHash,String status,String buildLog,String testResult,String sampleResult,String hiddenResult,String sourceType,Instant createdAt){}
  public record View(UUID id,String language,String sourceCode,long revision,String status,Instant updatedAt,VersionView version){}
  public record Work(UUID workspaceId,UUID versionId,String language,String source,String sourceHash,UUID artifactId,String artifactHash){}
+ public record SourceView(UUID versionId,int version,String language,String sourceCode,String sourceHash,String artifactHash,boolean sourceAvailable){}
+ @Transactional(readOnly=true) public SourceView source(UUID tournament,UUID user,UUID version){
+  var versions=db.createQuery("select v from CodeVersion v,CodeWorkspace w where v.workspaceId=w.id and w.tournamentId=:t and w.userId=:u and v.id=:v",CodeVersion.class).setParameter("t",tournament).setParameter("u",user).setParameter("v",version).getResultList();
+  if(versions.isEmpty())throw new AuthException("WORKSPACE_VERSION_NOT_FOUND",404);
+  var v=versions.getFirst();var w=db.find(CodeWorkspace.class,v.workspaceId);boolean available=!"JAR".equals(v.runtimeLanguage);
+  return new SourceView(v.id,v.number,w.language,available?v.source:null,v.sourceHash,v.artifactHash,available);
+ }
  private CodeWorkspace find(UUID tournament,UUID user,String language,boolean lock){
   var query=db.createQuery("select w from CodeWorkspace w where w.tournamentId=:t and w.userId=:u and w.language=:l",CodeWorkspace.class).setParameter("t",tournament).setParameter("u",user).setParameter("l",language);
   if(lock)query.setLockMode(LockModeType.PESSIMISTIC_WRITE);

@@ -4,7 +4,7 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
  const detail='/tournament-detail.html?id='+encodeURIComponent(t.id),code='/tournament-code.html?id='+encodeURIComponent(t.id),content='#tournament-phase-content',competition=t.status==='RUNNING'?'/tournament-lobby.html?id='+encodeURIComponent(t.id):detail;
  if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Bạn có thể tìm giải khác.','/tournaments.html');
  if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem thành tích, bảng điểm và replay.',detail+'#ranking');
- if(['DRAFT','UPCOMING'].includes(flow?.phase)||t.status==='DRAFT')return action('VIEW_RULES','Xem luật','Theo dõi lịch; đăng ký chưa mở.',content);
+ if(['DRAFT','UPCOMING'].includes(flow?.phase)||t.status==='DRAFT')return action('VIEW_RULES','Xem luật','Theo dõi lịch; đăng ký chưa mở.','#tournament-rules');
  if(!account)return action('LOGIN','Đăng nhập','Đăng nhập để xem việc cần làm của tài khoản.','/login.html?next='+encodeURIComponent(detail));
  const states=me?.states||[];
  if(['RUNNING','PAUSED','RECOVERY_REQUIRED'].includes(t.status)||!t.timeline){
@@ -27,7 +27,7 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
  }
  if(!flow)return action('WAIT_SERVER','Đang cập nhật trạng thái','Chờ dữ liệu quyền từ server.');
  switch(flow.nextAction){
-  case 'REGISTER':return action('REGISTER','Đăng ký tham gia','Điền thông tin và đồng ý luật giải.',content,{tone:'primary'});
+  case 'REGISTER':return action('REGISTER','Đăng ký tham gia','Điền thông tin và đồng ý luật giải.','#tournament-registration-form',{tone:'primary'});
   case 'WAIT_FOR_APPROVAL':return action('WAIT_APPROVAL','Chờ xét duyệt','Đơn đăng ký đã được gửi.');
   case 'WAIT_FOR_CODING':return action('WAIT_CODING','Chờ mở lập trình','Theo dõi giờ coding, luật và bot protocol.');
   case 'OPEN_CODE_WORKSPACE':return flow.canAccessWorkspace&&flow.canModifyWorkspace?action('OPEN_CODE','Vào phòng code','Hoàn thành, kiểm thử và nộp bot trước hạn.',code,{tone:'primary'}):action('WAIT_SERVER','Đang cập nhật quyền workspace','Chờ server xác nhận cửa sổ lập trình.');
