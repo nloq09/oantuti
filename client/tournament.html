@@ -40,7 +40,7 @@
         <p id="tournament-phase"></p><div id="live-matches" class="dashboard-cards"></div>
         <a id="export-tournament" class="button">Xuất JSON</a><button id="load-report">Xem báo cáo giải</button><div id="tournament-report"></div>
       </section>
-      <section id="participants-tab" class="panel" hidden>        <h3>Bot tham gia</h3>
+      <section id="participants-tab" class="panel" hidden><label for="organizer-registration-filter">Lọc danh sách đăng ký / check-in</label><select id="organizer-registration-filter"><option value="ALL">Tất cả</option><option value="PENDING">Chờ duyệt</option><option value="MISSING">Đủ điều kiện chưa check-in</option></select><p id="organizer-registration-filter-note"></p>        <h3>Bot tham gia</h3>
         <div id="participants"></div>
         <section aria-label="Đăng ký tham gia"><h3>Đơn đăng ký</h3><div id="registration-list"></div></section>
         <div id="registration" hidden>
@@ -96,7 +96,7 @@
       </section>
       <section id="organizer-audit" class="panel" hidden><h2>Lịch sử quản lý giải</h2><ol id="tournament-audit" class="audit-list"></ol></section>
       <section id="replays-tab" hidden><h2>Replay các trận</h2><div id="replay-list" class="dashboard-cards"></div></section>
-      <section id="matches" hidden><div id="match-list"></div></section>
+      <section id="matches" hidden><label for="organizer-match-filter">Lọc trận đấu</label><select id="organizer-match-filter"><option value="ALL">Tất cả</option><option value="FAILED">Trận lỗi</option><option value="REVIEW">Chờ review</option></select><div id="match-list"></div></section>
       <section id="bracket" hidden><div id="bracket-tree" class="bracket-tree"></div></section>
       <section id="ranking" class="panel" hidden>
         <h2>Bảng xếp hạng</h2>

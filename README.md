@@ -66,6 +66,8 @@ Nhóm 4 bổ sung khung quản lý cho chủ giải: header với giai đoạn/h
 
 Nhóm 5 bổ sung thống kê theo giai đoạn từ API riêng có kiểm tra quyền: đăng ký, coding, validation, check-in và thi đấu. Đếm toàn giải thay vì một trang danh sách, tránh trùng người có nhiều workspace và bỏ validation đã bị thay thế. Bộ lọc validation chạy trước phân trang; thông tin worker chỉ giới hạn máy đang giữ assignment của giải. [Định nghĩa số liệu, API và kiểm chứng](docs/CHANG-12-NHOM-5-PHASE-METRICS.md).
 
+Nhóm 6 bổ sung bảng “Cần xử lý” theo phase với ba mức Thông tin/Cần chú ý/Khẩn cấp, liên kết tới đúng đơn, bài kiểm thử hoặc bộ lọc trận/check-in. Chỉ nhận snapshot cùng giải và revision; lỗi cập nhật được báo dữ liệu cũ. Không suy đoán trận treo hay thiếu capacity. [Quy tắc và kiểm chứng](docs/CHANG-12-NHOM-6-NEEDS-ATTENTION.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.

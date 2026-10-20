@@ -1,5 +1,6 @@
 import {allowsPreuploaded,allowedPolicyBot,renderBotPolicy} from "./bot-policy.js";
 import {mountOrganizerShell} from './organizer-shell.js';
+import {matchFilter,filteredMatches,filteredRegistrations} from './organizer-filters.js';
 import {renderDeadlinePolicy} from './deadline-policy-editor.js';
 import {stagePlanText} from "./stage-plan.js";
 import {isKnockout} from "./bracket-renderer.js";
@@ -141,14 +142,15 @@ function render(t) {
     t.participantPolicy==="HUMAN_ONLY" || !draft || !available.options.length || (t.registrations || []).filter(r => ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)).length >= t.maxParticipants;
   const matches = document.querySelector("#match-list");
   matches.replaceChildren();
-  if (!t.matches.length) {
+  const matchFilterControl=document.querySelector('#organizer-match-filter');matchFilterControl.value=matchFilter(new URLSearchParams(location.search).get('filter'));const visibleMatches=filteredMatches(t,matchFilterControl.value);
+  if (!visibleMatches.length) {
     const text = document.createElement("p");
     text.className = "panel";
-    text.textContent = "Lịch đấu được tạo khi bắt đầu giải.";
+    text.textContent = t.matches.length?'Không có trận phù hợp với bộ lọc.':"Lịch đấu được tạo khi bắt đầu giải.";
     matches.append(text);
   }
   let currentRound;
-  for (const m of [...t.matches].sort((a,b)=>(a.round||1)-(b.round||1))) {
+  for (const m of [...visibleMatches].sort((a,b)=>(a.round||1)-(b.round||1))) {
     if(currentRound!==m.round) {
       currentRound=m.round;const heading=document.createElement("h3");heading.textContent=roundLabel(m.round||1,t.rounds?.length||1,t.format);matches.append(heading);
       const byes=t.rounds?.find(r=>r.number===m.round)?.byeParticipantIds||[];
@@ -262,8 +264,9 @@ else {
 
 function renderRegistrations(t, owner) {
   const list = document.querySelector("#registration-list"); list.replaceChildren();
+  const control=document.querySelector('#organizer-registration-filter'),params=new URLSearchParams(location.search),requested=params.get('filter');control.hidden=!owner;control.previousElementSibling.hidden=!owner;control.value=owner&&['PENDING','MISSING'].includes(requested)?requested:'ALL';const visible=filteredRegistrations(t,control.value);document.querySelector('#organizer-registration-filter-note').textContent=control.value==='MISSING'?'Danh sách dựa trên roster hợp lệ hiện có và các suất được ghi nhận lỡ hạn; không gồm ứng viên chưa final PASS.':'';
   const labels = {PENDING:"Chờ duyệt",APPROVED:"Đã duyệt",REJECTED:"Bị từ chối",CANCELLED:"Đã rút",CHECKED_IN:"Đã check-in",NOT_CHECKED_IN:"Không check-in"};
-  for (const r of t.registrations || []) {
+  for (const r of visible) {
     const row = document.createElement("div"); row.className="participant-row";
     const text = document.createElement("span"); text.textContent=`${r.displayName} · ${labels[r.status] || r.status}`; row.append(text);
     const buttons = document.createElement("div");buttons.className="actions";
@@ -274,8 +277,10 @@ function renderRegistrations(t, owner) {
     if((account?.id === r.userId || owner) && ["REGISTRATION","CHECK_IN"].includes(t.status) && ["PENDING","APPROVED","CHECKED_IN"].includes(r.status))add("Rút đăng ký",()=>withdrawRegistration(id,r.id));
     row.append(buttons);list.append(row);
   }
-  if(!list.childElementCount)list.textContent="Chưa có đơn đăng ký.";
+  if(!list.childElementCount)list.textContent=control.value==='ALL'?"Chưa có đơn đăng ký.":'Không có đơn phù hợp với bộ lọc.';
 }
+
+for(const [selector,view]of [['#organizer-match-filter','matches'],['#organizer-registration-filter','check-in']])document.querySelector(selector).onchange=event=>{const url=new URL(location.href);url.searchParams.set('view',view);if(event.target.value==='ALL')url.searchParams.delete('filter');else url.searchParams.set('filter',event.target.value);history.replaceState(null,'',url);if(currentTournament){organizerShell?.select(view);render(currentTournament);}};
 
 function renderSeeding(t, owner) {
   const section=document.querySelector("#seeding");section.hidden=!owner;
