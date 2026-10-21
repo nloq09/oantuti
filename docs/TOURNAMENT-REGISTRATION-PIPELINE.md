@@ -1,6 +1,6 @@
-# Registration pipeline — nhóm 1 và 2
+# Registration pipeline — nhóm 1–3
 
-Ngày: 21/10/2026. Các phần đầu ghi nhận nhóm 1; phần nhóm 2 bên dưới mô tả cơ chế đã nối vào server/client. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
+Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 3 bổ sung capacity và waitlist trên nền nhóm 1–2. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
 
 ## Luồng thực tế đã đối chiếu
 
@@ -145,4 +145,76 @@ PostgreSQL migration tests: **PASS 33/33**, bao gồm upgrade V37→V38 giữ đ
 - `server/src/test/java/com/rpsbattle/persistence/FlywayMigrationTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/TimelineRegistrationApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationEligibilityServiceTest.java`
+
+
+## Nhóm 3 — capacity, waitlist và cấp chỗ atomic
+
+### Hành vi mới
+
+- Chỉ APPROVED chiếm suất đăng ký. NEEDS_REVIEW, WAITLISTED, REJECTED và CANCELLED không được tính vào capacity; số đơn có thể lớn hơn maxParticipants.
+- Sau đánh giá eligibility, Store đếm APPROVED trong database dưới khóa hàng tournament. Nếu một đơn đủ điều kiện tự duyệt không còn suất, allocation chuyển WAITLIST với CAPACITY_FULL, lưu WAITLISTED và trả response cuối cùng đó. Đơn cần người xác minh tiếp tục NEEDS_REVIEW, không bị tự coi là đã đủ điều kiện.
+- Review APPROVED khi hết suất trả HTTP 409 CAPACITY_FULL, không đổi trạng thái hoặc ghi một audit duyệt thành công. Organizer vẫn có thể đưa đơn vào waitlist hoặc từ chối mà không bị giới hạn bởi tổng số đơn.
+- Waitlist hiện có policy explicit FIRST_COME_FIRST_SERVED. Chỉ expose policy đã triển khai; không cung cấp lựa chọn random/manual priority chưa có thuật toán.
+- Mỗi lần vào waitlist được cấp waitlist_order mới, tăng theo thứ tự transaction đã được cấp khóa. Không dùng UUID ngẫu nhiên để phân thứ tự cho đơn mới có cùng registeredAt. Đơn rút rồi đăng ký lại được đánh giá lại và nếu vẫn phải chờ thì về cuối hàng.
+- Position được tính từ những đơn WAITLISTED còn hoạt động có order trước hoặc bằng đơn hiện tại. Khi một người rời hàng, vị trí các người sau tự giảm; Player chỉ nhận vị trí của chính mình, không nhận danh sách hoặc userId người khác.
+- Filter WAITLISTED của Organizer trả theo thứ tự chờ. Page vẫn giới hạn 25; position dùng count query được index theo tournament/status/order, không tải toàn bộ waitlist để tính ở client.
+
+### Transaction và khóa
+
+Register, review và withdraw của application đều lấy `SELECT ... FOR UPDATE` trên hàng `tournaments` trước khi đọc/khóa application. Khóa được giữ đến commit/rollback của transaction hiện có; không chỉ đến khi Java method trả về. Review dùng tournament scope trước khi khóa application đích.
+
+Capacity lấy từ `tournaments.max_participants` trong database, không tin số chỗ còn lại do client gửi. Nếu capacity snapshot phía service đã cũ, trả STALE_TOURNAMENT_REVISION. Các nhánh register/review đều kiểm tra số APPROVED sau khóa, nên không thể cùng cấp một suất cuối cho hai đơn. Withdraw dùng cùng thứ tự khóa để giải phóng suất nhất quán. Cơ chế mutation/audit/rollback hiện có tiếp tục được tái sử dụng.
+
+Refresh application từ database dưới khóa để không dùng trạng thái CANCELLED cũ trong persistence context: hai transaction đã đọc cùng đơn hủy chỉ có một transaction được đăng ký lại thành công.
+
+Các kiểm thử dùng transaction PostgreSQL độc lập, cố ý bỏ qua monitor tournament trong JVM. Điều này kiểm chứng primitive cấp suất trong DB; không đồng nghĩa toàn bộ server/phòng chơi đã hỗ trợ nhiều instance.
+
+### API/DTO và migration
+
+Không thêm endpoint.
+
+- `registrationPolicy.waitlistPolicy`: FIRST_COME_FIRST_SERVED. Snapshot cũ thiếu field được bổ sung default này khi khôi phục; constructor hai tham số của model vẫn tương thích.
+- `participant-flow.registration.waitlistPosition`: số thứ tự đang chờ của người hiện tại; null khi không chờ.
+- Organizer applications: thêm waitlistPosition; thứ tự trang WAITLISTED dùng waitlist_order.
+- Organizer metrics registration: thêm capacity và remainingSlots (capacity trừ APPROVED, không âm), giữ các field cũ.
+- Lỗi review khi đầy: HTTP 409 CAPACITY_FULL; client giải thích cần giữ waitlist hoặc giải phóng suất.
+- Audit của đơn tự vào waitlist lưu CAPACITY_FULL; reason vẫn được che trong API công khai như nhóm 2.
+
+Migration V39 `registration_waitlist_order` thêm waitlist_order BIGINT, backfill các đơn WAITLISTED cũ theo registeredAt/id ổn định, CHECK số dương, UNIQUE(tournament_id,waitlist_order), index(tournament_id,status,waitlist_order). Không đổi migration cũ. Các đơn cũ không thuộc waitlist giữ order null. Snapshot mới không cần cột policy riêng vì đã dùng JSON của giải.
+
+### Phạm vi chưa triển khai
+
+Tự đôn người chờ khi có suất, notification promotion, Registration Close riêng và Roster Lock thuộc **nhóm 4**. Ở nhóm 3, suất được giải phóng chưa tự cấp lại cho hàng chờ; Organizer vẫn dùng review hiện có. Không tuyên bố đã hoàn thành flow FCFS auto-promotion hoặc roster lock. GameEngine không thay đổi.
+
+### Kiểm chứng nhóm 3
+
+- PostgreSQL concurrency: 8 đơn cùng tranh 1 suất còn lại; hai đơn waitlist được duyệt đồng thời tranh một suất trống; hai request cùng đăng ký một account; hai transaction cùng giữ bản CANCELLED cũ; rollback hủy allocation; capacity snapshot sai bị từ chối.
+- API: tổng đơn vượt capacity mà không chiếm suất; tự vào waitlist khi đầy; vị trí riêng tư; rút/rejoin về cuối hàng; manual approve không vượt giới hạn và không đổi đơn khi thất bại.
+- Migration: upgrade V38→V39 giữ đơn cũ, backfill ổn định, reject order không dương/trùng; toàn bộ suite migration.
+- Client: người chờ nhìn thấy vị trí, không có form đăng ký trùng hoặc link vào workspace coding.
+
+**PASS 75/75 backend tests**, bao gồm **5/5 concurrency PostgreSQL tests**; **PASS 34/34 migration PostgreSQL tests**; **PASS 321/321 client tests**; **PASS bootJar**. Tổng backend + migration: **109 tests PASS**. Không có failure hoặc skipped trong các suite này ở lượt cuối. Client được kiểm chứng bằng DOM/component tests; chưa kiểm tra hình ảnh bằng browser.
+
+
+### File thêm/sửa trong nhóm 3
+
+- `client/js/tournament/application-review.js`
+- `client/js/tournament/registration-policy.js`
+- `client/js/tournament/timeline-registration.js`
+- `client/js/ui/toast.js`
+- `client/tests/timeline-registration.test.js`
+- `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
+- `server/src/main/java/com/rpsbattle/tournament/OrganizerMetricsService.java`
+- `server/src/main/java/com/rpsbattle/tournament/registration/RegistrationEligibilityService.java`
+- `server/src/main/java/com/rpsbattle/tournament/registration/RegistrationPolicy.java`
+- `server/src/main/java/com/rpsbattle/tournament/registration/WaitlistPolicy.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistration.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationStore.java`
+- `server/src/main/resources/db/migration/V39__registration_waitlist_order.sql`
+- `server/src/test/java/com/rpsbattle/persistence/FlywayMigrationTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/TimelineRegistrationApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationCapacityPostgresTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationEligibilityServiceTest.java`

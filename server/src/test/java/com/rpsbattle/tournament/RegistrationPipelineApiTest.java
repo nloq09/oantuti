@@ -14,14 +14,33 @@ class RegistrationPipelineApiTest extends StageThreeWebFixture {
     @MockitoBean Clock clock;
     static final Instant START=Instant.parse("2026-10-19T00:00:00Z");
     @BeforeEach void time(){when(clock.instant()).thenReturn(START.plusSeconds(30));when(clock.getZone()).thenReturn(ZoneOffset.UTC);}
-    String cup(String policy,boolean verify,boolean open)throws Exception{
-        loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Registration pipeline","botPolicy",Map.of("submissionMode","BOTH"),"registrationPolicy",Map.of("approvalPolicy",policy,"requireAffiliationVerification",verify)),201);
+    String cup(String policy,boolean verify,boolean open)throws Exception{return cup(policy,verify,open,10);}
+    String cup(String policy,boolean verify,boolean open,int capacity)throws Exception{
+        loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Registration pipeline","maxParticipants",capacity,"botPolicy",Map.of("submissionMode","BOTH"),"registrationPolicy",Map.of("approvalPolicy",policy,"requireAffiliationVerification",verify)),201);
         String base="/api/tournaments/"+created.path("id").asText();var timeline=new TournamentTimeline(START,START.plusSeconds(60),START.plusSeconds(120),START.plusSeconds(180),START.plusSeconds(180),START.plusSeconds(210),START.plusSeconds(240),START.plusSeconds(270),START.plusSeconds(300),START.plusSeconds(360),null);
         request(base+"/timeline","PUT",Map.of("revision",created.path("revision").asLong(),"timeline",timeline),200);if(open)request(base+"/open-registration","POST",Map.of(),200);return base;
     }
     Map<String,Object> signup(){return Map.of("rulesAccepted",true,"intendedLanguage","CPP","affiliation","UET");}
     long revision(String base)throws Exception{return request(base,"GET",null,200).path("revision").asLong();}
 
+    String applicant()throws Exception{String username="capacity_"+UUID.randomUUID().toString().substring(0,8);registration.register(username,username+"@example.com","Capacity Test Password",username);loginApplicant(username);return username;}
+    void loginApplicant(String username)throws Exception{request("/api/auth/login","POST",Map.of("username",username,"password","Capacity Test Password"),200);}
+    void loginOwner()throws Exception{request("/api/auth/login","POST",Map.of("username",account.username(),"password","Tournament Test Password"),200);}
+    @Test void fullAutoApprovalCreatesPrivateOrderedWaitlistAndRejoiningGoesToTheTail()throws Exception{
+        String base=cup("HYBRID",false,true,2);request(base+"/participant-registration","POST",signup(),200);applicant();request(base+"/participant-registration","POST",signup(),200);
+        String first=applicant();var waiting=request(base+"/participant-registration","POST",signup(),200);assertThat(waiting.path("registrationStatus").asText()).isEqualTo("WAITLISTED");assertThat(waiting.path("registration").path("waitlistPosition").asLong()).isEqualTo(1);assertThat(waiting.toString()).doesNotContain("CAPACITY_FULL",account.username());
+        String second=applicant();assertThat(request(base+"/participant-registration","POST",signup(),200).path("registration").path("waitlistPosition").asLong()).isEqualTo(2);request(base+"/participant-applications?status=WAITLISTED","GET",null,403);
+        loginApplicant(first);request(base+"/participant-registration","DELETE",Map.of(),200);loginApplicant(second);assertThat(request(base+"/participant-flow","GET",null,200).path("registration").path("waitlistPosition").asLong()).isEqualTo(1);
+        loginApplicant(first);assertThat(request(base+"/participant-registration","POST",signup(),200).path("registration").path("waitlistPosition").asLong()).isEqualTo(2);
+        loginOwner();var list=request(base+"/participant-applications?status=WAITLISTED","GET",null,200).path("items");assertThat(list.get(0).path("displayName").asText()).isEqualTo(second);assertThat(list.get(0).path("reasonCodes").get(0).asText()).isEqualTo("CAPACITY_FULL");var counts=request(base+"/organizer-metrics","GET",null,200).path("registration");assertThat(counts.path("approved").asInt()).isEqualTo(2);assertThat(counts.path("waitlisted").asInt()).isEqualTo(2);assertThat(counts.path("remainingSlots").asInt()).isZero();
+    }
+    @Test void pendingReviewDoesNotReserveSlotsAndManualApprovalCannotExceedCapacity()throws Exception{
+        String base=cup("MANUAL_REVIEW",false,true,2);String ownerApplication=request(base+"/participant-registration","POST",signup(),200).path("registration").path("id").asText();applicant();String a=request(base+"/participant-registration","POST",signup(),200).path("registration").path("id").asText();applicant();String b=request(base+"/participant-registration","POST",signup(),200).path("registration").path("id").asText();
+        loginOwner();for(String id:List.of(ownerApplication,a))request(base+"/participant-applications/"+id+"/review","POST",Map.of("revision",revision(base),"decision","APPROVED","reason","Accept applicant"),200);
+        var error=request(base+"/participant-applications/"+b+"/review","POST",Map.of("revision",revision(base),"decision","APPROVED","reason","No remaining place"),409);assertThat(error.toString()).contains("CAPACITY_FULL");assertThat(request(base+"/participant-applications?status=NEEDS_REVIEW","GET",null,200).path("items").size()).isEqualTo(1);
+        request(base+"/participant-applications/"+b+"/review","POST",Map.of("revision",revision(base),"decision","WAITLISTED","reason","Wait for a place"),200);request(base+"/participant-registration","DELETE",Map.of(),200);
+        request(base+"/participant-applications/"+b+"/review","POST",Map.of("revision",revision(base),"decision","APPROVED","reason","A place is now available"),200);assertThat(request(base+"/organizer-metrics","GET",null,200).path("registration").path("approved").asInt()).isEqualTo(2);
+    }
     @Test void autoAndHybridReturnFinalApprovalWithoutPendingAndPreserveCodingWindow()throws Exception{
         for(String policy:List.of("AUTO_APPROVE","HYBRID")){
             String base=cup(policy,false,true);var flow=request(base+"/participant-registration","POST",signup(),200);

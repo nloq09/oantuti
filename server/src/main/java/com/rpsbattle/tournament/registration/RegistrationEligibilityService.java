@@ -30,4 +30,13 @@ public class RegistrationEligibilityService {
         if (policy.approvalPolicy() == RegistrationApprovalPolicy.MANUAL_REVIEW) reasons.add(MANUAL_REVIEW_REQUIRED);
         return reasons.isEmpty() ? new EligibilityDecision(APPROVE, List.of()) : new EligibilityDecision(REVIEW, reasons);
     }
+
+    /** Called after locking the tournament row, with the current approved count from the DB. */
+    public EligibilityDecision allocate(EligibilityDecision eligible,long approved,int capacity) {
+        if (capacity < 1 || approved < 0) throw new IllegalArgumentException("Invalid capacity snapshot");
+        if (eligible.decision() == APPROVE && approved >= capacity) {
+            return new EligibilityDecision(WAITLIST,List.of(CAPACITY_FULL));
+        }
+        return eligible;
+    }
 }

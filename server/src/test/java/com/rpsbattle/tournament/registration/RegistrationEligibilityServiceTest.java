@@ -34,4 +34,13 @@ class RegistrationEligibilityServiceTest {
     @Test void missingLanguageIsARequiredFieldFailure(){
         assertThat(service.evaluate(new RegistrationEligibilityService.Context(true,true,false,true,null,Set.of("CPP"),null,null)).reasonCodes()).containsExactly(MISSING_REQUIRED_FIELD);
     }
+    @Test void capacityOnlyChangesEligibleApprovalsIntoWaitlist(){
+        var eligible=new EligibilityDecision(APPROVE,java.util.List.of());
+        assertThat(service.allocate(eligible,1,2)).isEqualTo(eligible);
+        assertThat(service.allocate(eligible,2,2).decision()).isEqualTo(WAITLIST);
+        assertThat(service.allocate(eligible,2,2).reasonCodes()).containsExactly(CAPACITY_FULL);
+        var review=new EligibilityDecision(REVIEW,java.util.List.of(AFFILIATION_NOT_VERIFIED));assertThat(service.allocate(review,2,2)).isEqualTo(review);
+        var rejected=new EligibilityDecision(REJECT,java.util.List.of(ACCOUNT_NOT_ELIGIBLE));assertThat(service.allocate(rejected,2,2)).isEqualTo(rejected);
+        assertThatThrownBy(()->service.allocate(eligible,0,0)).isInstanceOf(IllegalArgumentException.class);
+    }
 }

@@ -5,6 +5,7 @@ const errors = {
   VALIDATION_NOT_OPEN:"Chưa đến thời gian kiểm thử chính thức.",
   EMERGENCY_NOT_ALLOWED:"Chưa đủ điều kiện mở lượt nộp khẩn cấp, hoặc hạn mới không hợp lệ.",
   USE_FINAL_VALIDATION_ACTIONS:"Dùng trang Kiểm thử chính thức để xử lý bài theo timeline.",
+  CAPACITY_FULL:"Giải đã đủ số chỗ được duyệt. Hãy giữ đơn trong danh sách chờ hoặc giải phóng một chỗ trước khi duyệt.",
   REGISTRATION_POLICY_LOCKED:"Chính sách đăng ký đã khóa sau khi mở giải.",
   INVALID_REGISTRATION_POLICY:"Chính sách đăng ký không hợp lệ.",
   MISSING_REQUIRED_FIELD:"Vui lòng điền đủ thông tin bắt buộc, bao gồm trường/đơn vị nếu giải yêu cầu.",

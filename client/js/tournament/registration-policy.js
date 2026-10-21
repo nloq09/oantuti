@@ -10,7 +10,7 @@ export function registrationPolicyEditor(root,policy={approvalPolicy:'HYBRID',re
  mode.setAttribute('aria-label','Chính sách duyệt đăng ký');
  for(const [value,text]of Object.entries(registrationPolicyLabels)){const option=node('option',text);option.value=value;mode.append(option);}mode.value=policy.approvalPolicy;
  const label=node('label','Cách duyệt đơn');label.append(mode);const verification=node('label','Yêu cầu xác minh trường/đơn vị');verification.prepend(verify);
- box.append(node('legend','Chính sách đăng ký người chơi'),label,verification,node('p','Đơn hợp lệ được duyệt theo chính sách. Nếu yêu cầu xác minh đơn vị, ban tổ chức phải xác nhận thông tin tự khai.'));root.append(box);
+ box.append(node('legend','Chính sách đăng ký người chơi'),label,verification,node('p','Danh sách chờ: đăng ký trước được xếp trước (FCFS).'),node('p','Đơn hợp lệ được duyệt theo chính sách. Nếu yêu cầu xác minh đơn vị, ban tổ chức phải xác nhận thông tin tự khai.'));root.append(box);
  return {box,read:()=>({approvalPolicy:mode.value,requireAffiliationVerification:verify.checked}),setEnabled:enabled=>{box.hidden=!enabled;box.disabled=!enabled;}};
 }
 

@@ -20,5 +20,6 @@ public class TimelineRegistration {
     @Column(name="reviewed_at") Instant reviewedAt;
     @Column(name="reviewed_by") UUID reviewedBy;
     @Column(name="eligibility_reasons",nullable=false,length=500) String eligibilityReasons="";
+    @Column(name="waitlist_order") Long waitlistOrder;
     protected TimelineRegistration() {}
 }

@@ -48,3 +48,9 @@ test('needs-review registration stays visible with cancellation and never offers
  const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_OPEN',registrationStatus:'NEEDS_REVIEW',registration:{displayName:'Player',intendedLanguage:'CPP'}},()=>{});const nodes=all(root);
  assert.equal(nodes.some(x=>x.tag==='form'),false);assert.ok(nodes.some(x=>x.textContent.includes('ban tổ chức xác nhận')));assert.ok(nodes.some(x=>x.tag==='button'&&x.textContent.includes('Hủy')));
 });
+
+
+test('waitlisted player sees only their current position and has no coding access',()=>{
+ const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_OPEN',registrationStatus:'WAITLISTED',registration:{displayName:'Player',intendedLanguage:'CPP',waitlistPosition:12}},()=>{});const nodes=all(root);
+ assert.ok(nodes.some(x=>x.textContent==='Vị trí danh sách chờ: #12'));assert.equal(nodes.some(x=>x.tag==='form'||String(x.href).includes('tournament-code')),false);
+});
