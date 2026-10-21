@@ -8,22 +8,12 @@
     <link rel="stylesheet" href="/css/battle-theme.css" />
     <link rel="stylesheet" href="/css/tournament.css" />
     <link rel="stylesheet" href="/css/account.css">
-    <link rel="stylesheet" href="/css/tournament-mode.css">
+    <link rel="stylesheet" href="/css/tournament-mode.css"><link rel="stylesheet" href="/css/organizer-control-center.css">
   </head>
   <body>
     <nav class="account-nav site-account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/">Trang chủ</a><div class="account-actions"><a class="button" href="/login.html">Đăng nhập</a><a class="button" href="/register.html">Đăng ký</a></div></nav>
     <main class="tournament-page">
       <h1 id="name" class="page-title">Đang tải giải đấu…</h1>
-      <section class="panel tournament-invite">
-        <h2>Mời người chơi tham gia</h2>
-        <p>Mã giải: <strong id="invite-code"></strong></p>
-        <label for="invite-link">Link mời</label>
-        <div class="actions">
-          <input id="invite-link" readonly />
-          <button id="copy-invite">Sao chép link</button>
-        </div>
-        <p id="registration-help"></p>
-      </section>
       <div id="champion" class="panel champion" hidden></div>
       <nav class="actions tab-bar" aria-label="Nội dung giải đấu">
         <button data-tab="overview" aria-pressed="true">Tổng quan</button
@@ -34,13 +24,23 @@
         ><button data-tab="replays-tab" aria-pressed="false">Replay</button
         ><button data-tab="admin-tab" aria-pressed="false" hidden>Quản trị</button>
       </nav>
-      <section id="overview" class="panel">
+      <section id="overview"><div id="organizer-overview"></div><div class="legacy-overview panel">
         <h2 id="format-heading">Tổng quan</h2><p id="competition-policy"></p>
         <div id="counts" class="stats-grid"></div>
         <p id="tournament-phase"></p><div id="live-matches" class="dashboard-cards"></div>
-        <div class="ui-actions"><a id="export-tournament" class="button">Xuất JSON</a><button id="load-report">Xem báo cáo giải</button></div><div id="tournament-report"></div>
+
+      </div></section>
+      <section id="participants-tab" class="panel" hidden><h2>Đăng ký tham gia</h2>      <section class="panel tournament-invite">
+        <h2>Mời người chơi tham gia</h2>
+        <p>Mã giải: <strong id="invite-code"></strong></p>
+        <label for="invite-link">Link mời</label>
+        <div class="actions">
+          <input id="invite-link" readonly />
+          <button id="copy-invite">Sao chép link</button>
+        </div>
+        <p id="registration-help"></p>
       </section>
-      <section id="participants-tab" class="panel" hidden><label for="organizer-registration-filter">Lọc danh sách đăng ký / check-in</label><select id="organizer-registration-filter"><option value="ALL">Tất cả</option><option value="PENDING">Chờ duyệt</option><option value="MISSING">Đủ điều kiện chưa check-in</option></select><p id="organizer-registration-filter-note"></p>        <h3>Bot tham gia</h3>
+<div class="actions"><button id="open-registration" class="primary" hidden>Mở đăng ký</button><button id="close-registration" hidden>Chốt đăng ký</button></div><label for="organizer-registration-filter">Lọc danh sách đăng ký / check-in</label><select id="organizer-registration-filter"><option value="ALL">Tất cả</option><option value="PENDING">Chờ duyệt</option><option value="MISSING">Đủ điều kiện chưa check-in</option></select><p id="organizer-registration-filter-note"></p>        <h3>Danh sách đã duyệt</h3>
         <div id="participants"></div>
         <section aria-label="Đăng ký tham gia"><h3>Đơn đăng ký</h3><div id="registration-list"></div></section>
         <div id="registration" hidden>
@@ -63,44 +63,56 @@
         </details>
         </div>
 </section>
-      <section id="admin-tab" class="panel" hidden><h2>Cài đặt và điều khiển giải</h2>        <div class="actions" aria-label="Quản lý giải đấu">
-          <button id="open-registration" hidden>Mở đăng ký</button>
-          <button id="close-registration" hidden>Khóa đăng ký</button>
-          <button id="close-check-in" hidden>Hoàn tất check-in</button>
-          <button id="start" class="primary" hidden>Bắt đầu nhanh</button>
-          <button id="cancel" class="danger" hidden>Hủy giải</button>
-        </div>
+      <section id="organizer-check-in" class="panel" hidden>
+        <h2>Check-in</h2><p>Chỉ người có suất hợp lệ mới được đưa vào lịch thi đấu. Chủ giải không check-in thay người chơi.</p>
+        <div class="actions"><label for="check-in-filter">Danh sách</label><select id="check-in-filter"><option value="ALL">Tất cả suất đã duyệt</option><option value="MISSING">Chưa check-in / lỡ hạn</option></select><button id="close-check-in" class="primary" hidden>Chốt check-in</button><button id="start" class="primary" hidden>Bắt đầu giải</button></div>
+        <div id="check-in-list"></div>
+      </section>
+      <section id="admin-tab" class="panel organizer-settings" hidden>
+        <h2>Cài đặt giải</h2><p>Chỉ cấu hình luật, lịch và chính sách. Điều khiển thi đấu nằm ở Trận đấu.</p>
+        <section class="settings-section"><h3>Thông tin thi đấu</h3><p id="series-setting"></p><div id="organizer-policy-settings"></div></section>
         <section id="competition-rules" hidden><h3>Luật giải đấu</h3><form id="rules-form">
           <label for="rule-concurrency">Số trận chạy đồng thời (1–4)</label><input id="rule-concurrency" type="number" min="1" max="4" required />
           <p>Điểm luôn được xét trước. Chọn các tiêu chí phụ theo thứ tự ưu tiên; mỗi tiêu chí chỉ dùng một lần.</p>
           <div id="tie-break-inputs" class="tie-break-inputs"></div><button id="save-rules">Lưu luật giải</button>
           <p>Thắng 3, hòa 1, thua 0 điểm. BYE và trận lỗi hạ tầng không tính điểm. Luật được khóa khi giải sẵn sàng.</p>
         </form></section>
-        <section id="seeding" hidden><h3>Xếp hạt giống</h3><form id="seeding-form">
+        <section id="deadline-policy" class="settings-section"></section>
+        <details class="settings-section"><summary>Luật đã khóa</summary><dl id="rules-snapshot" class="phase-facts"></dl></details>
+        <section id="organizer-danger-zone" class="organizer-danger-zone" aria-labelledby="danger-heading">
+          <h3 id="danger-heading">Vùng nguy hiểm</h3><p>Hủy giải sẽ dừng các trận chưa hoàn tất. Không thể khôi phục giải đã hủy; lịch sử và replay vẫn được giữ.</p>
+          <button id="cancel" class="danger" hidden>Hủy giải đấu</button><p id="cancel-state"></p>
+        </section>
+      </section>
+      <section id="organizer-audit" class="panel" hidden><h2>Lịch sử quản lý giải</h2><ol id="tournament-audit" class="audit-list"></ol></section>
+      <section id="replays-tab" hidden><h2>Replay các trận</h2><div id="replay-list" class="dashboard-cards"></div></section>
+      <section id="matches" hidden><section id="organizer-match-operations" class="panel">
+        <h2>Điều khiển thi đấu</h2><p>Giải tạm dừng sẽ ngừng mở trận mới; các trận đang chạy được phép kết thúc.</p>
+        <div class="actions"><button data-admin-control="pause" hidden>Tạm dừng</button><button data-admin-control="resume" class="primary" hidden>Tiếp tục</button><button data-admin-control="next-round" class="primary" hidden>Mở vòng tiếp</button></div>
+        <div id="round-policy"><label><input id="auto-rounds" type="checkbox" checked /> Tự chuyển vòng</label><button id="save-round-policy">Lưu cách chuyển vòng</button></div>
+        <section id="match-review-section"><h3>Review và chạy lại trận lỗi</h3><p id="match-review-empty"></p><div id="match-review-content">
+          <label for="admin-match">Chọn trận</label><select id="admin-match"></select><p id="review-details"></p>
+          <details><summary>Lịch sử xử lý trận</summary><ol id="match-execution-log"></ol></details>
+          <div id="match-review-actions"><label for="admin-reason">Lý do xử lý (bắt buộc)</label><textarea id="admin-reason" maxlength="500" rows="2"></textarea>
+          <div class="actions"><button id="request-review" hidden>Đánh dấu review</button><button id="retry-match" hidden>Chạy lại trận lỗi</button></div></div>
+        </div></section>
+        <div id="participant-operations"></div>
+      </section><label for="organizer-match-filter">Lọc trận đấu</label><select id="organizer-match-filter"><option value="ALL">Tất cả</option><option value="FAILED">Trận lỗi</option><option value="REVIEW">Chờ review</option></select><div id="match-list"></div></section>
+      <section id="bracket" class="panel" hidden><h2>Nhánh đấu và hạt giống</h2><section id="seeding" hidden><h3>Xếp hạt giống</h3><form id="seeding-form">
           <label for="seeding-strategy">Cách xếp</label><select id="seeding-strategy"><option value="RANDOM">Ngẫu nhiên</option><option value="MANUAL">Thủ công</option><option value="RANKING">Theo thành tích</option></select>
           <label for="seeding-seed">Seed ngẫu nhiên</label><input id="seeding-seed" type="text" inputmode="numeric" maxlength="20" required />
           <div id="manual-seeds" hidden></div><button id="save-seeding">Lưu hạt giống</button>
           <p>Thứ tự được khóa khi giải sẵn sàng. Thành tích lấy từ các giải đã kết thúc; bot mới được xếp sau.</p>
-        </form></section>
-
-        <section><h3>Điều khiển và xử lý kết quả</h3>
-          <p>Pause dừng mở trận mới, trận đang chạy được kết thúc. Hủy giải dừng các phòng đang chạy. Replay giữ sự kiện gốc; quyết định sửa kết quả được ghi riêng trong audit.</p>
-          <label><input id="auto-rounds" type="checkbox" checked /> Tự chuyển vòng</label><button id="save-round-policy">Lưu cách chuyển vòng</button>
-          <div class="actions"><button data-admin-control="pause">Tạm dừng</button><button data-admin-control="resume">Tiếp tục</button><button data-admin-control="next-round">Mở vòng tiếp</button><button data-admin-control="finish">Hoàn tất giải</button></div>
-          <label for="admin-reason">Lý do (bắt buộc khi xử lý bot hoặc kết quả)</label><textarea id="admin-reason" maxlength="500" rows="2"></textarea>
-          <label for="admin-participant">Bot cần xử lý</label><select id="admin-participant"></select><div class="actions"><button data-participant-status="WITHDRAWN">Xử bỏ cuộc</button><button data-participant-status="DISQUALIFIED" class="danger">Loại bot</button></div>
-          <label for="admin-match">Review trận</label><select id="admin-match"></select><p id="review-details"></p><details><summary>Nhật ký xử lý trận</summary><ol id="match-execution-log"></ol></details>
-          <div class="actions"><button id="request-review">Đánh dấu review</button><button id="keep-result">Giữ kết quả</button><button id="retry-match">Chạy lại trận lỗi</button></div>
-          <label for="override-winner">Quyết định kết quả</label><select id="override-winner"></select><button id="override-result" class="danger">Sửa kết quả có audit</button>
-        </section><h3>Luật đã khóa</h3><pre id="rules-snapshot"></pre>
-      </section>
-      <section id="organizer-audit" class="panel" hidden><h2>Lịch sử quản lý giải</h2><ol id="tournament-audit" class="audit-list"></ol></section>
-      <section id="replays-tab" hidden><h2>Replay các trận</h2><div id="replay-list" class="dashboard-cards"></div></section>
-      <section id="matches" hidden><label for="organizer-match-filter">Lọc trận đấu</label><select id="organizer-match-filter"><option value="ALL">Tất cả</option><option value="FAILED">Trận lỗi</option><option value="REVIEW">Chờ review</option></select><div id="match-list"></div></section>
-      <section id="bracket" hidden><div id="bracket-tree" class="bracket-tree"></div></section>
+        </form></section><p id="seeding-state"></p><div id="bracket-tree" class="bracket-tree"></div></section>
       <section id="ranking" class="panel" hidden>
-        <h2>Bảng xếp hạng</h2>
-        <p id="ranking-policy" class="muted"></p>
+        <h2>Kết quả giải đấu</h2><section id="result-decisions" class="settings-section"><h3>Quyết định kết quả</h3><p id="result-empty"></p><div id="result-content">
+        <label for="result-match">Trận đang chờ review</label><select id="result-match"></select><p id="result-details"></p>
+        <label for="result-reason">Lý do quyết định (bắt buộc)</label><textarea id="result-reason" maxlength="500" rows="2"></textarea>
+        <div class="actions"><button id="keep-result" hidden>Giữ kết quả</button><button id="override-result" class="danger" hidden>Sửa kết quả có audit</button></div>
+        <div id="override-fields"><label for="override-winner">Kết quả thay thế</label><select id="override-winner"></select><p>Quyết định được ghi riêng trong audit; replay gốc không bị sửa.</p></div></div>
+        <div id="finish-operation"><button data-admin-control="finish" class="primary" hidden>Hoàn tất giải</button></div>
+        </section><div class="ui-actions"><a id="export-tournament" class="button">Xuất JSON</a><button id="load-report">Xem báo cáo giải</button></div><div id="tournament-report"></div>
+        <p id="ranking-empty"></p><p id="ranking-policy" class="muted"></p>
         <div class="table-scroll">
           <table>
             <thead>

@@ -35,8 +35,8 @@ export const removeParticipant = (id, participantId, bot) =>
   );
 export const startTournament = (id) =>
   tournamentRequest("/" + encodeURIComponent(id) + "/start", {});
-export const cancelTournament = (id) =>
-  tournamentRequest("/" + encodeURIComponent(id) + "/cancel", {});
+export const cancelTournament = (id,decision={}) =>
+  tournamentRequest("/" + encodeURIComponent(id) + "/cancel", decision);
 export const openRegistration = id => tournamentRequest("/" + encodeURIComponent(id) + "/open-registration", {});
 export const closeRegistration = id => tournamentRequest("/" + encodeURIComponent(id) + "/close-registration", {});
 const registrationPath = (id, registrationId) => "/" + encodeURIComponent(id) + "/registrations/" + encodeURIComponent(registrationId);

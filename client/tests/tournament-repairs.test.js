@@ -24,9 +24,9 @@ test('transport time alone does not repaint while new execution state heartbeat 
 test('reviewed completed results stay provisional until review closes',()=>{
  const m={executionState:'FINISHED',winnerParticipantId:'a',participantA:{participantId:'a',playerName:'Alice'},participantB:{participantId:'b',playerName:'Bob'}};assert.equal(matchResult({...m,reviewRequired:true}),'Kết quả đang được trọng tài xem xét');assert.equal(matchResult(m),'Thắng: Alice');
 });
-test('draft without a timeline exposes full recovery form but published legacy cups do not',()=>{
- const root=dom();renderDeadlinePolicy(root,{...cup,status:'DRAFT',timeline:null,participants:[]},()=>{});assert.equal(root.hidden,false);assert.ok(descendants(root).some(n=>n.textContent==='Tiếp tục cấu hình timeline'));assert.equal(descendants(root).filter(n=>n.type==='datetime-local').length,10);
- const closed=dom();renderDeadlinePolicy(closed,{...cup,timeline:null},()=>{});assert.equal(closed.hidden,true);const human=dom();renderDeadlinePolicy(human,{...cup,status:'DRAFT',timeline:null,participants:[],participantPolicy:'HUMAN_ONLY'},()=>{});assert.equal(human.hidden,true);
+test('draft can edit manual dates or convert to timeline while published manual settings are read only',()=>{
+ const root=dom();renderDeadlinePolicy(root,{...cup,status:'DRAFT',timeline:null,participants:[]},()=>{});assert.equal(root.hidden,false);assert.ok(descendants(root).some(n=>n.textContent==='Chuyển sang giải theo timeline'));assert.equal(descendants(root).filter(n=>n.type==='datetime-local').length,13);
+ const closed=dom();renderDeadlinePolicy(closed,{...cup,timeline:null},()=>{});assert.equal(closed.hidden,false);assert.equal(descendants(closed).filter(n=>n.type==='datetime-local').length,0);const human=dom();renderDeadlinePolicy(human,{...cup,status:'DRAFT',timeline:null,participants:[],participantPolicy:'HUMAN_ONLY'},()=>{});assert.equal(human.hidden,false);assert.equal(descendants(human).filter(n=>n.type==='datetime-local').length,3);
 });
 test('full draft timeline can be populated edited and serialized in local device time',()=>{
  const root=dom(),editor=timelineEditor(root),timeline={...validateTimeline(sampleTimeline(new Date('2026-10-20T12:00:00'))).timeline,deadlinePolicy:'REQUIRE_EXPLICIT_SUBMIT',validationFailurePolicy:'USE_LAST_VALID_VERSION'};editor.setValue(timeline);assert.deepEqual(editor.read(),timeline);

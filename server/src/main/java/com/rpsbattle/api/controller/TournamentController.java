@@ -17,7 +17,8 @@ public class TournamentController {
     @PostMapping("/{id}/participants") public Map<String,Object> add(Authentication auth,@PathVariable String id,@RequestBody Participant p) {owned.add(auth,id,p.botId(),p.displayName(),p.seed());return detail(id);}
     @DeleteMapping("/{id}/participants/{participantId}") public Map<String,Object> remove(Authentication auth,@PathVariable String id,@PathVariable String participantId) {owned.remove(auth,id,participantId);return detail(id);}
     @PostMapping("/{id}/start") public Map<String,Object> start(Authentication auth,@PathVariable String id) {owned.start(auth,id);return detail(id);}
-    @PostMapping("/{id}/cancel") public Map<String,Object> cancel(Authentication auth,@PathVariable String id) {owned.cancel(auth,id);return detail(id);}
+    @PostMapping("/{id}/cancel") public Map<String,Object> cancel(Authentication auth,@PathVariable String id,@RequestBody(required=false) Cancel request) {if(request==null||request.revision()==null&&request.reason()==null)owned.cancel(auth,id);else owned.cancel(auth,id,request.revision(),request.reason());return detail(id);}
+    public record Cancel(Long revision,String reason) {}
     @PostMapping("/{id}/open-registration") public Map<String,Object> openRegistration(Authentication auth,@PathVariable String id) {owned.openRegistration(auth,id);return detail(id);}
     @PostMapping("/{id}/close-registration") public Map<String,Object> closeRegistration(Authentication auth,@PathVariable String id) {owned.closeRegistration(auth,id);return detail(id);}
     @PostMapping("/{id}/registrations") public Map<String,Object> register(Authentication auth,@PathVariable String id,@RequestBody Participant p) {

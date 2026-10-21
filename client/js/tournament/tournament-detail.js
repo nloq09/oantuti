@@ -3,6 +3,8 @@ import {tournamentRoute} from './tournament-routes.js';
 import {mountMatchMonitor} from './match-monitor.js';
 import {allowsPreuploaded,allowedPolicyBot,renderBotPolicy} from "./bot-policy.js";
 import {mountOrganizerShell} from './organizer-shell.js';
+import {renderLifecycleControls,renderOrganizerCheckIn} from './organizer-controls.js';
+import {confirmOrganizerDecision} from './organizer-decision-dialog.js';
 import {matchFilter,filteredMatches,filteredRegistrations} from './organizer-filters.js';
 import {renderDeadlinePolicy} from './deadline-policy-editor.js';
 import {stagePlanText} from "./stage-plan.js";
@@ -41,13 +43,14 @@ let organizerShell,matchMonitor;
 let latest = -1,
   busy = false, currentTournament;
 async function action(operation) {
-  if (busy) return;
+  if (busy) return false;
   busy = true;
   document.querySelectorAll("#registration button").forEach(button => button.disabled = true);
   try {
-    render(await operation());
+    const result=await operation();render(result);organizerShell?.refresh();return result;
   } catch (error) {
     toast(error.message, true);
+    return false;
   } finally {
     busy = false, currentTournament;
     document.querySelectorAll("#registration button").forEach(button => button.disabled = false);
@@ -67,21 +70,9 @@ function render(t) {
   document.querySelector("#registration-help").textContent = draft
     ? `Giải tối đa ${t.maxParticipants} bot. Đăng ký trong giai đoạn mở sẽ chờ chủ giải duyệt.`
     : t.status === "REGISTRATION" ? "Đã đóng nhận đơn. Chủ giải vẫn có thể xét duyệt các đơn đã gửi trước hạn." : t.status === "CHECK_IN" ? "Check-in đã mở. Người tham gia cần xác nhận có mặt trước khi chủ giải hoàn tất." : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
-  document.querySelector("#open-registration").hidden = !owner || t.status !== "DRAFT";
-  document.querySelector("#close-registration").hidden = !owner || Boolean(t.timeline) || t.status !== "REGISTRATION";
-  document.querySelector("#close-registration").disabled = t.participants.length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);
-  document.querySelector("#start").hidden = !owner || Boolean(t.timeline) || !(["DRAFT", "READY"].includes(t.status) && !(t.status === "DRAFT" && t.checkInRequired));
-  document.querySelector("#start").textContent = t.status === "DRAFT" ? "Bắt đầu nhanh" : "Bắt đầu giải";
-  document.querySelector("#start").disabled = t.participants.length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);
-  document.querySelector("#cancel").hidden = !owner || ["FINISHED", "CANCELLED"].includes(
-    t.status,
-  );
-  document.querySelector("#close-check-in").hidden = !owner || Boolean(t.timeline) || t.status !== "CHECK_IN";
-  document.querySelector("#close-check-in").disabled = (t.registrations || []).filter(r => r.status === "CHECKED_IN").length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);
-  let submissionLink=document.querySelector("#submission-dashboard-link");if(!submissionLink){submissionLink=document.createElement("a");submissionLink.id="submission-dashboard-link";submissionLink.className="button";submissionLink.textContent="Bài nộp bot và hàng đợi →";document.querySelector("#admin-tab").prepend(submissionLink);}submissionLink.hidden=!owner;submissionLink.href="/tournament-submissions.html?id="+encodeURIComponent(id);
-  let applicationLink=document.querySelector("#application-review-link");if(!applicationLink){applicationLink=document.createElement("a");applicationLink.id="application-review-link";applicationLink.className="button";applicationLink.textContent="Duyệt đăng ký người chơi →";document.querySelector("#admin-tab").prepend(applicationLink);}applicationLink.hidden=!owner||!t.timeline;applicationLink.href="/tournament-applications.html?id="+encodeURIComponent(id);
-  let deadlinePolicy=document.querySelector('#deadline-policy');if(!deadlinePolicy){deadlinePolicy=document.createElement('section');deadlinePolicy.id='deadline-policy';document.querySelector('#admin-tab').prepend(deadlinePolicy);}if(owner)renderDeadlinePolicy(deadlinePolicy,t,async()=>render(await getTournament(id)));else deadlinePolicy.hidden=true;
-  let finalLink=document.querySelector('#final-validation-link');if(!finalLink){finalLink=document.createElement('a');finalLink.id='final-validation-link';finalLink.className='button';finalLink.textContent='Kiểm thử chính thức →';document.querySelector('#admin-tab').prepend(finalLink);}finalLink.hidden=!owner||!t.timeline;finalLink.href='/tournament-final-validation.html?id='+encodeURIComponent(id);
+  if(owner)renderLifecycleControls(t,organizerShell?.snapshot);
+  const deadlinePolicy=document.querySelector('#deadline-policy');if(owner)renderDeadlinePolicy(deadlinePolicy,t,async()=>render(await getTournament(id)));else deadlinePolicy.hidden=true;
+  const policySettings=document.querySelector('#organizer-policy-settings');policySettings.replaceChildren();if(owner)renderBotPolicy(policySettings,t);
   renderRegistrations(t, owner);
   renderSeeding(t, owner);renderRules(t,owner);
   document.querySelector("#format-heading").textContent="Tổng quan · "+formatLabel(t.format);
@@ -197,10 +188,11 @@ function render(t) {
   if(owner){
     if(!organizerShell){
       document.querySelector('#name').hidden=true;document.querySelector('.tab-bar').hidden=true;
-      document.querySelector('#overview').prepend(document.querySelector('.tournament-invite'));
+
       document.querySelector('#ranking').prepend(document.querySelector('#champion'));
-      const selectPanel=target=>{for(const key of ['overview','participants-tab','matches','bracket','ranking','replays-tab','admin-tab','organizer-audit'])document.getElementById(key).hidden=key!==target;document.querySelectorAll('[data-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.tab===target)));};
-      organizerShell=mountOrganizerShell(document.querySelector('main'),{tournament:t,account,section:new URLSearchParams(location.search).get('view'),selectPanel,onSnapshot:render});
+      const selectPanel=target=>{for(const key of ['overview','participants-tab','organizer-check-in','matches','bracket','ranking','replays-tab','admin-tab','organizer-audit'])document.getElementById(key).hidden=key!==target;document.querySelectorAll('[data-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.tab===target)));if(target==='organizer-check-in')renderCheckIn(currentTournament);};
+      organizerShell=mountOrganizerShell(document.querySelector('main'),{tournament:t,account,section:new URLSearchParams(location.search).get('view'),selectPanel,onSnapshot:render,onCommand:command=>document.getElementById(command)?.click(),onPhase:(snapshot,phase,options)=>{renderLifecycleControls(snapshot,phase,options);document.querySelector('main').dataset.organizerStale=String(options.stale);}});
+
     }else organizerShell.update(t);
   }
 }
@@ -221,12 +213,12 @@ document.querySelector("#close-registration").onclick = () =>
   confirmAction("Khóa đăng ký?", "Đơn chưa duyệt sẽ bị từ chối. Không thể đăng ký bot mới. Nếu giải yêu cầu check-in, chủ bot phải xác nhận có mặt trước khi bắt đầu.", () => action(() => closeRegistration(id)));
 document.querySelector("#close-check-in").onclick = () => confirmAction("Hoàn tất check-in?", "Bot chưa check-in sẽ không được đưa vào lịch đấu. Cần ít nhất hai bot đã check-in.", () => action(() => closeCheckIn(id)));
 
-document.querySelector("#cancel").onclick = () =>
-  confirmAction(
-    "Hủy giải đấu?",
-    "Các trận đang chạy sẽ bị dừng. Kết quả đã hoàn tất vẫn được giữ.",
-    () => action(() => cancelTournament(id)),
-  );
+document.querySelector("#cancel").onclick = () => confirmOrganizerDecision('Hủy giải đấu?', 'Không thể khôi phục giải đã hủy. Các trận chưa hoàn tất sẽ dừng; replay và lịch sử được giữ.', reason => action(() => cancelTournament(id, {revision:currentTournament.revision,reason})));
+
+function renderCheckIn(t){const filter=document.querySelector('#check-in-filter');const params=new URLSearchParams(location.search);filter.value=params.get('view')==='check-in'&&params.get('filter')==='MISSING'?'MISSING':'ALL';renderOrganizerCheckIn(document.querySelector('#check-in-list'),t,filter.value);}
+document.querySelector('#check-in-filter').onchange=event=>{const url=new URL(location.href);url.searchParams.set('view','check-in');if(event.target.value==='MISSING')url.searchParams.set('filter','MISSING');else url.searchParams.delete('filter');history.replaceState(null,'',url);renderCheckIn(currentTournament);};
+document.addEventListener('organizer-request-refresh',()=>organizerShell?.refresh());
+
 document.querySelector("#add-participant").onsubmit = (event) => {
   event.preventDefault();
   const bot = savedBots().find(
@@ -277,11 +269,13 @@ function renderRegistrations(t, owner) {
   if(!list.childElementCount)list.textContent=control.value==='ALL'?"Chưa có đơn đăng ký.":'Không có đơn phù hợp với bộ lọc.';
 }
 
-for(const [selector,view]of [['#organizer-match-filter','matches'],['#organizer-registration-filter','check-in']])document.querySelector(selector).onchange=event=>{const url=new URL(location.href);url.searchParams.set('view',view);if(event.target.value==='ALL')url.searchParams.delete('filter');else url.searchParams.set('filter',event.target.value);history.replaceState(null,'',url);if(currentTournament){organizerShell?.select(view);render(currentTournament);}};
+for(const [selector,view]of [['#organizer-match-filter','matches'],['#organizer-registration-filter','registration']])document.querySelector(selector).onchange=event=>{const url=new URL(location.href);url.searchParams.set('view',view);if(event.target.value==='ALL')url.searchParams.delete('filter');else url.searchParams.set('filter',event.target.value);history.replaceState(null,'',url);if(currentTournament){organizerShell?.select(view);render(currentTournament);}};
 
 function renderSeeding(t, owner) {
   const section=document.querySelector("#seeding");section.hidden=!owner;
   const editable=["DRAFT","REGISTRATION","CHECK_IN"].includes(t.status);
+  document.querySelector('#seeding-form').hidden=!editable;
+  document.querySelector('#seeding-state').textContent=editable?'Có thể cấu hình hạt giống trước khi chốt danh sách.':'Hạt giống đã khóa: '+({RANDOM:'Ngẫu nhiên',MANUAL:'Thủ công',RANKING:'Theo thành tích'})[t.seedingStrategy]+'.';
   const strategy=document.querySelector("#seeding-strategy"), seed=document.querySelector("#seeding-seed");
   if(document.activeElement!==strategy)strategy.value=t.seedingStrategy;
   if(document.activeElement!==seed)seed.value=t.seedingSeed;
@@ -315,6 +309,7 @@ for(let index=0;index<4;index++) {
 function renderRules(t,owner) {
   const section=document.querySelector("#competition-rules");section.hidden=!owner;
   const editable=["DRAFT","REGISTRATION","CHECK_IN"].includes(t.status);
+  document.querySelector('#rules-form').hidden=!editable;
   const concurrency=document.querySelector("#rule-concurrency");
   if(!section.contains(document.activeElement)) {
     concurrency.value=t.maxConcurrentMatches;

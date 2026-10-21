@@ -5,6 +5,20 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.*;
 
 class TournamentLifecycleApiTest extends StageThreeWebFixture {
+    @Test void organizerCancellationDecisionRequiresCurrentRevisionAndPersistsReason() throws Exception {
+        loginAccount();var cup=request("/api/tournaments","POST",Map.of("name","Cancel decision"),201);String base="/api/tournaments/"+cup.path("id").asText();long revision=cup.path("revision").asLong();
+        request(base+"/cancel","POST",Map.of("revision",revision+1,"reason","Schedule conflict"),409);
+        request(base+"/cancel","POST",Map.of("revision",revision,"reason","  "),400);
+        assertThat(request(base,"GET",null,200).path("status").asText()).isEqualTo("DRAFT");
+        var cancelled=request(base+"/cancel","POST",Map.of("revision",revision,"reason","  Schedule conflict  "),200);
+        assertThat(cancelled.path("status").asText()).isEqualTo("CANCELLED");var audit=cancelled.path("audit");assertThat(audit.get(audit.size()-1).path("reason").asText()).isEqualTo("Schedule conflict");
+        var legacy=request("/api/tournaments","POST",Map.of("name","Legacy cancellation"),201);request("/api/tournaments/"+legacy.path("id").asText()+"/cancel","POST",Map.of(),200);
+    }
+    @Test void cancellationMetadataCannotGrantAnotherAccountOrganizerRights() throws Exception {
+        loginAccount();var cup=request("/api/tournaments","POST",Map.of("name","Protected cancellation"),201);String base="/api/tournaments/"+cup.path("id").asText();request("/api/auth/logout","POST",Map.of(),200);account=null;loginAccount();
+        request(base+"/cancel","POST",Map.of("revision",cup.path("revision").asLong(),"reason","Not the organizer","role","ADMIN"),403);
+        assertThat(request(base,"GET",null,200).path("status").asText()).isEqualTo("DRAFT");
+    }
     @Test void registrationCanOpenCloseAndLockRosterWithoutStartingAnyMatch() throws Exception {
         org.junit.jupiter.api.Assumptions.assumeTrue(uploads.available(com.rpsbattle.bot.upload.BotLanguage.PYTHON));
         loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Lifecycle API"),201);

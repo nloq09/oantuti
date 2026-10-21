@@ -1,0 +1,9 @@
+import {node} from './player-dom.js';
+import {errorText} from '../ui/toast.js';
+export function organizerDecisionReason(value){const reason=value?.trim();if(!reason||reason.length>500)throw Error('Nhập lý do từ 1 đến 500 ký tự.');return reason;}
+export function confirmOrganizerDecision(title,description,run,{danger=true}={}){
+ const dialog=node('dialog',undefined,'organizer-decision-dialog'),form=node('form'),reason=node('textarea'),label=node('label','Lý do (bắt buộc)'),notice=node('p'),actions=node('div',undefined,'actions'),cancel=node('button','Quay lại'),confirm=node('button','Xác nhận',danger?'danger':'primary');
+ reason.required=true;reason.maxLength=500;reason.rows=3;reason.setAttribute('aria-label','Lý do quyết định');label.append(reason);notice.setAttribute('role','status');cancel.type='button';cancel.onclick=()=>dialog.close();actions.append(cancel,confirm);form.append(node('h2',title),node('p',description),label,notice,actions);dialog.append(form);
+ form.onsubmit=async event=>{event.preventDefault();if(confirm.disabled)return;let text;try{text=organizerDecisionReason(reason.value);}catch(error){notice.textContent=error.message;return;}confirm.disabled=true;reason.disabled=true;try{const result=await run(text);if(result!==false)dialog.close();else notice.textContent='Chưa thực hiện được quyết định. Kiểm tra thông báo và trạng thái mới của giải.';}catch(error){notice.textContent=errorText(error.message);}finally{confirm.disabled=false;reason.disabled=false;}};
+ dialog.addEventListener('close',()=>dialog.remove());document.body.append(dialog);dialog.showModal();reason.focus();return dialog;
+}

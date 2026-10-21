@@ -240,6 +240,15 @@ public class OwnedTournamentService {
         }
     }
     public void cancel(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,auth,()->tournaments.cancel(id));}
+    /** Optional decision metadata for the organizer UI; legacy callers retain the existing route. */
+    public void cancel(Authentication auth,String id,Long revision,String reason) {
+        var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){
+            if(revision==null||revision!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
+            if(reason==null||reason.isBlank()||reason.length()>500)throw new DemoRequestException("REASON_REQUIRED");
+            var previous=administrativeReason.get();administrativeReason.set(reason.trim());
+            try{mutate(t,auth,()->tournaments.cancel(id));}finally{if(previous==null)administrativeReason.remove();else administrativeReason.set(previous);}
+        }
+    }
     public void openRegistration(Authentication auth,String id) {
         var t=tournaments.find(id);authorization.requireManager(auth,t);
         mutate(t,auth,()->{
