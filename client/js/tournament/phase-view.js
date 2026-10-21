@@ -2,7 +2,7 @@ import {node,date} from './player-dom.js';
 import {formatLabel} from './bracket-renderer.js';
 import {countdownText} from './tournament-header.js';
 
-const labels={PENDING:'Chờ',QUEUED:'Đang xếp hàng',RUNNING:'Đang chạy',PASS:'Đạt',PASSED:'Đạt',FAIL:'Không đạt',FAILED:'Không đạt',INFRA_ERROR:'Lỗi hạ tầng',APPROVED:'Đã xác nhận',WAITLISTED:'Danh sách chờ',REJECTED:'Bị từ chối',CHECKED_IN:'Đã check-in'};
+const labels={NEEDS_REVIEW:'Chờ ban tổ chức xác nhận',PENDING:'Chờ',QUEUED:'Đang xếp hàng',RUNNING:'Đang chạy',PASS:'Đạt',PASSED:'Đạt',FAIL:'Không đạt',FAILED:'Không đạt',INFRA_ERROR:'Lỗi hạ tầng',APPROVED:'Đã xác nhận',WAITLISTED:'Danh sách chờ',REJECTED:'Bị từ chối',CHECKED_IN:'Đã check-in'};
 export function statusBadge(value){const state=Object.hasOwn(labels,value)?value:'PENDING',symbol=['PASS','PASSED','APPROVED','CHECKED_IN'].includes(state)?'✓':['FAIL','FAILED','REJECTED','INFRA_ERROR'].includes(state)?'!':state==='RUNNING'?'●':'○';const badge=node('span',`${symbol} ${labels[state]}`,'phase-status');badge.dataset.status=state;return badge;}
 export function phaseFacts(root,rows){const list=node('dl',undefined,'phase-facts');for(const [label,value]of rows){list.append(node('dt',label),node('dd',value??'Chưa có'));}root.append(list);return list;}
 export function phaseCountdown(root,label,deadline,flow,legacyKey){const title=node('p',label),timer=node('p',countdownText(deadline,flow.serverNow),'phase-countdown');timer.setAttribute('role','timer');if(legacyKey)timer.dataset[legacyKey]=deadline;else{timer.dataset.phaseDeadline=deadline;timer.dataset.serverNow=flow.serverNow||'';timer.dataset.receivedAt=String(performance.now());}root.append(title,timer);return timer;}

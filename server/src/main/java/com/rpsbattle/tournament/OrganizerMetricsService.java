@@ -19,6 +19,7 @@ public class OrganizerMetricsService {
  static View project(Tournament t,OrganizerMetricsStore.Snapshot data,Instant now){
   var registration=new LinkedHashMap<String,Long>();for(String key:List.of("registered","approved","pending","waitlisted","rejected","cancelled"))registration.put(key,0L);
   Collection<String> statuses=t.timeline!=null?data.applications().values():t.registrations.stream().map(r->Set.of(TournamentRegistration.Status.CHECKED_IN,TournamentRegistration.Status.NOT_CHECKED_IN).contains(r.status())?"APPROVED":r.status().name()).toList();registration.put("registered",(long)statuses.size());for(String value:statuses){String key=value.toLowerCase(Locale.ROOT);if(registration.containsKey(key))registration.merge(key,1L,Long::sum);}
+  registration.put("needsReview",registration.get("pending"));
   var approved=data.applications().entrySet().stream().filter(e->e.getValue().equals("APPROVED")).map(Map.Entry::getKey).collect(Collectors.toSet());var active=new HashSet<UUID>();var ready=new HashSet<UUID>();var failed=new HashSet<UUID>();
   for(var w:data.workspaces())if(approved.contains(w.user())){active.add(w.user());if(Set.of("READY","SUBMITTED","LOCKED").contains(Objects.toString(w.versionState(),"")))ready.add(w.user());if("BUILD_FAILED".equals(w.versionState()))failed.add(w.user());}failed.removeAll(ready);
   long submitted=data.submissions().entrySet().stream().filter(e->approved.contains(e.getKey())&&Set.of("SUBMITTED","LOCKED").contains(e.getValue())).count();

@@ -3,6 +3,7 @@ package com.rpsbattle.tournament.timeline;
 import com.rpsbattle.account.AccountAuthorizationService;
 import com.rpsbattle.auth.AuthException;
 import com.rpsbattle.tournament.*;
+import com.rpsbattle.tournament.registration.*;
 import com.rpsbattle.tournament.domain.*;
 import java.time.*;
 import java.util.*;
@@ -16,6 +17,7 @@ public class TimelineRegistrationService {
     private final OwnedTournamentService owned;
     private final TimelineRegistrationStore store;
     private final Clock clock;
+    @org.springframework.beans.factory.annotation.Autowired RegistrationEligibilityService eligibility;
     @org.springframework.beans.factory.annotation.Autowired TournamentAuthorizationService authorization;
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.coding.SubmissionStore submissions;
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.coding.FinalValidationStore finals;
@@ -38,7 +40,7 @@ public class TimelineRegistrationService {
         var submission=approved&&!closed?submissions.mine(t.id,user):null;
         String submissionStatus=frozen!=null?(frozen.decision().equals("MISSING")?"SUBMISSION_MISSING":"SUBMISSION_FROZEN"):approved&&closed?"FREEZE_PENDING":submission==null?"NO_SUBMISSION":submission.status();
         if(validation!=null)submissionStatus=validation.status().equals("PASSED")&&validation.applied()?"BOT_READY":validation.status().equals("FAILED")?"VALIDATION_FAILED":validation.status().equals("INFRA_ERROR")?"VALIDATION_INFRA_ERROR":"VALIDATING";
-        String action=phase.phase()==TournamentPhase.REGISTRATION_OPEN&&(registration==null||status.equals("CANCELLED"))?"REGISTER":switch(status){case "PENDING"->"WAIT_FOR_APPROVAL";case "APPROVED"->closed?"VIEW_FROZEN_SUBMISSION":phase.phase()==TournamentPhase.CODING_OPEN?"OPEN_CODE_WORKSPACE":"WAIT_FOR_CODING";case "REJECTED"->"REGISTRATION_REJECTED";case "WAITLISTED"->"WAITLISTED";default->"VIEW_REGISTRATION_STATUS";};
+        String action=phase.phase()==TournamentPhase.REGISTRATION_OPEN&&(registration==null||status.equals("CANCELLED"))?"REGISTER":switch(status){case "PENDING","NEEDS_REVIEW"->"WAIT_FOR_APPROVAL";case "APPROVED"->closed?"VIEW_FROZEN_SUBMISSION":phase.phase()==TournamentPhase.CODING_OPEN?"OPEN_CODE_WORKSPACE":"WAIT_FOR_CODING";case "REJECTED"->"REGISTRATION_REJECTED";case "WAITLISTED"->"WAITLISTED";default->"VIEW_REGISTRATION_STATUS";};
         if(validation!=null)action="VIEW_FINAL_VALIDATION";
         var entry=t.registrations.stream().filter(r->r.userId().equals(user)&&(r.active()||r.status()==TournamentRegistration.Status.NOT_CHECKED_IN)).findFirst().orElse(null);
         boolean checked=entry!=null&&entry.status()==TournamentRegistration.Status.CHECKED_IN;
@@ -52,7 +54,7 @@ public class TimelineRegistrationService {
     private String participantStatus(Tournament t,UUID user,TournamentPhase phase,String registration,String submission,CheckIn check){
         if(phase==TournamentPhase.DRAFT||phase==TournamentPhase.UPCOMING)return "REGISTER_NOT_OPEN";
         if(registration.equals("NOT_REGISTERED")||registration.equals("CANCELLED"))return "NOT_REGISTERED";
-        if(!registration.equals("APPROVED"))return switch(registration){case "PENDING"->"REGISTRATION_PENDING";case "WAITLISTED"->"WAITLISTED";default->"REGISTRATION_REJECTED";};
+        if(!registration.equals("APPROVED"))return switch(registration){case "PENDING","NEEDS_REVIEW"->"REGISTRATION_NEEDS_REVIEW";case "WAITLISTED"->"WAITLISTED";default->"REGISTRATION_REJECTED";};
         if(phase==TournamentPhase.CANCELLED)return "TOURNAMENT_CANCELLED";
         if(submission.equals("SUBMISSION_MISSING"))return "SUBMISSION_MISSING";
         if(submission.equals("VALIDATION_FAILED"))return "VALIDATION_FAILED";
@@ -75,8 +77,8 @@ public class TimelineRegistrationService {
         return "REGISTRATION_APPROVED";
     }
     private boolean reviewOpen(Tournament t){var phase=resolve(t,clock.instant()).phase();return Set.of(TournamentPhase.REGISTRATION_OPEN,TournamentPhase.REGISTRATION_REVIEW,TournamentPhase.WAITING_FOR_CODING).contains(phase);}
-    public record Applications(List<TimelineRegistrationStore.View> items,int page,int size,long revision,boolean reviewOpen,Instant codingOpenAt) {}
-    public Applications list(Authentication auth,String id,int page,String status){var t=tournaments.find(id);authorization.requireManager(auth,t);if(page<0||page>10000)throw new AuthException("INVALID_PAGING",400);if(status!=null&&!Set.of("PENDING","APPROVED","WAITLISTED","REJECTED","CANCELLED").contains(status))throw new AuthException("INVALID_FILTER",400);synchronized(t){return new Applications(store.page(UUID.fromString(id),page,status),page,25,t.revision,reviewOpen(t),t.timeline.codingOpenAt());}}
+    public record Applications(List<TimelineRegistrationStore.Application> items,int page,int size,long revision,boolean reviewOpen,Instant codingOpenAt) {}
+    public Applications list(Authentication auth,String id,int page,String status){var t=tournaments.find(id);authorization.requireManager(auth,t);if(page<0||page>10000)throw new AuthException("INVALID_PAGING",400);if(status!=null&&!Set.of("PENDING","NEEDS_REVIEW","APPROVED","WAITLISTED","REJECTED","CANCELLED").contains(status))throw new AuthException("INVALID_FILTER",400);synchronized(t){return new Applications(store.page(UUID.fromString(id),page,status),page,25,t.revision,reviewOpen(t),t.timeline.codingOpenAt());}}
     public record Review(Long revision,String decision,String reason) {}
     public void review(Authentication auth,String id,UUID application,Review request){var actor=accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){
         if(request.revision()==null||request.revision()!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
@@ -85,12 +87,26 @@ public class TimelineRegistrationService {
         String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
         owned.submissionMutation(t,auth,()->{var change=store.review(UUID.fromString(id),application,request.decision(),reason,actor.id().value(),clock.instant(),t.maxParticipants);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_REVIEWED",actor.id().value(),application.toString(),reason,change.before(),request.decision());tournaments.changed(t);});
     }}
+    public record PolicyUpdate(Long revision,RegistrationPolicy policy,String reason) {}
+    public void configurePolicy(Authentication auth,String id,PolicyUpdate request){
+        var actor=accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);
+        synchronized(t){
+            if(request.revision()==null||request.revision()!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
+            if(request.policy()==null)throw new AuthException("INVALID_REGISTRATION_POLICY",400);
+            if(t.status!=TournamentStatus.DRAFT||store.hasApplications(UUID.fromString(id)))throw new AuthException("REGISTRATION_POLICY_LOCKED",409);
+            String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
+            owned.submissionMutation(t,auth,()->{var before=t.registrationPolicy;t.registrationPolicy=request.policy();TournamentAudit.append(t,"REGISTRATION_POLICY_UPDATED",actor.id().value(),id,reason,before.toString(),request.policy().toString());tournaments.changed(t);});
+        }
+    }
     public Flow register(Authentication auth,String id,Signup request){var actor=accounts.requireUser(auth);var t=tournaments.find(id);synchronized(t){registrationOpen(t);
         if(!Boolean.TRUE.equals(request.rulesAccepted()))throw new AuthException("RULES_ACCEPTANCE_REQUIRED",400);
         if(request.botId()!=null||request.sourceCode()!=null||request.versionId()!=null)throw new AuthException("REGISTRATION_PARTICIPANT_ONLY",400);
         if(request.intendedLanguage()==null||!t.botPolicy.allowedLanguages().contains(request.intendedLanguage()))throw new AuthException("BOT_LANGUAGE_NOT_ALLOWED",400);
         String affiliation=request.affiliation()==null?null:request.affiliation().trim();if(affiliation!=null&&(affiliation.length()>80||affiliation.codePoints().anyMatch(Character::isISOControl)))throw new AuthException("INVALID_AFFILIATION",400);
-        owned.submissionMutation(t,auth,()->{var entry=store.register(UUID.fromString(id),actor.id().value(),actor.displayName(),request.intendedLanguage(),affiliation,t.maxParticipants,clock.instant());TournamentAudit.append(t,"PARTICIPANT_APPLICATION_SUBMITTED",actor.id().value(),entry.id().toString(),null,null,"PENDING");tournaments.changed(t);});return flow(t,actor.id().value());
+        var previous=store.mine(UUID.fromString(id),actor.id().value());
+        var decision=eligibility.evaluate(new RegistrationEligibilityService.Context(actor.status()==com.rpsbattle.account.domain.AccountStatus.ACTIVE,true,previous!=null&&!previous.status().equals("CANCELLED"),Boolean.TRUE.equals(request.rulesAccepted()),request.intendedLanguage(),t.botPolicy.allowedLanguages(),affiliation,t.registrationPolicy));
+        if(decision.decision()==EligibilityDecision.Decision.REJECT){var code=decision.reasonCodes().getFirst();throw new AuthException(code.name(),code==EligibilityReasonCode.DUPLICATE_REGISTRATION?409:400);}
+        owned.submissionMutation(t,auth,()->{var entry=store.register(UUID.fromString(id),actor.id().value(),actor.displayName(),request.intendedLanguage(),affiliation,t.maxParticipants,clock.instant(),decision);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_SUBMITTED",actor.id().value(),entry.id().toString(),String.join(",",decision.reasonCodes().stream().map(Enum::name).toList()),null,entry.status());tournaments.changed(t);});return flow(t,actor.id().value());
     }}
     public Flow withdraw(Authentication auth,String id){var user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){registrationOpen(t);owned.submissionMutation(t,auth,()->{store.withdraw(UUID.fromString(id),user);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_WITHDRAWN",user,id,null,null,"CANCELLED");tournaments.changed(t);});return flow(t,user);}}
 }

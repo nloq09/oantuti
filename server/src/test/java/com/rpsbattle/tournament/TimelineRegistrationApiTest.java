@@ -22,7 +22,7 @@ class TimelineRegistrationApiTest extends StageThreeWebFixture {
     Map<String,Object> signup(){return Map.of("rulesAccepted",true,"intendedLanguage","CPP","affiliation","UET");}
     @Test void personCanRegisterWithoutBotInAllThreeModesAndNoExecutionRosterIsCreated()throws Exception{
         for(String mode:List.of("PRE_UPLOADED_ONLY","CODE_IN_PLATFORM_ONLY","BOTH")){
-            String base=cup(mode,2);var result=request(base+"/participant-registration","POST",signup(),200);assertThat(result.path("registrationStatus").asText()).isEqualTo("PENDING");assertThat(result.path("registration").path("intendedLanguage").asText()).isEqualTo("CPP");assertThat(result.path("registration").has("botId")).isFalse();
+            String base=cup(mode,2);var result=request(base+"/participant-registration","POST",signup(),200);assertThat(result.path("registrationStatus").asText()).isEqualTo("NEEDS_REVIEW");assertThat(result.path("registration").path("intendedLanguage").asText()).isEqualTo("CPP");assertThat(result.path("registration").has("botId")).isFalse();
             var t=request(base,"GET",null,200);assertThat(t.path("participants").size()).isZero();assertThat(t.path("registrations").size()).isZero();assertThat(t.path("audit").toString()).contains("PARTICIPANT_APPLICATION_SUBMITTED");
             assertThat(request(base+"/participant-flow","GET",null,200).path("nextAction").asText()).isEqualTo("WAIT_FOR_APPROVAL");request(base+"/participant-registration","POST",signup(),409);
         }

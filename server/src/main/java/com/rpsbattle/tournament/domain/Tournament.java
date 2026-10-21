@@ -27,6 +27,7 @@ public final class Tournament {
     public boolean checkInRequired;
     public ParticipantPolicy participantPolicy=ParticipantPolicy.BOT_ONLY;
     public TournamentBotPolicy botPolicy=TournamentBotPolicy.defaults();
+    public com.rpsbattle.tournament.registration.RegistrationPolicy registrationPolicy=com.rpsbattle.tournament.registration.RegistrationPolicy.legacy();
     public TournamentTiming timing=TournamentTiming.manual();
     public TournamentTimeline timeline;
     public final Map<String,MatchReadyWindow> readyWindows=new LinkedHashMap<>();

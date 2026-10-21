@@ -6,18 +6,19 @@ import java.util.*;
 
 /** Versioned tournament-owned structure, committed atomically with participants and results. */
 public record TournamentDetails(int version,int maxConcurrentMatches,List<TieBreak> tieBreakOrder,
-        List<TournamentRound> rounds,List<BracketNode> bracket,Map<String,MatchDetails> matches,List<TournamentStage> stages,TournamentOperations operations,ParticipantPolicy participantPolicy,TournamentTiming timing,Map<String,MatchReadyWindow> readyWindows,Map<String,Long> notificationReads,Integer bestOf,GroupStageState groupStage,SwissState swiss,TeamState teams,List<GroupRoundPlan> groupPlans,List<GroupStageState> groupHistory,TournamentBotPolicy botPolicy,TournamentTimeline timeline) {
+        List<TournamentRound> rounds,List<BracketNode> bracket,Map<String,MatchDetails> matches,List<TournamentStage> stages,TournamentOperations operations,ParticipantPolicy participantPolicy,TournamentTiming timing,Map<String,MatchReadyWindow> readyWindows,Map<String,Long> notificationReads,Integer bestOf,GroupStageState groupStage,SwissState swiss,TeamState teams,List<GroupRoundPlan> groupPlans,List<GroupStageState> groupHistory,TournamentBotPolicy botPolicy,TournamentTimeline timeline,com.rpsbattle.tournament.registration.RegistrationPolicy registrationPolicy) {
     public TournamentDetails {tieBreakOrder=List.copyOf(tieBreakOrder);rounds=List.copyOf(rounds);bracket=List.copyOf(bracket);matches=Map.copyOf(matches);stages=List.copyOf(stages);}
     public record MatchDetails(int round,Instant scheduledAt,long moveNanosA,long moveNanosB,int moveCountA,int moveCountB,int attempt,String decisionReason,String seriesId,int gameNumber) {}
     public static TournamentDetails snapshot(Tournament t) {
         var games=new LinkedHashMap<String,MatchDetails>();
         for(var m:t.matches)games.put(m.id,new MatchDetails(m.round,m.scheduledAt,m.moveNanosA,m.moveNanosB,m.moveCountA,m.moveCountB,m.attempt,m.decisionReason,m.seriesId,m.gameNumber));
-        return new TournamentDetails(1,t.maxConcurrentMatches,t.tieBreakOrder,t.rounds,t.bracket,games,t.stages,t.operations,t.participantPolicy,t.timing,Map.copyOf(t.readyWindows),Map.copyOf(t.notificationReads),t.bestOf,t.groupStage,t.swiss,t.teams,t.groupPlans,List.copyOf(t.groupHistory),t.botPolicy,t.timeline);
+        return new TournamentDetails(1,t.maxConcurrentMatches,t.tieBreakOrder,t.rounds,t.bracket,games,t.stages,t.operations,t.participantPolicy,t.timing,Map.copyOf(t.readyWindows),Map.copyOf(t.notificationReads),t.bestOf,t.groupStage,t.swiss,t.teams,t.groupPlans,List.copyOf(t.groupHistory),t.botPolicy,t.timeline,t.registrationPolicy);
     }
-    public TournamentDetails withBotPolicy(TournamentBotPolicy policy){return new TournamentDetails(version,maxConcurrentMatches,tieBreakOrder,rounds,bracket,matches,stages,operations,participantPolicy,timing,readyWindows,notificationReads,bestOf,groupStage,swiss,teams,groupPlans,groupHistory,policy,timeline);}
+    public TournamentDetails withBotPolicy(TournamentBotPolicy policy){return new TournamentDetails(version,maxConcurrentMatches,tieBreakOrder,rounds,bracket,matches,stages,operations,participantPolicy,timing,readyWindows,notificationReads,bestOf,groupStage,swiss,teams,groupPlans,groupHistory,policy,timeline,registrationPolicy);}
     public void restore(Tournament t) {
         if(version!=1)throw new IllegalStateException("Unsupported tournament structure version");
         t.timeline=timeline;
+        t.registrationPolicy=registrationPolicy==null?com.rpsbattle.tournament.registration.RegistrationPolicy.legacy():registrationPolicy;
         t.botPolicy=botPolicy==null?TournamentBotPolicy.defaults():botPolicy;
         t.groupPlans=groupPlans==null?GroupRoundPlan.defaults():List.copyOf(groupPlans);t.groupHistory.clear();if(groupHistory!=null)t.groupHistory.addAll(groupHistory);t.bestOf=TournamentSeries.validate(bestOf);t.groupStage=groupStage;t.swiss=swiss;t.teams=teams==null?TeamState.empty():teams;
         t.maxConcurrentMatches=maxConcurrentMatches;t.tieBreakOrder=tieBreakOrder;

@@ -97,6 +97,9 @@ public class OwnedTournamentService {
     }
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf) {return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,policy,bestOf,null);}
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf,TournamentBotPolicy botPolicy) {
+        return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,policy,bestOf,botPolicy,null);
+    }
+    public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf,TournamentBotPolicy botPolicy,com.rpsbattle.tournament.registration.RegistrationPolicy registrationPolicy) {
         format=format==null?TournamentFormat.ROUND_ROBIN:format;
         boolean enroll=botPolicy!=null;int seriesLength=TournamentSeries.validate(bestOf);
         var actor=accounts.requireUser(auth);botPolicy=botPolicy==null?TournamentBotPolicy.defaults():botPolicy;
@@ -108,6 +111,7 @@ public class OwnedTournamentService {
         var t=tournaments.create(name,format==null?TournamentFormat.ROUND_ROBIN:format);
         synchronized(t) {
             if(format==TournamentFormat.SWISS&&order==null)t.tieBreakOrder=List.of(com.rpsbattle.tournament.ranking.TieBreak.POINTS,com.rpsbattle.tournament.ranking.TieBreak.BUCHHOLZ,com.rpsbattle.tournament.ranking.TieBreak.WINS,com.rpsbattle.tournament.ranking.TieBreak.REMAINING_PIECES);
+            t.registrationPolicy=registrationPolicy==null?com.rpsbattle.tournament.registration.RegistrationPolicy.legacy():registrationPolicy;
             t.botPolicy=botPolicy;t.bestOf=seriesLength;t.maxConcurrentMatches=concurrency==null?4:concurrency;if(order!=null)t.tieBreakOrder=List.copyOf(order);
             TournamentAudit.append(t,"TOURNAMENT_CREATED",actor.id().value(),t.id,null,null,t.format.name());
             t.ownerUserId=actor.id().value();t.participantPolicy=policy==null?ParticipantPolicy.BOT_ONLY:policy;t.checkInRequired=checkInRequired;t.maxParticipants=limit;t.deferNotifications=true;

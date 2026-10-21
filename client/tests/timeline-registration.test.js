@@ -42,3 +42,9 @@ test('rejected participants see their reason and cannot open coding or submit an
  const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_REVIEW',registrationStatus:'REJECTED',registration:{displayName:'Player',intendedLanguage:'CPP',reviewReason:'Missing information'}},()=>{});const nodes=all(root);
  assert.ok(nodes.some(x=>x.textContent.includes('Missing information')));assert.equal(nodes.some(x=>x.tag==='form'||String(x.href).includes('tournament-code')),false);
 });
+
+
+test('needs-review registration stays visible with cancellation and never offers duplicate signup',()=>{
+ const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_OPEN',registrationStatus:'NEEDS_REVIEW',registration:{displayName:'Player',intendedLanguage:'CPP'}},()=>{});const nodes=all(root);
+ assert.equal(nodes.some(x=>x.tag==='form'),false);assert.ok(nodes.some(x=>x.textContent.includes('ban tổ chức xác nhận')));assert.ok(nodes.some(x=>x.tag==='button'&&x.textContent.includes('Hủy')));
+});

@@ -10,6 +10,7 @@ public class TimelineRegistrationController {
     private final TimelineRegistrationService service;
     public TimelineRegistrationController(TimelineRegistrationService service){this.service=service;}
     private ResponseEntity<?> response(Object body){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header("Vary","Cookie").body(body);}
+    @PutMapping("/registration-policy") public ResponseEntity<?> policy(Authentication auth,@PathVariable String id,@RequestBody TimelineRegistrationService.PolicyUpdate request){service.configurePolicy(auth,id,request);return response(java.util.Map.of("status","OK"));}
     @GetMapping("/participant-flow") public ResponseEntity<?> flow(Authentication auth,@PathVariable String id){return response(service.read(auth,id));}
     @PostMapping("/participant-registration") public ResponseEntity<?> register(Authentication auth,@PathVariable String id,@RequestBody TimelineRegistrationService.Signup request){return response(service.register(auth,id,request));}
     @DeleteMapping("/participant-registration") public ResponseEntity<?> withdraw(Authentication auth,@PathVariable String id){return response(service.withdraw(auth,id));}

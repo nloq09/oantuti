@@ -1,6 +1,6 @@
-# Registration pipeline — nhóm 1
+# Registration pipeline — nhóm 1 và 2
 
-Ngày: 21/10/2026. Phạm vi nhóm này: rà soát kiến trúc, định nghĩa chính sách duyệt và kết quả eligibility. Chưa kích hoạt tự duyệt, chưa đổi trạng thái API, schema hoặc giao diện. Dừng sau nhóm 1 theo mục 52–53 của yêu cầu.
+Ngày: 21/10/2026. Các phần đầu ghi nhận nhóm 1; phần nhóm 2 bên dưới mô tả cơ chế đã nối vào server/client. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
 
 ## Luồng thực tế đã đối chiếu
 
@@ -34,7 +34,7 @@ Ví dụ hợp lệ:
 {"decision":"REVIEW","reasonCodes":["AFFILIATION_NOT_VERIFIED"]}
 ```
 
-Các model này chưa được Controller/Service hiện tại gọi. Giải mới tạo ở phiên bản này vẫn duyệt thủ công; chưa có thiết lập policy hoạt động trên UI/API. Việc nối và lưu policy cùng eligibility engine thuộc nhóm 2, phải hoàn tất trước khi cho người tổ chức chọn AUTO_APPROVE/HYBRID.
+Tại thời điểm hoàn tất nhóm 1, các model này chưa được Controller/Service gọi. Giải mới tạo ở phiên bản này vẫn duyệt thủ công; chưa có thiết lập policy hoạt động trên UI/API. Việc nối và lưu policy cùng eligibility engine thuộc nhóm 2, phải hoàn tất trước khi cho người tổ chức chọn AUTO_APPROVE/HYBRID.
 
 ## Kế hoạch tích hợp các nhóm sau
 
@@ -73,3 +73,76 @@ Thêm:
 - `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
 
 Sửa: `README.md` để liên kết tài liệu này.
+
+## Nhóm 2 — eligibility engine và chính sách hoạt động
+
+Đã nối `RegistrationEligibilityService` vào đăng ký người chơi theo timeline. Context được server dựng từ account/session, đơn hiện có, bot policy, lịch giải và thông tin đăng ký. Không nhận account eligibility hoặc kết quả xét duyệt từ body do Player gửi.
+
+- AUTO_APPROVE/HYBRID: đơn hợp lệ và không có yêu cầu xác minh được lưu APPROVED ngay trong transaction đăng ký, response cuối cùng trả APPROVED.
+- MANUAL_REVIEW: đơn cần người duyệt, reason MANUAL_REVIEW_REQUIRED.
+- Nếu giải bật `requireAffiliationVerification`, trường/đơn vị là bắt buộc. Thông tin tự khai chưa có verifier tin cậy, nên chuyển cần xét duyệt với AFFILIATION_NOT_VERIFIED kể cả khi dùng AUTO_APPROVE. Organizer có thể xác nhận bằng action review hiện có.
+- Basic validation tiếp tục chặn đơn sai rules acceptance, ngôn ngữ, source/botId không được gửi ở giai đoạn này hoặc affiliation không hợp lệ. Engine trả REJECT với business reason cho context không đủ điều kiện; request không hợp lệ không tạo một application rác.
+- Model lưu PENDING cũ được giữ nguyên để không phá CHECK constraint và query phase cũ; API của application project thành NEEDS_REVIEW. Frontend hiển thị “Đang chờ ban tổ chức xác nhận”, giữ thao tác hủy đơn trong cửa sổ đăng ký và không cho gửi trùng.
+- `reasonCodes` của lần đánh giá được lưu riêng, chỉ trả trên endpoint applications dành cho manager. Audit vẫn lưu reason, nhưng public detail/summary/export loại reason của application và policy update; Player flow không có eligibility reasonCodes.
+- Chưa tạo WAITLIST tự động khi đầy, chưa thay cách tính capacity hoặc tự đôn danh sách chờ. Đây là nhóm 3–4; nhóm 2 vẫn trả lỗi capacity hiện có nếu đạt giới hạn admission cũ.
+
+### Policy, tương thích và UI
+
+`RegistrationPolicy` gồm `approvalPolicy` và `requireAffiliationVerification`, lưu trong JSON `TournamentDetails` cùng snapshot của giải. Thiếu toàn bộ policy ở snapshot/API cũ tiếp tục MANUAL_REVIEW; không tự thay chính sách của giải cũ.
+
+Wizard tạo giải theo timeline gửi policy explicit, mặc định HYBRID, xác minh đơn vị tắt. Bước xem lại cấu hình hiển thị chính sách này. Giải thủ công không dùng pipeline mới. API client cũ không gửi policy được giữ hành vi duyệt thủ công để tương thích.
+
+Trong Settings của giải có timeline còn DRAFT, chủ giải có thể sửa policy với revision mới nhất và lý do bắt buộc. Server kiểm tra manager/admin, DRAFT, chưa có application; commit cùng audit/revision, phục hồi snapshot nếu mutation lỗi. Sau mở đăng ký, UI chỉ hiển thị chính sách đã cố định. Chưa tự đánh giá lại đơn cũ khi đổi policy.
+
+### API/DTO thay đổi ở nhóm 2
+
+- POST `/api/tournaments`: thêm tùy chọn `registrationPolicy: {approvalPolicy, requireAffiliationVerification}`.
+- Tournament read-model: thêm `registrationPolicy`.
+- PUT `/api/tournaments/{id}/registration-policy`: `{revision, policy, reason}`, manager/admin, chỉ DRAFT chưa có application, trả `{status:"OK"}`.
+- Participant flow và `registration.status`: PENDING lưu cũ được trả thành NEEDS_REVIEW; participantStatus tương ứng REGISTRATION_NEEDS_REVIEW. Các trạng thái APPROVED/REJECTED/WAITLISTED/CANCELLED giữ nguyên.
+- Applications list: thêm `reasonCodes`, filter NEEDS_REVIEW; nhận PENDING như alias tương thích. Không gửi reasonCodes trong `participant-flow`.
+- Organizer metrics: thêm `registration.needsReview`, giữ `pending` làm alias cho client cũ. Paging vẫn 25; filter/bulk nâng cao chưa thuộc nhóm này.
+
+### Migration nhóm 2
+
+V38 `registration_eligibility_reasons`: thêm `eligibility_reasons VARCHAR(500) NOT NULL DEFAULT ''` vào bảng applications. Không đổi trạng thái lưu của đơn cũ, không sửa migration cũ. Đơn cũ thiếu reason metadata được Organizer projection giải thích bằng MANUAL_REVIEW_REQUIRED. Policy không cần cột riêng do đã có JSON snapshot tournament-owned.
+
+### Kiểm chứng nhóm 2
+
+Các tests mới bao gồm auto/hybrid approval, manual review, affiliation exception, các lỗi eligibility kết hợp, trạng thái response cuối cùng, thời gian coding không bị bypass, alias PENDING, privacy public API, manager/revision/reason/phase guards, audit và snapshot backward compatibility. Client kiểm tra editor default/disabled, PUT payload, màn policy đã khóa và NEEDS_REVIEW không tạo form đăng ký lại.
+
+PostgreSQL migration tests: **PASS 33/33**, bao gồm upgrade V37→V38 giữ đơn PENDING và metadata mặc định. Client tests: **PASS 320/320**. Backend regression/unit/API: **PASS 67/67**, **PASS bootJar**, không có test fail/skipped ở lượt cuối. Tổng backend + migration: **100 tests PASS**. Không kiểm tra hình ảnh bằng browser vì browser bị tắt trong Work settings; client được kiểm chứng bằng DOM/component tests và API integration.
+
+
+### File thêm/sửa trong nhóm 2
+
+- `client/js/tournament/application-review.js`
+- `client/js/tournament/deadline-policy-editor.js`
+- `client/js/tournament/phase-view.js`
+- `client/js/tournament/registration-policy.js`
+- `client/js/tournament/timeline-registration-model.js`
+- `client/js/tournament/timeline-registration.js`
+- `client/js/tournament/tournament-create-form.js`
+- `client/js/tournament/tournament-create-summary.js`
+- `client/js/ui/toast.js`
+- `client/tests/registration-policy.test.js`
+- `client/tests/timeline-registration.test.js`
+- `client/tournament-applications.html`
+- `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
+- `server/src/main/java/com/rpsbattle/api/controller/TimelineRegistrationController.java`
+- `server/src/main/java/com/rpsbattle/api/controller/TournamentController.java`
+- `server/src/main/java/com/rpsbattle/tournament/OrganizerMetricsService.java`
+- `server/src/main/java/com/rpsbattle/tournament/OwnedTournamentService.java`
+- `server/src/main/java/com/rpsbattle/tournament/TournamentService.java`
+- `server/src/main/java/com/rpsbattle/tournament/domain/Tournament.java`
+- `server/src/main/java/com/rpsbattle/tournament/persistence/TournamentDetails.java`
+- `server/src/main/java/com/rpsbattle/tournament/registration/RegistrationEligibilityService.java`
+- `server/src/main/java/com/rpsbattle/tournament/registration/RegistrationPolicy.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistration.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationStore.java`
+- `server/src/main/resources/db/migration/V38__registration_eligibility_reasons.sql`
+- `server/src/test/java/com/rpsbattle/persistence/FlywayMigrationTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/TimelineRegistrationApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationEligibilityServiceTest.java`

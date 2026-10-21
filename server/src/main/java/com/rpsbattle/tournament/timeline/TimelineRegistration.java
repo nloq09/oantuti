@@ -19,5 +19,6 @@ public class TimelineRegistration {
     @Column(name="review_reason",length=500) String reviewReason;
     @Column(name="reviewed_at") Instant reviewedAt;
     @Column(name="reviewed_by") UUID reviewedBy;
+    @Column(name="eligibility_reasons",nullable=false,length=500) String eligibilityReasons="";
     protected TimelineRegistration() {}
 }
