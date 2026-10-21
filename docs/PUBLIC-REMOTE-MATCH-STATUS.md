@@ -44,3 +44,11 @@ Nếu monitor lỗi, trạng thái remote công khai vẫn cho phép theo dõi q
 Khi tải lịch sử attempt trả UNAUTHENTICATED, TOURNAMENT_FORBIDDEN hoặc ACCOUNT_DISABLED, monitor xóa ngay dữ liệu riêng, vô hiệu bộ lọc/nút cập nhật và dừng request đang chờ. Phản hồi cũ đến sau không được khôi phục dữ liệu. Lỗi mạng thông thường vẫn giữ dữ liệu cũ và cho thử lại.
 
 Kiểm chứng: PASS 251 client tests (7 ca mới, trong đó ca mất quyền kiểm tra cả ba mã lỗi); PASS 73 module syntax, diff check, bootJar và native PostgreSQL HTTP/compact WebSocket smoke đối chiếu 51 asset. Cập nhật fixture hành trình remote với assignment/participant ID thật thay vì execution không có danh tính. Bản này chỉ đổi client và tài liệu; không thay backend, schema hoặc protocol bot. Chưa có kiểm tra screenshot/browser click mới; giới hạn browser như ghi ở trên vẫn còn.
+
+## Phục hồi lỗi tải trang và phân trang khi chi tiết đang mở
+
+Khi reader của trang người chơi gặp lỗi và thay nội dung bằng màn hình lỗi, nó ghi nhận cần render lại. Snapshot hợp lệ tiếp theo phục hồi giao diện dù cùng revision; phản hồi lỗi đã bị thay thế không được làm hỏng màn hình mới. Snapshot revision cũ không được dùng để tiêu thụ trạng thái chờ phục hồi.
+
+Match Monitor tách trang yêu cầu khỏi trang đã hiển thị. Bấm Trước/Sau là yêu cầu điều hướng rõ ràng, được thay danh sách dù chi tiết cũ đang mở; polling nền vẫn giữ focus/chi tiết như trước. Điều hướng hủy history đang tải và khóa hai nút phân trang trong lúc chuyển trang. Nếu request lỗi, nội dung và nhãn trang giữ nguyên; lần thử lại tính từ trang đang nhìn, tránh bỏ qua trang. Polling thử lại cũng có thể hoàn tất lần điều hướng bị gián đoạn. Bộ lọc mới đưa cả trạng thái phân trang về đầu.
+
+PASS 259 client tests, gồm 8 ca hồi quy mới cho phục hồi cùng revision, lỗi ban đầu/lỗi liên tiếp, bỏ lỗi đã lỗi thời, từ chối revision cũ, chuyển hai chiều khi chi tiết mở, retry không nhảy trang, hủy history/chống click lặp và retry nền. Các ca lỗi đã được chạy trước bản sửa để xác nhận tái hiện. Test reader thực thi hàm đọc thật của trang với transport/render được tiêm vào, không sao chép logic production. PASS cú pháp 73 module, diff check, bootJar và native PostgreSQL HTTP/compact WebSocket smoke đối chiếu 51 asset. Không đổi server Java/schema; kiểm tra trực quan bằng browser vẫn chưa thực hiện.

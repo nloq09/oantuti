@@ -39,3 +39,25 @@ test('attempt history authorization failure immediately clears the monitor and c
   }finally{monitor.stop();}
  }
 });
+
+test('deliberate pagination replaces opened details and keeps displayed rows and page label together',async()=>{
+ const root=harness(),pages=[];globalThis.fetch=async url=>{const page=Number(new URL(url,'http://localhost').searchParams.get('page'));pages.push(page);return{ok:true,json:async()=>({...snapshot,total:60,items:[{...m,id:'page-'+page}]})};};const monitor=mountMatchMonitor(root,t);
+ try{await tick();descendants(root).find(n=>n.tag==='details').open=true;descendants(root).find(n=>n.textContent==='Sau →').onclick();await tick();assert.match(text(root),/Match #page-1/);assert.doesNotMatch(text(root),/Match #page-0/);assert.match(text(root),/Trang 2 · 60/);descendants(root).find(n=>n.tag==='details').open=true;descendants(root).find(n=>n.textContent==='← Trước').onclick();await tick();assert.match(text(root),/Match #page-0/);assert.match(text(root),/Trang 1 · 60/);assert.deepEqual(pages,[0,1,0]);
+ }finally{monitor.stop();}
+});
+test('a failed page change retries the next visible page instead of skipping over it',async()=>{
+ const root=harness(),pages=[];let fail=false;globalThis.fetch=async url=>{const page=Number(new URL(url,'http://localhost').searchParams.get('page'));pages.push(page);if(fail)throw Error('network');return{ok:true,json:async()=>({...snapshot,total:60,items:[{...m,id:'page-'+page}]})};};const monitor=mountMatchMonitor(root,t);
+ try{await tick();fail=true;descendants(root).find(n=>n.textContent==='Sau →').onclick();await tick();assert.match(text(root),/Match #page-0/);assert.match(text(root),/Trang 1 · 60/);fail=false;descendants(root).find(n=>n.textContent==='Sau →').onclick();await tick();assert.deepEqual(pages,[0,1,1]);assert.match(text(root),/Match #page-1/);assert.match(text(root),/Trang 2 · 60/);
+ }finally{monitor.stop();}
+});
+
+test('pagination aborts old history and prevents repeated clicks from skipping a pending page',async()=>{
+ const root=harness();let finishPage,finishHistory,historySignal;const pages=[];globalThis.fetch=async(url,options)=>{if(url.endsWith('/attempts')){historySignal=options.signal;return new Promise(resolve=>finishHistory=resolve);}const page=Number(new URL(url,'http://localhost').searchParams.get('page'));pages.push(page);if(page===1)return new Promise(resolve=>finishPage=resolve);return{ok:true,json:async()=>({...snapshot,total:60})};};const monitor=mountMatchMonitor(root,t);
+ try{await tick();descendants(root).find(n=>n.tag==='details').open=true;const history=descendants(root).find(n=>n.textContent==='Xem lịch sử các lần nhận việc').onclick();await tick();const next=descendants(root).find(n=>n.textContent==='Sau →');next.onclick();assert.equal(historySignal.aborted,true);assert.equal(next.disabled,true);next.onclick();await tick();assert.deepEqual(pages,[0,1]);finishPage({ok:true,json:async()=>({...snapshot,total:60,items:[{...m,id:'new-page'}]})});await tick();assert.match(text(root),/Match #new-page/);assert.match(text(root),/Trang 2 · 60/);assert.equal(next.disabled,false);finishHistory({ok:true,json:async()=>[{executionId:'discarded-history'}]});await history;assert.doesNotMatch(text(root),/discarded-history/);
+ }finally{monitor.stop();}
+});
+test('background retry after a failed page change can replace the old expanded detail',async()=>{
+ const root=harness();let fail=false;globalThis.fetch=async url=>{const page=Number(new URL(url,'http://localhost').searchParams.get('page'));if(fail)throw Error('network');return{ok:true,json:async()=>({...snapshot,total:60,items:[{...m,id:'page-'+page}]})};};const monitor=mountMatchMonitor(root,t);
+ try{await tick();descendants(root).find(n=>n.tag==='details').open=true;fail=true;descendants(root).find(n=>n.textContent==='Sau →').onclick();await tick();assert.match(text(root),/Match #page-0/);fail=false;await monitor.refresh();assert.match(text(root),/Match #page-1/);assert.match(text(root),/Trang 2 · 60/);
+ }finally{monitor.stop();}
+});
