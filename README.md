@@ -74,6 +74,8 @@ Nhóm 8 nối trạng thái execution vào thẻ **Trận của tôi** trên det
 
 Nhóm 9 thống nhất model CTA/route giữa hub, progression và player; card discovery và thông báo lịch sử mở trang giải để lấy quyền hiện tại, không đoán quyền coding/check-in. Các trang tournament dùng refresh queue chung có coalescing, abort/generation guard, dừng khi ẩn tab và phục hồi BFCache; WebSocket compact chỉ invalidation rồi tải HTTP. Giữ bộ lọc, form đang nhập và các kiểm soát mutation hiện có. [Luồng, file và kết quả kiểm chứng](docs/CHANG-12-NHOM-9-NAVIGATION-REFRESH.md).
 
+Nhóm 10 bỏ ô hẹn công bố chưa có tác dụng; kết quả hiển thị khi giải kết thúc theo read model server. Cải thiện bố cục màn hình nhỏ, vùng bảng cuộn và focus khi refresh; regression PASS 218 client tests, 152 ca backend và smoke HTTP/WebSocket trên PostgreSQL. Đã triển khai code đủ 10 nhóm; kiểm tra trực quan và browser click E2E còn chờ bật quyền trình duyệt. [Quyết định công bố, file và kết quả kiểm chứng](docs/CHANG-12-NHOM-10-RESULT-RESPONSIVE-REGRESSION.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.

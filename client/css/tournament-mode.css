@@ -9,3 +9,18 @@
 
 .my-match-card{padding:18px 0;border-top:1px solid #c6a26666;display:grid;gap:12px}.my-match-card>small,.monitor-detail small{display:block;overflow-wrap:anywhere;opacity:.8}.match-versus{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:18px}.match-identity{min-width:0;overflow-wrap:anywhere}.match-identity p{margin:6px 0}.match-execution-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}.match-execution-facts div{min-width:0;overflow-wrap:anywhere}.match-execution-facts dt{font-size:.85rem;opacity:.8}.match-execution-facts dd{margin:4px 0;font-weight:600}.execution-badge{white-space:normal;display:inline-block}.monitor-match-card{margin:16px 0;min-width:0}.monitor-detail{margin-top:14px}.monitor-detail summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.monitor-detail p{overflow-wrap:anywhere}.execution-badge[data-execution-state=ERROR],.execution-badge[data-execution-state=RECOVERING]{border-color:#ed9c8c}.execution-badge[data-execution-state=FINISHED]{border-color:#81c59b}
 @media(max-width:600px){.match-versus{grid-template-columns:1fr;gap:8px}.match-versus>span{font-size:.8rem;opacity:.8}.match-execution-facts{grid-template-columns:minmax(0,1fr)}.monitor-match-card h3{font-size:1.1rem}}
+
+/* Keep wide data inside named scroll regions rather than widening the page. */
+.tournament-page .table-scroll,.tournament-page .bracket-viewport{min-width:0;overscroll-behavior-x:contain;scrollbar-gutter:stable}
+.tournament-page .panel,.tournament-page .tournament-grid>*,.tournament-page fieldset,.tournament-page .create-timeline-grid>*{min-width:0}
+.tournament-page input,.tournament-page select,.tournament-page textarea{min-width:0;max-width:100%;box-sizing:border-box}
+.tournament-page .status-badge,.tournament-page .tournament-podium article{max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;white-space:normal}
+.tournament-page .tournament-results p,.tournament-page .player-next-action p{overflow-wrap:anywhere}
+@media(max-width:480px){
+ .tournament-page{width:calc(100% - 24px)}
+ .tournament-page .stats-grid,.tournament-page .organizer-metrics-grid{grid-template-columns:minmax(0,1fr)}
+ .tournament-page .panel,.tournament-page fieldset{padding:12px}
+ .tournament-page .organizer-menu nav{grid-template-columns:minmax(0,1fr)}
+ .tournament-page .actions>.button,.tournament-page .actions>button{white-space:normal;overflow-wrap:anywhere}
+ .tournament-page .tournament-podium article{flex-basis:100%}
+}

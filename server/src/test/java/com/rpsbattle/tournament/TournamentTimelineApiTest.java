@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.*;
 
 class TournamentTimelineApiTest extends StageThreeWebFixture {
     @Autowired TournamentRepository repository;
+    @Autowired OwnedTournamentService ownedTournaments;
     @Test void fullCreateFlowKeepsDraftAndAlignedBotPolicyUntilOwnerOpensRegistration()throws Exception{
         loginAccount();var schedule=TournamentTimelineTest.timeline();
         var t=request("/api/tournaments","POST",Map.of("name","Full timeline create","format","SINGLE_ELIMINATION","participantPolicy","BOT_ONLY","checkInRequired",true,"maxParticipants",64,"maxConcurrentMatches",2,"botPolicy",Map.of("submissionMode","BOTH","allowedLanguages",List.of("PYTHON","CPP"),"submissionOpenAt",schedule.codingOpenAt().toString(),"submissionDeadline",schedule.codingCloseAt().toString(),"deadlineBehavior","AUTO_SUBMIT_LATEST_READY","lockAtDeadline",true)),201);
@@ -33,5 +34,30 @@ class TournamentTimelineApiTest extends StageThreeWebFixture {
         var t=tournaments.create("Legacy phase",com.rpsbattle.tournament.domain.TournamentFormat.ROUND_ROBIN);long revision=t.revision;
         var response=accountHttp.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://localhost:"+port+"/api/tournaments/"+t.id+"/timeline")).GET().build(),java.net.http.HttpResponse.BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(200);assertThat(response.headers().firstValue("Cache-Control")).contains("no-store");assertThat(json.readTree(response.body()).path("timelineConfigured").asBoolean()).isFalse();assertThat(t.revision).isEqualTo(revision);
+    }
+    @Test void legacyPublicationMetadataNeverDelaysCompletedResultsAcrossPublicReadModels()throws Exception{
+        loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Immediate results compatibility","participantPolicy","HUMAN_ONLY"),201);
+        String base="/api/tournaments/"+created.path("id").asText();var t=tournaments.find(created.path("id").asText());
+        var a=new com.rpsbattle.tournament.domain.TournamentParticipant(UUID.randomUUID().toString(),null,null,"Winner",1,account.id().value());
+        var runner=registration.register("result_"+UUID.randomUUID().toString().substring(0,8),UUID.randomUUID()+"@example.invalid","Tournament Test Password","Runner");
+        var b=new com.rpsbattle.tournament.domain.TournamentParticipant(UUID.randomUUID().toString(),null,null,"Runner",2,runner.id().value());
+        var match=new com.rpsbattle.tournament.domain.TournamentMatch(UUID.randomUUID().toString(),t.id,a,b);
+        var schedule=TournamentTimelineTest.timeline();var future=Instant.now().plusSeconds(86400);
+        ownedTournaments.submissionMutation(t,com.rpsbattle.auth.AuthService.sessionAuthentication(account),()->{
+            t.timeline=new com.rpsbattle.tournament.domain.TournamentTimeline(schedule.registrationOpenAt(),schedule.registrationCloseAt(),schedule.codingOpenAt(),schedule.codingCloseAt(),schedule.validationStartAt(),schedule.validationDeadline(),schedule.checkInOpenAt(),schedule.checkInCloseAt(),schedule.tournamentStartAt(),schedule.estimatedEndAt(),future);
+            t.participants.addAll(List.of(a,b));t.matches.add(match);t.status=com.rpsbattle.tournament.domain.TournamentStatus.RUNNING;match.status=com.rpsbattle.tournament.domain.TournamentMatch.Status.RUNNING;tournaments.changed(t);
+        });
+        assertThat(request(base+"/summary","GET",null,200).path("champion").isNull()).isTrue();
+        ownedTournaments.submissionMutation(t,com.rpsbattle.auth.AuthService.sessionAuthentication(account),()->{
+            match.status=com.rpsbattle.tournament.domain.TournamentMatch.Status.FINISHED;match.winnerParticipantId=a.participantId();match.finishedAt=Instant.now();t.status=com.rpsbattle.tournament.domain.TournamentStatus.FINISHED;t.finishedAt=match.finishedAt;tournaments.changed(t);
+        });
+        request("/api/auth/logout","POST",Map.of(),200);
+        for(String suffix:List.of("","/summary","/report")){
+            var view=request(base+suffix,"GET",null,200);
+            assertThat(view.path("champion").path("participantId").asText()).isEqualTo(a.participantId());
+        }
+        var summary=request(base+"/summary","GET",null,200);assertThat(summary.path("timeline").path("resultPublishAt").asText()).isEqualTo(future.toString());
+        assertThat(summary.path("ranking").get(0).path("wins").asInt()).isEqualTo(1);
+        request(base+"/me","GET",null,401);request(base+"/organizer-metrics","GET",null,401);
     }
 }

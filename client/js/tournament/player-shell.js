@@ -9,9 +9,9 @@ export function renderPlayerNextActionCard(root,action,commands={}){
  const card=node('section',undefined,'panel player-next-action');card.dataset.nextAction=action.type;
  card.append(node('h2','Việc của bạn'),node('h3',action.label),node('p',action.description));
  if(action.deadline){const timer=node('p');timer.dataset[action.command==='READY_CHECK'?'readyDeadline':'deadline']=action.deadline;card.append(timer);}
- if(action.enabled&&action.href){const cta=link(action.label,action.href);cta.className='button primary';card.append(cta);}
+ if(action.enabled&&action.href){const cta=link(action.label,action.href);cta.className='button primary';cta.id='player-primary-action-'+action.type;card.append(cta);}
  else if(action.enabled&&commands[action.command]){
-  const button=node('button',action.label,'primary'),notice=node('p');notice.setAttribute('role','status');
+  const button=node('button',action.label,'primary'),notice=node('p');button.id='player-primary-action-'+action.type;notice.setAttribute('role','status');
   button.onclick=async()=>{if(button.disabled)return;button.disabled=true;card.dataset.submitting='true';try{await commands[action.command](action.payload);}catch(error){notice.textContent=errorText(error.message);}finally{delete card.dataset.submitting;button.disabled=false;}};
   card.append(button,notice);
  }else if(action.reasonDisabled)card.append(node('small',action.reasonDisabled,'next-action-reason'));
