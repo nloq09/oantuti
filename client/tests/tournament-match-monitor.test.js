@@ -20,3 +20,14 @@ test('background refresh preserves keyboard reader and pager while a deliberate 
  try{await tick();const pager=descendants(root).find(n=>n.textContent==='Sau →'),summary=descendants(root).find(n=>n.tag==='summary');document.activeElement=summary;data={...data,items:[{...m,executionState:'RUNNING_REMOTE'}]};monitor.refresh();await tick();assert.ok(descendants(root).includes(summary));assert.ok(descendants(root).includes(pager));assert.match(text(root),/giữ vị trí bàn phím/);document.activeElement=null;monitor.refresh();await tick();assert.match(text(root),/Trận đang chạy trên máy/);assert.ok(descendants(root).includes(pager));const select=descendants(root).find(n=>n.tag==='select');document.activeElement=descendants(root).find(n=>n.tag==='summary');select.value='RUNNING';select.onchange();await tick();assert.match(text(root),/Trận đang chạy trên máy/);
  }finally{monitor.stop();document.activeElement=null;}
 });
+
+test('stopping a monitor aborts attempt history and ignores its late response even before DOM removal',async()=>{
+ const root=harness();let pending,signal;globalThis.fetch=async(path,options)=>{if(path.endsWith('/attempts')){signal=options.signal;return new Promise(resolve=>pending=resolve);}return{ok:true,json:async()=>snapshot};};const monitor=mountMatchMonitor(root,t);
+ try{await tick();const button=descendants(root).find(n=>n.textContent==='Xem lịch sử các lần nhận việc'),history=button.onclick();await tick();assert.equal(signal.aborted,false);monitor.stop();assert.equal(signal.aborted,true);pending({ok:true,json:async()=>[{executionId:'obsolete-execution'}]});await history;assert.doesNotMatch(text(root),/obsolete-execution/);
+ }finally{monitor.stop();}
+});
+test('changing monitor filters cancels old attempt history without replacing the new results',async()=>{
+ const root=harness();let pending,signal;globalThis.fetch=async(path,options)=>{if(path.endsWith('/attempts')){signal=options.signal;return new Promise(resolve=>pending=resolve);}return{ok:true,json:async()=>snapshot};};const monitor=mountMatchMonitor(root,t);
+ try{await tick();const button=descendants(root).find(n=>n.textContent==='Xem lịch sử các lần nhận việc'),history=button.onclick();await tick();const select=descendants(root).find(n=>n.tag==='select');select.value='ERROR';select.onchange();await tick();assert.equal(signal.aborted,true);pending({ok:true,json:async()=>[{executionId:'old-filter-execution'}]});await history;assert.doesNotMatch(text(root),/old-filter-execution/);assert.equal(select.value,'ERROR');
+ }finally{monitor.stop();}
+});

@@ -21,5 +21,9 @@ export function renderMatchPages(root,t,me,kind='schedule'){
   finally{if(isCurrent())body.setAttribute('aria-busy','false');}
  }
  prev.onclick=()=>{page--;load(true);};next.onclick=()=>{page++;load(true);};for(const control of [mine,round,stage,order])control.onchange=()=>{page=0;lastKey=null;body.replaceChildren();load(true);};
- controller=createTournamentRefresh(read,{tournamentId:t.id,connected:()=>root.isConnected});return{refresh:load,stop:()=>controller.dispose()};
+ controller=createTournamentRefresh(read,{tournamentId:t.id,connected:()=>root.isConnected});return{refresh:load,stop:()=>controller.dispose(),update(next,nextMe){
+  const changed=next.revision!==t.revision;
+  for(const [select,before,after,label]of [[round,t.rounds,next.rounds,'Vòng '],[stage,t.stages,next.stages,'Giai đoạn ']])if(readSnapshotKey(before.map(r=>r.number))!==readSnapshotKey(after.map(r=>r.number))){const value=select.value;select.replaceChildren(new Option(select===round?'Tất cả vòng':'Tất cả giai đoạn',''),...after.map(r=>new Option(label+r.number,r.number)));select.value=after.some(r=>String(r.number)===value)?value:'';if(select.value!==value)page=0;}
+  t=next;me=nextMe;mine.disabled=!me?.states?.length;if(mine.disabled&&mine.checked){mine.checked=false;page=0;lastKey=null;body.replaceChildren();load(true);}else if(changed)load();
+ }};
 }

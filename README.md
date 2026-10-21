@@ -78,7 +78,7 @@ Nhóm 10 bỏ ô hẹn công bố chưa có tác dụng; kết quả hiển th�
 
 Đã sửa các điểm bất hợp lý sau rà soát: xếp đội trước giờ thi, hạn nộp đội hình 5 phút có fallback, giữ giải khi validation bị lỗi hạ tầng, phân nhóm discovery theo timeline, phục hồi/sửa lịch bản nháp, kết quả đang review và tối ưu refresh/xếp hạng. [Hành vi, API và kiểm thử](docs/TOURNAMENT-FLOW-REPAIRS.md).
 
-Trạng thái remote đã được đồng bộ sang lịch đấu, lobby, bracket và chi tiết bàn đồng đội; lịch/bracket cập nhật cả khi revision giải không đổi, chỉ mở liên kết live/replay hợp lệ. [Hành vi, dữ liệu công khai và kiểm chứng](docs/PUBLIC-REMOTE-MATCH-STATUS.md).
+Trạng thái remote đã được đồng bộ sang lịch đấu, lobby, bracket và chi tiết bàn đồng đội; lịch/bracket cập nhật cả khi revision giải không đổi, chỉ mở liên kết live/replay hợp lệ. Khi header cập nhật, các tab giữ bộ lọc, zoom và chi tiết đang mở; rời tab sẽ hủy request cũ. [Hành vi, dữ liệu công khai và kiểm chứng](docs/PUBLIC-REMOTE-MATCH-STATUS.md).
 
 ### Bot của người chơi
 

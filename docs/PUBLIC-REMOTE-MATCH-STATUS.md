@@ -26,3 +26,11 @@
 - Chưa kiểm tra bố cục bằng screenshot hoặc browser click E2E: browser bị tắt trong Work settings. DOM/API tests không thay thế kiểm tra trực quan. Không chạy lại trận Docker đầy đủ trong smoke native; các ca remote dùng fixture replay và PostgreSQL Testcontainers.
 
 File chính: `PublicMatchExecutionService`, `TournamentService`, `TournamentMatchPageService`, `RemoteExecutionReadService`; client `match-execution`, `match-pages`, `public-bracket`, `lobby-matches`, `bracket-renderer`, `competition-view`, `player-detail`, `team-view` và các bảng quản lý trận.
+
+## Giữ trạng thái khi màn hình cha cập nhật
+
+Bản tiếp theo bổ sung `player-tab-view`: trang người chơi giữ một khung đọc đang hoạt động cho lịch đấu, replay, bracket hoặc Trận của tôi. Khi header/lobby cập nhật, khung cũ được gắn lại thay vì tạo polling controller mới. Revision mới được truyền xuống view; lịch cập nhật danh sách vòng/giai đoạn mà giữ bộ lọc, bracket giữ zoom và monitor giữ bộ lọc/phân trang. Khi đổi tab, đổi tài khoản/giai đoạn, chuyển về màn hình trước giải, gặp lỗi tải màn hình cha hoặc rời trang thật sự, view cũ được dừng và request đang chờ bị hủy. BFCache vẫn dùng suspend/resume của refresh controller.
+
+Các lần render phải hoãn vì người dùng đang nhập hoặc đang gửi form được ghi nhớ; polling tiếp theo thử render lại sau khi hết chặn, kể cả khi server không tăng revision lần nữa. Lịch sử attempt trong Match Monitor có AbortSignal riêng; đổi bộ lọc, thay danh sách hoặc dừng monitor sẽ hủy việc tải và bỏ phản hồi muộn.
+
+Kiểm chứng bổ sung: PASS 244 client tests, trong đó 9 ca mới kiểm tra reparent màn hình thật bằng DOM harness, giữ filter/zoom/chi tiết đang mở, một controller đang hoạt động, truyền revision mới, abort khi đổi tab/quyền/giai đoạn, hủy trước lần tải đầu và phản hồi history đến muộn. PASS cú pháp 73 module, bootJar, diff check và smoke HTTP/WebSocket cùng đối chiếu 51 asset của bản đóng gói. Không đổi backend hoặc schema trong bản tiếp theo; không chạy lại các suite backend đã qua ở trên. Browser click/screenshot vẫn chưa kiểm tra vì browser bị tắt trong Work settings.
