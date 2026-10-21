@@ -1,3 +1,4 @@
+import {mountMatchMonitor} from './match-monitor.js';
 import {allowsPreuploaded,allowedPolicyBot,renderBotPolicy} from "./bot-policy.js";
 import {mountOrganizerShell} from './organizer-shell.js';
 import {matchFilter,filteredMatches,filteredRegistrations} from './organizer-filters.js';
@@ -34,7 +35,7 @@ if (!account) {
   link.href = loginLink(); link.textContent = "Đăng nhập để đăng ký bot của bạn vào giải."; notice.append(link);
   document.querySelector("#registration").before(notice);
 }
-let organizerShell;
+let organizerShell,matchMonitor;
 let latest = -1,
   busy = false, currentTournament;
 async function action(operation) {
@@ -140,7 +141,11 @@ function render(t) {
     available.value = selected;
   document.querySelector("#add-participant").hidden =
     t.participantPolicy==="HUMAN_ONLY" || !draft || !available.options.length || (t.registrations || []).filter(r => ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)).length >= t.maxParticipants;
+  const monitorParent=document.querySelector('#matches');let monitorRoot=document.querySelector('#organizer-match-monitor');
+  document.querySelector('#organizer-match-filter').hidden=owner;document.querySelector('label[for="organizer-match-filter"]').hidden=owner;
+  if(owner){if(!monitorRoot){monitorRoot=document.createElement('div');monitorRoot.id='organizer-match-monitor';monitorParent.prepend(monitorRoot);matchMonitor=mountMatchMonitor(monitorRoot,t);}else matchMonitor?.update(t);}else{matchMonitor?.stop();monitorRoot?.remove();matchMonitor=null;}
   const matches = document.querySelector("#match-list");
+  matches.hidden=owner;
   matches.replaceChildren();
   const matchFilterControl=document.querySelector('#organizer-match-filter');matchFilterControl.value=matchFilter(new URLSearchParams(location.search).get('filter'));const visibleMatches=filteredMatches(t,matchFilterControl.value);
   if (!visibleMatches.length) {

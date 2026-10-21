@@ -70,6 +70,8 @@ Nhóm 6 bổ sung bảng “Cần xử lý” theo phase với ba mức Thông t
 
 Nhóm 7 bổ sung API read-only trạng thái remote theo giải, lọc/phân trang, thông tin attempt/worker/lease và phân biệt kết quả đang chờ áp dụng. Schema V36 và worker 0.11.0 thêm tín hiệu bắt đầu gameplay sau chuẩn bị sandbox, tách STARTING khỏi RUNNING_REMOTE. Nâng Central trước rồi cập nhật worker; worker cũ vẫn chạy nhưng chưa báo được gameplay. Màn hình My Match/Match Monitor dùng dữ liệu này ở nhóm 8. [API, chuyển trạng thái và kiểm chứng](docs/CHANG-12-NHOM-7-REMOTE-READ-MODEL.md).
 
+Nhóm 8 nối trạng thái execution vào thẻ **Trận của tôi** trên detail/lobby và tab phân trang riêng. Chủ giải có **Match Monitor** với bộ lọc, worker/lease/heartbeat, mốc gameplay/receipt và lịch sử các lần nhận việc. API chỉ cho người chơi đọc trận của mình; monitor/history dành cho chủ giải/admin. Trận remote không có stream sẽ không hiện nút xem trực tiếp; kết quả pending được phân biệt với kết quả đã áp dụng. [API, file thay đổi và kiểm chứng](docs/CHANG-12-NHOM-8-MY-MATCH-MONITOR.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.

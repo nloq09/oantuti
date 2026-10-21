@@ -27,7 +27,7 @@ public class TournamentService {
     private final Map<UUID,String> publicNames=new java.util.concurrent.ConcurrentHashMap<>();
     @org.springframework.beans.factory.annotation.Autowired public void liveRooms(com.rpsbattle.online.OnlineMatchService online){this.online=online;}
     @org.springframework.beans.factory.annotation.Autowired public void users(com.rpsbattle.account.repository.UserRepository users){this.users=users;}
-    private String username(UUID id){if(id==null||users==null)return "—";return publicNames.computeIfAbsent(id,key->users.findById(new com.rpsbattle.account.domain.UserId(key)).map(com.rpsbattle.account.domain.User::username).orElse("Người chơi"));}
+    String username(UUID id){if(id==null||users==null)return "—";return publicNames.computeIfAbsent(id,key->users.findById(new com.rpsbattle.account.domain.UserId(key)).map(com.rpsbattle.account.domain.User::username).orElse("Người chơi"));}
     public Tournament find(String id) { return registry.findById(id).orElseThrow(()->new DemoRequestException("TOURNAMENT_NOT_FOUND")); }
     public List<com.rpsbattle.tournament.ranking.RankingEntry> ranking(Tournament t){return ranking.rank(t);}
     public Tournament create(String name,TournamentFormat format) { return registry.create(name,format); }
