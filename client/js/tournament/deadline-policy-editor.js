@@ -1,9 +1,15 @@
+import {timelineEditor} from './create-timeline-editor.js';
 import {renderTimelineOverrides} from './timeline-overrides.js';
 import {node} from './player-dom.js';
 import {sessionRequest} from '../api/auth-api.js';
 import {errorText} from '../ui/toast.js';
+const rendered=new WeakMap();
 export function renderDeadlinePolicy(root,t,refresh){
- root.replaceChildren();root.hidden=!t.timeline;if(!t.timeline)return;
+ const key=JSON.stringify([t.id,t.revision,t.status,t.timeline,t.participantPolicy,t.participants?.length,t.registrations?.length]);if(rendered.get(root)===key)return;rendered.set(root,key);
+ root.replaceChildren();const editable=(t.participantPolicy||'BOT_ONLY')==='BOT_ONLY'&&t.status==='DRAFT'&&!t.participants?.length&&!t.registrations?.length;
+ root.hidden=!t.timeline&&!editable;if(root.hidden)return;
+ if(editable){const details=node('details'),title=node('summary',t.timeline?'Sửa lịch đầy đủ':'Tiếp tục cấu hình timeline'),form=node('form'),box=node('div'),save=node('button','Lưu timeline'),notice=node('p');notice.setAttribute('role','status');details.open=!t.timeline;details.append(title,form);form.append(box,notice,save);root.append(details);const editor=timelineEditor(box);if(t.timeline)editor.setValue(t.timeline);form.onsubmit=async event=>{event.preventDefault();if(save.disabled)return;let schedule;try{schedule=editor.read();}catch{notice.textContent='Kiểm tra các mốc giờ trong timeline.';return;}save.disabled=true;form.dataset.submitting='true';try{await sessionRequest('/api/tournaments/'+encodeURIComponent(t.id)+'/timeline',{revision:t.revision,timeline:schedule},'PUT');await refresh();}catch(error){notice.textContent=errorText(error.message);}finally{save.disabled=false;delete form.dataset.submitting;}};}
+ if(!t.timeline)return;
  const current=t.timeline.deadlinePolicy||'AUTO_SUBMIT_LATEST_READY';
  const failures={DISQUALIFY:'Loại bài không đạt',USE_LAST_VALID_VERSION:'Thử lại bằng bản hợp lệ trước đó',ALLOW_EMERGENCY_RESUBMISSION:'Chủ giải có thể cấp lượt nộp khẩn cấp'};
  root.append(node('h3','Khi hết giờ lập trình'),node('p',current==='AUTO_SUBMIT_LATEST_READY'?'Tự nộp phiên bản READY mới nhất trước hạn.':'Chỉ giữ bài người chơi đã bấm nộp trước hạn.'),node('p','Bài chưa READY trước hạn không được tự nộp. Hết giờ luôn khóa chỉnh sửa.'));

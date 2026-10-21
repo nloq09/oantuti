@@ -9,6 +9,7 @@ export function attentionItems(t,data){
   add('validation-infra','CRITICAL',data.validation?.infraError,'bài kiểm thử bị lỗi hạ tầng','/tournament-final-validation.html'+base+'&status=INFRA_ERROR');
   add('validation-failed','WARNING',data.validation?.failed,'bài không đạt kiểm thử chính thức','/tournament-final-validation.html'+base+'&status=FAILED');
  }
+ if(t.timelineStartIssue==='VALIDATION_INFRA_BLOCKED')items.push({key:'validation-blocked',severity:'CRITICAL',count:1,text:'Chưa thể bắt đầu: kiểm thử chưa hoàn tất hoặc lỗi hạ tầng. Gia hạn kiểm thử và chạy lại bài lỗi.',href:'/tournament-final-validation.html'+base});
  if(['CHECK_IN_OPEN','READY_TO_START'].includes(data.phase))add('missing-check-in','WARNING',data.checkIn?.missing,'suất đủ điều kiện chưa check-in',local('check-in','MISSING'));
  if(['RUNNING','PAUSED','RECOVERY_REQUIRED'].includes(data.phase)){
   if(data.phase==='RECOVERY_REQUIRED')items.push({key:'recovery',severity:'CRITICAL',count:1,text:'Giải cần kiểm tra để khôi phục',href:local('settings')});

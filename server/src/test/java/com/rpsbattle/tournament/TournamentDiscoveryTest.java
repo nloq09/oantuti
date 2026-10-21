@@ -12,4 +12,11 @@ import org.junit.jupiter.api.Test;import org.springframework.beans.factory.annot
   assertThat(discovery.discover(auth,"joined",name,null,0,12).get("total")).isEqualTo(0L);
   assertThatThrownBy(()->discovery.discover(auth,"open",null,null,0,51)).isInstanceOf(AuthException.class);
  }
+
+ @Test void timelineCategoriesUseServerWindowsBeforeCountingAndPagination(){
+  var now=Instant.now();String key="phase_"+UUID.randomUUID().toString().substring(0,8);var user=users.save(new User(UserId.random(),key,key+"@example.invalid","unused",key,UserRole.USER,AccountStatus.ACTIVE,now,now,null,0));var auth=AuthService.sessionAuthentication(user);
+  for(int i=0;i<9;i++){var t=owned.create(auth,key+" "+i,TournamentFormat.ROUND_ROBIN,"PUBLIC");var open=now.plusSeconds(i<3?3600:i<6?-30:-120);var times=new TournamentTimeline(open,open.plusSeconds(60),open.plusSeconds(120),open.plusSeconds(180),open.plusSeconds(190),open.plusSeconds(210),open.plusSeconds(240),open.plusSeconds(270),open.plusSeconds(300),open.plusSeconds(360),null);owned.configureTimeline(auth,t.id,t.revision,times);owned.openRegistration(auth,t.id);}
+  assertThat(discovery.discover(null,"open",key,null,0,2).get("total")).isEqualTo(3L);assertThat((List<?>)discovery.discover(null,"open",key,null,1,2).get("items")).hasSize(1);assertThat(discovery.discover(null,"upcoming",key,null,0,2).get("total")).isEqualTo(6L);
+  var fixture=new Tournament(UUID.randomUUID().toString(),"Boundary",TournamentFormat.ROUND_ROBIN,now);fixture.status=TournamentStatus.REGISTRATION;fixture.timeline=TournamentTimelineTest.timeline();assertThat(TournamentDiscoveryService.discoveryCategory(fixture,TournamentTimelineTest.START.minusNanos(1))).isEqualTo("upcoming");assertThat(TournamentDiscoveryService.discoveryCategory(fixture,TournamentTimelineTest.START)).isEqualTo("open");assertThat(TournamentDiscoveryService.discoveryCategory(fixture,TournamentTimelineTest.START.plusSeconds(60))).isEqualTo("upcoming");
+ }
 }

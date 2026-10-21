@@ -47,7 +47,7 @@ public class OwnedTournamentService {
         managedMutation(auth,t,revision,()->{
             if(timeline==null)throw new DemoRequestException("INVALID_TOURNAMENT_TIMELINE");
             if(t.status!=TournamentStatus.DRAFT||!t.registrations.isEmpty()||!t.participants.isEmpty())throw new DemoRequestException("TOURNAMENT_LOCKED");
-            String before=t.timeline==null?null:t.timeline.toString();t.timeline=timeline;
+            String before=t.timeline==null?null:t.timeline.toString();t.timeline=timeline;t.botPolicy=t.botPolicy.withTimeline(timeline);
             TournamentAudit.append(t,"TIMELINE_CONFIGURED",actor(auth),id,null,before,timeline.toString());tournaments.changed(t);
         });
     }
@@ -60,10 +60,19 @@ public class OwnedTournamentService {
             });}catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=check_in_expiry_failed tournamentId={}",t.id);}
         }}
     }
+    @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.coding.FinalValidationStore finalValidations;
+    public void clearValidationHold(Tournament t){var last=t.operations.audit().stream().filter(a->a.type().equals("TIMELINE_START_BLOCKED")||a.type().equals("TIMELINE_START_UNBLOCKED")).reduce((a,b)->b).orElse(null);if(last!=null&&"VALIDATION_INFRA_BLOCKED".equals(last.reason())&&!finalValidations.blocksTimelineStart(t.id))TournamentAudit.append(t,"TIMELINE_START_UNBLOCKED",null,t.id,null,null,null);}
+    boolean holdForValidation(Tournament t){
+        if(!finalValidations.blocksTimelineStart(t.id))return false;
+        var previous=t.operations.audit().stream().filter(a->a.type().equals("TIMELINE_START_BLOCKED")||a.type().equals("TIMELINE_START_UNBLOCKED")).reduce((a,b)->b).orElse(null);
+        if(previous==null||!"VALIDATION_INFRA_BLOCKED".equals(previous.reason()))submissionMutation(t,null,()->{TournamentAudit.append(t,"TIMELINE_START_BLOCKED",null,t.id,"VALIDATION_INFRA_BLOCKED",null,null);tournaments.changed(t);});
+        return true;
+    }
     /** Persist missed check-ins without preparing matches or starting the tournament. */
     public void expireTimelineCheckIns(){
         int remaining=50;for(var t:checkInScan.next(registry.findAll()))synchronized(t){
             if(t.timeline==null||t.startedAt!=null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY).contains(t.status)||clock.instant().isBefore(t.timeline.checkInCloseAt()))continue;
+            if(holdForValidation(t))continue;
             var missed=t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.APPROVED).limit(remaining).toList();
             if(missed.isEmpty())continue;
             try{submissionMutation(t,null,()->{for(var r:missed){int index=t.registrations.indexOf(r);t.registrations.set(index,r.withStatus(TournamentRegistration.Status.NOT_CHECKED_IN,clock.instant()));t.participants.removeIf(p->p.participantId().equals(r.id().toString()));TournamentAudit.append(t,"CHECK_IN_MISSED",null,r.id().toString(),"CHECK_IN_DEADLINE",null,"NOT_CHECKED_IN");}tournaments.changed(t);});}
@@ -202,6 +211,7 @@ public class OwnedTournamentService {
             var now=clock.instant();
             if(t.timeline==null||now.isBefore(t.timeline.tournamentStartAt()))throw new DemoRequestException("TOURNAMENT_START_NOT_DUE");
             if(t.startedAt!=null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY).contains(t.status))return;
+            if(holdForValidation(t))return;
             var fresh=new ArrayList<String>();
             try{submissionMutation(t,auth,()->{
                 for(int i=0;i<t.registrations.size();i++){
@@ -252,7 +262,7 @@ public class OwnedTournamentService {
         var rules=new LinkedHashMap<String,Object>(online==null?Map.of("ruleSet","classic-online-v1","turnSeconds",30L,"maxTurns",200,"pieceQuota",6,"boardRows",9,"boardColumns",9):online.ruleConfiguration());
         if(t.format==TournamentFormat.GROUP_KNOCKOUT){rules.put("groupStages",t.groupPlans);rules.put("groupCount",t.groupPlans.getFirst().groups());rules.put("qualifyPerGroup",t.groupPlans.getFirst().qualifyTopN());rules.put("groupSeeding","SERPENTINE");rules.put("knockoutSeeding","RANK_THEN_GROUP");}
         if(t.format==TournamentFormat.SWISS){rules.put("swissRounds","CEIL_LOG2_ROSTER");rules.put("swissByePoints",3);rules.put("swissRepeatOpponents",false);}
-        if(t.format==TournamentFormat.TEAM_ROUND_ROBIN){rules.put("teamSlots",3);rules.put("teamRosterLimit",5);rules.put("teamScoring","FIXTURE_3_1_0_BOARD_2_1_0");}
+        if(t.format==TournamentFormat.TEAM_ROUND_ROBIN){rules.put("teamLineupSeconds",com.rpsbattle.tournament.scheduler.TeamScheduler.LINEUP_SECONDS);rules.put("teamLineupFallback","ROSTER_ORDER_ACTIVE_FIRST");rules.put("teamSlots",3);rules.put("teamRosterLimit",5);rules.put("teamScoring","FIXTURE_3_1_0_BOARD_2_1_0");}
         rules.put("bestOf",t.bestOf);rules.put("seriesDrawPolicy","MAX_GAMES_THEN_WINS_REMAINING_PIECES_SEED");rules.put("scoring",List.of(3,1,0));rules.put("tieBreakRules",t.tieBreakOrder.stream().map(Enum::name).toList());rules.put("autoAdvanceRounds",t.operations.autoAdvanceRounds());
         t.operations=t.operations.rules(rules);
     }

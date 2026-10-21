@@ -17,7 +17,7 @@ public class TimelineStartService {
  public void process(String only){int remaining=25;for(var t:fairScan.next(registry.findAll())){
   synchronized(t){if(only!=null&&!t.id.equals(only)||t.timeline==null||t.startedAt!=null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY).contains(t.status)||clock.instant().isBefore(t.timeline.tournamentStartAt()))continue;}
   try{owned.startTimeline(t,null);}catch(RuntimeException failure){
-   String reason=Set.of("SERVER_BUSY","BOT_SANDBOX_UNAVAILABLE","ARTIFACT_CHANGED","BOT_ARTIFACT_CHANGED","FINAL_VALIDATION_REQUIRED","BOT_SUBMISSION_NOT_LOCKED","RULE_SNAPSHOT_MISMATCH","INVALID_GROUP_PLAN","INVALID_TEAM_ROSTER").contains(String.valueOf(failure.getMessage()))?failure.getMessage():"START_PREPARATION_FAILED";
+   String reason=Set.of("SERVER_BUSY","BOT_SANDBOX_UNAVAILABLE","ARTIFACT_CHANGED","BOT_ARTIFACT_CHANGED","FINAL_VALIDATION_REQUIRED","BOT_SUBMISSION_NOT_LOCKED","RULE_SNAPSHOT_MISMATCH","INVALID_GROUP_PLAN","INVALID_TEAM_ROSTER","TEAM_ROSTER_INCOMPLETE","TEAM_MEMBER_DUPLICATE").contains(String.valueOf(failure.getMessage()))?failure.getMessage():"START_PREPARATION_FAILED";
    synchronized(t){if(t.startedAt==null&&Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY).contains(t.status))try{
     var last=t.operations.audit().stream().filter(a->a.type().equals("TIMELINE_START_BLOCKED")).reduce((a,b)->b).orElse(null);
     if(last==null||!reason.equals(last.reason()))owned.submissionMutation(t,null,()->{TournamentAudit.append(t,"TIMELINE_START_BLOCKED",null,t.id,reason,null,null);tournaments.changed(t);});
@@ -25,5 +25,5 @@ public class TimelineStartService {
   }
   if(--remaining==0)return;
  }}
- public static String issue(Tournament t){if(t.timeline==null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY,TournamentStatus.CANCELLED).contains(t.status))return null;return t.operations.audit().stream().filter(a->a.type().equals("TIMELINE_START_BLOCKED")||a.type().equals("TOURNAMENT_CANCELLED")).reduce((a,b)->b).map(TournamentAuditEvent::reason).orElse(null);}
+ public static String issue(Tournament t){if(t.timeline==null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY,TournamentStatus.CANCELLED).contains(t.status))return null;return t.operations.audit().stream().filter(a->a.type().equals("TIMELINE_START_BLOCKED")||a.type().equals("TIMELINE_START_UNBLOCKED")||a.type().equals("TOURNAMENT_CANCELLED")).reduce((a,b)->b).map(TournamentAuditEvent::reason).orElse(null);}
 }

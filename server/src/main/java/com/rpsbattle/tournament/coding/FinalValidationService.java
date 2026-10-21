@@ -29,7 +29,7 @@ public class FinalValidationService {
    for(var id:store.unapplied(t.id,Math.min(20,remaining))){owned.submissionMutation(t,null,()->{if(store.fallback(t,id)){TournamentAudit.append(t,"FINAL_VALIDATION_FALLBACK",null,id.toString(),null,null,null);tournaments.changed(t);return;}var applied=store.apply(t,id);if(applied==null)return;
     for(int i=0;i<t.registrations.size();i++){var r=t.registrations.get(i);if(!r.id().equals(applied.registrationId()))continue;t.participants.removeIf(p->p.participantId().equals(r.id().toString()));if(applied.passed()){var execution=bots.registrationExecution(r.botId().toString());var p=new TournamentParticipant(r.id().toString(),r.botId().toString(),execution.token(),r.displayName(),UUID.randomUUID().getMostSignificantBits(),r.userId()).withHash(r.artifactHash());t.participants.add(p);t.registrations.set(i,r.withStatus(TournamentRegistration.Status.APPROVED,clock.instant()));}else if(applied.status().equals("FAILED"))t.registrations.set(i,r.withStatus(TournamentRegistration.Status.REJECTED,clock.instant()));}
     TournamentAudit.append(t,"TIMELINE_BOT_VALIDATION_"+applied.status(),null,store.detail(t.id,id).userId().toString(),null,null,applied.status());
-    TournamentAudit.append(t,"FINAL_VALIDATION_"+applied.status(),null,id.toString(),null,null,applied.status());tournaments.changed(t);
+    TournamentAudit.append(t,"FINAL_VALIDATION_"+applied.status(),null,id.toString(),null,null,applied.status());owned.clearValidationHold(t);tournaments.changed(t);
    });if(--remaining==0)return;}
   }catch(RuntimeException retry){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=final_validation_retry tournamentId={} cause={}",t.id,retry.getClass().getSimpleName());}
  }}

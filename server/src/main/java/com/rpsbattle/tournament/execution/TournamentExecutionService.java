@@ -19,6 +19,7 @@ public class TournamentExecutionService {
     private final OnlineMatchService online;
     private final ReplayRegistry replays;
     private final Duration maxDuration;
+    @org.springframework.beans.factory.annotation.Autowired Clock clock=Clock.systemUTC();
     private com.rpsbattle.tournament.persistence.TournamentPersistenceCoordinator persistence;
     @org.springframework.beans.factory.annotation.Autowired public void persistence(com.rpsbattle.tournament.persistence.TournamentPersistenceCoordinator persistence){this.persistence=persistence;}
     private boolean commit(Tournament t){
@@ -82,7 +83,7 @@ public class TournamentExecutionService {
             changed|=TournamentSeries.advance(t);
             changed|=com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.qualify(t);
             changed|=com.rpsbattle.tournament.scheduler.SwissScheduler.advance(t);
-            changed|=com.rpsbattle.tournament.scheduler.TeamScheduler.advance(t);
+            changed|=com.rpsbattle.tournament.scheduler.TeamScheduler.advance(t,clock.instant());
             if((t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED) && com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t)) {
                 var before=List.copyOf(t.bracket);var next=com.rpsbattle.tournament.scheduler.SingleEliminationScheduler.advance(t);t.matches.addAll(next);
                 changed|=!before.equals(t.bracket)||!next.isEmpty();

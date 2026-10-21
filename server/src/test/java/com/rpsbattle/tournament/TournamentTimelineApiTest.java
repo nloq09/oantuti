@@ -60,4 +60,9 @@ class TournamentTimelineApiTest extends StageThreeWebFixture {
         assertThat(summary.path("ranking").get(0).path("wins").asInt()).isEqualTo(1);
         request(base+"/me","GET",null,401);request(base+"/organizer-metrics","GET",null,401);
     }
+
+    @Test void existingDraftCanRecoverAndEditFullTimelineWithoutRecreatingTournament()throws Exception{
+        loginAccount();var draft=request("/api/tournaments","POST",Map.of("name","Recover timeline draft"),201);String base="/api/tournaments/"+draft.path("id").asText();var schedule=TournamentTimelineTest.timeline();request(base+"/timeline","PUT",Map.of("revision",draft.path("revision").asLong(),"timeline",schedule),200);var t=request(base,"GET",null,200);assertThat(t.path("status").asText()).isEqualTo("DRAFT");assertThat(t.path("botPolicy").path("submissionOpenAt").asText()).isEqualTo(schedule.codingOpenAt().toString());
+        var edited=TournamentTimelineTest.from(new long[]{0,60,120,240,250,270,300,330,360,420,480});request(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",edited),200);var saved=request(base,"GET",null,200);assertThat(saved.path("id").asText()).isEqualTo(draft.path("id").asText());assertThat(saved.path("botPolicy").path("submissionDeadline").asText()).isEqualTo(edited.codingCloseAt().toString());assertThat(saved.path("participants").size()).isZero();assertThat(saved.path("registrations").size()).isZero();
+    }
 }

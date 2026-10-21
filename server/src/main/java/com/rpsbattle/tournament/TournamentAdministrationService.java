@@ -49,7 +49,7 @@ public class TournamentAdministrationService {
                     require(t.status==TournamentStatus.PAUSED||t.status==TournamentStatus.RECOVERY_REQUIRED,"TOURNAMENT_LOCKED");
                     require(t.operations.reviews().isEmpty()&&t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.FAILED),"MATCH_REVIEW_REQUIRED");
                     t.readyWindows.clear();
-                    owned.verifyArtifacts(t);TournamentStateMachine.transition(t,TournamentStatus.RUNNING,Instant.now());
+                    com.rpsbattle.tournament.scheduler.TeamScheduler.resetLineupWindows(t);owned.verifyArtifacts(t);TournamentStateMachine.transition(t,TournamentStatus.RUNNING,Instant.now());
                 }
                 case "next-round" -> {
                     require(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED,"TOURNAMENT_LOCKED");

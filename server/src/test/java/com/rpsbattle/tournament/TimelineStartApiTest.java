@@ -47,4 +47,15 @@ class TimelineStartApiTest extends FinalValidationApiTest {
  @Test void disabledAccountIsExcludedEvenAfterSuccessfulCheckIn()throws Exception{
   var cup=entrants(2,2);var t=tournament(cup.base());var absent=cup.users().get(1);ownedTournaments.timelineUsers.save(absent.withStatus(com.rpsbattle.account.domain.AccountStatus.DISABLED,START.plusSeconds(700)));when(clock.instant()).thenReturn(START.plusSeconds(720));starts.process(t.id);assertThat(t.status).isEqualTo(TournamentStatus.CANCELLED);assertThat(t.participants).hasSize(1);assertThat(t.registrations.stream().filter(r->r.userId().equals(absent.id().value())).findFirst().orElseThrow().status()).isEqualTo(TournamentRegistration.Status.REJECTED);assertThat(t.matches).isEmpty();
  }
+
+ @Test void infrastructureValidationHoldsNoShowAndStartUntilAuditedExtensionAndRetry()throws Exception{
+  var cup=entrants(2,1);var t=tournament(cup.base());var waiting=cup.users().get(1);var owner=account;
+  var validation=jdbc.queryForObject("select id from tournament_final_validations where tournament_id=? and user_id=?",UUID.class,UUID.fromString(t.id),waiting.id().value());
+  jdbc.update("update tournament_final_validations set status='INFRA_ERROR',reason='WORKER_RECOVERY_EXHAUSTED' where id=?",validation);
+  when(clock.instant()).thenReturn(START.plusSeconds(660));ownedTournaments.expireTimelineCheckIns();assertThat(t.registrations.stream().filter(r->r.userId().equals(waiting.id().value())).findFirst().orElseThrow().status()).isEqualTo(TournamentRegistration.Status.APPROVED);
+  when(clock.instant()).thenReturn(START.plusSeconds(720));starts.process(t.id);assertThat(t.status).isEqualTo(TournamentStatus.REGISTRATION);assertThat(t.startedAt).isNull();assertThat(TimelineStartService.issue(t)).isEqualTo("VALIDATION_INFRA_BLOCKED");long revision=t.revision;starts.process(t.id);assertThat(t.revision).isEqualTo(revision);
+  request(cup.base()+"/timeline/override","POST",Map.of("revision",t.revision,"action","EXTEND_VALIDATION","value",START.plusSeconds(900),"reason","Worker outage: reopen validation and shift check-in"),200);
+  assertThat(t.timeline.checkInOpenAt()).isEqualTo(START.plusSeconds(900));request(cup.base()+"/final-validations/"+validation+"/retry","POST",Map.of("revision",t.revision,"reason","Worker recovered"),200);
+  as(waiting);assertThat(finalDone(cup.base()).path("submissionStatus").asText()).isEqualTo("BOT_READY");assertThat(TimelineStartService.issue(t)).isNull();when(clock.instant()).thenReturn(START.plusSeconds(900));request(cup.base()+"/check-in","POST",Map.of(),200);as(owner);when(clock.instant()).thenReturn(START.plusSeconds(1020));starts.process(t.id);assertThat(t.status).isEqualTo(TournamentStatus.RUNNING);assertThat(t.participants).hasSize(2);
+ }
 }

@@ -8,19 +8,19 @@ public class RankingService {
     public RankingService(ScoringRule scoring) { this.scoring=scoring; }
     public List<RankingEntry> rank(Tournament t) {
         synchronized(t) {
+            var totals=new HashMap<String,Totals>();
+            for(var p:t.participants)totals.put(p.participantId(),new Totals());
+            for(var m:TournamentSeries.scored(t))if(m.status==TournamentMatch.Status.FINISHED){
+                add(totals.get(m.participantA.participantId()),m,true);
+                add(totals.get(m.participantB.participantId()),m,false);
+            }
+            if(t.format==TournamentFormat.SWISS)for(var round:t.rounds)for(var id:round.byeParticipantIds()){
+                var total=totals.get(id);if(total!=null){total.played++;total.wins++;}
+            }
             var rows=new ArrayList<RankingEntry>();
-            for(var p:t.participants) {
-                int played=0,wins=0,draws=0,losses=0,pieces=0,moves=0;long nanos=0;
-                for(var m:TournamentSeries.scored(t)) if(m.status==TournamentMatch.Status.FINISHED &&
-                        (m.participantA.participantId().equals(p.participantId())||m.participantB.participantId().equals(p.participantId()))) {
-                    boolean a=m.participantA.participantId().equals(p.participantId());
-                    played++;pieces+=a?m.remainingA:m.remainingB;moves+=a?m.moveCountA:m.moveCountB;nanos+=a?m.moveNanosA:m.moveNanosB;
-                    if("DOUBLE_FORFEIT".equals(m.decisionReason))losses++;else if(m.winnerParticipantId==null) draws++;
-                    else if(m.winnerParticipantId.equals(p.participantId())) wins++; else losses++;
-                }
-                if(t.format==TournamentFormat.SWISS){int byes=(int)t.rounds.stream().filter(round->round.byeParticipantIds().contains(p.participantId())).count();played+=byes;wins+=byes;}
-                rows.add(new RankingEntry(0,p.participantId(),p.displayName(),played,wins,draws,losses,
-                    wins*scoring.pointsForWin()+draws*scoring.pointsForDraw()+losses*scoring.pointsForLoss(),pieces,moves==0?null:nanos/(1_000_000.0*moves)));
+            for(var p:t.participants){var total=totals.get(p.participantId());
+                rows.add(new RankingEntry(0,p.participantId(),p.displayName(),total.played,total.wins,total.draws,total.losses,
+                    total.wins*scoring.pointsForWin()+total.draws*scoring.pointsForDraw()+total.losses*scoring.pointsForLoss(),total.pieces,total.moves==0?null:total.nanos/(1_000_000.0*total.moves)));
             }
             var ordered=TieBreakService.order(t,rows,scoring);
             if(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t)) {
@@ -38,5 +38,11 @@ public class RankingService {
             for(var r:ordered) result.add(new RankingEntry(result.size()+1,r.participantId(),r.displayName(),r.played(),r.wins(),r.draws(),r.losses(),r.points(),r.piecesRemaining(),r.averageMoveMillis()));
             return List.copyOf(result);
         }
+    }
+    private static final class Totals {int played,wins,draws,losses,pieces,moves;long nanos;}
+    private static void add(Totals total,TournamentMatch match,boolean a){
+        if(total==null)return;total.played++;total.pieces+=a?match.remainingA:match.remainingB;total.moves+=a?match.moveCountA:match.moveCountB;total.nanos+=a?match.moveNanosA:match.moveNanosB;
+        String id=a?match.participantA.participantId():match.participantB.participantId();
+        if("DOUBLE_FORFEIT".equals(match.decisionReason))total.losses++;else if(match.winnerParticipantId==null)total.draws++;else if(id.equals(match.winnerParticipantId))total.wins++;else total.losses++;
     }
 }

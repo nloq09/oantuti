@@ -76,6 +76,8 @@ Nhóm 9 thống nhất model CTA/route giữa hub, progression và player; card 
 
 Nhóm 10 bỏ ô hẹn công bố chưa có tác dụng; kết quả hiển thị khi giải kết thúc theo read model server. Cải thiện bố cục màn hình nhỏ, vùng bảng cuộn và focus khi refresh; regression PASS 218 client tests, 152 ca backend và smoke HTTP/WebSocket trên PostgreSQL. Đã triển khai code đủ 10 nhóm; kiểm tra trực quan và browser click E2E còn chờ bật quyền trình duyệt. [Quyết định công bố, file và kết quả kiểm chứng](docs/CHANG-12-NHOM-10-RESULT-RESPONSIVE-REGRESSION.md).
 
+Đã sửa các điểm bất hợp lý sau rà soát: xếp đội trước giờ thi, hạn nộp đội hình 5 phút có fallback, giữ giải khi validation bị lỗi hạ tầng, phân nhóm discovery theo timeline, phục hồi/sửa lịch bản nháp, kết quả đang review và tối ưu refresh/xếp hạng. [Hành vi, API và kiểm thử](docs/TOURNAMENT-FLOW-REPAIRS.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.

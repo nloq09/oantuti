@@ -34,6 +34,7 @@ public record TournamentBotPolicy(BotSubmissionMode submissionMode,Set<String> a
    ||organizerSourceAccess)throw new DemoRequestException("INVALID_BOT_SUBMISSION_POLICY");
  }
  public static TournamentBotPolicy defaults(){return new TournamentBotPolicy(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null);}
+ public TournamentBotPolicy withTimeline(TournamentTimeline timeline){return new TournamentBotPolicy(submissionMode,allowedLanguages,timeline.codingOpenAt(),timeline.codingCloseAt(),maxSubmissionVersions,allowDraftSave,allowPublicTests,allowCustomTestMatch,hiddenTestsEnabled,lockOnSubmit,true,allowResubmitBeforeDeadline,maxSourceBytes,cpuLimit,memoryLimit,turnTimeoutMs,buildTimeoutMs,testTimeoutMs,timeline.deadlinePolicy()==TournamentTimeline.DeadlinePolicy.AUTO_SUBMIT_LATEST_READY?DeadlineBehavior.AUTO_SUBMIT_LATEST_READY:DeadlineBehavior.NO_SUBMISSION,organizerSourceAccess);}
  public void requirePreuploaded(BotLanguage language){
   if(submissionMode==BotSubmissionMode.CODE_IN_PLATFORM_ONLY)throw new DemoRequestException("PLATFORM_CODE_REQUIRED");
   if(!allowedLanguages.contains(language==BotLanguage.JAR?"JAVA":language.name()))throw new DemoRequestException("BOT_LANGUAGE_NOT_ALLOWED");

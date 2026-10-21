@@ -10,12 +10,19 @@ public class TournamentDiscoveryService {
     private final JdbcTemplate db;private final AuthService accounts;private final OwnedTournamentService owned;private final TournamentService tournaments;
     public TournamentDiscoveryService(JdbcTemplate db,AuthService accounts,OwnedTournamentService owned,TournamentService tournaments){this.db=db;this.accounts=accounts;this.owned=owned;this.tournaments=tournaments;}
     @org.springframework.beans.factory.annotation.Autowired java.time.Clock clock;
+    @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.registry.TournamentRegistry registry;
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.timeline.TimelineRegistrationStore applications;
     public Map<String,Object> discover(Authentication auth,String category,String search,String format,int page,int size){
         if(page<0||page>10000||size<1||size>50)throw new AuthException("INVALID_PAGE",400);
         String condition=switch(category){case "live"->"t.status in ('RUNNING','PAUSED','RECOVERY_REQUIRED')";case "open"->"t.status='REGISTRATION'";case "upcoming"->"t.status in ('DRAFT','CHECK_IN','READY')";case "finished"->"t.status in ('FINISHED','CANCELLED')";case "joined"->"1=1";default->throw new AuthException("INVALID_FILTER",400);};
         var user=accounts.current(auth);if(category.equals("joined")&&user.isEmpty())throw new AuthException("UNAUTHENTICATED",401);owned.flush();
-        var args=new ArrayList<Object>();String where=" from tournaments t join users u on u.id=t.owner_user_id where t.visibility='PUBLIC' and "+condition;
+        var args=new ArrayList<Object>();
+        if(category.equals("open")||category.equals("upcoming")){
+            var ids=new ArrayList<UUID>();var now=clock.instant();
+            for(var cup:registry.findAll())synchronized(cup){if(category.equals(discoveryCategory(cup,now)))ids.add(UUID.fromString(cup.id));}
+            condition=ids.isEmpty()?"1=0":"t.id in ("+String.join(",",Collections.nCopies(ids.size(),"?"))+")";args.addAll(ids);
+        }
+        String where=" from tournaments t join users u on u.id=t.owner_user_id where t.visibility='PUBLIC' and "+condition;
         if(category.equals("joined")){where+=" and (exists(select 1 from tournament_registrations r where r.tournament_id=t.id and r.user_id=?) or exists(select 1 from tournament_timeline_registrations r where r.tournament_id=t.id and r.user_id=? and r.status<>'CANCELLED'))";args.add(user.orElseThrow().id().value());args.add(user.orElseThrow().id().value());}
         if(search!=null&&!search.isBlank()){if(search.length()>80)throw new AuthException("INVALID_FILTER",400);where+=" and lower(t.name) like ? escape '!'";args.add("%"+search.toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_")+"%");}
         if(format!=null&&!format.isBlank()){if(!Set.of("ROUND_ROBIN","SINGLE_ELIMINATION","GROUP_KNOCKOUT","SWISS","TEAM_ROUND_ROBIN").contains(format))throw new AuthException("INVALID_FILTER",400);where+=" and t.format=?";args.add(format);}
@@ -26,5 +33,12 @@ public class TournamentDiscoveryService {
             var cup=tournaments.find(rs.getString("id"));synchronized(cup){var timing=cup.timing;var timeline=cup.timeline;row.put("startTime",timeline!=null?timeline.tournamentStartAt():timing.startTime()!=null?timing.startTime():rs.getTimestamp("started_at")==null?null:rs.getTimestamp("started_at").toInstant());row.put("registrationDeadline",timeline!=null?timeline.registrationCloseAt():timing.registrationDeadline());if(timeline!=null){row.put("phase",TournamentPhaseResolver.resolve(cup.status,timeline,clock.instant(),null,applications.reviewComplete(UUID.fromString(cup.id))).phase());var mine=user.isPresent()?applications.mine(UUID.fromString(cup.id),user.get().id().value()):null;row.put("applicationStatus",mine==null?null:mine.status());}}return row;
         },select.toArray());
         return Map.of("items",items,"page",page,"size",size,"total",total,"serverTime",clock.instant());
+    }
+    static String discoveryCategory(com.rpsbattle.tournament.domain.Tournament t,java.time.Instant now){
+        if(Set.of(com.rpsbattle.tournament.domain.TournamentStatus.RUNNING,com.rpsbattle.tournament.domain.TournamentStatus.PAUSED,com.rpsbattle.tournament.domain.TournamentStatus.RECOVERY_REQUIRED).contains(t.status))return "live";
+        if(Set.of(com.rpsbattle.tournament.domain.TournamentStatus.FINISHED,com.rpsbattle.tournament.domain.TournamentStatus.CANCELLED).contains(t.status))return "finished";
+        if(t.status==com.rpsbattle.tournament.domain.TournamentStatus.DRAFT)return "upcoming";
+        if(t.timeline!=null)return t.status==com.rpsbattle.tournament.domain.TournamentStatus.REGISTRATION&&!now.isBefore(t.timeline.registrationOpenAt())&&now.isBefore(t.timeline.registrationCloseAt())?"open":"upcoming";
+        return t.status==com.rpsbattle.tournament.domain.TournamentStatus.REGISTRATION?"open":"upcoming";
     }
 }
