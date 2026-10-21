@@ -10,3 +10,13 @@ test('existing bot language source/version limits and group stages remain valida
 test('manual timeline rejects invalid or reversed dates while optional dates remain optional',()=>{
  assert.equal(validateCreateStep(3,{...data,timing:{}}),true);assert.throws(()=>validateCreateStep(3,{...data,timing:{registrationDeadline:'2026-02-30T10:00'}}));assert.throws(()=>validateCreateStep(3,{...data,timing:{checkInDeadline:'2026-10-21T12:00',startTime:'2026-10-21T11:00'}}));
 });
+test('manual dates reject equal registration/check-in but allow check-in at start and optional middle',()=>{
+ const r='2026-10-21T10:00',later='2026-10-21T11:00';
+ assert.throws(()=>validateCreateStep(3,{...data,timing:{registrationDeadline:r,checkInDeadline:r}}));
+ assert.equal(validateCreateStep(3,{...data,timing:{registrationDeadline:r,checkInDeadline:later,startTime:later}}),true);
+ assert.equal(validateCreateStep(3,{...data,timing:{registrationDeadline:r,startTime:r}}),true);
+ assert.throws(()=>validateCreateStep(3,{...data,timing:{registrationDeadline:later,startTime:r}}));
+});
+test('human-only Swiss and knockout capacity does not require a bot policy',()=>{
+ for(const format of ['SWISS','SINGLE_ELIMINATION'])assert.equal(validateCreateStep(1,{...data,format,participantPolicy:'HUMAN_ONLY',botPolicy:null,maxParticipants:4000}),true);
+});

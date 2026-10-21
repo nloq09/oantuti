@@ -49,6 +49,7 @@ const errors = {
   CONTROLLER_NOT_ALLOWED: "Giải này không cho phép cách thi đấu đã chọn.",
   RULES_ACCEPTANCE_REQUIRED: "Bạn cần xác nhận đã đọc và đồng ý với luật giải.",
   REGISTRATION_CLOSED: "Đã hết hạn đăng ký theo giờ server.",
+  TOURNAMENT_SCHEDULE_EXPIRED: "Hạn đăng ký đã qua. Hãy cập nhật lịch trước khi mở đăng ký.",
   INVALID_TOURNAMENT_TIMING: "Hạn đăng ký, check-in và giờ dự kiến chưa đúng thứ tự.",
   INVALID_CONTROLLER: "Cách điều khiển người/bot không hợp lệ.",
   READY_WINDOW_CHANGED: "Cửa sổ sẵn sàng đã thay đổi. Hãy cập nhật giải rồi xác nhận lại.",
@@ -92,7 +93,7 @@ const errors = {
   TOURNAMENT_NOT_FOUND: "Không tìm thấy giải đấu.",
   TOURNAMENT_LOCKED:
     "Giải đấu đã bắt đầu hoặc kết thúc; không thể sửa danh sách bot.",
-  NOT_ENOUGH_BOTS: "Cần ít nhất 2 bot để bắt đầu giải.",
+  NOT_ENOUGH_BOTS: "Cần ít nhất 2 người chơi hoặc bot hợp lệ để bắt đầu giải.",
   DUPLICATE_PARTICIPANT: "Bot này đã tham gia giải.",
   PARTICIPANT_LIMIT: "Mỗi giải có tối đa 10 bot.",
   INVALID_TOURNAMENT_NAME: "Tên giải cần từ 1 đến 80 ký tự.",

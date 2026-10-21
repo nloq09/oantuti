@@ -38,7 +38,7 @@ Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
 ### Giải đấu, xếp hạng và khán giả — Chặng 3
 
-- Home → **Giải đấu**: tạo giải Vòng tròn hoặc Loại trực tiếp ngay cả khi chưa có bot; chia sẻ mã/link để người khác tham gia và đăng ký bot đã lưu hoặc tải bot mới ngay trong giải. Giải có enrollment hỗ trợ tối đa 4.000 người với Loại trực tiếp/Swiss; các thể thức còn lại tối đa 32. Số trận Docker chạy đồng thời vẫn có giới hạn. Vòng tròn chia vòng/BYE, tổng `n × (n − 1) / 2` trận; loại trực tiếp có bracket/BYE và `n − 1` trận thật. Chủ giải đặt giới hạn chạy đồng thời và thứ tự tie-break trước READY.
+- Home → **Giải đấu**: tạo giải Vòng tròn hoặc Loại trực tiếp ngay cả khi chưa có bot; chia sẻ mã/link để người khác tham gia và đăng ký bot đã lưu hoặc tải bot mới ngay trong giải. Loại trực tiếp/Swiss hỗ trợ tối đa 4.000 người hoặc bot, kể cả giải HUMAN_ONLY không bật coding; các thể thức còn lại tối đa 32. Số trận Docker chạy đồng thời vẫn có giới hạn. Vòng tròn chia vòng/BYE, tổng `n × (n − 1) / 2` trận; loại trực tiếp có bracket/BYE và `n − 1` trận thật. Chủ giải đặt giới hạn chạy đồng thời và thứ tự tie-break trước READY.
 - Bản nháp cho phép thêm/gỡ bot; Bắt đầu kiểm tra artifact nội bộ và Docker rồi khóa danh sách.
 - Server tự cấu hình hai seat trong chế độ `HUMAN_VS_HUMAN`, xếp quân, sẵn sàng và chạy qua Match/GameEngine hiện có. Không tạo game mode hoặc engine mới.
 - Hàng đợi giới hạn mặc định 4 trận đồng thời trên toàn bộ giải đấu trong một server, có thêm giới hạn riêng mỗi giải. Vòng tròn tiếp tục khi một trận lỗi hạ tầng; loại trực tiếp chuyển RECOVERY_REQUIRED để không tự gán người thắng. Có thể hủy giải.

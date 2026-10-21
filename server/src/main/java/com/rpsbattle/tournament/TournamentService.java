@@ -12,6 +12,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 @Service
 public class TournamentService {
+    private java.time.Clock clock=java.time.Clock.systemUTC();
+    @org.springframework.beans.factory.annotation.Autowired public void clock(java.time.Clock clock){this.clock=clock;}
     private com.rpsbattle.tournament.coding.SubmissionStore submissions;
     @org.springframework.beans.factory.annotation.Autowired public void submissionStore(com.rpsbattle.tournament.coding.SubmissionStore s){submissions=s;}
     private final TournamentRegistry registry;
@@ -118,6 +120,7 @@ public class TournamentService {
         data.put("statusChangedAt",t.statusChangedAt);
         data.put("seedingStrategy",t.seedingStrategy);data.put("seedingSeed",Long.toString(t.seedingSeed));
         data.put("timing",t.timing);data.put("participantPolicy",t.participantPolicy);data.put("botPolicy",t.botPolicy);data.put("submissionValidationRequired",submissions!=null&&submissions.enabled(t.id));data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
+        data.put("acceptingRegistrations",t.status==TournamentStatus.REGISTRATION&&(t.timeline!=null?!clock.instant().isBefore(t.timeline.registrationOpenAt())&&clock.instant().isBefore(t.timeline.registrationCloseAt()):t.timing.registrationDeadline()==null||clock.instant().isBefore(t.timing.registrationDeadline())));
         data.put("groups",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.view(t));data.put("groupStage",t.groupStage);data.put("groupPlans",t.groupPlans);data.put("groupHistory",List.copyOf(t.groupHistory));
         data.put("swiss",t.swiss);data.put("teamCompetition",t.format==TournamentFormat.TEAM_ROUND_ROBIN?com.rpsbattle.tournament.scheduler.TeamScheduler.view(t):null);
         data.put("bestOf",t.bestOf);data.put("series",TournamentSeries.roots(t).stream().filter(m->!compact||selected.stream().anyMatch(game->game.seriesId.equals(m.id))).map(m->TournamentSeries.view(t,m)).toList());

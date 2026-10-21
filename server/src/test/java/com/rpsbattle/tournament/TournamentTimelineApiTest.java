@@ -26,7 +26,8 @@ class TournamentTimelineApiTest extends StageThreeWebFixture {
         var saved=request(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",TournamentTimelineTest.timeline()),200);
         assertThat(saved.path("phase").asText()).isEqualTo("DRAFT");assertThat(saved.path("timelineConfigured").asBoolean()).isTrue();assertThat(Instant.parse(saved.path("serverNow").asText())).isBetween(Instant.now().minusSeconds(15),Instant.now().plusSeconds(15));
         var persisted=repository.all().stream().filter(row->row.id().toString().equals(id)).findFirst().orElseThrow();assertThat(persisted.details().timeline()).isEqualTo(TournamentTimelineTest.timeline());assertThat(persisted.details().operations().audit()).anyMatch(event->event.type().equals("TIMELINE_CONFIGURED")&&event.actor().equals(account.id().value())&&event.afterValue().contains("codingCloseAt"));
-        request(base+"/open-registration","POST",Map.of(),200);request(base+"/timeline","PUT",Map.of("revision",request(base,"GET",null,200).path("revision").asLong(),"timeline",TournamentTimelineTest.timeline()),400);
+        try{ownedTournaments.clock(Clock.fixed(TournamentTimelineTest.timeline().registrationOpenAt(),ZoneOffset.UTC));request(base+"/open-registration","POST",Map.of(),200);}finally{ownedTournaments.clock(Clock.systemUTC());}
+        request(base+"/timeline","PUT",Map.of("revision",request(base,"GET",null,200).path("revision").asLong(),"timeline",TournamentTimelineTest.timeline()),400);
         var stranger=registration.register("time_"+UUID.randomUUID().toString().substring(0,8),UUID.randomUUID()+"@example.com","Timeline Test Password","Stranger");request("/api/auth/login","POST",Map.of("username",stranger.username(),"password","Timeline Test Password"),200);
         request(base+"/timeline","PUT",Map.of("revision",saved.path("revision").asLong(),"timeline",TournamentTimelineTest.timeline()),403);
     }

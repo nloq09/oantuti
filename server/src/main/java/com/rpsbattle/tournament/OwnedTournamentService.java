@@ -97,12 +97,13 @@ public class OwnedTournamentService {
     }
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf) {return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,policy,bestOf,null);}
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf,TournamentBotPolicy botPolicy) {
+        format=format==null?TournamentFormat.ROUND_ROBIN:format;
         boolean enroll=botPolicy!=null;int seriesLength=TournamentSeries.validate(bestOf);
         var actor=accounts.requireUser(auth);botPolicy=botPolicy==null?TournamentBotPolicy.defaults():botPolicy;
         if(policy==ParticipantPolicy.HUMAN_ONLY&&botPolicy.submissionMode()!=BotSubmissionMode.PRE_UPLOADED_ONLY)throw new DemoRequestException("INVALID_BOT_SUBMISSION_POLICY");
         validateRules(concurrency==null?4:concurrency,order);
         int limit=maxParticipants==null?10:maxParticipants;
-        if(limit<(format==TournamentFormat.GROUP_KNOCKOUT?4:format==TournamentFormat.TEAM_ROUND_ROBIN?6:2) || limit>4000 || limit>32&&(!enroll||!Set.of(TournamentFormat.SINGLE_ELIMINATION,TournamentFormat.SWISS).contains(format)))throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
+        if(limit<(format==TournamentFormat.GROUP_KNOCKOUT?4:format==TournamentFormat.TEAM_ROUND_ROBIN?6:2) || limit>4000 || limit>32&&!Set.of(TournamentFormat.SINGLE_ELIMINATION,TournamentFormat.SWISS).contains(format))throw new DemoRequestException("INVALID_PARTICIPANT_LIMIT");
         if(visibility!=null && !visibility.equals("PUBLIC")) throw new AuthException("UNSUPPORTED_TOURNAMENT_VISIBILITY",400);
         var t=tournaments.create(name,format==null?TournamentFormat.ROUND_ROBIN:format);
         synchronized(t) {
@@ -163,9 +164,11 @@ public class OwnedTournamentService {
         if(tournament.botPolicy.submissionMode()==BotSubmissionMode.CODE_IN_PLATFORM_ONLY)throw new DemoRequestException("PLATFORM_CODE_REQUIRED");
         if(!tournament.participantPolicy.bots())throw new DemoRequestException("CONTROLLER_NOT_ALLOWED");
         if(tournament.status==TournamentStatus.REGISTRATION){register(auth,id,botId);return;}
+        if(tournament.status==TournamentStatus.DRAFT)authorization.requireManager(auth,tournament);
         accounts.requireUser(auth);var bot=bots.execution(auth,botId);var owner=bots.require(auth,botId).ownerUserId();var t=tournaments.find(id);
         mutate(t,auth,()-> {
             if(t.status!=TournamentStatus.DRAFT)throw new DemoRequestException("TOURNAMENT_LOCKED");
+            authorization.requireManager(auth,t);
             t.botPolicy.requirePreuploaded(bot.language());
             tournaments.add(id,bot.id(),bot.token(),displayName,seed);
             var created=t.participants.getLast();
@@ -237,7 +240,14 @@ public class OwnedTournamentService {
         }
     }
     public void cancel(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,auth,()->tournaments.cancel(id));}
-    public void openRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);mutate(t,auth,()->tournaments.openRegistration(id));}
+    public void openRegistration(Authentication auth,String id) {
+        var t=tournaments.find(id);authorization.requireManager(auth,t);
+        mutate(t,auth,()->{
+            var deadline=t.timeline!=null?t.timeline.registrationCloseAt():t.timing.registrationDeadline();
+            if(deadline!=null&&!clock.instant().isBefore(deadline))throw new DemoRequestException("TOURNAMENT_SCHEDULE_EXPIRED");
+            tournaments.openRegistration(id);
+        });
+    }
     public void closeRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);var scores=historicalScores();mutate(t,auth,()->{
         if(t.timeline!=null&&clock.instant().isBefore(t.timeline.checkInCloseAt()))throw new DemoRequestException("CHECK_IN_NOT_CLOSED");
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("INVALID_TOURNAMENT_TRANSITION");
@@ -351,7 +361,9 @@ public class OwnedTournamentService {
     public void review(Authentication auth,String id,String registrationId,boolean approve) {
         var t=tournaments.find(id);authorization.requireManager(auth,t);
         mutate(t,auth,()->{
-            registrationPhase(t);int index=registrationIndex(t,registrationId);var r=t.registrations.get(index);
+            if(t.timeline!=null)throw new AuthException("REGISTRATION_PARTICIPANT_ONLY",409);
+            if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("TOURNAMENT_LOCKED");
+            int index=registrationIndex(t,registrationId);var r=t.registrations.get(index);
             if(r.status()!=TournamentRegistration.Status.PENDING && !(r.status()==TournamentRegistration.Status.APPROVED && !approve))throw new DemoRequestException("INVALID_REGISTRATION_TRANSITION");
             if(approve&&r.botId()==null){t.participants.add(new TournamentParticipant(r.id().toString(),null,"",r.displayName(),UUID.randomUUID().getMostSignificantBits(),r.userId()));}
             else if(approve) {

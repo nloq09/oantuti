@@ -60,13 +60,13 @@ function render(t) {
   if(t.timeline&&!owner){location.replace("/tournament-detail.html?id="+encodeURIComponent(t.id));return;}
   document.querySelector("#name").textContent = t.name;
   const p = t.progress;
-  const draft = ["DRAFT", "REGISTRATION"].includes(t.status);
+  const draft = t.status==="DRAFT"?owner:t.status==="REGISTRATION"&&t.acceptingRegistrations!==false;
   document.querySelector("#invite-link").value = location.origin+tournamentRoute(id);
   document.querySelector("#invite-code").textContent = id;
   document.querySelector("#registration").hidden = !account || !draft || (t.registrations || []).filter(r => ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)).length >= t.maxParticipants;
   document.querySelector("#registration-help").textContent = draft
     ? `Giải tối đa ${t.maxParticipants} bot. Đăng ký trong giai đoạn mở sẽ chờ chủ giải duyệt.`
-    : t.status === "CHECK_IN" ? "Check-in đã mở. Chủ bot cần xác nhận có mặt trước khi chủ giải hoàn tất." : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
+    : t.status === "REGISTRATION" ? "Đã đóng nhận đơn. Chủ giải vẫn có thể xét duyệt các đơn đã gửi trước hạn." : t.status === "CHECK_IN" ? "Check-in đã mở. Người tham gia cần xác nhận có mặt trước khi chủ giải hoàn tất." : "Giải đã khóa đăng ký. Bạn vẫn có thể xem trận đấu và bảng xếp hạng.";
   document.querySelector("#open-registration").hidden = !owner || t.status !== "DRAFT";
   document.querySelector("#close-registration").hidden = !owner || Boolean(t.timeline) || t.status !== "REGISTRATION";
   document.querySelector("#close-registration").disabled = t.participants.length < (t.format==="GROUP_KNOCKOUT"?4:t.format==="TEAM_ROUND_ROBIN"?6:2);

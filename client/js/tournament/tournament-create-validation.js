@@ -12,7 +12,12 @@ export function validateCreateStep(step,data){
   if(policy.submissionOpenAt&&policy.submissionDeadline&&Date.parse(policy.submissionOpenAt)>=Date.parse(policy.submissionDeadline))fail('Hạn nộp bot phải sau giờ mở nhận bài.');
   const bots=data.bots||[];if(bots.length>data.maxParticipants)fail('Số bot chọn trước vượt sức chứa giải.');if(bots.length&&(policy.submissionMode==='CODE_IN_PLATFORM_ONLY'||bots.some(b=>!policy.allowedLanguages.includes(b.language==='JAR'?'JAVA':b.language))))fail('Bot đã chọn không phù hợp với cách nộp hoặc ngôn ngữ cho phép.');
  }
- if(step===3&&!data.fullTimeline){let previous=null;for(const [key,label]of [['registrationDeadline','hạn đăng ký'],['checkInDeadline','hạn check-in'],['startTime','giờ bắt đầu']]){const value=data.timing?.[key];if(!value)continue;const stamp=localStamp(value);if(!stamp)fail('Ngày giờ không hợp lệ: '+label+'.');if(previous&&Date.parse(stamp)<previous)fail('Các mốc đăng ký, check-in và bắt đầu phải theo thứ tự thời gian.');previous=Date.parse(stamp);}}
+ if(step===3&&!data.fullTimeline){
+  const stamps={};for(const [key,label]of [['registrationDeadline','hạn đăng ký'],['checkInDeadline','hạn check-in'],['startTime','giờ bắt đầu']]){const value=data.timing?.[key];if(!value)continue;const stamp=localStamp(value);if(!stamp)fail('Ngày giờ không hợp lệ: '+label+'.');stamps[key]=Date.parse(stamp);}
+  const {registrationDeadline:r,checkInDeadline:c,startTime:s}=stamps;
+  if(r!=null&&c!=null&&r>=c)fail('Hạn check-in phải sau hạn đăng ký.');
+  if(c!=null&&s!=null&&c>s||r!=null&&s!=null&&r>s)fail('Các mốc đăng ký, check-in và bắt đầu phải theo thứ tự thời gian.');
+ }
  if(step===4&&(!Number.isInteger(data.maxConcurrentMatches)||data.maxConcurrentMatches<1||data.maxConcurrentMatches>4))fail('Số trận đồng thời phải từ 1 đến 4.');
  return true;
 }

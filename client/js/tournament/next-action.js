@@ -32,7 +32,7 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
   if(item?.status==='PENDING_APPROVAL')return action('WAIT_APPROVAL','Chờ xét duyệt','Chủ giải đang xét duyệt đăng ký.');
   if(item?.status==='READY_CONFIRMED')return action('WAIT_START','Đã sẵn sàng','Chờ đối thủ xác nhận và server cấp trận.');
   if(item)return action(t.status==='RUNNING'?'WAIT_NEXT_MATCH':'WAIT_START','Chờ thi đấu',progressDescription(item,t));
-  if(!t.timeline&&t.status==='REGISTRATION')return action('REGISTER','Đăng ký tham gia','Chọn cách thi đấu theo luật giải.',content);
+  if(!t.timeline&&t.status==='REGISTRATION')return t.acceptingRegistrations===false?action('REGISTRATION_CLOSED','Đã đóng nhận đơn','Chủ giải đang xét duyệt các đăng ký đã gửi.'):action('REGISTER','Đăng ký tham gia','Chọn cách thi đấu theo luật giải.',content);
   if(t.status==='RUNNING')return action('VIEW_SCHEDULE','Xem lịch thi đấu','Bạn chưa có suất thi đấu đang hoạt động.',competition+'#schedule');
  }
  if(!flow)return action('WAIT_SERVER','Đang cập nhật trạng thái','Chờ dữ liệu quyền từ server.');

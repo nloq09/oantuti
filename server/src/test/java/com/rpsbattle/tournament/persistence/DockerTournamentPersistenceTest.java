@@ -72,7 +72,8 @@ class DockerTournamentPersistenceTest {
         var a=user();var b=user();var authA=AuthService.sessionAuthentication(a);var authB=AuthService.sessionAuthentication(b);
         var file=new MockMultipartFile("file","main.py","text/plain","raise SystemExit(1)\n".getBytes());
         var botA=bots.upload(authA,"Forfeit A",file);var botB=bots.upload(authB,"Forfeit B",file);
-        var cup=owned.create(authA,"Docker persistence",TournamentFormat.ROUND_ROBIN,"PUBLIC");owned.add(authA,cup.id,botA.id().toString(),null,1L);owned.add(authB,cup.id,botB.id().toString(),null,2L);owned.start(authA,cup.id);
+        var cup=owned.create(authA,"Docker persistence",TournamentFormat.ROUND_ROBIN,"PUBLIC");owned.add(authA,cup.id,botA.id().toString(),null,1L);owned.openRegistration(authA,cup.id);owned.register(authB,cup.id,botB.id().toString());
+        owned.review(authA,cup.id,cup.registrations.stream().filter(r->r.userId().equals(b.id().value())).findFirst().orElseThrow().id().toString(),true);owned.closeRegistration(authA,cup.id);owned.start(authA,cup.id);
         long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(30);
         boolean finished=false;
         while(System.nanoTime()<deadline) {synchronized(cup) {finished=cup.status==TournamentStatus.FINISHED;}if(finished) break;Thread.sleep(100);}

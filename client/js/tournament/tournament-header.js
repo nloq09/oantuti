@@ -3,6 +3,7 @@ import {formatLabel} from './bracket-renderer.js';
 
 export const phaseLabels={DRAFT:'Bản nháp',UPCOMING:'Sắp mở đăng ký',REGISTRATION_OPEN:'Đang đăng ký',REGISTRATION_REVIEW:'Xét duyệt đăng ký',WAITING_FOR_CODING:'Chờ lập trình',CODING_OPEN:'Lập trình',SUBMISSION_FROZEN:'Đã khóa bài',VALIDATING:'Kiểm thử chính thức',CHECK_IN_OPEN:'Check-in',READY_TO_START:'Chờ bắt đầu',RUNNING:'Đang thi đấu',PAUSED:'Tạm dừng',RECOVERY_REQUIRED:'Chờ khôi phục',FINISHED:'Đã kết thúc',CANCELLED:'Đã hủy'};
 export function tournamentPhase(t,flow){
+ if(!flow&&!t.timeline&&t.status==='REGISTRATION'&&t.acceptingRegistrations===false)return 'REGISTRATION_REVIEW';
  return flow?.phase||({REGISTRATION:'REGISTRATION_OPEN',CHECK_IN:'CHECK_IN_OPEN',READY:'READY_TO_START'})[t.status]||t.status;
 }
 export function headerModel(t,flow){

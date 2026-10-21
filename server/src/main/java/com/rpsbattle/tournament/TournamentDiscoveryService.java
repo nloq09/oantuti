@@ -39,6 +39,6 @@ public class TournamentDiscoveryService {
         if(Set.of(com.rpsbattle.tournament.domain.TournamentStatus.FINISHED,com.rpsbattle.tournament.domain.TournamentStatus.CANCELLED).contains(t.status))return "finished";
         if(t.status==com.rpsbattle.tournament.domain.TournamentStatus.DRAFT)return "upcoming";
         if(t.timeline!=null)return t.status==com.rpsbattle.tournament.domain.TournamentStatus.REGISTRATION&&!now.isBefore(t.timeline.registrationOpenAt())&&now.isBefore(t.timeline.registrationCloseAt())?"open":"upcoming";
-        return t.status==com.rpsbattle.tournament.domain.TournamentStatus.REGISTRATION?"open":"upcoming";
+        return t.status==com.rpsbattle.tournament.domain.TournamentStatus.REGISTRATION&&(t.timing.registrationDeadline()==null||now.isBefore(t.timing.registrationDeadline()))?"open":"upcoming";
     }
 }

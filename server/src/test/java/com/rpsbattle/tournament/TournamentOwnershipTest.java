@@ -26,7 +26,7 @@ class TournamentOwnershipTest {
     @Autowired ObjectMapper json;
     @Autowired UserRepository users;
     @Autowired OwnedBotService bots;
-    @Autowired BotUploadService artifacts;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean BotUploadService artifacts;
     @Autowired TournamentService tournaments;
     class Browser implements AutoCloseable {
         final HttpClient http=HttpClient.newBuilder().cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL)).build();
@@ -58,15 +58,26 @@ class TournamentOwnershipTest {
         }
     }
     @Test void otherAccountsCanJoinWithOwnBotsWithdrawAndOwnerCanEditDraftRoster() throws Exception {
+        // This test isolates authorization; real sandbox registration is covered by Docker tests.
+        org.mockito.Mockito.doNothing().when(artifacts).validateRegistration(org.mockito.ArgumentMatchers.any());
         try(var a=new Browser();var b=new Browser();var stranger=new Browser()) {
             a.login();b.login();stranger.login();var botA=a.upload();var botB=b.upload();var cup=a.request("/api/tournaments","POST",Map.of("name","Open Cup"),201);var path="/api/tournaments/"+cup.path("id").asText();
             a.request(path+"/participants","POST",Map.of("botId",botB),403);
-            a.request(path+"/participants","POST",Map.of("botId",botA),200);var joined=b.request(path+"/participants","POST",Map.of("botId",botB,"ownerUserId",a.user.id().toString()),200);
+            a.request(path+"/participants","POST",Map.of("botId",botA),200);
+            b.request(path+"/participants","POST",Map.of("botId",botB,"ownerUserId",a.user.id().toString()),403);
+            assertThat(a.request(path,"GET",null,200).path("participants").size()).isEqualTo(1);
+            a.request(path+"/open-registration","POST",Map.of(),200);
+            var pending=b.request(path+"/participants","POST",Map.of("botId",botB),200);
+            assertThat(pending.path("participants").size()).isEqualTo(1);
+            String registration="";for(var r:pending.path("registrations"))if(r.path("botId").asText().equals(botB)){registration=r.path("id").asText();assertThat(r.path("status").asText()).isEqualTo("PENDING");}
+            b.request(path+"/registrations/"+registration+"/approve","POST",Map.of(),403);
+            var joined=a.request(path+"/registrations/"+registration+"/approve","POST",Map.of(),200);
             assertThat(joined.path("participants").size()).isEqualTo(2);
             for(var p:joined.path("participants")) if(p.path("botId").asText().equals(botB)) assertThat(p.path("ownerUserId").asText()).isEqualTo(b.user.id().toString());
             var pa=participant(joined,botA);var pb=participant(joined,botB);
             var stolen=artifacts.stored(botB).token();stranger.request(path+"/participants/"+pb,"DELETE",null,403,Map.of("X-Bot-Token",stolen),true);b.request(path+"/participants/"+pa,"DELETE",null,403);
-            b.request(path+"/participants/"+pb,"DELETE",null,200);var again=b.request(path+"/participants","POST",Map.of("botId",botB),200);
+            b.request(path+"/participants/"+pb,"DELETE",null,200);b.request(path+"/participants","POST",Map.of("botId",botB),200);
+            var again=a.request(path+"/registrations/"+registration+"/approve","POST",Map.of(),200);
             a.request(path+"/participants/"+participant(again,botB),"DELETE",null,200);
             assertThat(a.request(path+"/export","GET",null,200).toString()).doesNotContain(stolen,"botToken","sourcePath");
         }
