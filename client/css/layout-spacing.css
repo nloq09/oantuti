@@ -1,0 +1,43 @@
+/* Shared spacing for block-flow screens. Grid/card/board children keep their own gaps. */
+:root { --section-gap: 24px; --control-gap: 12px; }
+.panel { min-width: 0; overflow-wrap: anywhere; }
+.panel > :first-child { margin-block-start: 0; }
+.panel > :last-child { margin-block-end: 0; }
+
+/* Only block stacks: never apply panel margins to grid rows or the game board. */
+.tournament-page > .panel,
+.tournament-page .organizer-content > .panel,
+.tournament-page :where([role="tabpanel"], #submissions, #final-validation-dashboard, #tournament-phase-content) > .panel,
+.coding-page :where(#work-area, #frozen-summary) > .panel,
+.account-page > :where([data-protected-content]) > .panel {
+  margin-block: 0 var(--section-gap);
+}
+.coding-page :where(#work-area, #frozen-summary),
+.tournament-page :where(#submissions, #final-validation-dashboard, #tournament-phase-content) {
+  display: flow-root;
+  min-width: 0;
+}
+.account-page .account-columns { margin-block-end: var(--section-gap); }
+.panel > .actions { margin-block-start: var(--control-gap); }
+
+/* Use actual layout gaps for generated actions instead of relying on HTML whitespace. */
+.tab-bar, .ui-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--control-gap);
+}
+.ui-actions { margin-block: var(--control-gap); }
+:where(.actions, .ui-actions, .tab-bar, [role="tablist"]) > :where(button, .button) {
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.panel :where(input, select, textarea) { max-width: 100%; box-sizing: border-box; }
+
+@media (max-width: 650px) {
+  :root { --section-gap: 18px; --control-gap: 10px; }
+  .ui-actions { align-items: stretch; }
+  .ui-actions > :where(button, .button) { flex: 0 1 auto; }
+}
