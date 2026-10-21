@@ -8,13 +8,13 @@ export async function csrfHeaders() {
   const csrf = await read(await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" }));
   return { [csrf.headerName]: csrf.token };
 }
-export async function sessionRequest(path, body, method) {
+export async function sessionRequest(path, body, method, {signal} = {}) {
   const headers = { "Content-Type": "application/json" };
   if (body !== undefined) {
     Object.assign(headers, await csrfHeaders());
   }
   return read(await fetch(path, {
-    method: method || (body === undefined ? "GET" : "POST"),
+    method: method || (body === undefined ? "GET" : "POST"), ...(signal?{signal}:{}),
     credentials: "same-origin", cache: "no-store", headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   }));

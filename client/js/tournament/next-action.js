@@ -1,7 +1,9 @@
+import {tournamentRoute,playerTournamentRoute,actionDestination} from './tournament-routes.js';
+import {isKnockout,roundLabel} from './bracket-renderer.js';
 // Presentation of server decisions only. These links never grant admission or workspace rights.
 const action=(type,label,description,href=null,extra={})=>({type,label,href,enabled:Boolean(href),tone:'neutral',description,reasonDisabled:href?null:description,...extra});
 export function tournamentNextAction({tournament:t,flow,me,account}){
- const detail='/tournament-detail.html?id='+encodeURIComponent(t.id),code='/tournament-code.html?id='+encodeURIComponent(t.id),content='#tournament-phase-content',competition=t.status==='RUNNING'?'/tournament-lobby.html?id='+encodeURIComponent(t.id):detail;
+ const detail=tournamentRoute(t.id),code=tournamentRoute(t.id,'code'),content='#tournament-phase-content',competition=playerTournamentRoute(t);
  if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Bạn có thể tìm giải khác.','/tournaments.html');
  if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem thành tích, bảng điểm và replay.',detail+'#ranking');
  if(['DRAFT','UPCOMING'].includes(flow?.phase)||t.status==='DRAFT')return action('VIEW_RULES','Xem luật','Theo dõi lịch; đăng ký chưa mở.','#tournament-rules');
@@ -12,6 +14,7 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
   const active=states.filter(s=>!['WITHDRAWN','DISQUALIFIED','ELIMINATED','REJECTED','MISSED_CHECK_IN'].includes(s.status));
   const item=active.find(s=>s.currentMatch&&s.registration.controllerType==='HUMAN')||active.find(s=>s.status==='READY_CHECK')||active.find(s=>s.currentMatch)||active[0]||states[0];
   if(item&&['WITHDRAWN','DISQUALIFIED','REJECTED','MISSED_CHECK_IN'].includes(item.status))return action('INELIGIBLE','Không có suất thi đấu đang hoạt động','Xem trạng thái đăng ký hoặc liên hệ chủ giải.');
+  if(item&&['CHAMPION','FINISHED'].includes(item.status))return action('VIEW_RESULT','Xem kết quả',item.status==='CHAMPION'?'Bạn đã vô địch! Xem kết quả và replay.':'Giải đã kết thúc. Xem thành tích và replay.',detail+'#ranking');
   if(item?.status==='ELIMINATED')return action('ELIMINATED','Xem bracket','Bạn đã dừng bước; theo dõi các trận còn lại.',competition+'#bracket');
   const remoteMatch=me?.matchMonitor?.items?.find(m=>m.execution&&!["FINISHED","CANCELLED","ERROR"].includes(m.executionState));
   if(item&&remoteMatch)return action('TRACK_MATCH','Theo dõi trận của tôi',({QUEUED:'Đang chờ máy thi đấu.',ASSIGNED:'Đã cấp máy chạy.',STARTING:'Đang khởi động bot.',RUNNING_REMOTE:'Trận đang chạy trên máy thi đấu; live board chưa khả dụng.',RESULT_PENDING:'Đã chạy xong, đang xác nhận kết quả.',RETRYING:'Trận đang chờ chạy lại.',RECOVERING:'Đang chờ khôi phục execution.'})[remoteMatch.executionState]||'Đang cập nhật execution.',competition+'#my-match');
@@ -23,7 +26,7 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
   if(item?.status==='CHECK_IN_REQUIRED')return action('CHECK_IN','Check-in','Xác nhận tham gia trước hạn.',null,{enabled:true,command:'CHECK_IN',payload:{registrationId:item.registration.id},deadline:item.deadline,tone:'primary'});
   if(item?.status==='PENDING_APPROVAL')return action('WAIT_APPROVAL','Chờ xét duyệt','Chủ giải đang xét duyệt đăng ký.');
   if(item?.status==='READY_CONFIRMED')return action('WAIT_START','Đã sẵn sàng','Chờ đối thủ xác nhận và server cấp trận.');
-  if(item)return action(t.status==='RUNNING'?'WAIT_NEXT_MATCH':'WAIT_START','Chờ thi đấu','Theo dõi lịch và trạng thái trận của bạn.');
+  if(item)return action(t.status==='RUNNING'?'WAIT_NEXT_MATCH':'WAIT_START','Chờ thi đấu',progressDescription(item,t));
   if(!t.timeline&&t.status==='REGISTRATION')return action('REGISTER','Đăng ký tham gia','Chọn cách thi đấu theo luật giải.',content);
   if(t.status==='RUNNING')return action('VIEW_SCHEDULE','Xem lịch thi đấu','Bạn chưa có suất thi đấu đang hoạt động.',competition+'#schedule');
  }
@@ -42,4 +45,18 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
   case 'WAITLISTED':return action('WAITLISTED','Đang trong danh sách chờ','Chờ chủ giải xác nhận suất tham gia.');
   default:return action('VIEW_STATUS','Theo dõi trạng thái','Chưa có thao tác được server cấp tại thời điểm này.');
  }
+}
+
+function progressDescription(item,t){
+ if(t.format==='TEAM_ROUND_ROBIN'&&!item.currentMatch&&!item.nextMatch)return 'Mở tab Đồng đội để xem đội và đội hình đã được server ghi nhận.';
+ if(item.qualified&&item.nextMatch)return '✓ Đã vượt qua vòng bảng. Chờ vòng tiếp theo được mở.';
+ if(isKnockout(t.format)&&item.nextMatch&&(t.bestOf>1?t.series||[]:t.matches||[]).some(m=>m.status==='FINISHED'&&m.winnerParticipantId===item.participantId))return '✓ Đã đi tiếp vào '+roundLabel(item.nextMatch.round,t.rounds?.length||1,t.format)+'. Chờ vòng được mở và xác nhận sẵn sàng.';
+ return 'Theo dõi lịch và trạng thái trận của bạn.';
+}
+// Discovery lacks personal capabilities. Only a fresh participant flow can enable coding/check-in.
+export function tournamentNavigation(t,context={}){
+ if(context.flow||context.me){const resolved=tournamentNextAction({tournament:t,...context});return{...resolved,enabled:true,command:undefined,payload:undefined,href:actionDestination(resolved,t)};}
+ if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem kết quả do server công bố.',tournamentRoute(t.id,'detail',{tab:'ranking'}));
+ if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Xem thông tin giải đã hủy.',tournamentRoute(t.id));
+ return action('VIEW_STATUS',t.registered?'Xem trạng thái':'Xem giải','Mở giải để lấy giai đoạn và quyền hiện tại từ server.',playerTournamentRoute(t));
 }

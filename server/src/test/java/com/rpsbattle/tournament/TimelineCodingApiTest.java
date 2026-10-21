@@ -12,7 +12,8 @@ import static org.mockito.Mockito.*;
 
 @org.springframework.test.context.TestPropertySource(properties="rps.coding.deadline-initial-delay-ms=3600000")
 class TimelineCodingApiTest extends StageThreeWebFixture {
- @MockitoBean Clock clock;
+ // Each test stubs START again; keep a valid clock between tests and during scheduler shutdown.
+ @MockitoBean(reset=org.springframework.test.context.bean.override.mockito.MockReset.NONE) Clock clock;
  @MockitoBean WorkspaceSandbox sandbox;
  @MockitoBean BotTestService tests;
  static final Instant START=Instant.parse("2026-10-19T00:00:00Z");

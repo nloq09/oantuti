@@ -1,3 +1,4 @@
+import {tournamentRoute} from './tournament-routes.js';
 import {participantLimitForFormat} from './capacity.js';
 import {timelineEditor} from './create-timeline-editor.js';
 import {timelineBotPolicy} from './create-timeline-model.js';
@@ -94,7 +95,7 @@ document.querySelector("#join-tournament").onsubmit = (event) => {
     toast("Nhập mã giải đấu hoặc link mời hợp lệ.", true);
     return;
   }
-  location.href = "/tournament.html?id=" + encodeURIComponent(target);
+  location.href=tournamentRoute(target);
 };
 
 mountHub(document.querySelector("#tournament-list"));

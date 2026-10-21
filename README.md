@@ -72,6 +72,8 @@ Nhóm 7 bổ sung API read-only trạng thái remote theo giải, lọc/phân tr
 
 Nhóm 8 nối trạng thái execution vào thẻ **Trận của tôi** trên detail/lobby và tab phân trang riêng. Chủ giải có **Match Monitor** với bộ lọc, worker/lease/heartbeat, mốc gameplay/receipt và lịch sử các lần nhận việc. API chỉ cho người chơi đọc trận của mình; monitor/history dành cho chủ giải/admin. Trận remote không có stream sẽ không hiện nút xem trực tiếp; kết quả pending được phân biệt với kết quả đã áp dụng. [API, file thay đổi và kiểm chứng](docs/CHANG-12-NHOM-8-MY-MATCH-MONITOR.md).
 
+Nhóm 9 thống nhất model CTA/route giữa hub, progression và player; card discovery và thông báo lịch sử mở trang giải để lấy quyền hiện tại, không đoán quyền coding/check-in. Các trang tournament dùng refresh queue chung có coalescing, abort/generation guard, dừng khi ẩn tab và phục hồi BFCache; WebSocket compact chỉ invalidation rồi tải HTTP. Giữ bộ lọc, form đang nhập và các kiểm soát mutation hiện có. [Luồng, file và kết quả kiểm chứng](docs/CHANG-12-NHOM-9-NAVIGATION-REFRESH.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.

@@ -1,3 +1,4 @@
+import {tournamentRoute} from './tournament-routes.js';
 import {mountMatchMonitor} from './match-monitor.js';
 import {allowsPreuploaded,allowedPolicyBot,renderBotPolicy} from "./bot-policy.js";
 import {mountOrganizerShell} from './organizer-shell.js';
@@ -18,7 +19,7 @@ import {
   closeRegistration,
   configureSeeding, configureRules,
   registerBot, approveRegistration, rejectRegistration, withdrawRegistration, checkInRegistration, closeCheckIn,
-  TournamentStream,
+  watchTournament,
   canManageTournament,
 } from "./tournament-api.js?v=final-v5";
 import { bindAdministration, renderDashboard, tournamentNotification } from "./tournament-dashboard.js";
@@ -59,7 +60,7 @@ function render(t) {
   document.querySelector("#name").textContent = t.name;
   const p = t.progress;
   const draft = ["DRAFT", "REGISTRATION"].includes(t.status);
-  document.querySelector("#invite-link").value = location.origin + "/tournament.html?id=" + encodeURIComponent(id);
+  document.querySelector("#invite-link").value = location.origin+tournamentRoute(id);
   document.querySelector("#invite-code").textContent = id;
   document.querySelector("#registration").hidden = !account || !draft || (t.registrations || []).filter(r => ["PENDING","APPROVED","CHECKED_IN"].includes(r.status)).length >= t.maxParticipants;
   document.querySelector("#registration-help").textContent = draft
@@ -208,7 +209,7 @@ function render(t) {
       document.querySelector('#overview').prepend(document.querySelector('.tournament-invite'));
       document.querySelector('#ranking').prepend(document.querySelector('#champion'));
       const selectPanel=target=>{for(const key of ['overview','participants-tab','matches','bracket','ranking','replays-tab','admin-tab','organizer-audit'])document.getElementById(key).hidden=key!==target;document.querySelectorAll('[data-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.tab===target)));};
-      organizerShell=mountOrganizerShell(document.querySelector('main'),{tournament:t,account,section:new URLSearchParams(location.search).get('view'),selectPanel});
+      organizerShell=mountOrganizerShell(document.querySelector('main'),{tournament:t,account,section:new URLSearchParams(location.search).get('view'),selectPanel,onSnapshot:render});
     }else organizerShell.update(t);
   }
 }
@@ -263,8 +264,8 @@ else {
   getTournament(id)
     .then(render)
     .catch((error) => toast(error.message, true));
-  const stream = new TournamentStream(id, render, () => {}, tournamentNotification);
-  window.addEventListener("pagehide", () => stream.close());
+  watchTournament(id,tournamentNotification);
+
 }
 
 function renderRegistrations(t, owner) {
