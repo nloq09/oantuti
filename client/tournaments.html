@@ -12,54 +12,62 @@
   </head>
   <body>
     <nav class="account-nav site-account-nav" data-account-nav aria-label="Điều hướng"><a class="button" href="/">Trang chủ</a><div class="account-actions"><a class="button" href="/login.html">Đăng nhập</a><a class="button" href="/register.html">Đăng ký</a></div></nav>
-    <main class="tournament-page">
-      <div class="tournament-grid">
-        <section class="panel">
-          <h2>Tạo giải đấu</h2>
-          <p id="tournament-account-notice" role="status"></p><form id="create-tournament" class="create-tournament-form" novalidate>
-            <fieldset><legend>1. Thể thức giải</legend>
-            <label for="tournament-name">Tên giải đấu</label
-            ><input
-              id="tournament-name"
-              required
-              maxlength="80"
-              placeholder="RPS Championship"
-            />
-            <label for="tournament-format">Thể thức</label><select id="tournament-format"><option value="ROUND_ROBIN">Vòng tròn (Round Robin)</option><option value="SWISS">Swiss · Ghép theo điểm, không gặp lại</option><option value="TEAM_ROUND_ROBIN">Đồng đội / Trường học · 3 vị trí mỗi cặp đội</option><option value="GROUP_KNOCKOUT">Vòng bảng nhiều giai đoạn → Loại trực tiếp</option><option value="SINGLE_ELIMINATION">Loại trực tiếp (Single Elimination)</option></select>
-            <p id="format-help">Mỗi cặp gặp nhau một lần; thắng 3, hòa 1, thua 0 điểm.</p><label for="tournament-best-of">Số ván mỗi cặp đấu</label><select id="tournament-best-of"><option value="1">BO1 · Một ván</option><option value="3">BO3 · Tối đa 3 ván</option><option value="5">BO5 · Tối đa 5 ván</option></select></fieldset>
-            <fieldset><legend>2. Người tham gia</legend><label for="participant-policy">Người tham gia</label><select id="participant-policy"><option value="BOT_ONLY">Chỉ bot</option><option value="HUMAN_ONLY">Chỉ người tự chơi</option><option value="HUMAN_OR_BOT">Người tự chơi hoặc bot</option></select></fieldset>
-            <div id="create-bot-policy"></div>
-            <fieldset><legend>4. Timeline</legend>
-              <label><input id="use-full-timeline" type="checkbox" checked> Lập lịch đầy đủ cho cuộc thi bot</label>
-              <p id="timeline-mode-help">Người chơi đăng ký trước, chọn hoặc viết bot trong giờ coding; server khóa bài và xử lý các giai đoạn theo lịch sau khi chủ giải mở đăng ký.</p>
-              <div id="create-timeline"></div>
-              <div id="manual-timing" hidden><p>Chủ giải tự mở/đóng đăng ký và bắt đầu giải.</p><label>Hạn đăng ký<input id="registration-deadline" type="datetime-local"></label><label>Hạn check-in<input id="check-in-deadline" type="datetime-local"></label><label>Bắt đầu dự kiến<input id="scheduled-start" type="datetime-local"></label></div>
-            </fieldset>
-            <fieldset><legend>5. Sức chứa và đồng thời</legend><label for="max-participants">Số participant tối đa</label><input id="max-participants" type="number" min="2" max="32" value="10" required />
-            <label for="match-concurrency">Số trận chạy đồng thời</label><input id="match-concurrency" type="number" min="1" max="4" value="2" required />
-            <label><input id="check-in-required" type="checkbox" /> Yêu cầu người tham gia check-in trước khi bắt đầu</label></fieldset>
-            <div id="create-existing-bots"><h3>Bot của bạn (không bắt buộc)</h3>
-            <div id="bot-options"></div>
-            <p id="bot-empty" hidden>
-              Bạn có thể tạo giải trước rồi mời mọi người đăng ký bot.
-              <a href="/bots.html">Đi tới Bot của tôi →</a>
-            </p>
-            </div><p id="create-error" role="alert" hidden></p><div id="created-draft" hidden></div>
-            <button class="primary wide" id="create">Tạo bản nháp giải đấu</button>
-          </form>
-          <h2>Tham gia giải đấu</h2>
-          <form id="join-tournament">
-            <label for="tournament-code">Mã giải hoặc link mời</label>
-            <input id="tournament-code" required placeholder="Dán mã giải hoặc link mời" />
-            <button class="primary wide">Tham gia</button>
-          </form>
-        </section>
-        <section>
-          <h2>Khám phá giải đấu</h2><div id="tournament-list" aria-live="polite"></div>
-        </section>
+    <main class="tournament-page tournament-home">
+      <div class="tournament-home-heading"><h1>Giải đấu</h1><p>Tham gia các giải đấu hoặc tạo giải đấu của riêng bạn.</p></div>
+      <div class="tournament-main-tabs" role="tablist" aria-label="Giải đấu">
+        <button type="button" id="tab-discover" role="tab" aria-controls="panel-discover" aria-selected="true" data-tournament-tab="discover">Khám phá giải đấu</button>
+        <button type="button" id="tab-create" role="tab" aria-controls="panel-create" aria-selected="false" tabindex="-1" data-tournament-tab="create">Tạo giải đấu</button>
       </div>
+      <section id="panel-discover" role="tabpanel" aria-labelledby="tab-discover" tabindex="0">
+        <h2>Khám phá giải đấu</h2><p>Tìm và tham gia các giải đấu đang mở.</p>
+        <div id="tournament-list"></div>
+        <details class="tournament-join"><summary>Đã có mã giải hoặc link mời?</summary>
+          <form id="join-tournament"><label for="tournament-code">Mã giải hoặc link mời</label><div class="tournament-join-row"><input id="tournament-code" required placeholder="Dán mã giải hoặc link mời"><button type="submit">Tham gia</button></div></form>
+        </details>
+      </section>
+      <section id="panel-create" role="tabpanel" aria-labelledby="tab-create" tabindex="0" hidden>
+        <h2>Tạo giải đấu</h2><p>Cấu hình từng bước và kiểm tra lại trước khi tạo bản nháp.</p>
+        <p id="tournament-account-notice" role="status"></p>
+        <form id="create-tournament" class="create-tournament-form panel" novalidate>
+          <ol id="create-steps" class="create-stepper" aria-label="Các bước tạo giải"></ol>
+          <p id="create-progress" role="status"></p>
+          <section data-wizard-step="0" aria-labelledby="create-title-0">
+            <h3 id="create-title-0" tabindex="-1">1. Thể thức</h3>
+            <label for="tournament-name">Tên giải đấu</label><input id="tournament-name" required maxlength="80" placeholder="RPS Championship">
+            <label for="tournament-format">Thể thức</label><select id="tournament-format"><option value="ROUND_ROBIN">Vòng tròn (Round Robin)</option><option value="SWISS">Swiss · Ghép theo điểm, không gặp lại</option><option value="TEAM_ROUND_ROBIN">Đồng đội / Trường học · 3 vị trí mỗi cặp đội</option><option value="GROUP_KNOCKOUT">Vòng bảng nhiều giai đoạn → Loại trực tiếp</option><option value="SINGLE_ELIMINATION">Loại trực tiếp (Single Elimination)</option></select>
+            <p id="format-help"></p><div id="create-stages"></div>
+            <label for="tournament-best-of">Số ván mỗi cặp đấu</label><select id="tournament-best-of"><option value="1">BO1 · Một ván</option><option value="3">BO3 · Tối đa 3 ván</option><option value="5">BO5 · Tối đa 5 ván</option></select>
+          </section>
+          <section data-wizard-step="1" aria-labelledby="create-title-1" hidden>
+            <h3 id="create-title-1" tabindex="-1">2. Người tham gia</h3>
+            <label for="max-participants">Số người/bot tối đa</label><input id="max-participants" type="number" min="2" max="32" value="10" required>
+            <label for="participant-policy">Người tham gia</label><select id="participant-policy"><option value="BOT_ONLY">Chỉ bot</option><option value="HUMAN_ONLY">Chỉ người tự chơi</option><option value="HUMAN_OR_BOT">Người tự chơi hoặc bot</option></select>
+            <p id="create-team-help" hidden>Ít nhất 2 đội, mỗi đội 3–5 thành viên. Sau khi được duyệt, người chơi tạo/gia nhập đội tại Chi tiết giải → Đồng đội; đội trưởng nộp đội hình cho từng cặp đấu.</p>
+          </section>
+          <section data-wizard-step="2" aria-labelledby="create-title-2" hidden>
+            <h3 id="create-title-2" tabindex="-1">3. Bot</h3>
+            <p id="create-human-help" hidden>Giải chỉ dành cho người tự chơi, không cần cấu hình hoặc chọn bot.</p>
+            <div id="create-bot-policy"></div>
+            <div id="create-existing-bots"><h4>Bot của bạn (không bắt buộc)</h4><div id="bot-options"></div><p id="bot-empty" hidden>Bạn có thể tạo giải trước rồi mời mọi người đăng ký bot. <a href="/bots.html">Đi tới Bot của tôi →</a></p></div>
+          </section>
+          <section data-wizard-step="3" aria-labelledby="create-title-3" hidden>
+            <h3 id="create-title-3" tabindex="-1">4. Timeline</h3>
+            <label><input id="use-full-timeline" type="checkbox" checked> Lập lịch đầy đủ cho cuộc thi bot</label><p id="timeline-mode-help"></p><div id="create-timeline"></div>
+            <div id="manual-timing" hidden><p>Chủ giải tự mở/đóng đăng ký và bắt đầu giải.</p><label>Hạn đăng ký<input id="registration-deadline" type="datetime-local"></label><label>Hạn check-in<input id="check-in-deadline" type="datetime-local"></label><label>Bắt đầu dự kiến<input id="scheduled-start" type="datetime-local"></label></div>
+          </section>
+          <section data-wizard-step="4" aria-labelledby="create-title-4" hidden>
+            <h3 id="create-title-4" tabindex="-1">5. Thi đấu</h3>
+            <label for="match-concurrency">Số trận chạy đồng thời</label><input id="match-concurrency" type="number" min="1" max="4" value="2" required>
+            <label><input id="check-in-required" type="checkbox"> Yêu cầu check-in trước khi bắt đầu</label>
+            <p>Giới hạn thời gian lượt, trận đấu và ready check dùng cấu hình server hiện tại. Chủ giải quản lý vòng và hạ tầng tại trang quản lý sau khi tạo.</p>
+          </section>
+          <section data-wizard-step="5" aria-labelledby="create-title-5" hidden><h3 id="create-title-5" tabindex="-1">6. Xác nhận</h3><div id="create-summary"></div><p>Chỉ khi bấm Tạo giải đấu, server mới tạo bản nháp. Giải chưa mở đăng ký cho đến khi bạn thực hiện tại trang quản lý.</p></section>
+          <p id="create-error" role="alert" hidden></p><div id="created-draft" hidden></div>
+          <div class="create-wizard-actions"><button id="create-back" type="button" disabled>← Quay lại</button><button id="create-next" type="button" class="primary">Tiếp tục →</button><button id="create" type="submit" class="primary" hidden>Tạo giải đấu</button></div>
+        </form>
+      </section>
     </main>
-    <script type="module" src="/js/tournament/tournament-list.js?v=final-v5"></script>
+    <script type="module" src="/js/tournament/tournament-list.js?v=two-tabs"></script>
     <script type="module" src="/js/pages/account-nav.js"></script>
   </body>
 </html>

@@ -441,6 +441,8 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 
 ## Tài liệu liên quan
 
+- [Khám phá giải đấu và wizard tạo giải 6 bước](docs/TOURNAMENT-DISCOVER-CREATE-TABS.md).
+
 - [Giao diện và các màn hình](docs/CLIENT-BATTLE-UI.md).
 - [Production deployment](docs/DEPLOYMENT.md), [vận hành và backup/restore](docs/OPERATIONS.md), [tài khoản và phân quyền](docs/AUTH.md).
 - [Chặng 3: Tournament, Ranking, Spectator và Replay](docs/CHANG-3.md).
