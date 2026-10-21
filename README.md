@@ -441,6 +441,7 @@ CLI có thể đấu hai bot và export/replay log JSON. Đây là chức năng 
 
 ## Tài liệu liên quan
 
+- [Registration pipeline: kiến trúc hiện tại, model policy/eligibility và lộ trình tích hợp](docs/TOURNAMENT-REGISTRATION-PIPELINE.md).
 - [Rà soát luồng giải đấu ngày 21/10/2026](docs/TOURNAMENT-FLOW-AUDIT-2026-10-21.md).
 - [Organizer Tournament Control Center: bố cục, chức năng, API và kiểm chứng](docs/ORGANIZER-CONTROL-CENTER-2026-10-21.md).
 
