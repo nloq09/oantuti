@@ -23,6 +23,20 @@ class OperationsSecurityTest {
     @Autowired RegistrationService registration;
     @Autowired UserRepository users;
     @Autowired MatchRegistry rooms;
+    @Test void staticClientHasRestrictiveScriptPolicyWithoutBreakingLocalAssets()throws Exception{
+        for(String path:java.util.List.of("/","/login.html","/tournament-detail.html","/js/tournament/player-detail.js"))mvc.perform(get(path))
+            .andExpect(status().isOk()).andExpect(header().string("Content-Security-Policy",org.hamcrest.Matchers.containsString("script-src 'self'")))
+            .andExpect(header().string("Content-Security-Policy",org.hamcrest.Matchers.containsString("object-src 'none'")))
+            .andExpect(header().string("Content-Security-Policy",org.hamcrest.Matchers.containsString("frame-ancestors 'none'")))
+            .andExpect(header().string("Referrer-Policy","no-referrer"));
+    }
+    @Test void botValidationQuotaIsSharedAcrossBotIdsAndDoesNotTrustForwardedHeaders()throws Exception{
+        var account=registration.register("validation_limit","validation_limit@example.com","Validation Password 123","Validation");var auth=AuthService.sessionAuthentication(account);
+        for(int i=0;i<6;i++)mvc.perform(post("/api/account/bots/"+java.util.UUID.randomUUID()+"/validate").with(authentication(auth)).with(csrf())
+            .with(r->{r.setRemoteAddr("192.0.2.45");return r;}).header("X-Forwarded-For","198.51.100."+i)).andExpect(status().isNotFound());
+        mvc.perform(post("/api/account/bots/"+java.util.UUID.randomUUID()+"/validate").with(authentication(auth)).with(csrf()).with(r->{r.setRemoteAddr("192.0.2.45");return r;}))
+            .andExpect(status().isTooManyRequests()).andExpect(jsonPath("$.error").value("RATE_LIMITED")).andExpect(header().exists("Retry-After"));
+    }
     @Test void tenFailedLoginsBlockBruteForceDespiteSpoofedForwardedHeaders() throws Exception {
         double before=meters.counter("login_failure_total").count();
         for(int i=0;i<10;i++)mvc.perform(post("/api/auth/login").with(csrf()).with(r->{r.setRemoteAddr("192.0.2.10");return r;})

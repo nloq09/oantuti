@@ -24,7 +24,8 @@ public class RequestLimitFilter extends OncePerRequestFilter {
             case "/api/bots" -> {route="upload";quota=20;}
             case "/api/matches" -> {route="create-match";quota=60;}
             case "/api/tournaments" -> {route="create-tournament";quota=20;}
-            default -> {if(path.matches("/api/matches/[^/]+/join")){route="join";quota=120;}}
+            default -> {if(path.matches("/api/matches/[^/]+/join")){route="join";quota=120;}
+                else if(path.matches("/api/account/bots/[^/]+/validate")){route="validate-bot";quota=6;}}
         }
         if(quota==0){chain.doFilter(request,response);return;}
         String ip=request.getRemoteAddr();var auth=SecurityContextHolder.getContext().getAuthentication();

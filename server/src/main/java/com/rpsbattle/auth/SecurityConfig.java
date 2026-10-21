@@ -43,6 +43,9 @@ public class SecurityConfig {
         http.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable);
         http.securityContext(context -> context.securityContextRepository(contexts).requireExplicitSave(true));
+        http.headers(headers->headers
+                .contentSecurityPolicy(csp->csp.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"))
+                .referrerPolicy(referrer->referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)));
         http.addFilterAfter(new SessionAccountFilter(authService,contexts),SecurityContextHolderFilter.class);
         http.addFilterBefore(new com.rpsbattle.admin.AdminOperationAuditFilter(journal,authService),org.springframework.security.web.csrf.CsrfFilter.class);
         http.addFilterBefore(new com.rpsbattle.operations.RequestLogFilter(),org.springframework.security.web.access.intercept.AuthorizationFilter.class);

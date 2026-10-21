@@ -80,6 +80,8 @@ Nhóm 10 bỏ ô hẹn công bố chưa có tác dụng; kết quả hiển th�
 
 Trạng thái remote đã được đồng bộ sang lịch đấu, lobby, bracket và chi tiết bàn đồng đội; lịch/bracket cập nhật cả khi revision giải không đổi, chỉ mở liên kết live/replay hợp lệ. Khi header cập nhật, các tab giữ bộ lọc, zoom và chi tiết đang mở; rời tab sẽ hủy request cũ. Nút chính ưu tiên suất chơi tay, theo dõi đúng trận bot và không mở mã phòng cũ khi monitor lỗi. [Hành vi, dữ liệu công khai và kiểm chứng](docs/PUBLIC-REMOTE-MATCH-STATUS.md).
 
+Đã gia cố CSP/referrer policy, giới hạn endpoint xác thực bot, gộp và cache kiểm tra Docker (kể cả lỗi), giảm lookup metadata lặp trong Match Monitor. [Thay đổi, kiểm chứng và giới hạn](docs/SECURITY-PERFORMANCE-HARDENING.md).
+
 ### Bot của người chơi
 
 - Trang **Bot của tôi** quản lý bot theo tài khoản trong PostgreSQL, chọn bot và tải file lên server.
