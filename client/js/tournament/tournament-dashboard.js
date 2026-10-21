@@ -1,3 +1,4 @@
+import {activeMatch,matchOpen,matchStatusText} from './match-execution.js';
 import {competitionComplete} from "./bracket-renderer.js";
 import {tournamentControl,tournamentRoundPolicy,tournamentParticipantStatus,tournamentMatchOperation,tournamentRequest} from "./tournament-api.js?final-v5";
 import {toast} from "../ui/toast.js";
@@ -10,8 +11,7 @@ export function allowedControls(t){return {
   finish:["RUNNING","PAUSED","RECOVERY_REQUIRED"].includes(t.status)&&!Object.keys(t.reviews||{}).length&&!t.matches.some(m=>["PENDING","RUNNING"].includes(m.status))&&competitionComplete(t),
 };}
 function options(select,items){const key=JSON.stringify(items);if(select.dataset.options===key)return;select.dataset.options=key;const previous=select.value;select.replaceChildren(...items.map(([value,label])=>new Option(label,value)));if(items.some(([value])=>value===previous))select.value=previous;}
-function card(m,live){const article=document.createElement("article");article.className="panel match-card";const title=document.createElement("h3");title.textContent=`${m.participantA.displayName} vs ${m.participantB.displayName}`;article.append(title);const text=document.createElement("p");text.textContent=`Vòng ${m.round} · ${live?"Lượt "+(m.turn??"—"):m.result||m.status}${m.decisionReason?" · Quyết định: "+m.decisionReason:""}`;article.append(text);
-  const link=document.createElement("a");link.className="button primary";link.textContent=live?"Xem trực tiếp":m.decisionReason==="RESULT_OVERRIDE"?"Xem replay gốc":"Xem replay";link.href=(live?"/game.html?spectate=":"/replay.html?match=")+encodeURIComponent(live?m.onlineMatchId:m.historyMatchId);article.append(link);return article;}
+function card(m,tournamentId){const article=document.createElement('article');article.className='panel match-card';const title=document.createElement('h3');title.textContent=`${m.participantA.displayName} vs ${m.participantB.displayName}`;const text=document.createElement('p');text.textContent=`Vòng ${m.round} · ${matchStatusText(m)}`;article.append(title,text);const open=matchOpen(m,tournamentId);if(open)article.append(open);return article;}
 export function renderDashboard(t,owner){
   document.querySelector(".tournament-invite").hidden=!["DRAFT","REGISTRATION","CHECK_IN"].includes(t.status);
   const adminButton=document.querySelector('[data-tab="admin-tab"]');adminButton.hidden=!owner;
@@ -19,7 +19,7 @@ export function renderDashboard(t,owner){
   document.querySelector("#tournament-phase").textContent=`${t.status} · ${t.autoAdvanceRounds?"Tự chuyển vòng":"Chuyển vòng thủ công"} · Bắt đầu: ${t.startedAt?new Date(t.startedAt).toLocaleString("vi-VN"):"Chưa bắt đầu"}`;
   document.querySelector("#export-tournament").href=`/api/tournaments/${encodeURIComponent(t.id)}/export`;
   const live=document.querySelector("#live-matches"),replays=document.querySelector("#replay-list");live.replaceChildren();replays.replaceChildren();
-  for(const m of t.matches){if(m.status==="RUNNING"&&m.onlineMatchId)live.append(card(m,true));if(m.status==="FINISHED"&&m.historyMatchId)replays.append(card(m,false));}
+  for(const m of t.matches){if(activeMatch(m))live.append(card(m,t.id));if(m.status==="FINISHED"&&m.historyMatchId)replays.append(card(m,t.id));}
   if(!live.childElementCount)live.textContent="Chưa có trận đang diễn ra.";if(!replays.childElementCount)replays.textContent="Chưa có replay. Trận xử thua hành chính không tạo replay giả.";
   const rows=document.querySelectorAll("#participants .participant-row");t.participants.forEach((p,index)=>{const description=document.createElement("small");const registration=t.registrations?.find(r=>r.id===p.participantId);description.textContent=`${t.participantOwners?.[p.participantId]||"Người chơi"} · ${statusText[t.participantStatuses?.[p.participantId]||"ACTIVE"]} · ${registration?.status||"—"}`;rows[index]?.append(description);});
   document.querySelector("#rules-snapshot").textContent=JSON.stringify(t.rulesSnapshot||{},null,2);

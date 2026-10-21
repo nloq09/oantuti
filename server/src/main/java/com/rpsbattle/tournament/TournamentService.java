@@ -22,6 +22,8 @@ public class TournamentService {
     public TournamentService(TournamentRegistry registry,BotUploadService bots,TournamentScheduler scheduler,RankingService ranking) {
         this.registry=registry; this.bots=bots; this.scheduler=scheduler; this.ranking=ranking;
     }
+    private PublicMatchExecutionService publicExecutions;
+    @org.springframework.beans.factory.annotation.Autowired public void publicExecutions(PublicMatchExecutionService value){publicExecutions=value;}
     private com.rpsbattle.online.OnlineMatchService online;
     private com.rpsbattle.account.repository.UserRepository users;
     private final Map<UUID,String> publicNames=new java.util.concurrent.ConcurrentHashMap<>();
@@ -105,7 +107,7 @@ public class TournamentService {
         report.put("totalBotErrors",t.matches.stream().filter(m->"BOT_FAILED".equals(m.failure)).count());report.put("infrastructureErrors",t.matches.stream().filter(m->m.status==TournamentMatch.Status.FAILED).count());report.put("finalStandings",rows);return report;
     }}
     public Map<String,Object> view(Tournament t) { return view(t,t.matches,false); }
-    public Map<String,Object> summary(Tournament t) { synchronized(t){return view(t,t.matches.stream().filter(m->m.status==TournamentMatch.Status.RUNNING).limit(20).toList(),true);} }
+    public Map<String,Object> summary(Tournament t) { synchronized(t){var active=publicExecutions==null?t.matches.stream().filter(m->m.status==TournamentMatch.Status.RUNNING).limit(21).toList():publicExecutions.active(t,21);var result=view(t,active.stream().limit(20).toList(),true);result.put("activeMatchesTruncated",active.size()>20);return result;} }
     public Map<String,Object> view(Tournament t,List<TournamentMatch> selected,boolean compact) { synchronized(t) {
         var data=new LinkedHashMap<String,Object>();
         data.put("id",t.id);data.put("name",t.name);data.put("format",t.format);data.put("status",t.status);
@@ -129,12 +131,13 @@ public class TournamentService {
         data.put("registrations",List.copyOf(t.registrations));
         data.put("participants",List.copyOf(t.participants));
         // Copy mutable matches while holding the monitor; never expose internal tokens or mutable objects.
-        data.put("matches",selected.stream().map(m->{var row=new LinkedHashMap<String,Object>();
+        var matchRows=selected.stream().map(m->{Map<String,Object> row=new LinkedHashMap<>();
             row.put("id",m.id);row.put("participantA",m.participantA);row.put("participantB",m.participantB);row.put("onlineMatchId",m.onlineMatchId);row.put("historyMatchId",m.historyMatchId);
             row.put("status",m.status);row.put("winnerParticipantId",m.winnerParticipantId);row.put("result",m.result);row.put("failure",m.failure);
             row.put("attempt",m.attempt);row.put("decisionReason",m.decisionReason);
             if(m.status==TournamentMatch.Status.RUNNING && online!=null)try{row.put("turn",online.find(m.onlineMatchId).state().turnNumber());}catch(RuntimeException ignored){}
-            row.put("stageNumber",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.stage(t,m.round));row.put("group",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.group(t,m));row.put("seriesId",m.seriesId);row.put("gameNumber",m.gameNumber);row.put("round",m.round);row.put("scheduledAt",m.scheduledAt);row.put("startedAt",m.startedAt);row.put("finishedAt",m.finishedAt);row.put("remainingA",m.remainingA);row.put("remainingB",m.remainingB);return row;}).toList());
+            row.put("stageNumber",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.stage(t,m.round));row.put("group",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.group(t,m));row.put("seriesId",m.seriesId);row.put("gameNumber",m.gameNumber);row.put("round",m.round);row.put("scheduledAt",m.scheduledAt);row.put("startedAt",m.startedAt);row.put("finishedAt",m.finishedAt);row.put("remainingA",m.remainingA);row.put("remainingB",m.remainingB);return row;}).toList();
+        if(publicExecutions!=null)publicExecutions.decorate(t,matchRows);else for(var row:matchRows){row.put("remote",false);row.put("executionState",PublicMatchExecutionService.localState(t.status,row.get("status").toString()));row.put("reviewRequired",t.operations.reviews().containsKey(row.get("id")));}data.put("matches",matchRows);
         int pending=0,running=0,finished=0,failed=0;
         for(var m:t.matches) switch(m.status){case PENDING->pending++;case RUNNING->running++;case FINISHED->finished++;case FAILED->failed++;}
         int total=t.format==TournamentFormat.GROUP_KNOCKOUT?t.matches.size():t.bestOf>1?t.matches.size():(t.format!=TournamentFormat.ROUND_ROBIN)&&!t.bracket.isEmpty()?(int)t.bracket.stream().filter(node->node.matchId()!=null&&(node.resolution()==null||t.matches.stream().anyMatch(m->m.id.equals(node.matchId())))).count():t.matches.size();

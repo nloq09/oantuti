@@ -1,3 +1,4 @@
+import {matchOpen,matchStatusText} from './match-execution.js';
 import {tournamentRoute} from './tournament-routes.js';
 import {mountMatchMonitor} from './match-monitor.js';
 import {allowsPreuploaded,allowedPolicyBot,renderBotPolicy} from "./bot-policy.js";
@@ -173,7 +174,7 @@ function render(t) {
       state.textContent = statusLabels[m.status];
       card.append(state);
     }
-    if (m.status === "FINISHED") {
+    if (m.status === "FINISHED" && !m.reviewRequired) {
       const result = document.createElement("p");
       result.textContent = m.winnerParticipantId
         ? `Thắng: ${m.winnerParticipantId === m.participantA.participantId ? m.participantA.displayName : m.participantB.displayName}`
@@ -188,17 +189,7 @@ function render(t) {
           : "Lỗi: " + m.failure;
       card.append(reason);
     }
-    if (m.onlineMatchId && ["RUNNING", "FINISHED"].includes(m.status)) {
-      const link = document.createElement("a");
-      link.className = "button primary";
-      link.textContent =
-        m.status === "RUNNING" ? "Xem trực tiếp" : "Xem replay";
-      link.href =
-        (m.status === "RUNNING"
-          ? "/game.html?v=stage3&spectate="
-          : "/replay.html?match=") + encodeURIComponent(m.status === "RUNNING" ? m.onlineMatchId : (m.historyMatchId || m.onlineMatchId));
-      card.append(document.createElement("br"), link);
-    }
+    card.append(document.createTextNode(matchStatusText(m)));const open=matchOpen(m,t.id);if(open)card.append(document.createElement('br'),open);
     matches.append(card);
   }
   let groups=document.querySelector("#group-standings");if(!groups){groups=document.createElement("div");groups.id="group-standings";document.querySelector("#ranking-policy").after(groups);}groups.replaceChildren();renderSwiss(groups,t);renderGroups(groups,t);if(t.teamCompetition){const teamLink=document.createElement("a");teamLink.href="/tournament-detail.html?id="+encodeURIComponent(t.id)+"#teams";teamLink.textContent="Đội, đội hình và bảng điểm đồng đội →";groups.append(teamLink);}

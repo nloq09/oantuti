@@ -1,13 +1,19 @@
 import {node,link,date} from './player-dom.js';
 export const executionLabels={WAITING_OPPONENT:'○ Chờ xếp trận / đối thủ',QUEUED:'○ Đang chờ máy thi đấu',ASSIGNED:'● Đã cấp máy chạy',STARTING:'● Đang khởi động bot',RUNNING_LOCAL:'● Trận đang chạy',RUNNING_REMOTE:'● Trận đang chạy trên máy thi đấu',RESULT_PENDING:'● Đã chạy xong · Đang xác nhận kết quả',FINISHED:'✓ Hoàn tất',RETRYING:'↻ Đang chờ chạy lại',RECOVERING:'! Đang chờ khôi phục execution',ERROR:'! Lỗi trận',CANCELLED:'○ Đã hủy',UNKNOWN:'○ Chưa xác định trạng thái'};
 export function executionBadge(state){const badge=node('span',executionLabels[state]||executionLabels.UNKNOWN,'status-badge execution-badge');badge.dataset.executionState=state;return badge;}
+export const isRemoteMatch=m=>m.remote===true||Boolean(m.execution)||['QUEUED','ASSIGNED','STARTING','RUNNING_REMOTE','RESULT_PENDING','RETRYING','RECOVERING'].includes(m.executionState);
+export const matchExecutionState=m=>m.executionState||({RUNNING:'RUNNING_LOCAL',FINISHED:'FINISHED',FAILED:'ERROR',PENDING:'WAITING_OPPONENT'})[m.status]||'UNKNOWN';
+export function matchStatusText(m){if(m.reviewRequired)return 'Kết quả đang được trọng tài xem xét';if(matchExecutionState(m)==='FINISHED'&&(m.failure==='NO_SHOW'||['FORFEIT','DOUBLE_FORFEIT'].includes(m.decisionReason)))return 'Xử thua theo luật';return executionLabels[matchExecutionState(m)]||executionLabels.UNKNOWN;}
+export const activeMatch=m=>['QUEUED','ASSIGNED','STARTING','RUNNING_REMOTE','RUNNING_LOCAL','RESULT_PENDING','RETRYING','RECOVERING'].includes(matchExecutionState(m));
 export function matchOpen(m,tournamentId){
- if(m.execution)return m.historyMatchId&&m.executionState==='FINISHED'?link('Xem replay','/replay.html?match='+encodeURIComponent(m.historyMatchId)):null;
- if(m.status==='RUNNING'&&m.onlineMatchId)return link('Xem trực tiếp','/game.html?spectate='+encodeURIComponent(m.onlineMatchId)+'&tournament='+encodeURIComponent(tournamentId));
- return m.historyMatchId?link('Xem replay','/replay.html?match='+encodeURIComponent(m.historyMatchId)):null;
+ const state=matchExecutionState(m);
+ if(state==='FINISHED')return m.historyMatchId?link('Xem replay','/replay.html?match='+encodeURIComponent(m.historyMatchId)):null;
+ if(!isRemoteMatch(m)&&state==='RUNNING_LOCAL'&&m.status==='RUNNING'&&m.onlineMatchId)return link('Xem trực tiếp','/game.html?spectate='+encodeURIComponent(m.onlineMatchId)+'&tournament='+encodeURIComponent(tournamentId));
+ return null;
 }
+export function currentMatchOpen(t,me,id){const match=me?.matchMonitor?.items?.find(m=>m.id===id)||t.matches?.find(m=>m.id===id);return match?matchOpen(match,t.id):null;}
 export function playerIdentity(side){const box=node('div',undefined,'match-identity');box.append(node('strong',side.playerName||'Người chơi'),node('p',side.controllerType==='HUMAN'?'Tự điều khiển':side.botName||'Bot · Chưa có tên phiên bản'));if(side.botVersionId)box.append(node('small','Phiên bản ID: '+side.botVersionId));return box;}
-export function matchResult(m){if(m.reviewRequired)return 'Kết quả đang được trọng tài xem xét';if(m.executionState!=='FINISHED')return 'Chưa có kết quả chính thức';return m.winnerParticipantId?'Thắng: '+(m.winnerParticipantId===m.participantA.participantId?m.participantA.playerName:m.participantB.playerName):['DOUBLE_FORFEIT','DOUBLE_NO_SHOW'].includes(m.decisionReason)?'Cả hai bị xử thua':'Hòa / kết quả theo quyết định của giải';}
+export function matchResult(m){if(m.reviewRequired)return 'Kết quả đang được trọng tài xem xét';if(m.executionState!=='FINISHED')return 'Chưa có kết quả chính thức';return m.winnerParticipantId?'Thắng: '+(m.winnerParticipantId===m.participantA.participantId?(m.participantA.playerName||m.participantA.displayName):(m.participantB.playerName||m.participantB.displayName)):['DOUBLE_FORFEIT','DOUBLE_NO_SHOW'].includes(m.decisionReason)?'Cả hai bị xử thua':'Hòa / kết quả theo quyết định của giải';}
 export function renderExecutionDetails(root,m,{organizer=false,serverNow}={}){
  const e=m.execution;root.append(executionBadge(m.executionState));
  if(e){const facts=node('dl',undefined,'match-execution-facts');for(const [label,value]of [['Máy thi đấu',e.workerDisplayName||'Chưa được cấp'],['Kết nối máy',e.workerStatus||'Chưa có dữ liệu'],['Lần nhận việc',e.attempt],['Vị trí chờ',e.queuePosition??'—'],['Bắt đầu dự kiến','Chưa có ETA đáng tin cậy'],['Bắt đầu gameplay',e.startedAt?date(e.startedAt):'Chưa có tín hiệu gameplay']]){const cell=node('div');cell.append(node('dt',label),node('dd',value));facts.append(cell);}root.append(facts);

@@ -1,3 +1,4 @@
+import {matchOpen,matchStatusText} from './match-execution.js';
 export const isKnockout=format=>["SINGLE_ELIMINATION","GROUP_KNOCKOUT"].includes(format);
 export const competitionComplete=t=>t.format==="SWISS"?Boolean(t.swiss?.complete):t.format==="TEAM_ROUND_ROBIN"?Boolean(t.teamCompetition?.fixtures?.length)&&t.teamCompetition.fixtures.every(f=>f.score.complete):t.format==="ROUND_ROBIN"||Boolean(t.bracket?.at(-1)?.resolution);
 export const formatLabel = format => format==="SWISS"?"Swiss":format==="TEAM_ROUND_ROBIN"?"Đồng đội / Trường học": format === "GROUP_KNOCKOUT" ? "Vòng bảng → Loại trực tiếp" : format === "SINGLE_ELIMINATION" ? "Loại trực tiếp" : "Vòng tròn";
@@ -31,15 +32,12 @@ export function renderBracket(element,t) {
       const card=document.createElement("article");card.className="panel bracket-node";if(n.matchId)card.dataset.matchId=n.matchId;
       for(const [id,name] of [[n.slotA,n.a],[n.slotB,n.b]]) {
         const row=document.createElement("p");row.textContent=name;
-        if(id && id===n.winnerParticipantId){row.className="bracket-winner";row.prepend("✓ ");}card.append(row);
+        if(id && id===n.winnerParticipantId&&!n.game?.reviewRequired){row.className="bracket-winner";row.prepend("✓ ");}card.append(row);
       }
       if(n.series?.bestOf>1){const score=document.createElement("p");score.textContent=`BO${n.series.bestOf} · ${n.series.winsA} – ${n.series.winsB} · Ván ${n.series.currentGame}`;card.append(score);}
-      if(n.resolution) {const note=document.createElement("small");note.textContent=({BYE:"Miễn đấu",WALKOVER:"Đi tiếp do nhánh đối thủ trống",NO_ELIGIBLE_PARTICIPANT:"Không còn người tham gia đủ điều kiện",DOUBLE_FORFEIT:"Cả hai bị xử thua",WIN:"Đã có kết quả",DRAW_REMAINING_PIECES:"Hòa · đi tiếp nhờ quân còn lại",DRAW_SEED:"Hòa · đi tiếp theo hạt giống"})[n.resolution];card.append(note);}
+      if(n.resolution&&!n.game?.reviewRequired) {const note=document.createElement("small");note.textContent=({BYE:"Miễn đấu",WALKOVER:"Đi tiếp do nhánh đối thủ trống",NO_ELIGIBLE_PARTICIPANT:"Không còn người tham gia đủ điều kiện",DOUBLE_FORFEIT:"Cả hai bị xử thua",WIN:"Đã có kết quả",DRAW_REMAINING_PIECES:"Hòa · đi tiếp nhờ quân còn lại",DRAW_SEED:"Hòa · đi tiếp theo hạt giống"})[n.resolution];card.append(note);}
       if(n.game?.failure){const note=document.createElement("small");note.textContent="Lỗi trận: "+n.game.failure;card.append(note);}
-      if(n.game?.onlineMatchId && ["RUNNING","FINISHED"].includes(n.game.status)) {
-        const live=n.game.status==="RUNNING",link=document.createElement("a");link.className="button";link.textContent=live?"Xem trực tiếp":"Xem replay";
-        link.href=(live?"/game.html?spectate=":"/replay.html?match=")+encodeURIComponent(live?n.game.onlineMatchId:(n.game.historyMatchId||n.game.onlineMatchId));card.append(link);
-      }
+      if(n.game){const state=document.createElement('small');state.textContent=matchStatusText(n.game);card.append(state);const open=matchOpen(n.game,t.id);if(open)card.append(open);}
       slots.append(card);
     }
     element.append(column);

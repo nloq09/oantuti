@@ -19,8 +19,8 @@ public class RemoteExecutionReadService {
  static Instant instant(Object value){return value==null?null:value instanceof java.sql.Timestamp t?t.toInstant():value instanceof OffsetDateTime t?t.toInstant():(Instant)value;}
  static String string(Map<String,Object> row,String key){return Objects.toString(row.get(key),null);}
  public static String state(String tournament,String match,String job,String attempt,boolean receipt,String projection,boolean terminalRecovery,boolean gameplay,boolean expired,int attemptCount){
-  if("CANCELLED".equals(tournament))return "CANCELLED";
   if("FINISHED".equals(match))return "FINISHED";
+  if("CANCELLED".equals(tournament))return "CANCELLED";
   if("FAILED".equals(match)||terminalRecovery)return "ERROR";
   if(receipt)return "PENDING".equals(projection)?"RESULT_PENDING":"APPLIED".equals(projection)?"RESULT_PENDING":"ERROR";
   if("QUEUED".equals(job))return attemptCount>0?"RETRYING":"QUEUED";
