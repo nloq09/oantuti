@@ -54,3 +54,12 @@ test('waitlisted player sees only their current position and has no coding acces
  const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_OPEN',registrationStatus:'WAITLISTED',registration:{displayName:'Player',intendedLanguage:'CPP',waitlistPosition:12}},()=>{});const nodes=all(root);
  assert.ok(nodes.some(x=>x.textContent==='Vị trí danh sách chờ: #12'));assert.equal(nodes.some(x=>x.tag==='form'||String(x.href).includes('tournament-code')),false);
 });
+
+
+test('closed admission still allows withdrawal before explicit roster lock',()=>{
+ const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_REVIEW',registrationStatus:'APPROVED',registrationControl:{enabled:true,lockedAt:null},registration:{displayName:'Player',intendedLanguage:'CPP'}},()=>{});assert.ok(all(root).some(x=>x.tag==='button'&&x.textContent.includes('Hủy')));assert.equal(all(root).some(x=>x.tag==='form'),false);
+});
+
+test('locked roster removes withdrawal controls while waiting for coding',()=>{
+ const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'WAITING_FOR_CODING',registrationStatus:'APPROVED',registrationControl:{enabled:true,lockedAt:'2026-10-19T02:05:00Z'},registration:{displayName:'Player',intendedLanguage:'CPP'}},()=>{});assert.equal(all(root).some(x=>x.tag==='button'&&x.textContent.includes('Hủy')),false);
+});

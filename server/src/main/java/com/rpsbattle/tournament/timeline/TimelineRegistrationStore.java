@@ -28,6 +28,47 @@ public class TimelineRegistrationStore {
     @Transactional(readOnly=true) public View mine(UUID tournament,UUID user){return view(find(tournament,user));}
     @Transactional(readOnly=true) public boolean reviewComplete(UUID tournament){return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t and r.status='PENDING'",Long.class).setParameter("t",tournament).getSingleResult()==0;}
 
+    public record Control(boolean enabled,Instant closedAt,Instant lockedAt,String lockedByName,Integer lockedCount) {}
+    private RegistrationControl controlRow(UUID tournament,boolean refresh){var row=db.find(RegistrationControl.class,tournament);if(row!=null&&refresh)db.refresh(row,LockModeType.PESSIMISTIC_WRITE);return row;}
+    @Transactional(readOnly=true) public Control control(UUID tournament){var row=controlRow(tournament,false);return row==null?new Control(false,null,null,null,null):new Control(true,row.closedAt,row.lockedAt,row.lockedByName,row.lockedCount);}
+    @Transactional(readOnly=true) public boolean codingAllowed(String tournament){var state=control(UUID.fromString(tournament));return !state.enabled()||state.lockedAt()!=null;}
+    @Transactional public void enable(UUID tournament){lockCapacity(tournament);if(controlRow(tournament,true)==null){var row=new RegistrationControl();row.tournamentId=tournament;db.persist(row);db.flush();}}
+    private RegistrationControl unlocked(UUID tournament){var row=controlRow(tournament,true);if(row!=null&&row.lockedAt!=null)throw new AuthException("ROSTER_LOCKED",409);return row;}
+    @Transactional public void close(UUID tournament,Instant now){lockCapacity(tournament);enable(tournament);var row=unlocked(tournament);if(row.closedAt!=null)throw new AuthException("REGISTRATION_ALREADY_CLOSED",409);row.closedAt=now;db.flush();}
+    @Transactional public Control lockRoster(UUID tournament,UUID actor,String name,Instant now,int minimum,Instant registrationDeadline){
+        int capacity=lockCapacity(tournament);enable(tournament);var row=unlocked(tournament);
+        if(row.closedAt==null&&now.isBefore(registrationDeadline))throw new AuthException("REGISTRATION_STILL_OPEN",409);
+        if(!reviewComplete(tournament))throw new AuthException("ROSTER_REVIEW_REQUIRED",409);
+        long approved=approvedCount(tournament);if(approved>capacity)throw new AuthException("CAPACITY_FULL",409);if(approved<minimum)throw new AuthException("NOT_ENOUGH_PARTICIPANTS",409);
+        row.closedAt=row.closedAt==null?registrationDeadline:row.closedAt;row.lockedAt=now;row.lockedBy=actor;row.lockedByName=name;row.lockedCount=Math.toIntExact(approved);db.flush();return control(tournament);
+    }
+    @Transactional(readOnly=true) public Map<String,Long> counts(UUID tournament){var counts=new LinkedHashMap<String,Long>();for(String key:List.of("total","approved","needsReview","waitlisted","rejected","cancelled"))counts.put(key,0L);for(var row:db.createQuery("select r.status,count(r) from TimelineRegistration r where r.tournamentId=:t group by r.status",Object[].class).setParameter("t",tournament).getResultList()){String key=row[0].equals("PENDING")?"needsReview":row[0].toString().toLowerCase(Locale.ROOT);long n=(Long)row[1];counts.put(key,n);counts.merge("total",n,Long::sum);}return counts;}
+    @Transactional(readOnly=true) public com.rpsbattle.tournament.TournamentPhaseResolver.Resolution phase(com.rpsbattle.tournament.domain.Tournament t,Instant now){
+        var base=com.rpsbattle.tournament.TournamentPhaseResolver.resolve(t.status,t.timeline,now,null,reviewComplete(UUID.fromString(t.id)));var state=control(UUID.fromString(t.id));
+        if(t.timeline!=null&&t.status==com.rpsbattle.tournament.domain.TournamentStatus.REGISTRATION&&state.enabled()&&(state.closedAt()!=null||!now.isBefore(t.timeline.registrationCloseAt()))){
+            if(state.lockedAt()==null)return new com.rpsbattle.tournament.TournamentPhaseResolver.Resolution(com.rpsbattle.tournament.domain.TournamentPhase.REGISTRATION_REVIEW,t.timeline.codingOpenAt());
+            if(now.isBefore(t.timeline.codingOpenAt()))return new com.rpsbattle.tournament.TournamentPhaseResolver.Resolution(com.rpsbattle.tournament.domain.TournamentPhase.WAITING_FOR_CODING,t.timeline.codingOpenAt());
+        }return base;
+    }
+    public record Promotion(UUID applicationId,String before,String after,String reason) {}
+    @Transactional public List<Promotion> promote(UUID tournament,RegistrationPolicy policy,Set<String> languages,Instant now){return promote(tournament,policy,languages,now,null);}
+    @Transactional public List<Promotion> promote(UUID tournament,RegistrationPolicy policy,Set<String> languages,Instant now,UUID excluded){
+        int capacity=lockCapacity(tournament);var control=controlRow(tournament,true);if(control!=null&&control.lockedAt!=null)return List.of();
+        if(policy.approvalPolicy()==RegistrationApprovalPolicy.MANUAL_REVIEW||policy.requireAffiliationVerification())return List.of();
+        int remaining=(int)Math.max(0,capacity-approvedCount(tournament));if(remaining==0)return List.of();
+        // Bounded batches and an order cursor skip unresolved verification without looping on it.
+        var result=new ArrayList<Promotion>();long cursor=0;
+        while(remaining>0){var query=db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t and r.status='WAITLISTED' and r.waitlistOrder>:cursor"+(excluded==null?"":" and r.id<>:excluded")+" order by r.waitlistOrder,r.id",TimelineRegistration.class).setParameter("t",tournament).setParameter("cursor",cursor).setMaxResults(100);if(excluded!=null)query.setParameter("excluded",excluded);var candidates=query.getResultList();if(candidates.isEmpty())break;
+            for(var candidate:candidates){if(remaining==0)break;cursor=candidate.waitlistOrder;db.refresh(candidate,LockModeType.PESSIMISTIC_WRITE);if(!candidate.status.equals("WAITLISTED"))continue;
+                Object account=db.createNativeQuery("select status from users where id=:id").setParameter("id",candidate.userId).getResultStream().findFirst().orElse(null);
+                var decision=eligibility.evaluate(new RegistrationEligibilityService.Context("ACTIVE".equals(account),true,false,true,candidate.intendedLanguage,languages,candidate.affiliation,policy));
+                if(decision.decision()==EligibilityDecision.Decision.REVIEW)continue;
+                candidate.status=switch(decision.decision()){case APPROVE->"APPROVED";case REVIEW->"PENDING";default->"REJECTED";};candidate.eligibilityReasons=String.join(",",decision.reasonCodes().stream().map(Enum::name).toList());
+                result.add(new Promotion(candidate.id,"WAITLISTED",publicStatus(candidate.status),candidate.eligibilityReasons));if(candidate.status.equals("APPROVED"))remaining--;
+            }db.flush();
+        }return result;
+    }
+
     // All slot mutations take this parent lock first, then inspect/lock applications.
     // It is held until the surrounding submissionMutation transaction commits or rolls back.
     private int lockCapacity(UUID tournament){
@@ -44,7 +85,9 @@ public class TimelineRegistrationStore {
     @Transactional public View register(UUID tournament,UUID user,String name,String language,String affiliation,int capacity,Instant now,EligibilityDecision decision){
         if(!Set.of(EligibilityDecision.Decision.APPROVE,EligibilityDecision.Decision.REVIEW).contains(decision.decision()))throw new IllegalArgumentException("Unsupported admission decision");
         int currentCapacity=lockCapacity(tournament);
+        unlocked(tournament);
         if(capacity!=currentCapacity)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
+        var state=control(tournament);if(state.closedAt()!=null)throw new AuthException("REGISTRATION_NOT_OPEN",409);
         var previous=find(tournament,user);
         if(previous!=null)db.refresh(previous,LockModeType.PESSIMISTIC_WRITE);
         if(previous!=null&&!previous.status.equals("CANCELLED"))throw new AuthException("DUPLICATE_REGISTRATION",409);
@@ -59,7 +102,7 @@ public class TimelineRegistrationStore {
         if(previous==null)db.persist(r);db.flush();return view(r);
     }
     @Transactional public void withdraw(UUID tournament,UUID user){
-        lockCapacity(tournament);
+        lockCapacity(tournament);unlocked(tournament);
         var r=find(tournament,user);if(r!=null)db.refresh(r,LockModeType.PESSIMISTIC_WRITE);if(r==null||!Set.of("PENDING","APPROVED","WAITLISTED").contains(r.status))throw new AuthException("INVALID_REGISTRATION_TRANSITION",409);
         r.status="CANCELLED";
     }
@@ -74,6 +117,7 @@ public class TimelineRegistrationStore {
     @Transactional public ReviewChange review(UUID tournament,UUID id,String next,String reason,UUID actor,Instant now,int capacity){
         if(!Set.of("APPROVED","REJECTED","WAITLISTED").contains(next))throw new AuthException("INVALID_REGISTRATION_TRANSITION",400);
         int currentCapacity=lockCapacity(tournament);
+        unlocked(tournament);
         if(capacity!=currentCapacity)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
         // Scope before acquiring the child lock: a foreign application must never be modified.
         var r=db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t and r.id=:id",TimelineRegistration.class)

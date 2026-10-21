@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 /** Durable per-user decisions; retries resume only unfinished users. No Docker jobs are launched here. */
 @Service
 public class CodingDeadlineService {
+ @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.timeline.TimelineRegistrationStore registrationControls;
  private final com.rpsbattle.tournament.FairTournamentScan fairScan=new com.rpsbattle.tournament.FairTournamentScan();
  private final TournamentRegistry registry;private final SubmissionStore store;private final OwnedTournamentService owned;private final TournamentService tournaments;private final UserRepository users;private final Clock clock;
  public CodingDeadlineService(TournamentRegistry r,SubmissionStore s,OwnedTournamentService o,TournamentService t,UserRepository u,Clock c){registry=r;store=s;owned=o;tournaments=t;users=u;clock=c;}
@@ -20,7 +21,7 @@ public class CodingDeadlineService {
  public void processDeadlines(){
   int remaining=50;
   for(var t:fairScan.next(registry.findAll()))synchronized(t){
-   if(t.timeline==null||t.startedAt!=null||clock.instant().isBefore(t.timeline.codingCloseAt())||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY,TournamentStatus.PAUSED,TournamentStatus.RECOVERY_REQUIRED).contains(t.status))continue;
+   if(t.timeline==null||!registrationControls.codingAllowed(t.id)||t.startedAt!=null||clock.instant().isBefore(t.timeline.codingCloseAt())||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY,TournamentStatus.PAUSED,TournamentStatus.RECOVERY_REQUIRED).contains(t.status))continue;
    var pending=store.pendingFreezeUsers(t.id,t.timeline.codingCloseAt(),Math.min(25,remaining));
    if(!pending.isEmpty())try{owned.submissionMutation(t,null,()->{for(var user:pending)freezeOne(t,user);tournaments.changed(t);});}
    catch(RuntimeException batchFailure){for(var user:pending)try{owned.submissionMutation(t,null,()->{freezeOne(t,user);tournaments.changed(t);});}catch(RuntimeException retry){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=coding_deadline_retry tournamentId={} userId={} cause={}",t.id,user,retry.getClass().getSimpleName());}}

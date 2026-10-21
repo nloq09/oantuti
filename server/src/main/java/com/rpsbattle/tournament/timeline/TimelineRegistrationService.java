@@ -24,17 +24,17 @@ public class TimelineRegistrationService {
     public TimelineRegistrationService(AccountAuthorizationService a,TournamentService t,OwnedTournamentService o,TimelineRegistrationStore s,Clock c){accounts=a;tournaments=t;owned=o;store=s;clock=c;}
     public record Signup(Boolean rulesAccepted,String intendedLanguage,String affiliation,String botId,String sourceCode,String versionId) {}
     public record CheckIn(String status,UUID registrationId,Instant checkedInAt,boolean canCheckIn,Instant opensAt,Instant closesAt,Instant startsAt,long checkedInCount) {}
-    public record Flow(TournamentPhase phase,String registrationStatus,TimelineRegistrationStore.View registration,String nextAction,Instant serverNow,Instant phaseEndsAt,Instant codingOpenAt,Set<String> allowedLanguages,long revision,Instant codingCloseAt,boolean canAccessWorkspace,boolean canModifyWorkspace,String submissionStatus,com.rpsbattle.tournament.coding.CodingFreeze.View frozenSubmission,com.rpsbattle.tournament.coding.FinalValidationStore.View finalValidation,CheckIn checkIn,String participantStatus,boolean emergencyCoding) {}
-    private TournamentPhaseResolver.Resolution resolve(Tournament t,Instant now){if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);return TournamentPhaseResolver.resolve(t.status,t.timeline,now,null,store.reviewComplete(UUID.fromString(t.id)));}
+    public record Flow(TournamentPhase phase,String registrationStatus,TimelineRegistrationStore.View registration,String nextAction,Instant serverNow,Instant phaseEndsAt,Instant codingOpenAt,Set<String> allowedLanguages,long revision,Instant codingCloseAt,boolean canAccessWorkspace,boolean canModifyWorkspace,String submissionStatus,com.rpsbattle.tournament.coding.CodingFreeze.View frozenSubmission,com.rpsbattle.tournament.coding.FinalValidationStore.View finalValidation,CheckIn checkIn,String participantStatus,boolean emergencyCoding,TimelineRegistrationStore.Control registrationControl) {}
+    private TournamentPhaseResolver.Resolution resolve(Tournament t,Instant now){if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);return store.phase(t,now);}
     private void registrationOpen(Tournament t){if(resolve(t,clock.instant()).phase()!=TournamentPhase.REGISTRATION_OPEN)throw new AuthException("REGISTRATION_NOT_OPEN",409);}
     public Flow read(Authentication auth,String id){var user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){return flow(t,user);}}
     private Flow flow(Tournament t,UUID user){
         var now=clock.instant();var phase=resolve(t,now);var registration=store.mine(UUID.fromString(t.id),user);String status=registration==null?"NOT_REGISTERED":registration.status();
         var emergency=status.equals("APPROVED")?finals.emergencyCutoff(t.id,user):null;
         var cutoff=emergency==null?t.timeline.codingCloseAt():emergency;
-        boolean emergencyOpen=emergency!=null&&now.isBefore(emergency)&&t.status==TournamentStatus.REGISTRATION&&t.startedAt==null;
+        boolean emergencyOpen=store.codingAllowed(t.id)&&emergency!=null&&now.isBefore(emergency)&&t.status==TournamentStatus.REGISTRATION&&t.startedAt==null;
         if(emergencyOpen)phase=new TournamentPhaseResolver.Resolution(TournamentPhase.CODING_OPEN,emergency);
-        boolean approved=status.equals("APPROVED"),closed=!now.isBefore(cutoff);
+        boolean approved=status.equals("APPROVED"),closed=store.codingAllowed(t.id)&&!now.isBefore(cutoff);
         var frozen=approved&&closed?submissions.frozenMine(t.id,user,cutoff):null;
         var validation=approved&&closed?finals.mine(t.id,user,cutoff):null;
         var submission=approved&&!closed?submissions.mine(t.id,user):null;
@@ -49,7 +49,7 @@ public class TimelineRegistrationService {
         String checkStatus=checked?"CHECKED_IN":approved&&submissionStatus.equals("BOT_READY")&&entry!=null&&!now.isBefore(t.timeline.checkInCloseAt())?"MISSED":eligible?"BOT_READY":"NOT_ELIGIBLE";
         var checkIn=new CheckIn(checkStatus,entry==null?null:entry.id(),entry==null?null:entry.checkedInAt(),eligible&&open&&!checked,t.timeline.checkInOpenAt(),t.timeline.checkInCloseAt(),t.timeline.tournamentStartAt(),t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.CHECKED_IN).count());
         if(checked)action="OPEN_WAITING_ROOM";else if(checkIn.canCheckIn())action="CHECK_IN";else if(approved&&checkStatus.equals("MISSED"))action="CHECK_IN_MISSED";
-        return new Flow(phase.phase(),status,registration,action,now,phase.phaseEndsAt(),t.timeline.codingOpenAt(),t.botPolicy.allowedLanguages(),t.revision,cutoff,approved&&t.status!=TournamentStatus.DRAFT&&!now.isBefore(t.timeline.codingOpenAt()),approved&&phase.phase()==TournamentPhase.CODING_OPEN,submissionStatus,frozen,validation,checkIn,participantStatus(t,user,phase.phase(),status,submissionStatus,checkIn),emergencyOpen);
+        return new Flow(phase.phase(),status,registration,action,now,phase.phaseEndsAt(),t.timeline.codingOpenAt(),t.botPolicy.allowedLanguages(),t.revision,cutoff,approved&&store.codingAllowed(t.id)&&t.status!=TournamentStatus.DRAFT&&!now.isBefore(t.timeline.codingOpenAt()),approved&&phase.phase()==TournamentPhase.CODING_OPEN,submissionStatus,frozen,validation,checkIn,participantStatus(t,user,phase.phase(),status,submissionStatus,checkIn),emergencyOpen,store.control(UUID.fromString(t.id)));
     }
     private String participantStatus(Tournament t,UUID user,TournamentPhase phase,String registration,String submission,CheckIn check){
         if(phase==TournamentPhase.DRAFT||phase==TournamentPhase.UPCOMING)return "REGISTER_NOT_OPEN";
@@ -76,16 +76,16 @@ public class TimelineRegistrationService {
         if(phase==TournamentPhase.WAITING_FOR_CODING||phase==TournamentPhase.REGISTRATION_REVIEW)return "WAITING_FOR_CODING";
         return "REGISTRATION_APPROVED";
     }
-    private boolean reviewOpen(Tournament t){var phase=resolve(t,clock.instant()).phase();return Set.of(TournamentPhase.REGISTRATION_OPEN,TournamentPhase.REGISTRATION_REVIEW,TournamentPhase.WAITING_FOR_CODING).contains(phase);}
-    public record Applications(List<TimelineRegistrationStore.Application> items,int page,int size,long revision,boolean reviewOpen,Instant codingOpenAt) {}
-    public Applications list(Authentication auth,String id,int page,String status){var t=tournaments.find(id);authorization.requireManager(auth,t);if(page<0||page>10000)throw new AuthException("INVALID_PAGING",400);if(status!=null&&!Set.of("PENDING","NEEDS_REVIEW","APPROVED","WAITLISTED","REJECTED","CANCELLED").contains(status))throw new AuthException("INVALID_FILTER",400);synchronized(t){return new Applications(store.page(UUID.fromString(id),page,status),page,25,t.revision,reviewOpen(t),t.timeline.codingOpenAt());}}
+    private boolean reviewOpen(Tournament t){if(store.control(UUID.fromString(t.id)).lockedAt()!=null||!clock.instant().isBefore(t.timeline.codingOpenAt()))return false;var phase=resolve(t,clock.instant()).phase();return Set.of(TournamentPhase.REGISTRATION_OPEN,TournamentPhase.REGISTRATION_REVIEW,TournamentPhase.WAITING_FOR_CODING).contains(phase);}
+    public record Applications(List<TimelineRegistrationStore.Application> items,int page,int size,long revision,boolean reviewOpen,Instant codingOpenAt,TimelineRegistrationStore.Control registrationControl) {}
+    public Applications list(Authentication auth,String id,int page,String status){var t=tournaments.find(id);authorization.requireManager(auth,t);if(page<0||page>10000)throw new AuthException("INVALID_PAGING",400);if(status!=null&&!Set.of("PENDING","NEEDS_REVIEW","APPROVED","WAITLISTED","REJECTED","CANCELLED").contains(status))throw new AuthException("INVALID_FILTER",400);synchronized(t){return new Applications(store.page(UUID.fromString(id),page,status),page,25,t.revision,reviewOpen(t),t.timeline.codingOpenAt(),store.control(UUID.fromString(t.id)));}}
     public record Review(Long revision,String decision,String reason) {}
     public void review(Authentication auth,String id,UUID application,Review request){var actor=accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){
         if(request.revision()==null||request.revision()!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
         if(!reviewOpen(t))throw new AuthException("APPLICATION_REVIEW_CLOSED",409);
         if(request.decision()==null||!Set.of("APPROVED","REJECTED","WAITLISTED").contains(request.decision()))throw new AuthException("INVALID_REGISTRATION_TRANSITION",400);
         String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
-        owned.submissionMutation(t,auth,()->{var change=store.review(UUID.fromString(id),application,request.decision(),reason,actor.id().value(),clock.instant(),t.maxParticipants);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_REVIEWED",actor.id().value(),application.toString(),reason,change.before(),request.decision());tournaments.changed(t);});
+        owned.submissionMutation(t,auth,()->{var change=store.review(UUID.fromString(id),application,request.decision(),reason,actor.id().value(),clock.instant(),t.maxParticipants);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_REVIEWED",actor.id().value(),application.toString(),reason,change.before(),request.decision());promote(t,application);tournaments.changed(t);});
     }}
     public record PolicyUpdate(Long revision,RegistrationPolicy policy,String reason) {}
     public void configurePolicy(Authentication auth,String id,PolicyUpdate request){
@@ -95,7 +95,7 @@ public class TimelineRegistrationService {
             if(request.policy()==null)throw new AuthException("INVALID_REGISTRATION_POLICY",400);
             if(t.status!=TournamentStatus.DRAFT||store.hasApplications(UUID.fromString(id)))throw new AuthException("REGISTRATION_POLICY_LOCKED",409);
             String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
-            owned.submissionMutation(t,auth,()->{var before=t.registrationPolicy;t.registrationPolicy=request.policy();TournamentAudit.append(t,"REGISTRATION_POLICY_UPDATED",actor.id().value(),id,reason,before.toString(),request.policy().toString());tournaments.changed(t);});
+            owned.submissionMutation(t,auth,()->{var before=t.registrationPolicy;t.registrationPolicy=request.policy();store.enable(UUID.fromString(id));TournamentAudit.append(t,"REGISTRATION_POLICY_UPDATED",actor.id().value(),id,reason,before.toString(),request.policy().toString());tournaments.changed(t);});
         }
     }
     public Flow register(Authentication auth,String id,Signup request){var actor=accounts.requireUser(auth);var t=tournaments.find(id);synchronized(t){registrationOpen(t);
@@ -106,7 +106,32 @@ public class TimelineRegistrationService {
         var previous=store.mine(UUID.fromString(id),actor.id().value());
         var decision=eligibility.evaluate(new RegistrationEligibilityService.Context(actor.status()==com.rpsbattle.account.domain.AccountStatus.ACTIVE,true,previous!=null&&!previous.status().equals("CANCELLED"),Boolean.TRUE.equals(request.rulesAccepted()),request.intendedLanguage(),t.botPolicy.allowedLanguages(),affiliation,t.registrationPolicy));
         if(decision.decision()==EligibilityDecision.Decision.REJECT){var code=decision.reasonCodes().getFirst();throw new AuthException(code.name(),code==EligibilityReasonCode.DUPLICATE_REGISTRATION?409:400);}
-        owned.submissionMutation(t,auth,()->{var entry=store.register(UUID.fromString(id),actor.id().value(),actor.displayName(),request.intendedLanguage(),affiliation,t.maxParticipants,clock.instant(),decision);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_SUBMITTED",actor.id().value(),entry.id().toString(),entry.status().equals("WAITLISTED")?EligibilityReasonCode.CAPACITY_FULL.name():String.join(",",decision.reasonCodes().stream().map(Enum::name).toList()),null,entry.status());tournaments.changed(t);});return flow(t,actor.id().value());
+        owned.submissionMutation(t,auth,()->{promote(t);var entry=store.register(UUID.fromString(id),actor.id().value(),actor.displayName(),request.intendedLanguage(),affiliation,t.maxParticipants,clock.instant(),decision);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_SUBMITTED",actor.id().value(),entry.id().toString(),entry.status().equals("WAITLISTED")?EligibilityReasonCode.CAPACITY_FULL.name():String.join(",",decision.reasonCodes().stream().map(Enum::name).toList()),null,entry.status());tournaments.changed(t);});return flow(t,actor.id().value());
     }}
-    public Flow withdraw(Authentication auth,String id){var user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){registrationOpen(t);owned.submissionMutation(t,auth,()->{store.withdraw(UUID.fromString(id),user);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_WITHDRAWN",user,id,null,null,"CANCELLED");tournaments.changed(t);});return flow(t,user);}}
+    private void promote(Tournament t){promote(t,null);}
+    private void promote(Tournament t,UUID excluded){
+        if(t.startedAt!=null||t.status!=TournamentStatus.REGISTRATION||!clock.instant().isBefore(t.timeline.codingOpenAt()))return;
+        for(var change:store.promote(UUID.fromString(t.id),t.registrationPolicy,t.botPolicy.allowedLanguages(),clock.instant(),excluded)){
+            String type=change.after().equals("APPROVED")?"WAITLIST_PROMOTED":change.after().equals("NEEDS_REVIEW")?"WAITLIST_REVIEW_REQUIRED":"WAITLIST_REJECTED";
+            TournamentAudit.append(t,type,null,change.applicationId().toString(),change.reason(),change.before(),change.after());
+        }
+    }
+    public record LifecycleAction(Long revision,String reason) {}
+    public record Summary(TimelineRegistrationStore.Control control,Map<String,Long> counts,boolean registrationOpen,boolean canClose,boolean canLock,Instant registrationCloseAt,Instant codingOpenAt,long revision,Instant serverNow) {}
+    public Summary summary(Authentication auth,String id){var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);var now=clock.instant();var state=store.control(UUID.fromString(id));boolean beforeCoding=now.isBefore(t.timeline.codingOpenAt()),closed=state.closedAt()!=null||!now.isBefore(t.timeline.registrationCloseAt());var counts=store.counts(UUID.fromString(id));boolean active=t.status==TournamentStatus.REGISTRATION&&t.startedAt==null;return new Summary(state,counts,active&&!now.isBefore(t.timeline.registrationOpenAt())&&!closed&&state.lockedAt()==null,active&&!now.isBefore(t.timeline.registrationOpenAt())&&!closed&&beforeCoding,active&&closed&&beforeCoding&&state.lockedAt()==null&&counts.get("needsReview")==0&&counts.get("approved")>=(t.format==TournamentFormat.GROUP_KNOCKOUT?4:t.format==TournamentFormat.TEAM_ROUND_ROBIN?6:2),t.timeline.registrationCloseAt(),t.timeline.codingOpenAt(),t.revision,now);}}
+    public void lifecycle(Authentication auth,String id,LifecycleAction request,boolean lock){
+        var actor=accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){
+            if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);
+            if(request.revision()==null||request.revision()!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
+            if(t.status!=TournamentStatus.REGISTRATION||t.startedAt!=null)throw new AuthException("APPLICATION_REVIEW_CLOSED",409);
+            var now=clock.instant();if(!now.isBefore(t.timeline.codingOpenAt()))throw new AuthException("ROSTER_LOCK_DEADLINE",409);
+            String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
+            owned.submissionMutation(t,auth,()->{
+                if(lock){promote(t);int minimum=t.format==TournamentFormat.GROUP_KNOCKOUT?4:t.format==TournamentFormat.TEAM_ROUND_ROBIN?6:2;var state=store.lockRoster(UUID.fromString(id),actor.id().value(),actor.displayName(),now,minimum,t.timeline.registrationCloseAt());TournamentAudit.append(t,"REGISTRATION_ROSTER_LOCKED",actor.id().value(),id,reason,null,state.lockedCount().toString());}
+                else{if(now.isBefore(t.timeline.registrationOpenAt()))throw new AuthException("REGISTRATION_NOT_OPEN",409);store.close(UUID.fromString(id),now);promote(t);TournamentAudit.append(t,"REGISTRATION_APPLICATIONS_CLOSED",actor.id().value(),id,reason,null,now.toString());}
+                tournaments.changed(t);
+            });
+        }
+    }
+    public Flow withdraw(Authentication auth,String id){var user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){if(!store.control(UUID.fromString(id)).enabled())registrationOpen(t);else if(!reviewOpen(t))throw new AuthException("APPLICATION_REVIEW_CLOSED",409);owned.submissionMutation(t,auth,()->{store.withdraw(UUID.fromString(id),user);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_WITHDRAWN",user,id,null,null,"CANCELLED");promote(t);tournaments.changed(t);});return flow(t,user);}}
 }

@@ -38,6 +38,7 @@ export function organizerNextAction(t,data,{stale=false}={}){
  if(phase==='DRAFT')return available.openRegistration?command('open-registration','Mở đăng ký','Kiểm tra lịch và luật trước khi công bố giải.'):go('settings','Kiểm tra cài đặt','Hoàn tất cấu hình và cập nhật lịch trước khi mở đăng ký.');
  if(['REGISTRATION_OPEN','REGISTRATION_REVIEW','WAITING_FOR_CODING','UPCOMING'].includes(phase)){
   if(data?.registration?.pending)return {label:'Duyệt đăng ký',description:data.registration.pending+' đơn đang chờ xét duyệt.',href:t.timeline?'/tournament-applications.html?id='+encodeURIComponent(t.id)+'&status=PENDING':base+'&view=registration&filter=PENDING',section:'registration'};
+  if(data?.registrationControl?.enabled){if(data.registrationControl.lockedAt)return go('registration','Chờ lập trình','Danh sách đã chốt. Chờ giờ mở coding.');if(phase==='REGISTRATION_REVIEW')return {label:'Chốt danh sách thi đấu',description:'Đã đóng nhận đơn. Kiểm tra danh sách và chốt trước giờ coding.',href:'/tournament-applications.html?id='+encodeURIComponent(t.id),section:'registration'};}
   if(available.closeRegistration)return command('close-registration','Chốt đăng ký','Đã đủ người được duyệt. Kiểm tra các đơn còn lại trước khi chốt.');
   return go('registration',phase==='UPCOMING'?'Xem lịch đăng ký':'Theo dõi đăng ký',phase==='WAITING_FOR_CODING'?'Đã xét duyệt xong. Chờ giờ mở lập trình.':'Theo dõi danh sách và các đơn được gửi vào giải.');
  }

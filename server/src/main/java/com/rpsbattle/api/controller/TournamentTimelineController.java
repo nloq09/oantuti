@@ -21,7 +21,7 @@ public class TournamentTimelineController {
     @GetMapping public ResponseEntity<View> read(@PathVariable String id){
         owned.flush();var t=tournaments.find(id);
         synchronized(t){var now=clock.instant();boolean reviewed=t.registrations.stream().noneMatch(r->r.status()==TournamentRegistration.Status.PENDING)&&(t.timeline==null||applications.reviewComplete(java.util.UUID.fromString(t.id)));
-            var result=TournamentPhaseResolver.resolve(t.status,t.timeline,now,null,reviewed);
+            var result=t.timeline==null?TournamentPhaseResolver.resolve(t.status,null,now,null,reviewed):applications.phase(t,now);
             return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new View(t.timeline,result.phase(),now,result.phaseEndsAt(),t.revision,t.timeline!=null));}
     }
     @PutMapping public ResponseEntity<View> configure(Authentication auth,@PathVariable String id,@RequestBody Configure request){owned.configureTimeline(auth,id,request.revision(),request.timeline());return read(id);}

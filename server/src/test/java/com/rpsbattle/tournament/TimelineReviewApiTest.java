@@ -15,7 +15,7 @@ class TimelineReviewApiTest extends StageThreeWebFixture {
  @Autowired TimelineRegistrationService service;
  @Autowired com.rpsbattle.account.repository.UserRepository users;
  static final Instant START=Instant.parse("2026-10-19T00:00:00Z");
- @BeforeEach void time(){when(clock.instant()).thenReturn(START.plusSeconds(30));when(clock.getZone()).thenReturn(ZoneOffset.UTC);}
+ @BeforeEach void time(){doReturn(START.plusSeconds(30)).when(clock).instant();doReturn(ZoneOffset.UTC).when(clock).getZone();}
  String cup()throws Exception{loginAccount();var t=request("/api/tournaments","POST",Map.of("name","Review applications","botPolicy",Map.of("submissionMode","BOTH")),201);String base="/api/tournaments/"+t.path("id").asText();var timeline=new TournamentTimeline(START,START.plusSeconds(60),START.plusSeconds(120),START.plusSeconds(180),START.plusSeconds(180),START.plusSeconds(210),START.plusSeconds(240),START.plusSeconds(270),START.plusSeconds(300),START.plusSeconds(360),null);request(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",timeline),200);request(base+"/open-registration","POST",Map.of(),200);return base;}
  String apply(String base)throws Exception{return request(base+"/participant-registration","POST",Map.of("intendedLanguage","CPP","rulesAccepted",true),200).path("registration").path("id").asText();}
  long revision(String base)throws Exception{return request(base,"GET",null,200).path("revision").asLong();}

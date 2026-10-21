@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 @Service
 public class TournamentService {
     private java.time.Clock clock=java.time.Clock.systemUTC();
+    @org.springframework.beans.factory.annotation.Autowired(required=false) com.rpsbattle.tournament.timeline.TimelineRegistrationStore registrationApplications;
     @org.springframework.beans.factory.annotation.Autowired public void clock(java.time.Clock clock){this.clock=clock;}
     private com.rpsbattle.tournament.coding.SubmissionStore submissions;
     @org.springframework.beans.factory.annotation.Autowired public void submissionStore(com.rpsbattle.tournament.coding.SubmissionStore s){submissions=s;}
@@ -121,6 +122,7 @@ public class TournamentService {
         data.put("seedingStrategy",t.seedingStrategy);data.put("seedingSeed",Long.toString(t.seedingSeed));
         data.put("registrationPolicy",t.registrationPolicy);data.put("timing",t.timing);data.put("participantPolicy",t.participantPolicy);data.put("botPolicy",t.botPolicy);data.put("submissionValidationRequired",submissions!=null&&submissions.enabled(t.id));data.put("checkInRequired",t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
         data.put("acceptingRegistrations",t.status==TournamentStatus.REGISTRATION&&(t.timeline!=null?!clock.instant().isBefore(t.timeline.registrationOpenAt())&&clock.instant().isBefore(t.timeline.registrationCloseAt()):t.timing.registrationDeadline()==null||clock.instant().isBefore(t.timing.registrationDeadline())));
+        if(t.timeline!=null&&registrationApplications!=null){var control=registrationApplications.control(UUID.fromString(t.id));data.put("registrationControl",control);if(control.closedAt()!=null||control.lockedAt()!=null)data.put("acceptingRegistrations",false);}
         data.put("groups",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.view(t));data.put("groupStage",t.groupStage);data.put("groupPlans",t.groupPlans);data.put("groupHistory",List.copyOf(t.groupHistory));
         data.put("swiss",t.swiss);data.put("teamCompetition",t.format==TournamentFormat.TEAM_ROUND_ROBIN?com.rpsbattle.tournament.scheduler.TeamScheduler.view(t):null);
         data.put("bestOf",t.bestOf);data.put("series",TournamentSeries.roots(t).stream().filter(m->!compact||selected.stream().anyMatch(game->game.seriesId.equals(m.id))).map(m->TournamentSeries.view(t,m)).toList());
@@ -129,7 +131,7 @@ public class TournamentService {
         data.put("currentRound",t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(t.rounds.size()));
         data.put("drawPolicy",Set.of(TournamentFormat.GROUP_KNOCKOUT,TournamentFormat.SINGLE_ELIMINATION).contains(t.format)?"REMAINING_PIECES_THEN_SEED":null);
         data.put("autoAdvanceRounds",t.operations.autoAdvanceRounds());data.put("releasedRound",t.operations.releasedRound());data.put("participantStatuses",t.operations.participants());
-        data.put("reviews",t.operations.reviews());data.put("rulesSnapshot",t.operations.rulesSnapshot());data.put("audit",(compact?t.operations.audit().stream().skip(Math.max(0,t.operations.audit().size()-20)):t.operations.audit().stream()).map(e->Set.of("PARTICIPANT_APPLICATION_REVIEWED","PARTICIPANT_APPLICATION_SUBMITTED","REGISTRATION_POLICY_UPDATED").contains(e.type())?new TournamentAuditEvent(e.id(),e.sequence(),e.type(),e.actor(),e.target(),null,e.beforeValue(),e.afterValue(),e.at()):e).toList());data.put("paged",compact);
+        data.put("reviews",t.operations.reviews());data.put("rulesSnapshot",t.operations.rulesSnapshot());data.put("audit",(compact?t.operations.audit().stream().skip(Math.max(0,t.operations.audit().size()-20)):t.operations.audit().stream()).map(e->Set.of("PARTICIPANT_APPLICATION_REVIEWED","PARTICIPANT_APPLICATION_SUBMITTED","REGISTRATION_POLICY_UPDATED","WAITLIST_PROMOTED","WAITLIST_REJECTED","REGISTRATION_ROSTER_LOCKED","REGISTRATION_APPLICATIONS_CLOSED").contains(e.type())?new TournamentAuditEvent(e.id(),e.sequence(),e.type(),e.actor(),e.target(),null,e.beforeValue(),e.afterValue(),e.at()):e).toList());data.put("paged",compact);
         var names=new LinkedHashMap<String,String>();for(var participant:t.participants)names.put(participant.participantId(),username(participant.ownerUserId()));data.put("participantOwners",names);
         data.put("registrations",List.copyOf(t.registrations));
         data.put("participants",List.copyOf(t.participants));

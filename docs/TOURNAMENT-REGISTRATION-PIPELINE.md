@@ -1,6 +1,6 @@
-# Registration pipeline — nhóm 1–3
+# Registration pipeline — nhóm 1–4
 
-Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 3 bổ sung capacity và waitlist trên nền nhóm 1–2. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
+Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách trên nền nhóm 1–3. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
 
 ## Luồng thực tế đã đối chiếu
 
@@ -218,3 +218,80 @@ Tự đôn người chờ khi có suất, notification promotion, Registration C
 - `server/src/test/java/com/rpsbattle/tournament/TimelineRegistrationApiTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationCapacityPostgresTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationEligibilityServiceTest.java`
+
+
+## Nhóm 4 — promotion, Registration Close và Roster Lock
+
+### Đóng nhận đơn và chốt danh sách độc lập
+
+Giải mới tạo với registrationPolicy explicit (hoặc cập nhật policy của giải nháp chưa có đơn) được khởi tạo một hàng control riêng trong transaction tạo giải. Hàng này bật workflow chốt danh sách trước coding. Không backfill các giải cũ sang workflow bắt buộc mới để tránh khóa các giải đã có bài nộp/đang chạy. Giải cũ vẫn có thể chủ động dùng thao tác đóng/chốt mới trước giờ coding; đóng sẽ tạo control và yêu cầu chốt riêng.
+
+- **Đóng cửa đăng ký:** không nhận thêm đơn, không thay mốc coding, không khóa submission, không chuyển CHECK_IN/READY và không chốt roster. Các đơn cũ vẫn được xét duyệt hoặc rút trước khi lock, trong thời gian trước codingOpenAt.
+- Đến registrationCloseAt chỉ đóng admission theo clock; không ngầm tạo roster lock. Với workflow mới, phase tiếp tục REGISTRATION_REVIEW đến khi chủ giải chốt, dù NEEDS_REVIEW bằng 0.
+- **Chốt danh sách thi đấu:** server yêu cầu nhận đơn đã đóng (explicit hoặc theo deadline), không còn NEEDS_REVIEW, đủ số người tối thiểu theo format, chưa bắt đầu giải và chưa đến codingOpenAt. Chốt lưu thời gian, actor/name và số APPROVED.
+- Không có override tự bỏ qua đơn cần xét duyệt hoặc action unlock trong nhóm này. Muốn chốt phải giải quyết hàng chờ. Nếu bỏ lỡ giờ coding, cần điều chỉnh lịch trước khi chốt; hệ thống không tự rút ngắn thời gian làm bài bằng cách mở coding muộn.
+- Sau lock, register/review/withdraw application đều bị chặn ở service và Store dưới khóa DB; promotion trở thành no-op. Đăng ký execution bot/check-in tiếp tục là đối tượng riêng.
+- UI có confirm dialog kèm lý do/revision cho từng thao tác. Card lock hiển thị số người, thời gian và người chốt; không còn nút review khi locked. Overview ưu tiên xử lý đơn, sau đó dẫn đến chốt roster; có cảnh báo còn dưới 10 phút hoặc đã đến giờ coding mà chưa chốt.
+
+### Tự đôn waitlist
+
+Promotion chạy trong cùng transaction của thao tác giải phóng suất (rút đơn hoặc review), khi đóng nhận đơn, trước nhận đơn mới để tránh người mới vượt hàng và khi chốt roster. Chỉ chạy trước coding và trước lock. Các transaction dùng cùng khóa hàng tournament và thứ tự khóa parent→application của nhóm 3.
+
+Xét lại từng người theo waitlist_order: tài khoản còn ACTIVE, ngôn ngữ còn được phép và eligibility/policy hiện hành. Đơn còn cần người xác minh được bỏ qua, vẫn ở waitlist; không giả định action WAITLIST đồng nghĩa đã xác minh. Đơn không còn đủ điều kiện bị REJECTED, có audit nội bộ; tiếp tục tìm người đủ điều kiện phía sau. Các batch đọc giới hạn tối đa 100, dùng order cursor để không lặp lại đơn chưa đủ điều kiện. Policy bắt buộc duyệt thủ công hoặc xác minh đơn vị không có người được tự duyệt nên không quét lại cả waitlist ở mỗi request.
+
+Một đơn bị Organizer chủ động chuyển vào waitlist được loại khỏi promotion trong chính thao tác đó, tránh tự đảo lại quyết định thành APPROVED ngay lập tức. Các lần xét suất sau vẫn đánh giá theo policy.
+
+WAITLIST_PROMOTED được audit với target application ID và chiếu thành notification cá nhân: “Bạn đã được chuyển từ danh sách chờ sang được chấp nhận.” Người khác, kể cả organizer không sở hữu đơn đó, không nhận notification cá nhân này. Organizer vẫn xem audit quản lý. WAITLIST_REJECTED có notification công khai riêng; private eligibility reasons không xuất hiện trong detail/summary/export hoặc notification.
+
+### Chặn đường vòng và thời gian
+
+Flow Player, timeline endpoint, discovery và organizer metrics đọc cùng phase projection có roster control. acceptingRegistrations trong tournament detail cũng chuyển false khi đóng sớm. Việc gia hạn timeline không tự mở lại một cửa đăng ký đã chủ động đóng.
+
+Với workflow mới chưa lock: TimelineAccessGuard chặn đọc/ghi workspace, build/test và import/submit qua guard dùng chung; không tạo freeze hoặc final validation; không mở trận kể cả đã qua tournamentStartAt. Không hiển thị FREEZE_PENDING giả khi coding chưa từng được mở. Giải cũ không có control giữ hành vi hiện có.
+
+### API/DTO và migration
+
+- GET `/api/tournaments/{id}/registration-summary`: manager/admin; control, counts, registrationOpen/canClose/canLock, mốc registration/coding, revision, serverNow.
+- POST `/api/tournaments/{id}/registration/close`: `{revision,reason}`; manager/admin; đóng admission, trả summary mới.
+- POST `/api/tournaments/{id}/roster/lock`: `{revision,reason}`; manager/admin; chốt roster khi đủ điều kiện, trả summary.
+- Player flow, applications list, organizer metrics và tournament detail: thêm registrationControl (enabled, closedAt, lockedAt, lockedByName, lockedCount); Player không nhận counts hàng xét duyệt hoặc reason nội bộ.
+- Các API cũ vẫn tồn tại cho luồng legacy. Không tái dùng action close-registration cũ (khóa submission/chuyển phase legacy) làm thao tác đóng admission mới.
+- Migration V40 `registration_close_and_roster_lock`: bảng tournament_registration_controls, PK/FK tournament_id, closed_at, locked_at, locked_by/name/count. Constraint yêu cầu metadata lock đầy đủ, số người ít nhất 2 và close không sau lock. Bảng ban đầu rỗng, không tự chốt hoặc áp workflow mới cho các giải cũ.
+- Không sửa GameEngine.
+
+### Kiểm chứng nhóm 4
+
+Các tests API bao gồm đóng trước hạn vẫn review/rút được, tự đôn sau withdraw, notification chỉ đúng người, guard pending review/minimum/revision/reason/ownership, roster immutable, không tự lock tại deadline, workspace/freeze/validation/start không vượt lock, và explicit WAITLIST không tự đảo quyết định. Concurrency PostgreSQL kiểm tra hai promotion cùng tranh suất, rollback cùng withdraw, revalidation tài khoản bị khóa, bỏ qua affiliation chưa xác minh và khóa roster tại Store. Migration test kiểm tra upgrade từ V39 giữ luồng cũ và constraint lock metadata.
+
+**PASS 268/268 backend/migration tests theo kết quả mới nhất của từng class**, gồm **35/35 PostgreSQL migration tests** và **10/10 PostgreSQL transaction/concurrency tests**. Lượt mở rộng ban đầu có một lỗi thiết lập clock Mockito do tác vụ nền; đã đổi sang doReturn cho stubbing clock và chạy lại class đó cùng các lớp lifecycle/concurrency liên quan, tất cả PASS. **PASS 329/329 client tests**, **PASS bootJar**, **PASS kiểm tra cú pháp application-review.js**. Không có failure/skipped trong bộ kết quả cuối. Browser bị tắt trong Work settings nên chưa kiểm tra hình ảnh; DOM/component tests đã xác minh các trạng thái và confirm dialog.
+
+
+### File thêm/sửa trong nhóm 4
+
+- `client/js/tournament/application-review.js`
+- `client/js/tournament/notifications.js`
+- `client/js/tournament/organizer-actions.js`
+- `client/js/tournament/registration-lifecycle.js`
+- `client/js/tournament/timeline-registration.js`
+- `client/js/ui/toast.js`
+- `client/tests/registration-lifecycle.test.js`
+- `client/tests/timeline-registration.test.js`
+- `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
+- `server/src/main/java/com/rpsbattle/api/controller/TimelineRegistrationController.java`
+- `server/src/main/java/com/rpsbattle/api/controller/TournamentTimelineController.java`
+- `server/src/main/java/com/rpsbattle/tournament/OrganizerMetricsService.java`
+- `server/src/main/java/com/rpsbattle/tournament/OwnedTournamentService.java`
+- `server/src/main/java/com/rpsbattle/tournament/TournamentDiscoveryService.java`
+- `server/src/main/java/com/rpsbattle/tournament/TournamentNotificationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/TournamentService.java`
+- `server/src/main/java/com/rpsbattle/tournament/coding/CodingDeadlineService.java`
+- `server/src/main/java/com/rpsbattle/tournament/coding/FinalValidationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/RegistrationControl.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineAccessGuard.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationStore.java`
+- `server/src/main/resources/db/migration/V40__registration_close_and_roster_lock.sql`
+- `server/src/test/java/com/rpsbattle/persistence/FlywayMigrationTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/TimelineReviewApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationCapacityPostgresTest.java`

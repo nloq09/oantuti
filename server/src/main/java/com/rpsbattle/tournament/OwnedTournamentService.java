@@ -115,7 +115,7 @@ public class OwnedTournamentService {
             t.botPolicy=botPolicy;t.bestOf=seriesLength;t.maxConcurrentMatches=concurrency==null?4:concurrency;if(order!=null)t.tieBreakOrder=List.copyOf(order);
             TournamentAudit.append(t,"TOURNAMENT_CREATED",actor.id().value(),t.id,null,null,t.format.name());
             t.ownerUserId=actor.id().value();t.participantPolicy=policy==null?ParticipantPolicy.BOT_ONLY:policy;t.checkInRequired=checkInRequired;t.maxParticipants=limit;t.deferNotifications=true;
-            try {if(submissions!=null&&enroll)submissionTransactions.executeWithoutResult(tx->{persistence.persistNow(t);submissions.enable(t.id);});else persistence.persistNow(t);} catch(RuntimeException failure) {registry.remove(t.id);throw failure;}
+            try {if(submissions!=null&&(enroll||registrationPolicy!=null))submissionTransactions.executeWithoutResult(tx->{persistence.persistNow(t);if(enroll)submissions.enable(t.id);if(registrationPolicy!=null)timelineRegistrations.enable(UUID.fromString(t.id));});else persistence.persistNow(t);} catch(RuntimeException failure) {registry.remove(t.id);throw failure;}
             finally {t.deferNotifications=false;}
             tournaments.notifyChanged(t);
         }
@@ -219,6 +219,7 @@ public class OwnedTournamentService {
             var now=clock.instant();
             if(t.timeline==null||now.isBefore(t.timeline.tournamentStartAt()))throw new DemoRequestException("TOURNAMENT_START_NOT_DUE");
             if(t.startedAt!=null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY).contains(t.status))return;
+            if(!timelineRegistrations.codingAllowed(t.id)){if(auth!=null)throw new AuthException("ROSTER_NOT_LOCKED",409);return;}
             if(holdForValidation(t))return;
             var fresh=new ArrayList<String>();
             try{submissionMutation(t,auth,()->{

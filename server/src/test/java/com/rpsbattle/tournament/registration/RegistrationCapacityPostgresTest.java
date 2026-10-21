@@ -71,6 +71,31 @@ class RegistrationCapacityPostgresTest {
         };
         assertThat(race(List.of(submit,submit))).containsExactlyInAnyOrder("APPROVED","DUPLICATE_REGISTRATION");assertThat(approved(cup)).isEqualTo(1);
     }
+    @Test void concurrentAutomaticPromotionsAllocateOnlyOneFreedPlace()throws Exception{
+        UUID cup=cup(),departing=user();store.enable(cup);apply(cup,departing);apply(cup,user());var first=apply(cup,user());var second=apply(cup,user());store.withdraw(cup,departing);
+        Callable<String> promotion=()->Integer.toString(store.promote(cup,new RegistrationPolicy(RegistrationApprovalPolicy.HYBRID,false),Set.of("CPP"),NOW).size());
+        assertThat(race(List.of(promotion,promotion))).containsExactlyInAnyOrder("1","0");assertThat(approved(cup)).isEqualTo(2);assertThat(store.page(cup,0,"WAITLISTED").getFirst().id()).isEqualTo(second.id());assertThat(store.page(cup,0,"APPROVED")).anyMatch(r->r.id().equals(first.id()));
+    }
+    @Test void promotionRechecksAccountAndSkipsUnresolvedVerification(){
+        UUID cup=cup(),departing=user();apply(cup,departing);apply(cup,user());UUID banned=user();var invalid=apply(cup,banned);var valid=apply(cup,user());db.update("update users set status='DISABLED' where id=?",banned);store.withdraw(cup,departing);
+        var results=store.promote(cup,new RegistrationPolicy(RegistrationApprovalPolicy.HYBRID,false),Set.of("CPP"),NOW);assertThat(results).hasSize(2);assertThat(results).anyMatch(r->r.applicationId().equals(invalid.id())&&r.after().equals("REJECTED"));assertThat(results).anyMatch(r->r.applicationId().equals(valid.id())&&r.after().equals("APPROVED"));assertThat(approved(cup)).isEqualTo(2);
+        UUID other=cup(),otherDeparting=user(),unverified=user();apply(other,otherDeparting);apply(other,user());store.register(other,unverified,"Unverified affiliation","CPP","UET",2,NOW,eligible);store.withdraw(other,otherDeparting);
+        assertThat(store.promote(other,new RegistrationPolicy(RegistrationApprovalPolicy.HYBRID,true),Set.of("CPP"),NOW)).isEmpty();assertThat(store.mine(other,unverified).status()).isEqualTo("WAITLISTED");assertThat(approved(other)).isEqualTo(1);
+    }
+    @Test void closedRegistrationRemainsReviewableButLockedRosterRejectsAllChanges(){
+        UUID cup=cup(),owner=user();var first=apply(cup,owner);apply(cup,user());var waiting=apply(cup,user());store.enable(cup);store.close(cup,NOW);
+        assertThat(store.control(cup).lockedAt()).isNull();assertThatThrownBy(()->apply(cup,user())).isInstanceOf(AuthException.class).hasMessage("REGISTRATION_NOT_OPEN");
+        var state=store.lockRoster(cup,owner,"Organizer",NOW,2,NOW.plusSeconds(60));assertThat(state.lockedCount()).isEqualTo(2);assertThat(store.codingAllowed(cup.toString())).isTrue();
+        assertThatThrownBy(()->store.withdraw(cup,owner)).hasMessage("ROSTER_LOCKED");assertThatThrownBy(()->store.review(cup,waiting.id(),"APPROVED","No changes",owner,NOW,2)).hasMessage("ROSTER_LOCKED");assertThat(store.promote(cup,new RegistrationPolicy(RegistrationApprovalPolicy.HYBRID,false),Set.of("CPP"),NOW)).isEmpty();
+    }
+    @Test void unresolvedApplicationsBlockLockAndRollbackLeavesControlUnlocked(){
+        UUID cup=cup(),owner=user();apply(cup,owner);apply(cup,user());store.register(cup,user(),"Needs review","CPP",null,2,NOW);store.enable(cup);store.close(cup,NOW);
+        assertThatThrownBy(()->store.lockRoster(cup,owner,"Organizer",NOW,2,NOW.plusSeconds(60))).hasMessage("ROSTER_REVIEW_REQUIRED");assertThat(store.control(cup).lockedAt()).isNull();assertThat(store.codingAllowed(cup.toString())).isFalse();
+    }
+    @Test void promotionRollsBackWithTheWithdrawalThatFreedItsPlace(){
+        UUID cup=cup(),departing=user(),waitingUser=user();apply(cup,departing);apply(cup,user());apply(cup,waitingUser);
+        assertThatThrownBy(()->new TransactionTemplate(transactions).executeWithoutResult(status->{store.withdraw(cup,departing);store.promote(cup,new RegistrationPolicy(RegistrationApprovalPolicy.HYBRID,false),Set.of("CPP"),NOW);throw new IllegalStateException("Abort promotion");})).hasMessage("Abort promotion");assertThat(store.mine(cup,departing).status()).isEqualTo("APPROVED");assertThat(store.mine(cup,waitingUser).status()).isEqualTo("WAITLISTED");
+    }
     @Test void rollbackReleasesAllocationAndWaitingOrderAndCapacityComesFromDatabase(){
         UUID cup=cup();apply(cup,user());apply(cup,user());var tx=new TransactionTemplate(transactions);UUID rolledBack=user();
         assertThatThrownBy(()->tx.executeWithoutResult(status->{apply(cup,rolledBack);throw new IllegalStateException("Rollback fixture");})).isInstanceOf(IllegalStateException.class);
