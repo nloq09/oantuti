@@ -27,7 +27,7 @@ test('player journey keeps one authorized next action from upcoming through chec
 
 test('remote execution journey never opens a live board before replay is available; final result overrides stale coding rights',()=>{
  for(const executionState of ['QUEUED','ASSIGNED','STARTING','RUNNING_REMOTE','RESULT_PENDING','RETRYING','RECOVERING']){
-  const root=dom(),action=renderPlayerShell(root,{tournament:{...cup,status:'RUNNING'},account:{id:'u'},me:{states:[{status:'PLAYING',registration:{controllerType:'BOT'}}],matchMonitor:{items:[{executionState,execution:{attempt:1}}]}}});assert.equal(action.type,'TRACK_MATCH');assert.equal(action.href,'/tournament-lobby.html?id=cup#my-match');assert.ok(!descendants(root).some(n=>n.href?.includes('/game.html')));
+  const root=dom(),action=renderPlayerShell(root,{tournament:{...cup,status:'RUNNING'},account:{id:'u'},me:{states:[{participantId:'entry',status:'PLAYING',registration:{controllerType:'BOT'},currentMatch:{id:'remote-game'}}],matchMonitor:{items:[{id:'remote-game',participantA:{participantId:'entry'},executionState,execution:{attempt:1}}]}}});assert.equal(action.type,'TRACK_MATCH');assert.equal(action.href,'/tournament-lobby.html?id=cup#my-match');assert.ok(!descendants(root).some(n=>n.href?.includes('/game.html')));
  }
  const root=dom(),action=renderPlayerShell(root,{tournament:{...cup,status:'FINISHED',timeline:{resultPublishAt:'2099-01-01T00:00:00Z'}},account:{id:'u'},flow:{nextAction:'OPEN_CODE_WORKSPACE',canAccessWorkspace:true,canModifyWorkspace:true}});assert.equal(action.type,'VIEW_RESULT');assert.equal(action.href,'/tournament-detail.html?id=cup#ranking');
 });

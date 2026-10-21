@@ -34,3 +34,13 @@ Bản tiếp theo bổ sung `player-tab-view`: trang người chơi giữ một 
 Các lần render phải hoãn vì người dùng đang nhập hoặc đang gửi form được ghi nhớ; polling tiếp theo thử render lại sau khi hết chặn, kể cả khi server không tăng revision lần nữa. Lịch sử attempt trong Match Monitor có AbortSignal riêng; đổi bộ lọc, thay danh sách hoặc dừng monitor sẽ hủy việc tải và bỏ phản hồi muộn.
 
 Kiểm chứng bổ sung: PASS 244 client tests, trong đó 9 ca mới kiểm tra reparent màn hình thật bằng DOM harness, giữ filter/zoom/chi tiết đang mở, một controller đang hoạt động, truyền revision mới, abort khi đổi tab/quyền/giai đoạn, hủy trước lần tải đầu và phản hồi history đến muộn. PASS cú pháp 73 module, bootJar, diff check và smoke HTTP/WebSocket cùng đối chiếu 51 asset của bản đóng gói. Không đổi backend hoặc schema trong bản tiếp theo; không chạy lại các suite backend đã qua ở trên. Browser click/screenshot vẫn chưa kiểm tra vì browser bị tắt trong Work settings.
+
+## Chọn đúng trận cho nút chính và mất quyền khi xem lịch sử
+
+Nút chính dùng trạng thái của chính suất được chọn, ưu tiên suất chơi tay đã có trận hoặc đang cần ready check trước bot. Một bot khác cùng tài khoản không được chiếm nút Vào trận/Sẵn sàng. Khi chọn bot, lấy projection đúng currentMatch/nextMatch ID, hoặc đối chiếu participant ID khi chưa có assignment; không lấy tùy ý execution đầu tiên trong tài khoản. Dữ liệu monitor riêng ưu tiên hơn snapshot công khai của cùng trận.
+
+Nếu monitor lỗi, trạng thái remote công khai vẫn cho phép theo dõi queue/gameplay/xác nhận kết quả. Mã phòng cũ trong participant state không đủ để tạo nút xem trực tiếp cho bot. Phòng local phải được projection xác nhận RUNNING_LOCAL; dữ liệu thiếu, kết quả pending/terminal/không rõ sẽ dẫn tới Trận của tôi để đồng bộ. Luồng chơi tay vẫn dùng seat do server cấp và endpoint entry kiểm tra quyền. Ready check không được mở mới khi giải đang PAUSED/RECOVERY_REQUIRED.
+
+Khi tải lịch sử attempt trả UNAUTHENTICATED, TOURNAMENT_FORBIDDEN hoặc ACCOUNT_DISABLED, monitor xóa ngay dữ liệu riêng, vô hiệu bộ lọc/nút cập nhật và dừng request đang chờ. Phản hồi cũ đến sau không được khôi phục dữ liệu. Lỗi mạng thông thường vẫn giữ dữ liệu cũ và cho thử lại.
+
+Kiểm chứng: PASS 251 client tests (7 ca mới, trong đó ca mất quyền kiểm tra cả ba mã lỗi); PASS 73 module syntax, diff check, bootJar và native PostgreSQL HTTP/compact WebSocket smoke đối chiếu 51 asset. Cập nhật fixture hành trình remote với assignment/participant ID thật thay vì execution không có danh tính. Bản này chỉ đổi client và tài liệu; không thay backend, schema hoặc protocol bot. Chưa có kiểm tra screenshot/browser click mới; giới hạn browser như ghi ở trên vẫn còn.

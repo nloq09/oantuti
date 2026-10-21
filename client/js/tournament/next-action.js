@@ -1,3 +1,4 @@
+import {activeMatch,isRemoteMatch,matchExecutionState} from './match-execution.js';
 import {tournamentRoute,playerTournamentRoute,actionDestination} from './tournament-routes.js';
 import {isKnockout,roundLabel} from './bracket-renderer.js';
 // Presentation of server decisions only. These links never grant admission or workspace rights.
@@ -11,18 +12,22 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
  const states=me?.states||[];
  if(['RUNNING','PAUSED','RECOVERY_REQUIRED'].includes(t.status)||!t.timeline){
   // Prefer an actionable human seat if a legacy account owns more than one registration.
+  const matches=new Map([...(t.matches||[]),...(me?.matchMonitor?.items||[])].map(m=>[m.id,m]));
   const active=states.filter(s=>!['WITHDRAWN','DISQUALIFIED','ELIMINATED','REJECTED','MISSED_CHECK_IN'].includes(s.status));
-  const item=active.find(s=>s.currentMatch&&s.registration.controllerType==='HUMAN')||active.find(s=>s.status==='READY_CHECK')||active.find(s=>s.currentMatch)||active[0]||states[0];
+  const item=active.find(s=>s.currentMatch&&s.registration.controllerType==='HUMAN')||active.find(s=>s.status==='READY_CHECK'&&s.registration.controllerType==='HUMAN')||active.find(s=>s.currentMatch)||active.find(s=>{const m=assignedMatch(matches,s);return m&&isRemoteMatch(m)&&activeMatch(m);})||active[0]||states[0];
   if(item&&['WITHDRAWN','DISQUALIFIED','REJECTED','MISSED_CHECK_IN'].includes(item.status))return action('INELIGIBLE','Không có suất thi đấu đang hoạt động','Xem trạng thái đăng ký hoặc liên hệ chủ giải.');
   if(item&&['CHAMPION','FINISHED'].includes(item.status))return action('VIEW_RESULT','Xem kết quả',item.status==='CHAMPION'?'Bạn đã vô địch! Xem kết quả và replay.':'Giải đã kết thúc. Xem thành tích và replay.',detail+'#ranking');
   if(item?.status==='ELIMINATED')return action('ELIMINATED','Xem bracket','Bạn đã dừng bước; theo dõi các trận còn lại.',competition+'#bracket');
-  const remoteMatch=me?.matchMonitor?.items?.find(m=>m.execution&&!["FINISHED","CANCELLED","ERROR"].includes(m.executionState));
-  if(item&&remoteMatch)return action('TRACK_MATCH','Theo dõi trận của tôi',({QUEUED:'Đang chờ máy thi đấu.',ASSIGNED:'Đã cấp máy chạy.',STARTING:'Đang khởi động bot.',RUNNING_REMOTE:'Trận đang chạy trên máy thi đấu; live board chưa khả dụng.',RESULT_PENDING:'Đã chạy xong, đang xác nhận kết quả.',RETRYING:'Trận đang chờ chạy lại.',RECOVERING:'Đang chờ khôi phục execution.'})[remoteMatch.executionState]||'Đang cập nhật execution.',competition+'#my-match');
-  if(item?.currentMatch?.onlineMatchId&&item.registration.controllerType==='HUMAN')return action('ENTER_MATCH','Vào trận','Trận đã được server cấp cho bạn.',null,{enabled:true,command:'ENTER_MATCH',payload:{matchId:item.currentMatch.id},tone:'primary'});
-  if(item?.currentMatch?.onlineMatchId&&item.registration.controllerType==='BOT')return action('WATCH_MATCH','Xem trận','Theo dõi trận đang diễn ra.','/game.html?spectate='+encodeURIComponent(item.currentMatch.onlineMatchId));
+  const candidate=assignedMatch(matches,item),current=item?.currentMatch;
+  if(current?.onlineMatchId&&item.registration.controllerType==='HUMAN'&&(!candidate||!isRemoteMatch(candidate)&&matchExecutionState(candidate)==='RUNNING_LOCAL'))return action('ENTER_MATCH','Vào trận','Trận đã được server cấp cho bạn.',null,{enabled:true,command:'ENTER_MATCH',payload:{matchId:current.id},tone:'primary'});
+  if(!['PAUSED','RECOVERY_REQUIRED'].includes(t.status)&&item?.status==='READY_CHECK'&&item.registration.controllerType==='HUMAN'&&item.nextMatch?.readyWindowId)return action('READY_CHECK','Sẵn sàng thi đấu','Xác nhận trước hạn do server cấp.',null,{enabled:true,command:'READY_CHECK',payload:{matchId:item.nextMatch.id,windowId:item.nextMatch.readyWindowId},deadline:item.nextMatch.readyDeadline,tone:'primary'});
+  if(item&&candidate&&isRemoteMatch(candidate)&&activeMatch(candidate))return action('TRACK_MATCH','Theo dõi trận của tôi',({QUEUED:'Đang chờ máy thi đấu.',ASSIGNED:'Đã cấp máy chạy.',STARTING:'Đang khởi động bot.',RUNNING_REMOTE:'Trận đang chạy trên máy thi đấu; live board chưa khả dụng.',RESULT_PENDING:'Đã chạy xong, đang xác nhận kết quả.',RETRYING:'Trận đang chờ chạy lại.',RECOVERING:'Đang chờ khôi phục execution.'})[candidate.executionState]||'Đang cập nhật execution.',competition+'#my-match');
+  if(current&&item.registration.controllerType==='BOT'){
+   if(candidate&&!isRemoteMatch(candidate)&&candidate.status==='RUNNING'&&matchExecutionState(candidate)==='RUNNING_LOCAL'&&candidate.onlineMatchId)return action('WATCH_MATCH','Xem trận','Theo dõi trận đang diễn ra.','/game.html?spectate='+encodeURIComponent(candidate.onlineMatchId)+'&tournament='+encodeURIComponent(t.id));
+   return action('TRACK_MATCH','Theo dõi trận của tôi',me?.matchMonitorError?'Chưa tải được trạng thái trận. Đang đồng bộ lại trước khi mở bàn cờ.':'Đang đồng bộ trạng thái trận; xem kết quả và khả năng mở replay trong Trận của tôi.',competition+'#my-match');
+  }
   if(t.status==='RECOVERY_REQUIRED')return action('WAIT_RECOVERY','Chờ khôi phục','Chủ giải đang xử lý; không tự chạy lại trận.');
   if(t.status==='PAUSED')return action('WAIT_RESUME','Giải tạm dừng','Chờ chủ giải tiếp tục thi đấu.');
-  if(item?.status==='READY_CHECK'&&item.registration.controllerType==='HUMAN'&&item.nextMatch?.readyWindowId)return action('READY_CHECK','Sẵn sàng thi đấu','Xác nhận trước hạn do server cấp.',null,{enabled:true,command:'READY_CHECK',payload:{matchId:item.nextMatch.id,windowId:item.nextMatch.readyWindowId},deadline:item.nextMatch.readyDeadline,tone:'primary'});
   if(item?.status==='CHECK_IN_REQUIRED')return action('CHECK_IN','Check-in','Xác nhận tham gia trước hạn.',null,{enabled:true,command:'CHECK_IN',payload:{registrationId:item.registration.id},deadline:item.deadline,tone:'primary'});
   if(item?.status==='PENDING_APPROVAL')return action('WAIT_APPROVAL','Chờ xét duyệt','Chủ giải đang xét duyệt đăng ký.');
   if(item?.status==='READY_CONFIRMED')return action('WAIT_START','Đã sẵn sàng','Chờ đối thủ xác nhận và server cấp trận.');
@@ -60,4 +65,11 @@ export function tournamentNavigation(t,context={}){
  if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem kết quả do server công bố.',tournamentRoute(t.id,'detail',{tab:'ranking'}));
  if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Xem thông tin giải đã hủy.',tournamentRoute(t.id));
  return action('VIEW_STATUS',t.registered?'Xem trạng thái':'Xem giải','Mở giải để lấy giai đoạn và quyền hiện tại từ server.',playerTournamentRoute(t));
+}
+
+// Prefer the selected registration's current assignment. Never let another owned bot hijack a human seat.
+function assignedMatch(rows,item){
+ if(!item)return null;
+ const id=item.currentMatch?.id||item.nextMatch?.id;if(id)return rows.get(id)||null;
+ return item.participantId?[...rows.values()].find(m=>activeMatch(m)&&[m.participantA?.participantId,m.participantB?.participantId].includes(item.participantId))||null:null;
 }

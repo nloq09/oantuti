@@ -31,3 +31,11 @@ test('changing monitor filters cancels old attempt history without replacing the
  try{await tick();const button=descendants(root).find(n=>n.textContent==='Xem lịch sử các lần nhận việc'),history=button.onclick();await tick();const select=descendants(root).find(n=>n.tag==='select');select.value='ERROR';select.onchange();await tick();assert.equal(signal.aborted,true);pending({ok:true,json:async()=>[{executionId:'old-filter-execution'}]});await history;assert.doesNotMatch(text(root),/old-filter-execution/);assert.equal(select.value,'ERROR');
  }finally{monitor.stop();}
 });
+
+test('attempt history authorization failure immediately clears the monitor and cancels pending reads',async()=>{
+ for(const error of ['UNAUTHENTICATED','TOURNAMENT_FORBIDDEN','ACCOUNT_DISABLED']){
+  const root=harness();let pending,signal,calls=0;globalThis.fetch=async(path,options)=>{calls++;if(path.endsWith('/attempts'))return{ok:false,json:async()=>({error})};if(calls>1){signal=options.signal;return new Promise(resolve=>pending=resolve);}return{ok:true,json:async()=>snapshot};};const monitor=mountMatchMonitor(root,t);
+  try{await tick();const history=descendants(root).find(n=>n.textContent==='Xem lịch sử các lần nhận việc');monitor.refresh();await tick();await history.onclick();assert.equal(signal.aborted,true);assert.match(text(root),/quyền truy cập đã thay đổi/);assert.doesNotMatch(text(root),/Player|Đang chờ máy/);assert.equal(descendants(root).find(n=>n.textContent==='Cập nhật').disabled,true);pending({ok:true,json:async()=>snapshot});await tick();assert.doesNotMatch(text(root),/Player|Đang chờ máy/);
+  }finally{monitor.stop();}
+ }
+});
