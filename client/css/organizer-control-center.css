@@ -36,11 +36,13 @@
 .organizer-page .organizer-content button:hover,.organizer-page .organizer-content .button:hover{filter:brightness(1.15)}
 .organizer-page .organizer-content input,.organizer-page .organizer-content select,.organizer-page .organizer-content textarea,.organizer-decision-dialog textarea{font:inherit;border:1px solid #6d8090;border-radius:6px;min-height:40px;padding:9px 12px;max-width:100%;box-sizing:border-box}
 .organizer-page .organizer-content input[type=checkbox]{min-height:0;width:auto}
+.organizer-page .organizer-content textarea,.organizer-decision-dialog textarea{display:block;width:100%;min-height:108px;resize:vertical;background:#f9edd5;color:#203249}
+.organizer-page .organizer-content label>textarea{margin-top:8px}
 .organizer-page .organizer-content .actions,.organizer-page .organizer-content .ui-actions{gap:10px;align-items:center;margin:14px 0}
 .organizer-page .organizer-content section+section{margin-top:20px}
 .organizer-page .organizer-overview-top>section+section,.organizer-page .organizer-overview-bottom>section+section{margin-top:0}
 .organizer-page .organizer-content form{display:grid;gap:12px;max-width:760px}
-.organizer-page .organizer-content form label{margin:0}
+.organizer-page .organizer-content form label{display:block;min-width:0;margin:0}
 .organizer-page .organizer-content form button{justify-self:start}
 .organizer-page .organizer-phase-metrics{margin:0!important}
 .organizer-page .organizer-metrics-grid{grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:12px}
