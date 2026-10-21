@@ -1,6 +1,6 @@
-# Registration pipeline — nhóm 1–4
+# Registration pipeline — nhóm 1–5
 
-Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách trên nền nhóm 1–3. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
+Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách; nhóm 5 bổ sung dashboard cho Organizer. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
 
 ## Luồng thực tế đã đối chiếu
 
@@ -295,3 +295,55 @@ Các tests API bao gồm đóng trước hạn vẫn review/rút được, tự 
 - `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/TimelineReviewApiTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationCapacityPostgresTest.java`
+
+
+## Nhóm 5 — Dashboard đăng ký và hàng cần xử lý
+
+Trang `/tournament-applications.html?id=…` có dashboard riêng; shell không lặp lại bộ số liệu và hộp attention chung ở trang này. Không thay đổi GameEngine hoặc workflow Player.
+
+- Năm thẻ Tổng đơn, Đã duyệt, Cần xử lý, Danh sách chờ, Từ chối lấy toàn bộ aggregate từ server. Bấm thẻ mở bộ lọc tương ứng; số liệu không phụ thuộc trang 25 đơn.
+- Hiển thị thời gian server và đếm ngược tới mở/đóng đăng ký, số suất đã duyệt/còn lại và số đơn đã hủy. Đếm ngược dùng serverNow cộng thời gian đơn điệu trên client; tới hạn chờ server xác nhận.
+- CTA chính là “Xử lý N đơn”. Khi review đã đóng, đổi thành “Xem N đơn”; không cung cấp thao tác review. Khi hết ngoại lệ và có thể lock, dẫn tới card chốt danh sách.
+- Card chính sách hiển thị cách duyệt, giới hạn, thứ tự waitlist và xác minh đơn vị. Link sửa chính sách chỉ hiện khi server xác nhận DRAFT, chưa có đơn và chưa lock. Đóng nhận đơn và chốt danh sách vẫn là hai thao tác riêng có confirm/reason/revision.
+- Lần mở đầu ưu tiên NEEDS_REVIEW nếu có ngoại lệ. URL `status=PENDING` vẫn tương thích. `status=ALL` biểu diễn lựa chọn Tất cả rõ ràng, không bị tự đổi lại khi tải trang hoặc polling. Sau khi xử lý hết ngoại lệ, bộ lọc đang chọn được giữ và hiển thị trạng thái trống.
+- Mỗi snapshot chỉ đọc detail, summary và một trang applications từ server. Detail/summary/list phải cùng revision; chỉ thử lại read tối đa một lần. Không retry mutation. Trang hiện tại được giới hạn lại khi số đơn giảm.
+- Polling không xóa textarea đang được nhập; nút/lý do cũ bị khóa nếu đọc lỗi hoặc không lấy được snapshot khớp. Cập nhật thủ công vẫn khả dụng. Khi mất phiên/quyền hoặc tài khoản bị khóa, xóa snapshot riêng tư khỏi DOM.
+- Layout dùng grid co về một cột cho policy/roster và hai cột cho thẻ số liệu trên màn hình nhỏ. Các application card có khoảng cách riêng để không dính viền.
+
+### API/DTO nhóm 5
+
+GET `/api/tournaments/{id}/registration-summary` giữ quyền manager/admin, bổ sung các trường additive:
+
+- `capacity`: số suất tối đa của giải.
+- `remainingSlots`: max(0, capacity − approved), không trừ các đơn đang review hoặc waitlist.
+- `policy`: RegistrationPolicy hiện hành (approvalPolicy, requireAffiliationVerification).
+- `canEditPolicy`: quyền sửa theo trạng thái giải và số đơn hiện có.
+- `canReview`: guard review hiện hành từ server; đóng admission chưa khóa review, lock hoặc đến codingOpenAt khóa review.
+
+Các trường control, counts, revision, serverNow và mốc giờ giữ nguyên. Không trả toàn bộ application hoặc thông tin source/mật khẩu trong summary. Applications vẫn phân trang tại server, 25 đơn/trang; chưa thêm tìm kiếm, bulk action hoặc đổi page size của nhóm 6. Không có endpoint hay migration mới.
+
+### Kiểm chứng nhóm 5
+
+- Backend: PASS 26/26 tests trong RegistrationPipelineApiTest (15), OrganizerMetricsApiTest (7), TimelineReviewApiTest (4). Bao gồm fixture 3.842 đơn (3.701 duyệt, 24 cần xử lý, 105 chờ, 12 từ chối), còn 299/4.000 suất, danh sách chỉ trả 25 hoặc 24 đơn theo bộ lọc; policy/review permissions qua draft/open/closed/deadline và người ngoài bị 403.
+- Client: PASS 340/340 tests, không fail/skipped. Có DOM/component và controller integration cho aggregate, filter URL/default, revision mismatch, bounded retry, AbortSignal, giữ draft, review một lần kèm reason/revision, mất kết nối và mất phiên đăng nhập.
+- PASS kiểm tra cú pháp JavaScript và git diff --check.
+- PASS bootJar; khởi động lại localhost:8080 và kiểm tra HTTP 200 của HTML/module dashboard mới.
+- Migration tests: SKIPPED (schema không đổi; giữ V40).
+- Browser bị tắt trong Work settings: chưa kiểm chứng layout bằng ảnh hoặc trình duyệt thực tế; responsive CSS và DOM được kiểm tra tự động.
+
+### File thêm/sửa nhóm 5
+
+- `client/css/organizer-control-center.css`
+- `client/js/tournament/application-review.js`
+- `client/js/tournament/organizer-shell.js`
+- `client/js/tournament/registration-dashboard-model.js` (mới)
+- `client/js/tournament/registration-dashboard.js` (mới)
+- `client/js/tournament/registration-lifecycle.js`
+- `client/js/ui/toast.js`
+- `client/tests/helpers/organizer-dom.js`
+- `client/tests/registration-dashboard-controller.test.js` (mới)
+- `client/tests/registration-dashboard-page.test.js` (mới)
+- `client/tournament-applications.html`
+- `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationService.java`
+- `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`

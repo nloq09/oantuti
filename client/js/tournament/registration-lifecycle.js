@@ -2,10 +2,10 @@ import {node,link,date} from './player-dom.js';
 import {sessionRequest} from '../api/auth-api.js';
 import {confirmOrganizerDecision} from './organizer-decision-dialog.js';
 
-export function renderRegistrationLifecycle(root,t,summary,refresh){
+export function renderRegistrationLifecycle(root,t,summary,refresh,{compact=false}={}){
  const state=summary.control,counts=summary.counts;
- root.append(node('h2',state.lockedAt?'Danh sách thi đấu đã chốt':'Đăng ký và danh sách thi đấu'));
- root.append(node('p',`${counts.approved} đã duyệt · ${counts.needsReview} cần xử lý · ${counts.waitlisted} đang chờ · ${counts.rejected} từ chối`));
+ root.append(node('h2',state.lockedAt?'Danh sách thi đấu đã chốt':compact?'Danh sách thi đấu':'Đăng ký và danh sách thi đấu'));
+ if(!compact)root.append(node('p',`${counts.approved} đã duyệt · ${counts.needsReview} cần xử lý · ${counts.waitlisted} đang chờ · ${counts.rejected} từ chối`));
  if(t.status==='DRAFT'||Date.parse(summary.serverNow)<Date.parse(t.timeline?.registrationOpenAt)){root.append(node('p','Giải chưa mở đăng ký.'));return;}
  if(!state.enabled&&!summary.canClose&&!summary.canLock){root.append(node('p','Giải dùng luồng đăng ký cũ, không yêu cầu chốt danh sách riêng.'));return;}
  if(state.lockedAt){root.append(node('p',`${state.lockedCount} người · Chốt lúc ${date(state.lockedAt)} · ${state.lockedByName}`));return;}

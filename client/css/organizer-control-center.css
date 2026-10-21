@@ -88,3 +88,32 @@
 @media(max-width:1000px){.organizer-page .organizer-layout{grid-template-columns:180px minmax(0,1fr);gap:16px}.organizer-page .organizer-overview-top,.organizer-page .organizer-overview-bottom{grid-template-columns:minmax(0,1fr)}.organizer-page .organizer-metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:800px){.organizer-page .organizer-layout{grid-template-columns:minmax(0,1fr)}.organizer-page .organizer-menu{position:static}.organizer-page .organizer-menu nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.organizer-page .organizer-menu:not([open]) nav{display:none}.organizer-page .organizer-heading .tournament-header{padding:18px}.organizer-page .organizer-content .panel,.organizer-page .control-card{padding:18px}.organizer-page .organizer-content .actions{align-items:stretch}.organizer-page .organizer-content .actions label{width:100%}.organizer-page .organizer-schedule-list{grid-template-columns:minmax(0,1fr);gap:6px}.organizer-page .organizer-schedule-list dd{margin-bottom:10px}}
 @media(max-width:480px){.organizer-page{width:calc(100% - 24px)}.organizer-page .organizer-menu nav{grid-template-columns:minmax(0,1fr)}.organizer-page .organizer-metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.organizer-page .organizer-metrics-grid>div{padding:10px}.organizer-page .organizer-content .actions>*{min-width:0}.organizer-page .match-execution-facts{grid-template-columns:minmax(0,1fr)}.organizer-page .organizer-overview-top,.organizer-page .organizer-overview-bottom{gap:16px}}
+
+/* Registration dashboard: server aggregates and a separate, paged review queue. */
+.organizer-page #registration-dashboard{display:flex;flex-direction:column;gap:18px;min-width:0}
+.organizer-page .registration-heading h1{font-size:26px;margin:0 0 8px}
+.organizer-page .registration-heading p{margin:4px 0;color:var(--control-muted)}
+.organizer-page .registration-heading .registration-admission-state{color:#ffe0a0;font-weight:700}
+.organizer-page .registration-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.organizer-page .organizer-content .registration-stat{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;padding:16px;text-align:left;white-space:normal;background:#0f2639;border:1px solid var(--control-line);box-shadow:none;text-shadow:none;overflow-wrap:anywhere}
+.organizer-page .registration-stat strong{font:700 28px/1.2 system-ui,sans-serif;color:#fff0c9}
+.organizer-page .registration-stat span{font-size:14px;color:#c6d3de}
+.organizer-page .organizer-content .registration-stat[aria-pressed=true]{background:#204d75;border-color:#d4b16c}
+.organizer-page .registration-capacity{margin:0;color:var(--control-muted);overflow-wrap:anywhere}
+.organizer-page .registration-primary-action{border-left:4px solid #c9a75f}
+.organizer-page .registration-primary-action h2,.organizer-page .registration-dashboard-columns h2{font-size:20px;margin-top:0}
+.organizer-page .registration-dashboard-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.organizer-page .registration-dashboard-columns>section+section{margin-top:0}
+.organizer-page .registration-policy-card dl{display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,1.4fr);gap:10px 16px;margin:0 0 18px}
+.organizer-page .registration-policy-card dt{color:var(--control-muted)}
+.organizer-page .registration-policy-card dd{margin:0;overflow-wrap:anywhere}
+.organizer-page .registration-policy-card>p{font-size:14px;color:var(--control-muted)}
+.organizer-page .registration-roster>a,.organizer-page .registration-roster>button{margin:5px 10px 5px 0}
+.organizer-page .registration-queue{display:flex;flex-direction:column;gap:12px;min-width:0}
+.organizer-page .registration-queue>h2,.organizer-page .registration-queue>p{margin:0}
+.organizer-page .registration-queue #applications{display:grid;gap:16px;min-width:0}
+.organizer-page .registration-queue .panel{margin:0;overflow-wrap:anywhere}
+.organizer-page .registration-queue .panel h3{font-size:20px;margin-top:0}
+.organizer-page .registration-queue .actions{display:flex;flex-wrap:wrap;gap:10px}
+@media(max-width:1100px){.organizer-page .registration-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.organizer-page .registration-dashboard-columns{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:480px){.organizer-page .registration-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.organizer-page .organizer-content .registration-stat{padding:12px}.organizer-page .registration-policy-card dl{grid-template-columns:minmax(0,1fr);gap:4px}.organizer-page .registration-policy-card dd{margin-bottom:12px}}

@@ -19,7 +19,10 @@ class RegistrationPipelineApiTest extends StageThreeWebFixture {
     @BeforeEach void time(){doReturn(START.plusSeconds(30)).when(clock).instant();doReturn(ZoneOffset.UTC).when(clock).getZone();}
     String cup(String policy,boolean verify,boolean open)throws Exception{return cup(policy,verify,open,10);}
     String cup(String policy,boolean verify,boolean open,int capacity)throws Exception{
-        loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Registration pipeline","maxParticipants",capacity,"botPolicy",Map.of("submissionMode","BOTH"),"registrationPolicy",Map.of("approvalPolicy",policy,"requireAffiliationVerification",verify)),201);
+        return cup(policy,verify,open,capacity,"ROUND_ROBIN");
+    }
+    String cup(String policy,boolean verify,boolean open,int capacity,String format)throws Exception{
+        loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Registration pipeline","maxParticipants",capacity,"format",format,"botPolicy",Map.of("submissionMode","BOTH"),"registrationPolicy",Map.of("approvalPolicy",policy,"requireAffiliationVerification",verify)),201);
         String base="/api/tournaments/"+created.path("id").asText();var timeline=new TournamentTimeline(START,START.plusSeconds(60),START.plusSeconds(120),START.plusSeconds(180),START.plusSeconds(180),START.plusSeconds(210),START.plusSeconds(240),START.plusSeconds(270),START.plusSeconds(300),START.plusSeconds(360),null);
         request(base+"/timeline","PUT",Map.of("revision",created.path("revision").asLong(),"timeline",timeline),200);if(open)request(base+"/open-registration","POST",Map.of(),200);return base;
     }
@@ -29,6 +32,49 @@ class RegistrationPipelineApiTest extends StageThreeWebFixture {
     String applicant()throws Exception{String username="capacity_"+UUID.randomUUID().toString().substring(0,8);registration.register(username,username+"@example.com","Capacity Test Password",username);loginApplicant(username);return username;}
     void loginApplicant(String username)throws Exception{request("/api/auth/login","POST",Map.of("username",username,"password","Capacity Test Password"),200);}
     void loginOwner()throws Exception{request("/api/auth/login","POST",Map.of("username",account.username(),"password","Tournament Test Password"),200);}
+    @Test void dashboardPolicyAndReviewPermissionsFollowLifecycle()throws Exception{
+        String base=cup("HYBRID",true,false);
+        var draft=request(base+"/registration-summary","GET",null,200);
+        assertThat(draft.path("capacity").asInt()).isEqualTo(10);
+        assertThat(draft.path("remainingSlots").asLong()).isEqualTo(10);
+        assertThat(draft.path("policy").path("approvalPolicy").asText()).isEqualTo("HYBRID");
+        assertThat(draft.path("policy").path("requireAffiliationVerification").asBoolean()).isTrue();
+        assertThat(draft.path("canEditPolicy").asBoolean()).isTrue();
+        assertThat(draft.path("canReview").asBoolean()).isFalse();
+        request(base+"/open-registration","POST",Map.of(),200);
+        var opened=request(base+"/registration-summary","GET",null,200);
+        assertThat(opened.path("canEditPolicy").asBoolean()).isFalse();
+        assertThat(opened.path("canReview").asBoolean()).isTrue();
+        request(base+"/registration/close","POST",Map.of("revision",revision(base),"reason","Review existing applications"),200);
+        assertThat(request(base+"/registration-summary","GET",null,200).path("canReview").asBoolean()).isTrue();
+        doReturn(START.plusSeconds(120)).when(clock).instant();
+        assertThat(request(base+"/registration-summary","GET",null,200).path("canReview").asBoolean()).isFalse();
+        applicant();request(base+"/registration-summary","GET",null,403);
+    }
+    @Test void dashboardAggregatesThousandsOfApplicationsWithoutReturningTheirDetails()throws Exception{
+        String base=cup("HYBRID",false,true,4000,"SWISS");
+        UUID tournament=UUID.fromString(base.substring(base.lastIndexOf('/')+1));
+        var users=new ArrayList<Object[]>();var applications=new ArrayList<Object[]>();
+        for(int i=0;i<3842;i++){
+            UUID user=UUID.randomUUID();String username="dash_"+user.toString().replace("-","").substring(0,24);
+            users.add(new Object[]{user,username,username+"@example.com","unused-test-hash",username});
+            String status=i<3701?"APPROVED":i<3725?"PENDING":i<3830?"WAITLISTED":"REJECTED";
+            applications.add(new Object[]{UUID.randomUUID(),tournament,user,username,"CPP",status,java.sql.Timestamp.from(START),java.sql.Timestamp.from(START),status.equals("WAITLISTED")?(long)(i-3724):null});
+        }
+        database.batchUpdate("insert into users(id,username,email,password_hash,display_name) values(?,?,?,?,?)",users);
+        database.batchUpdate("insert into tournament_timeline_registrations(id,tournament_id,user_id,display_name,intended_language,status,registered_at,rules_accepted_at,waitlist_order) values(?,?,?,?,?,?,?,?,?)",applications);
+        var summary=request(base+"/registration-summary","GET",null,200);
+        assertThat(summary.path("counts").path("total").asInt()).isEqualTo(3842);
+        assertThat(summary.path("counts").path("approved").asInt()).isEqualTo(3701);
+        assertThat(summary.path("counts").path("needsReview").asInt()).isEqualTo(24);
+        assertThat(summary.path("counts").path("waitlisted").asInt()).isEqualTo(105);
+        assertThat(summary.path("counts").path("rejected").asInt()).isEqualTo(12);
+        assertThat(summary.path("remainingSlots").asInt()).isEqualTo(299);
+        assertThat(summary.has("items")).isFalse();
+        assertThat(summary.toString()).doesNotContain("@example.com","unused-test-hash","dash_");
+        assertThat(request(base+"/participant-applications?status=NEEDS_REVIEW","GET",null,200).path("items").size()).isEqualTo(24);
+        assertThat(request(base+"/participant-applications","GET",null,200).path("items").size()).isEqualTo(25);
+    }
     @Test void fullAutoApprovalCreatesPrivateOrderedWaitlistAndRejoiningGoesToTheTail()throws Exception{
         String base=cup("HYBRID",false,true,2);request(base+"/participant-registration","POST",signup(),200);applicant();request(base+"/participant-registration","POST",signup(),200);
         String first=applicant();var waiting=request(base+"/participant-registration","POST",signup(),200);assertThat(waiting.path("registrationStatus").asText()).isEqualTo("WAITLISTED");assertThat(waiting.path("registration").path("waitlistPosition").asLong()).isEqualTo(1);assertThat(waiting.toString()).doesNotContain("CAPACITY_FULL",account.username());

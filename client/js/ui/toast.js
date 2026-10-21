@@ -1,4 +1,5 @@
 const errors = {
+  REGISTRATION_SNAPSHOT_CHANGED:"Dữ liệu đăng ký vừa thay đổi. Hãy cập nhật danh sách để tiếp tục xử lý.",
   FINAL_VALIDATION_REQUIRED:"Bot phải qua kiểm thử chính thức trước khi check-in hoặc thi đấu.",
   FINAL_VALIDATION_NOT_FOUND:"Không tìm thấy kết quả kiểm thử chính thức.",
   FINAL_RETRY_NOT_ALLOWED:"Chỉ chạy lại lỗi hạ tầng khi vẫn còn trong hạn kiểm thử.",

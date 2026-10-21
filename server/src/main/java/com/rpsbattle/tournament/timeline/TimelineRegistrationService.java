@@ -117,8 +117,26 @@ public class TimelineRegistrationService {
         }
     }
     public record LifecycleAction(Long revision,String reason) {}
-    public record Summary(TimelineRegistrationStore.Control control,Map<String,Long> counts,boolean registrationOpen,boolean canClose,boolean canLock,Instant registrationCloseAt,Instant codingOpenAt,long revision,Instant serverNow) {}
-    public Summary summary(Authentication auth,String id){var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);var now=clock.instant();var state=store.control(UUID.fromString(id));boolean beforeCoding=now.isBefore(t.timeline.codingOpenAt()),closed=state.closedAt()!=null||!now.isBefore(t.timeline.registrationCloseAt());var counts=store.counts(UUID.fromString(id));boolean active=t.status==TournamentStatus.REGISTRATION&&t.startedAt==null;return new Summary(state,counts,active&&!now.isBefore(t.timeline.registrationOpenAt())&&!closed&&state.lockedAt()==null,active&&!now.isBefore(t.timeline.registrationOpenAt())&&!closed&&beforeCoding,active&&closed&&beforeCoding&&state.lockedAt()==null&&counts.get("needsReview")==0&&counts.get("approved")>=(t.format==TournamentFormat.GROUP_KNOCKOUT?4:t.format==TournamentFormat.TEAM_ROUND_ROBIN?6:2),t.timeline.registrationCloseAt(),t.timeline.codingOpenAt(),t.revision,now);}}
+    public record Summary(TimelineRegistrationStore.Control control,Map<String,Long> counts,
+            boolean registrationOpen,boolean canClose,boolean canLock,Instant registrationCloseAt,
+            Instant codingOpenAt,long revision,Instant serverNow,int capacity,long remainingSlots,
+            RegistrationPolicy policy,boolean canEditPolicy,boolean canReview) {}
+    public Summary summary(Authentication auth,String id){
+        var t=tournaments.find(id);authorization.requireManager(auth,t);
+        synchronized(t){
+            if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);
+            var now=clock.instant();var state=store.control(UUID.fromString(id));var counts=store.counts(UUID.fromString(id));
+            boolean beforeCoding=now.isBefore(t.timeline.codingOpenAt()),closed=state.closedAt()!=null||!now.isBefore(t.timeline.registrationCloseAt());
+            boolean active=t.status==TournamentStatus.REGISTRATION&&t.startedAt==null;
+            boolean admission=active&&!now.isBefore(t.timeline.registrationOpenAt())&&!closed&&state.lockedAt()==null;
+            int minimum=t.format==TournamentFormat.GROUP_KNOCKOUT?4:t.format==TournamentFormat.TEAM_ROUND_ROBIN?6:2;
+            return new Summary(state,Map.copyOf(counts),admission,admission&&beforeCoding,
+                    active&&closed&&beforeCoding&&state.lockedAt()==null&&counts.get("needsReview")==0&&counts.get("approved")>=minimum,
+                    t.timeline.registrationCloseAt(),t.timeline.codingOpenAt(),t.revision,now,t.maxParticipants,
+                    Math.max(0L,t.maxParticipants-counts.get("approved")),t.registrationPolicy,
+                    t.status==TournamentStatus.DRAFT&&counts.get("total")==0&&state.lockedAt()==null,reviewOpen(t));
+        }
+    }
     public void lifecycle(Authentication auth,String id,LifecycleAction request,boolean lock){
         var actor=accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){
             if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);
