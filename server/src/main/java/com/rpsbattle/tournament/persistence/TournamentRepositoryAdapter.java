@@ -15,6 +15,7 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
     public TournamentRepositoryAdapter(JpaTournamentRepository tournaments,JpaTournamentParticipantRepository participants,JpaTournamentMatchRepository matches,MatchHistoryRepository history) {this.tournaments=tournaments;this.participants=participants;this.matches=matches;this.history=history;}
     @Transactional public void save(TournamentMetadata metadata) {
         var stored=entities.find(TournamentEntity.class,metadata.id(),LockModeType.PESSIMISTIC_WRITE);
+        if(stored!=null && (!"PUBLIC".equals(stored.visibility)||stored.trashedAt!=null)) return; // A queued snapshot must never resurrect trash.
         if(stored!=null && stored.revision>metadata.revision()) return;
         if(stored!=null && stored.revision==metadata.revision() && stored.details!=null && metadata.details()!=null && !TournamentDetailsConverter.equivalent(stored.details,metadata.details()))throw new org.springframework.dao.OptimisticLockingFailureException("Conflicting tournament revision");
         if(stored!=null && !stored.ownerUserId.equals(metadata.ownerUserId())) throw new IllegalStateException("Tournament owner cannot be changed");
@@ -60,7 +61,7 @@ public class TournamentRepositoryAdapter implements TournamentRepository {
     }
     @Transactional(readOnly=true) public List<TournamentMetadata> all() {
         // PRIVATE is intentionally unsupported in this version; never publish existing private rows.
-        return tournaments.findByVisibilityOrderByCreatedAtAsc("PUBLIC").stream().map(t->{
+        return tournaments.findByVisibilityAndTrashedAtIsNullOrderByCreatedAtAsc("PUBLIC").stream().map(t->{
             var policy=entities.find(TournamentBotPolicyEntity.class,t.id);var details=t.details;
             if(details!=null&&policy!=null)details=details.withBotPolicy(policy.domain());
             var roster=participants.findByTournamentIdOrderById(t.id).stream().map(TournamentParticipantEntity::domain).toList();

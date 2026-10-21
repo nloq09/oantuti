@@ -35,4 +35,15 @@ async function detail(root){
     ["controls","Quản trị",panel=>{panel.append(node("h2","Thao tác theo trạng thái hiện tại"));for(const [label,operation]of lifecycleActions(t))panel.append(action(label,reason=>lifecycle(operation,reason)));panel.append(node("p","Mọi thao tác cần lý do và được lưu audit. Trạng thái được kiểm tra lại ở server.","muted"));}]
   ]);
 }
-export async function mountTournaments(page,root){if(page==="tournament-detail.html")return detail(root);return listPage(root,{title:"Giải đấu",path:"tournaments",fields:[["Tên / chủ giải","q"],["Trạng thái","status",tournamentStatuses],["Thể thức","format",["ROUND_ROBIN","SINGLE_ELIMINATION","GROUP_KNOCKOUT","SWISS","TEAM_ROUND_ROBIN"]],...periodFields],columns:[["Giải đấu","name"],["Chủ giải","owner"],["Thể thức","format"],["Trạng thái","status",badge],["Bot","participants"],["Tổng trận","total_matches"],["Hoàn thành","finished_matches"],["Đang chạy","running_matches"],["Lỗi","failed_matches"],["Bắt đầu","started_at",date]],actions:(cell,row)=>cell.append(link("Chi tiết","/admin/tournament-detail.html?id="+encodeURIComponent(row.id)))});}
+export async function mountTournaments(page,root){if(page==="tournament-detail.html")return detail(root);await listPage(root,{title:"Giải đấu",path:"tournaments",fields:[["Tên / chủ giải","q"],["Trạng thái","status",tournamentStatuses],["Thể thức","format",["ROUND_ROBIN","SINGLE_ELIMINATION","GROUP_KNOCKOUT","SWISS","TEAM_ROUND_ROBIN"]],...periodFields],columns:[["Giải đấu","name"],["Chủ giải","owner"],["Thể thức","format"],["Trạng thái","status",badge],["Bot","participants"],["Tổng trận","total_matches"],["Hoàn thành","finished_matches"],["Đang chạy","running_matches"],["Lỗi","failed_matches"],["Bắt đầu","started_at",date]],actions:(cell,row)=>cell.append(link("Chi tiết","/admin/tournament-detail.html?id="+encodeURIComponent(row.id)))});await mountCleanup(root);}
+
+const cleanupReasons={EMPTY_ABANDONED_DRAFT:'Nháp trống bỏ dở ít nhất 14 ngày',EMPTY_CANCELLED:'Giải hủy trống ít nhất 7 ngày'};
+async function mountCleanup(root){
+ const box=node('section',undefined,'panel');root.prepend(box);
+ async function load(){box.replaceChildren(node('h2','Dọn giải bỏ dở'),node('p','Chỉ xét giải nháp hoặc đã hủy, không có đăng ký, đội, bài nộp hay trận đấu. Sau 72 giờ chờ, server kiểm tra lại rồi đưa vào thùng rác. Giải trong thùng rác vẫn có thể khôi phục.'));
+ try{const data=await adminRequest('tournament-cleanup');if(!data.items.length)box.append(node('p','Chưa có giải cần dọn hoặc trong thùng rác.'));else box.append(table([['Giải','name'],['Chủ giải','owner'],['Lý do','reason',value=>cleanupReasons[value]||value],['Đánh dấu','candidate_at',date],['Đưa vào thùng rác','trashed_at',value=>value?date(value):'Đang chờ xác minh']],data.items,(cell,row)=>{
+ const button=node('button',row.trashed_at?'Khôi phục':'Giữ lại');button.onclick=()=>confirmAction(button.textContent,async reason=>{if(row.trashed_at)await adminRequest(`tournament-cleanup/${encodeURIComponent(row.id)}/restore`,{reason});else await sessionRequest(`/api/tournaments/${encodeURIComponent(row.id)}/keep`,{reason,revision:row.candidate_revision});await load();});cell.append(button);
+ }));}
+ catch(error){message(error,box);}const reload=node('button','Cập nhật danh sách dọn giải');reload.onclick=load;box.append(reload);}
+ await load();
+}

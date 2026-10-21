@@ -135,6 +135,7 @@ public class OwnedTournamentService {
     /** Rollback memory on commit failure; scheduler and notifications cannot see staged changes. */
     private void mutate(Tournament t,Authentication auth,Runnable mutation) {
         synchronized(t) {
+            if(t.archived)throw new DemoRequestException("TOURNAMENT_NOT_FOUND");
             var status=t.status;var started=t.startedAt;var finished=t.finishedAt;var changedAt=t.statusChangedAt;long revision=t.revision;
             var registrations=List.copyOf(t.registrations);var checkIn=t.checkInRequired;var capacity=t.maxParticipants;var strategy=t.seedingStrategy;var randomSeed=t.seedingSeed;
             var participants=List.copyOf(t.participants);var matches=List.copyOf(t.matches);var matchStates=t.matches.stream().map(TournamentMatch::copy).toList();

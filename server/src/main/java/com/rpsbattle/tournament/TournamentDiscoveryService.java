@@ -22,7 +22,7 @@ public class TournamentDiscoveryService {
             for(var cup:registry.findAll())synchronized(cup){if(category.equals(discoveryCategory(cup,now)))ids.add(UUID.fromString(cup.id));}
             condition=ids.isEmpty()?"1=0":"t.id in ("+String.join(",",Collections.nCopies(ids.size(),"?"))+")";args.addAll(ids);
         }
-        String where=" from tournaments t join users u on u.id=t.owner_user_id where t.visibility='PUBLIC' and "+condition;
+        String where=" from tournaments t join users u on u.id=t.owner_user_id where t.visibility='PUBLIC' and t.trashed_at is null and "+condition;
         if(category.equals("joined")){where+=" and (exists(select 1 from tournament_registrations r where r.tournament_id=t.id and r.user_id=?) or exists(select 1 from tournament_timeline_registrations r where r.tournament_id=t.id and r.user_id=? and r.status<>'CANCELLED'))";args.add(user.orElseThrow().id().value());args.add(user.orElseThrow().id().value());}
         if(search!=null&&!search.isBlank()){if(search.length()>80)throw new AuthException("INVALID_FILTER",400);where+=" and lower(t.name) like ? escape '!'";args.add("%"+search.toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_")+"%");}
         if(format!=null&&!format.isBlank()){if(!Set.of("ROUND_ROBIN","SINGLE_ELIMINATION","GROUP_KNOCKOUT","SWISS","TEAM_ROUND_ROBIN").contains(format))throw new AuthException("INVALID_FILTER",400);where+=" and t.format=?";args.add(format);}

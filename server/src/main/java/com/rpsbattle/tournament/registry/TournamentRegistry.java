@@ -10,7 +10,7 @@ public class TournamentRegistry {
     private final ConcurrentHashMap<String,Tournament> tournaments = new ConcurrentHashMap<>();
     public synchronized Tournament create(String name, TournamentFormat format) {
         if (name == null || name.isBlank() || name.length()>80) throw new DemoRequestException("INVALID_TOURNAMENT_NAME");
-        if (tournaments.size()>=100) throw new DemoRequestException("TOURNAMENT_LIMIT");
+        if (tournaments.values().stream().filter(t->!t.archived&&t.status!=TournamentStatus.FINISHED&&t.status!=TournamentStatus.CANCELLED).count()>=100) throw new DemoRequestException("TOURNAMENT_LIMIT");
         var t=new Tournament(UUID.randomUUID().toString(),name.trim(),Objects.requireNonNull(format),Instant.now());
         tournaments.put(t.id,t); return t;
     }

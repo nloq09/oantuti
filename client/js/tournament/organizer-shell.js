@@ -7,11 +7,16 @@ import {sessionRequest} from '../api/auth-api.js';
 import {getAccount} from '../account/account-session.js';
 import {renderOrganizerMetrics} from './organizer-metrics.js';
 
-export function renderOrganizerHeader(root,t,flow){
+export function renderOrganizerHeader(root,t,flow,onKeep){
  root.replaceChildren();root.append(node('p','QUẢN LÝ GIẢI ĐẤU','organizer-kicker'));
  const header=renderTournamentHeader(root,t,flow),health=organizerHealth(t),state=node('p',health.text,'organizer-health');state.dataset.health=health.state;header.append(state);
  if(t.timeline&&!flow){header.append(node('p','Đang đồng bộ giai đoạn và hạn giờ từ server.'));}
  if(flow?.phaseEndsAt)header.append(node('p','Mốc hiện tại: '+date(flow.phaseEndsAt),'organizer-deadline'));
+ const cleanup=[...(t.audit||[])].reverse().find(e=>['CLEANUP_CANDIDATE','CLEANUP_CLEARED','TOURNAMENT_RETAINED','TOURNAMENT_RESTORED'].includes(e.type));
+ if(cleanup?.type==='CLEANUP_CANDIDATE'&&['DRAFT','CANCELLED'].includes(t.status)){
+  const notice=node('p','Giải trống lâu không hoạt động đang chờ dọn. Thời điểm sớm nhất: '+date(cleanup.afterValue)+'.');notice.setAttribute('role','status');header.append(notice);
+  if(onKeep){const keep=node('button','Giữ lại giải đấu');keep.onclick=async()=>{keep.disabled=true;try{await onKeep();}catch(error){notice.textContent='Chưa giữ được giải. Hãy tải lại và thử lại.';keep.disabled=false;}};header.append(keep);}
+ }
  return header;
 }
 
@@ -23,7 +28,7 @@ export function mountOrganizerShell(main,{tournament,account,section='overview',
  let current=tournament,flow=null,metrics=null,metricsStale=false,active=organizerSection(current,section),stopped=false,revision=-1,menuKey='',clock;
  function show(key,updateUrl=false){active=organizerSection(current,key);if(selectPanel)selectPanel(organizerPanels[active]||'overview');for(const item of nav.querySelectorAll('a')){if(item.dataset.section===active)item.setAttribute('aria-current','page');else item.removeAttribute('aria-current');}if(updateUrl){const url=new URL(location.href);url.searchParams.set('view',active);history.replaceState(null,'',url);}if(updateUrl&&matchMedia('(max-width:800px)').matches)menu.open=false;if(!metricsBox.contains(document.activeElement))renderOrganizerMetrics(metricsBox,current,metrics,{section:active,stale:metricsStale});if(!attentionBox.contains(document.activeElement))renderTournamentAttentionPanel(attentionBox,current,metrics,{stale:metricsStale});}
  function paint(){
-  renderOrganizerHeader(header,current,flow);const items=organizerNavigation(current),key=JSON.stringify(items);
+  renderOrganizerHeader(header,current,flow,async()=>{await sessionRequest('/api/tournaments/'+encodeURIComponent(current.id)+'/keep',{revision:current.revision,reason:'Chủ giải xác nhận tiếp tục sử dụng'});await refresh();});const items=organizerNavigation(current),key=JSON.stringify(items);
   if(key!==menuKey){menuKey=key;nav.replaceChildren();for(const item of items){const a=link(item.label,item.href);a.dataset.section=item.key;if(selectPanel&&organizerPanels[item.key]&&!(item.key==='registration'&&current.timeline))a.onclick=event=>{if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();show(item.key,true);};nav.append(a);}}
   const focus=organizerFocus(flow?.phase||current.status),target=items.find(item=>item.key===focus);for(const a of nav.querySelectorAll('a'))a.dataset.phaseFocus=String(a.dataset.section===focus);
   phaseNote.replaceChildren(node('span',flow?'Giai đoạn: '+(phaseLabels[flow.phase]||flow.phase)+'. ':'Giai đoạn đang được server xác nhận. '));if(target)phaseNote.append(link('Đi tới '+target.label.toLowerCase(),target.href));show(active);

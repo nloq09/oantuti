@@ -24,7 +24,7 @@ public class TournamentPersistenceCoordinator {
     @PostConstruct void initialize() {restore();service.listen(this::capture);}
     public TournamentMetadata snapshot(Tournament t) {
         synchronized(t) {
-            if(t.ownerUserId==null) return null; // Unmanaged internal/demo fixtures have no account to assign.
+            if(t.archived||t.ownerUserId==null) return null; // Unmanaged internal/demo fixtures have no account to assign.
             var roster=t.participants.stream().map(p->new TournamentMetadata.Participant(UUID.fromString(p.participantId()),p.botId()==null?null:UUID.fromString(p.botId()),p.ownerUserId(),p.displayName(),p.seed(),p.artifactHash(),p.seedNumber(),p.manualSeed())).toList();
             var entries=t.matches.stream().map(m->new TournamentMetadata.Entry(UUID.fromString(m.id),UUID.fromString(m.participantA.participantId()),UUID.fromString(m.participantB.participantId()),m.historyMatchId,m.onlineMatchId,m.status,m.winnerParticipantId==null?null:UUID.fromString(m.winnerParticipantId),m.result,m.failure,m.remainingA,m.remainingB,m.startedAt,m.finishedAt,history.latest(m.historyMatchId))).toList();
             return new TournamentMetadata(UUID.fromString(t.id),t.ownerUserId,t.name,t.format,t.status,t.revision,t.createdAt,t.startedAt,t.finishedAt,roster,entries,t.statusChangedAt,t.checkInRequired,t.maxParticipants,List.copyOf(t.registrations),t.seedingStrategy,t.seedingSeed,TournamentDetails.snapshot(t));
@@ -51,6 +51,7 @@ public class TournamentPersistenceCoordinator {
         }
         if(error!=null) throw error;
     }
+    public void forgetArchived(Tournament t){if(!t.archived)throw new IllegalStateException("Tournament is not archived");var id=UUID.fromString(t.id);pending.remove(id);observed.remove(id);}
     public void flushForRead() {try {flush();} catch(RuntimeException error) {throw new AuthException("TOURNAMENT_PERSISTENCE_UNAVAILABLE",503);}}
     @Scheduled(fixedDelayString="${rps.tournament.flush-millis:500}") public void synchronize() {
         for(var t:registry.findAll()) capture(t);
@@ -59,6 +60,7 @@ public class TournamentPersistenceCoordinator {
     /** DRAFT is editable again; live matches are deliberately never resumed automatically. */
     public void restore() {
         for(var data:repository.all()) {
+            if(registry.findById(data.id().toString()).isPresent())continue;
             var t=new Tournament(data.id().toString(),data.name(),data.format(),data.createdAt());t.ownerUserId=data.ownerUserId();t.status=data.status();t.revision=data.revision();t.startedAt=data.startedAt();t.finishedAt=data.finishedAt();t.statusChangedAt=data.statusChangedAt();t.checkInRequired=data.checkInRequired();t.maxParticipants=data.maxParticipants();t.registrations.addAll(data.registrations());t.seedingStrategy=data.seedingStrategy();t.seedingSeed=data.seedingSeed();
             var byId=new HashMap<UUID,TournamentParticipant>();
             for(var p:data.participants()) {

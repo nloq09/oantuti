@@ -15,6 +15,7 @@ public class TournamentEntity {
     @Column(nullable=false) long revision;
     @Column(name="created_at",nullable=false) Instant createdAt;
     @Column(name="started_at") Instant startedAt;
+    @Column(name="trashed_at") Instant trashedAt;
     @Column(name="finished_at") Instant finishedAt;
     @Column(name="status_changed_at",nullable=false) Instant statusChangedAt;
     @Column(name="check_in_required",nullable=false) boolean checkInRequired;

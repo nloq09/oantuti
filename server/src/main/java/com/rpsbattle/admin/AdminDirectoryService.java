@@ -51,7 +51,7 @@ public class AdminDirectoryService {
         authorization.requireAdmin(auth);var result=one(USERS+" where u.id=?",id,"USER_NOT_FOUND");
         result.put("recent_matches",rows("select id,mode,status,outcome,turn_count,created_at from matches where player1_user_id=? or player2_user_id=? order by created_at desc limit 20",id,id));
         result.put("owned_bots",rows(BOTS+" where b.owner_user_id=? order by b.created_at desc limit 20",id));
-        result.put("tournaments",rows("select distinct t.id,t.name,t.status,t.created_at from tournaments t left join tournament_participants p on p.tournament_id=t.id where t.owner_user_id=? or p.owner_user_id=? order by t.created_at desc limit 20",id,id));
+        result.put("tournaments",rows("select distinct t.id,t.name,t.status,t.created_at from tournaments t left join tournament_participants p on p.tournament_id=t.id where t.trashed_at is null and (t.owner_user_id=? or p.owner_user_id=?) order by t.created_at desc limit 20",id,id));
         result.put("audit",audit("USER",id));return result;
     }
     public Map<String,Object> bot(Authentication auth,UUID id){

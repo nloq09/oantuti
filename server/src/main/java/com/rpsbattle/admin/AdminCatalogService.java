@@ -29,7 +29,7 @@ public class AdminCatalogService {
             (select count(*) from tournament_matches m where m.tournament_id=t.id and m.status='FINISHED') as finished_matches,
             (select count(*) from tournament_matches m where m.tournament_id=t.id and m.status='RUNNING') as running_matches,
             (select count(*) from tournament_matches m where m.tournament_id=t.id and m.status='FAILED') as failed_matches
-            from tournaments t join users u on u.id=t.owner_user_id
+            from tournaments t join users u on u.id=t.owner_user_id where t.visibility='PUBLIC' and t.trashed_at is null
             """,clauses,args,page,size,"created_at desc,id");
     }
     public Map<String,Object> tournament(Authentication auth,String id){accounts.requireAdmin(auth);owned.flush();return tournaments.view(tournaments.find(id));}
