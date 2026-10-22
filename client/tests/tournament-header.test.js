@@ -7,7 +7,7 @@ test('header retains identity roster count lifecycle and authoritative phase acr
  for(const phase of ['UPCOMING','REGISTRATION_OPEN','WAITING_FOR_CODING','CODING_OPEN','SUBMISSION_FROZEN','VALIDATING','CHECK_IN_OPEN','READY_TO_START','RUNNING','FINISHED']){
   const root=setup();renderTournamentHeader(root,tournament,{phase});const nodes=descendants(root);
   assert.equal(nodes.find(n=>n.tag==='h1').textContent,tournament.name);
-  assert.ok(nodes.some(n=>n.textContent==='1 / 4000 suất thi đấu'));
+  assert.ok(nodes.some(n=>n.textContent==='1 / 4000 người trong roster'));
   assert.equal(nodes.find(n=>n.dataset.phase).dataset.phase,phase);
   assert.equal(nodes.some(n=>n.tag==='button'),false);
  }
@@ -20,5 +20,5 @@ test('header timer uses server time plus elapsed monotonic time and never announ
  assert.match(countdownText(deadline,null),/server/);
  const root=setup();renderTournamentHeader(root,tournament,{phase:'CODING_OPEN',serverNow,phaseEndsAt:deadline});
  const timer=descendants(root).find(n=>n.attributes.role==='timer');root.querySelectorAll=()=>[timer];updateHeaderTimers(root,Number(timer.dataset.receivedAt)+1000);
- assert.equal(timer.textContent,'Còn 00:59:59');
+ assert.equal(timer.textContent,'Lập trình kết thúc sau · Còn 00:59:59');
 });

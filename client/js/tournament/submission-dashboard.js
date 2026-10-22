@@ -1,11 +1,11 @@
 import {createTournamentRefresh} from './refresh-controller.js';
 import {sessionRequest} from '../api/auth-api.js';import {node,link} from './player-dom.js';import {submissionActions} from './submission-model.js';import {errorText} from '../ui/toast.js';
 import {organizerPageShell} from './organizer-shell.js';
-import {renderDeadlineInfo} from './deadline-info.js';
+import {mountSubmissionDashboard} from './submission-view.js';
 const id=new URLSearchParams(location.search).get('id'),base='/api/tournaments/'+encodeURIComponent(id),root=document.querySelector('#submissions');let page=0;
 let refresh;const render=()=>refresh.request(true,'manual',{replace:true});
-async function readSubmissions({isCurrent,signal,reason}){try{const t=await sessionRequest(base,undefined,undefined,{signal}),data=await sessionRequest(base+'/submissions?page='+page,undefined,undefined,{signal}),jobs=await sessionRequest(base+'/coding-jobs',undefined,undefined,{signal});if(!isCurrent())return;await organizerPageShell(t,'submissions');if(!isCurrent()||reason!=='manual'&&root.contains(document.activeElement)&&document.activeElement.matches('input,textarea,select'))return;root.replaceChildren(node('h1',t.name+' · Bài nộp bot'),link('← Chi tiết giải','/tournament.html?id='+encodeURIComponent(id)));root.append(node('p','Source và nội dung hidden tests được giữ riêng tư. Trạng thái NO_SUBMISSION nghĩa là chưa có bài; các đơn đăng ký vẫn được duyệt riêng.'));
-if(!location.pathname.startsWith('/admin/'))renderDeadlineInfo(root,t);
+async function readSubmissions({isCurrent,signal,reason}){try{const t=await sessionRequest(base,undefined,undefined,{signal});if(!isCurrent())return;if(t.timeline){refresh.dispose();await mountSubmissionDashboard({id,root,t});return;}const data=await sessionRequest(base+'/submissions?page='+page,undefined,undefined,{signal}),jobs=await sessionRequest(base+'/coding-jobs',undefined,undefined,{signal});if(!isCurrent())return;await organizerPageShell(t,'submissions');if(!isCurrent()||reason!=='manual'&&root.contains(document.activeElement)&&document.activeElement.matches('input,textarea,select'))return;root.replaceChildren(node('h1',t.name+' · Bài nộp bot'),link('← Chi tiết giải','/tournament.html?id='+encodeURIComponent(id)));root.append(node('p','Source và nội dung hidden tests được giữ riêng tư. Trạng thái NO_SUBMISSION nghĩa là chưa có bài; các đơn đăng ký vẫn được duyệt riêng.'));
+
 if(t.timeline)root.append(link('Kiểm thử chính thức →',(location.pathname.startsWith('/admin/')?'/admin/final-validation.html?id=':'/tournament-final-validation.html?id=')+encodeURIComponent(id)));
 const submitted=new Set(data.items.map(s=>s.registrationId));for(const r of t.registrations||[])if(r.botId&&!submitted.has(r.id)&&page===0)root.append(node('p',r.displayName+' · Chưa có bài nộp (hoặc ở trang khác)'));
 if(!data.items.length)root.append(node('p','Chưa có bài nộp ở trang này.'));

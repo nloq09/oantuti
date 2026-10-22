@@ -44,4 +44,7 @@ class TimelineCodingApiTest extends StageThreeWebFixture {
  @Test void pendingParticipantCannotReadOrCreateDuringCodingAndOtherUsersCannotReadSource()throws Exception{
   String base=cup("BOTH",false);when(clock.instant()).thenReturn(START.plusSeconds(120));request(base+"/workspace","POST",Map.of("language","PYTHON"),403);request(base+"/workspace/me?language=PYTHON","GET",null,403);request(base+"/submission/me/versions","GET",null,403);assertThat(request(base+"/participant-flow","GET",null,200).path("canAccessWorkspace").asBoolean()).isFalse();
  }
+ @Test void participantDashboardIncludesApprovedBeforeWorkspaceAndRejectsInvalidFilters()throws Exception{
+  String base=cup("BOTH",true);var data=request(base+"/submissions?view=participants","GET",null,200);assertThat(data.path("summary").path("approved").asInt()).isEqualTo(1);assertThat(data.path("items")).hasSize(1);assertThat(data.path("items").get(0).path("workspace_state").asText()).isEqualTo("NO_WORKSPACE");request(base+"/submissions?view=participants&filter=INVALID","GET",null,400);
+ }
 }
