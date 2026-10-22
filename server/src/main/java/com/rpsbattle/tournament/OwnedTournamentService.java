@@ -219,7 +219,6 @@ public class OwnedTournamentService {
             var now=clock.instant();
             if(t.timeline==null||now.isBefore(t.timeline.tournamentStartAt()))throw new DemoRequestException("TOURNAMENT_START_NOT_DUE");
             if(t.startedAt!=null||!Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN,TournamentStatus.READY).contains(t.status))return;
-            if(!timelineRegistrations.codingAllowed(t.id)){if(auth!=null)throw new AuthException("ROSTER_NOT_LOCKED",409);return;}
             if(holdForValidation(t))return;
             var fresh=new ArrayList<String>();
             try{submissionMutation(t,auth,()->{
@@ -256,12 +255,35 @@ public class OwnedTournamentService {
     }
     public void openRegistration(Authentication auth,String id) {
         var t=tournaments.find(id);authorization.requireManager(auth,t);
+        synchronized(t){if(t.status==TournamentStatus.REGISTRATION&&(t.timeline==null||!clock.instant().isBefore(t.timeline.registrationOpenAt())))return;
+        if(!Set.of(TournamentStatus.DRAFT,TournamentStatus.REGISTRATION).contains(t.status))throw new DemoRequestException("INVALID_TOURNAMENT_TRANSITION");
         mutate(t,auth,()->{
             var deadline=t.timeline!=null?t.timeline.registrationCloseAt():t.timing.registrationDeadline();
             if(deadline!=null&&!clock.instant().isBefore(deadline))throw new DemoRequestException("TOURNAMENT_SCHEDULE_EXPIRED");
-            tournaments.openRegistration(id);
-        });
+            if(t.timeline!=null&&clock.instant().isBefore(t.timeline.registrationOpenAt())){
+                var old=t.timeline;var now=clock.instant();
+                t.timeline=new TournamentTimeline(now,old.registrationCloseAt(),old.codingOpenAt(),old.codingCloseAt(),old.validationStartAt(),old.validationDeadline(),old.checkInOpenAt(),old.checkInCloseAt(),old.tournamentStartAt(),old.estimatedEndAt(),old.resultPublishAt(),old.deadlinePolicy(),old.validationFailurePolicy());
+                t.botPolicy=t.botPolicy.withTimeline(t.timeline);
+                TournamentAudit.append(t,"REGISTRATION_OPENED_EARLY",actor(auth),id,"MANAGER_OPEN",old.registrationOpenAt().toString(),now.toString());
+            }
+            if(t.status==TournamentStatus.DRAFT)tournaments.openRegistration(id);else tournaments.changed(t);
+        });}
     }
+    private final FairTournamentScan registrationScan=new FairTournamentScan();
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay=1000,initialDelayString="${rps.registration.initial-delay-ms:2000}")
+    public void advanceTimelineRegistrations(){int changed=0;for(var t:registrationScan.next(registry.findAll()))try{if(advanceTimelineRegistration(t)&&++changed>=25)return;}catch(RuntimeException failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("event=registration_schedule_retry tournamentId={}",t.id);}}
+    /** Requests enforce the same exact clock boundary as the background catch-up sweep. */
+    public boolean advanceTimelineRegistration(Tournament t){synchronized(t){
+        if(t.archived||t.timeline==null||t.startedAt!=null||!Set.of(TournamentStatus.DRAFT,TournamentStatus.REGISTRATION).contains(t.status))return false;
+        var now=clock.instant();if(now.isBefore(t.timeline.registrationOpenAt()))return false;boolean opens=t.status==TournamentStatus.DRAFT&&!now.isBefore(t.timeline.registrationOpenAt());
+        boolean closes=!now.isBefore(t.timeline.registrationCloseAt())&&timelineRegistrations.control(UUID.fromString(t.id)).closedAt()==null;
+        if(!opens&&!closes)return false;
+        submissionMutation(t,null,()->{
+            if(opens){TournamentStateMachine.transition(t,TournamentStatus.REGISTRATION,now);TournamentAudit.append(t,"REGISTRATION_AUTO_OPENED",null,t.id,"SCHEDULE",null,t.timeline.registrationOpenAt().toString());}
+            if(closes){timelineRegistrations.close(UUID.fromString(t.id),t.timeline.registrationCloseAt());TournamentAudit.append(t,"REGISTRATION_APPLICATIONS_CLOSED",null,t.id,"SCHEDULE",null,t.timeline.registrationCloseAt().toString());}
+            tournaments.changed(t);
+        });return true;
+    }}
     public void closeRegistration(Authentication auth,String id) {var t=tournaments.find(id);authorization.requireManager(auth,t);var scores=historicalScores();mutate(t,auth,()->{
         if(t.timeline!=null&&clock.instant().isBefore(t.timeline.checkInCloseAt()))throw new DemoRequestException("CHECK_IN_NOT_CLOSED");
         if(t.status!=TournamentStatus.REGISTRATION)throw new DemoRequestException("INVALID_TOURNAMENT_TRANSITION");

@@ -33,7 +33,7 @@ class TimelineRegistrationApiTest extends StageThreeWebFixture {
         for(String type:List.of("BOT","HUMAN"))request(base+"/registrations","POST",Map.of("controllerType",type,"rulesAccepted",true,"botId",UUID.randomUUID().toString()),type.equals("HUMAN")?400:409);
         request(base+"/registrations","POST",Map.of("controllerType","HUMAN","rulesAccepted",true),409);
         request(base+"/participants","POST",Map.of("botId",UUID.randomUUID().toString()),409);
-        when(clock.instant()).thenReturn(START.plusSeconds(60));request(base+"/participant-registration","POST",signup(),409);request(base+"/participant-registration","DELETE",Map.of(),409);assertThat(request(base+"/participant-flow","GET",null,200).path("phase").asText()).isEqualTo("REGISTRATION_REVIEW");
+        when(clock.instant()).thenReturn(START.plusSeconds(60));request(base+"/participant-registration","POST",signup(),409);request(base+"/participant-registration","DELETE",Map.of(),200);assertThat(request(base+"/participant-flow","GET",null,200).path("phase").asText()).isEqualTo("WAITING_FOR_CODING");when(clock.instant()).thenReturn(START.plusSeconds(120));request(base+"/participant-registration","DELETE",Map.of(),409);
     }
     @Test void directWorkspaceSourceBuildTestImportAndSubmitAreClosedDuringRegistration()throws Exception{
         String base=cup("BOTH",2);request(base+"/participant-registration","POST",signup(),200);

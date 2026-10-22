@@ -65,8 +65,8 @@ test('closed review is read only, policy edit is server authorized and locked ro
  renderRegistrationDashboard(root,{...tournament,status:'DRAFT'},{...summary,canEditPolicy:true,canClose:false});
  assert.equal(root.querySelector('[data-registration-focus="edit-policy"]').href,'/tournament.html?id=cup%2Fa&view=settings#deadline-policy');
 });
-test('empty exception queue directs organizer to roster lock when ready',()=>{
- const root=host();let focused=0;renderRegistrationDashboard(root,tournament,{...summary,counts:{...summary.counts,needsReview:0},canLock:true,canClose:false,registrationOpen:false},{focusRoster:()=>focused++});
+test('empty exception queue does not require a roster lock',()=>{
+ const root=host();let focused=0;renderRegistrationDashboard(root,tournament,{...summary,counts:{...summary.counts,needsReview:0},canLock:true,canClose:false,registrationOpen:false},{selectFilter:filter=>{assert.equal(filter,'');focused++;}});
  assert.equal(root.querySelector('[data-registration-focus="review-queue"]'),null);
  root.querySelector('[data-registration-focus="registration-next"]').click();assert.equal(focused,1);assert.match(text(root),/Không có đơn cần xử lý/);
 });

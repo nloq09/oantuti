@@ -10,13 +10,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrganizerMetricsService {
  @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.timeline.TimelineRegistrationStore applications;
+ @org.springframework.beans.factory.annotation.Autowired OwnedTournamentService owned;
  private final TournamentService tournaments;private final TournamentAuthorizationService authorization;private final OrganizerMetricsStore store;private final Clock clock;
  public OrganizerMetricsService(TournamentService t,TournamentAuthorizationService a,OrganizerMetricsStore s,Clock c){tournaments=t;authorization=a;store=s;clock=c;}
  public record Coding(boolean available,long approved,long workspaceUsers,long submitted,long ready,long buildFailed,long notStarted){}
  public record CheckIn(long eligible,long checkedIn,long missing,long missed,long disqualified){}
  public record Running(int currentRound,long total,long completed,long running,long queued,long retrying,long error){}
  public record View(String tournamentId,long revision,Instant serverNow,TournamentPhase phase,Instant phaseEndsAt,Map<String,Long> registration,Coding coding,Map<String,Long> validation,CheckIn checkIn,Running running,OrganizerMetricsStore.Workers workers,com.rpsbattle.tournament.timeline.TimelineRegistrationStore.Control registrationControl){}
- public View read(Authentication auth,String id){var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){var now=clock.instant();var data=project(t,store.read(UUID.fromString(t.id),now),now);if(t.timeline==null)return data;var phase=applications.phase(t,now);return new View(data.tournamentId(),data.revision(),data.serverNow(),phase.phase(),phase.phaseEndsAt(),data.registration(),data.coding(),data.validation(),data.checkIn(),data.running(),data.workers(),applications.control(UUID.fromString(t.id)));}}
+ public View read(Authentication auth,String id){var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){owned.advanceTimelineRegistration(t);var now=clock.instant();var data=project(t,store.read(UUID.fromString(t.id),now),now);if(t.timeline==null)return data;var phase=applications.phase(t,now);return new View(data.tournamentId(),data.revision(),data.serverNow(),phase.phase(),phase.phaseEndsAt(),data.registration(),data.coding(),data.validation(),data.checkIn(),data.running(),data.workers(),applications.control(UUID.fromString(t.id)));}}
  static View project(Tournament t,OrganizerMetricsStore.Snapshot data,Instant now){
   var registration=new LinkedHashMap<String,Long>();for(String key:List.of("registered","approved","pending","waitlisted","rejected","cancelled"))registration.put(key,0L);
   Collection<String> statuses=t.timeline!=null?data.applications().values():t.registrations.stream().map(r->Set.of(TournamentRegistration.Status.CHECKED_IN,TournamentRegistration.Status.NOT_CHECKED_IN).contains(r.status())?"APPROVED":r.status().name()).toList();registration.put("registered",(long)statuses.size());for(String value:statuses){String key=value.toLowerCase(Locale.ROOT);if(registration.containsKey(key))registration.merge(key,1L,Long::sum);}

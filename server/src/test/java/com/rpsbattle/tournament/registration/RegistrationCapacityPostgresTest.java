@@ -86,12 +86,12 @@ class RegistrationCapacityPostgresTest {
     @Test void closedRegistrationRemainsReviewableButLockedRosterRejectsAllChanges(){
         UUID cup=cup(),owner=user();var first=apply(cup,owner);apply(cup,user());var waiting=apply(cup,user());store.enable(cup);store.close(cup,NOW);
         assertThat(store.control(cup).lockedAt()).isNull();assertThatThrownBy(()->apply(cup,user())).isInstanceOf(AuthException.class).hasMessage("REGISTRATION_NOT_OPEN");
-        var state=store.lockRoster(cup,owner,"Organizer",NOW,2,NOW.plusSeconds(60));assertThat(state.lockedCount()).isEqualTo(2);assertThat(store.codingAllowed(cup.toString())).isTrue();
+        var state=store.lockRoster(cup,owner,"Organizer",NOW,2,NOW.plusSeconds(60));assertThat(state.lockedCount()).isEqualTo(2);assertThat(store.control(cup).lockedAt()).isNotNull();
         assertThatThrownBy(()->store.withdraw(cup,owner)).hasMessage("ROSTER_LOCKED");assertThatThrownBy(()->store.review(cup,waiting.id(),"APPROVED","No changes",owner,NOW,2)).hasMessage("ROSTER_LOCKED");assertThat(store.promote(cup,new RegistrationPolicy(RegistrationApprovalPolicy.HYBRID,false),Set.of("CPP"),NOW)).isEmpty();
     }
     @Test void unresolvedApplicationsBlockLockAndRollbackLeavesControlUnlocked(){
         UUID cup=cup(),owner=user();apply(cup,owner);apply(cup,user());store.register(cup,user(),"Needs review","CPP",null,2,NOW);store.enable(cup);store.close(cup,NOW);
-        assertThatThrownBy(()->store.lockRoster(cup,owner,"Organizer",NOW,2,NOW.plusSeconds(60))).hasMessage("ROSTER_REVIEW_REQUIRED");assertThat(store.control(cup).lockedAt()).isNull();assertThat(store.codingAllowed(cup.toString())).isFalse();
+        assertThatThrownBy(()->store.lockRoster(cup,owner,"Organizer",NOW,2,NOW.plusSeconds(60))).hasMessage("ROSTER_REVIEW_REQUIRED");assertThat(store.control(cup).lockedAt()).isNull();assertThat(store.control(cup).lockedAt()).isNull();
     }
     @Test void promotionRollsBackWithTheWithdrawalThatFreedItsPlace(){
         UUID cup=cup(),departing=user(),waitingUser=user();apply(cup,departing);apply(cup,user());apply(cup,waitingUser);

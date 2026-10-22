@@ -32,7 +32,6 @@ public class TimelineRegistrationStore {
     public record Control(boolean enabled,Instant closedAt,Instant lockedAt,String lockedByName,Integer lockedCount) {}
     private RegistrationControl controlRow(UUID tournament,boolean refresh){var row=db.find(RegistrationControl.class,tournament);if(row!=null&&refresh)db.refresh(row,LockModeType.PESSIMISTIC_WRITE);return row;}
     @Transactional(readOnly=true) public Control control(UUID tournament){var row=controlRow(tournament,false);return row==null?new Control(false,null,null,null,null):new Control(true,row.closedAt,row.lockedAt,row.lockedByName,row.lockedCount);}
-    @Transactional(readOnly=true) public boolean codingAllowed(String tournament){var state=control(UUID.fromString(tournament));return !state.enabled()||state.lockedAt()!=null;}
     @Transactional public void enable(UUID tournament){lockCapacity(tournament);if(controlRow(tournament,true)==null){var row=new RegistrationControl();row.tournamentId=tournament;db.persist(row);db.flush();}}
     private RegistrationControl unlocked(UUID tournament){var row=controlRow(tournament,true);if(row!=null&&row.lockedAt!=null)throw new AuthException("ROSTER_LOCKED",409);return row;}
     @Transactional public void close(UUID tournament,Instant now){lockCapacity(tournament);enable(tournament);var row=unlocked(tournament);if(row.closedAt!=null)throw new AuthException("REGISTRATION_ALREADY_CLOSED",409);row.closedAt=now;db.flush();}
@@ -46,9 +45,8 @@ public class TimelineRegistrationStore {
     @Transactional(readOnly=true) public Map<String,Long> counts(UUID tournament){var counts=new LinkedHashMap<String,Long>();for(String key:List.of("total","approved","needsReview","waitlisted","rejected","cancelled"))counts.put(key,0L);for(var row:db.createQuery("select r.status,count(r) from TimelineRegistration r where r.tournamentId=:t group by r.status",Object[].class).setParameter("t",tournament).getResultList()){String key=row[0].equals("PENDING")?"needsReview":row[0].toString().toLowerCase(Locale.ROOT);long n=(Long)row[1];counts.put(key,n);counts.merge("total",n,Long::sum);}return counts;}
     @Transactional(readOnly=true) public com.rpsbattle.tournament.TournamentPhaseResolver.Resolution phase(com.rpsbattle.tournament.domain.Tournament t,Instant now){
         var base=com.rpsbattle.tournament.TournamentPhaseResolver.resolve(t.status,t.timeline,now,null,reviewComplete(UUID.fromString(t.id)));var state=control(UUID.fromString(t.id));
-        if(t.timeline!=null&&t.status==com.rpsbattle.tournament.domain.TournamentStatus.REGISTRATION&&state.enabled()&&(state.closedAt()!=null||!now.isBefore(t.timeline.registrationCloseAt()))){
-            if(state.lockedAt()==null)return new com.rpsbattle.tournament.TournamentPhaseResolver.Resolution(com.rpsbattle.tournament.domain.TournamentPhase.REGISTRATION_REVIEW,t.timeline.codingOpenAt());
-            if(now.isBefore(t.timeline.codingOpenAt()))return new com.rpsbattle.tournament.TournamentPhaseResolver.Resolution(com.rpsbattle.tournament.domain.TournamentPhase.WAITING_FOR_CODING,t.timeline.codingOpenAt());
+        if(t.timeline!=null&&t.status==com.rpsbattle.tournament.domain.TournamentStatus.REGISTRATION&&now.isBefore(t.timeline.codingOpenAt())&&(state.closedAt()!=null||state.lockedAt()!=null)){
+            return new com.rpsbattle.tournament.TournamentPhaseResolver.Resolution(reviewComplete(UUID.fromString(t.id))?com.rpsbattle.tournament.domain.TournamentPhase.WAITING_FOR_CODING:com.rpsbattle.tournament.domain.TournamentPhase.REGISTRATION_REVIEW,t.timeline.codingOpenAt());
         }return base;
     }
     public record Promotion(UUID applicationId,String before,String after,String reason) {}

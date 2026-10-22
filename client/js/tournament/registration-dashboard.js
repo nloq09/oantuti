@@ -18,8 +18,8 @@ export function renderRegistrationDashboard(root,t,summary,{status='',selectFilt
   attention.append(node('h2',summary.canReview?'Cần bạn xử lý':'Đơn chưa được xử lý'),node('p',`${number(summary.counts.needsReview)} đơn cần ban tổ chức xác nhận. ${summary.canReview?'Các đơn rõ ràng hợp lệ được xử lý theo chính sách của giải.':'Phần xét duyệt hiện đã khóa; chỉ có thể xem danh sách.'}`));
   const review=node('button',`${summary.canReview?'Xử lý':'Xem'} ${number(summary.counts.needsReview)} đơn`,'primary');review.type='button';review.dataset.registrationFocus='review-queue';review.onclick=()=>selectFilter?.('NEEDS_REVIEW');attention.append(review);
  }else{
-  attention.append(node('h2','Không có đơn cần xử lý'),node('p',summary.canLock?'Đã đóng nhận đơn và không còn đơn cần xác nhận. Kiểm tra danh sách trước khi chốt.':summary.control.lockedAt?'Danh sách đã chốt. Bạn vẫn có thể tra cứu các đơn đăng ký.':'Theo dõi đăng ký; không cần duyệt từng đơn đã được hệ thống chấp nhận.'));
-  const action=node('button',summary.canLock?'Kiểm tra và chốt danh sách':'Xem tất cả đơn');action.type='button';action.dataset.registrationFocus='registration-next';action.onclick=()=>summary.canLock?focusRoster?.():selectFilter?.('');attention.append(action);
+  attention.append(node('h2','Không có đơn cần xử lý'),node('p','Server tự mở và đóng đăng ký theo lịch. Người đã được duyệt vào lập trình đúng giờ; không cần chốt danh sách.'));
+  const action=node('button','Xem tất cả đơn');action.type='button';action.dataset.registrationFocus='registration-next';action.onclick=()=>selectFilter?.('');attention.append(action);
  }
  root.append(attention);
  const columns=node('div',undefined,'registration-dashboard-columns'),policy=node('section',undefined,'control-card registration-policy-card'),facts=node('dl'),config=summary.policy;

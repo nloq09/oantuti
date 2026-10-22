@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
-/** A row opts the tournament into explicit close/lock; absent rows preserve legacy schedules. */
+/** Tracks optional early closure and legacy explicit roster locks; scheduled coding needs neither. */
 @Entity @Table(name="tournament_registration_controls")
 public class RegistrationControl {
     @Id @Column(name="tournament_id") UUID tournamentId;

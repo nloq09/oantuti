@@ -22,3 +22,5 @@ test('match operations mirror review retry and downstream locking guards',()=>{
  assert.equal(matchOperationAvailability({...t,status:'PAUSED'},{...m,status:'FAILED'}).retry,true);assert.equal(matchOperationAvailability(t,{...m,status:'FAILED'}).retry,false);
  assert.equal(matchOperationAvailability({...t,status:'CANCELLED'},m).keep,false);
 });
+
+test('scheduled registration can open early without requiring publication at the scheduled hour',()=>{const t=cup({timeline:{registrationOpenAt:'2026-11-01T11:00:00Z',registrationCloseAt:'2026-11-01T12:00:00Z'}}),data=metrics(t,{phase:'UPCOMING'});assert.equal(organizerNextAction(t,data).command,'open-registration');assert.match(organizerNextAction(t,data).description,/server tự mở/);});

@@ -13,7 +13,7 @@ export function organizerActionAvailability(t,data,{stale=false}={}){
  const checked=(t.registrations||[]).filter(r=>r.status==='CHECKED_IN'&&roster.some(p=>p.participantId===r.id)).length;
  const controls=allowedControls(t),serverNow=Date.parse(data?.serverNow),starts=Date.parse(t.timeline?.tournamentStartAt||t.timing?.startTime),registrationDeadline=t.timeline?.registrationCloseAt||t.timing?.registrationDeadline;
  return {phase,synced,minimum,
-  openRegistration:synced&&t.status==='DRAFT'&&(!registrationDeadline||Number.isFinite(serverNow)&&serverNow<Date.parse(registrationDeadline)),
+  openRegistration:synced&&(t.status==='DRAFT'||t.timeline&&t.status==='REGISTRATION'&&phase==='UPCOMING')&&(!registrationDeadline||Number.isFinite(serverNow)&&serverNow<Date.parse(registrationDeadline)),
   closeRegistration:synced&&!t.timeline&&t.status==='REGISTRATION'&&roster.length>=minimum,
   closeCheckIn:synced&&!t.timeline&&t.status==='CHECK_IN'&&checked>=minimum,
   start:synced&&!t.timelineStartIssue&&roster.length>=minimum&&(t.timeline?checked>=minimum&&phase==='READY_TO_START'&&Number.isFinite(serverNow)&&serverNow>=starts&&['REGISTRATION','CHECK_IN','READY'].includes(t.status):(t.status==='READY'||t.status==='DRAFT'&&!t.checkInRequired)&&(!t.timing?.startTime||Number.isFinite(serverNow)&&serverNow>=starts)),
@@ -35,10 +35,11 @@ export function organizerNextAction(t,data,{stale=false}={}){
  if(available.start)return command('start','Bắt đầu giải','Danh sách hợp lệ đã sẵn sàng và đã đến thời điểm bắt đầu.');
  if(available.finish)return go('results','Hoàn tất giải','Các trận đã kết thúc. Kiểm tra kết quả và xác nhận hoàn tất.');
  if(['PAUSED','RECOVERY_REQUIRED'].includes(phase))return go('matches','Xử lý thi đấu',available.resume?'Có thể tiếp tục giải sau khi kiểm tra.':'Kiểm tra trận lỗi và các review trước khi tiếp tục.');
- if(phase==='DRAFT')return available.openRegistration?command('open-registration','Mở đăng ký','Kiểm tra lịch và luật trước khi công bố giải.'):go('settings','Kiểm tra cài đặt','Hoàn tất cấu hình và cập nhật lịch trước khi mở đăng ký.');
+ if(phase==='DRAFT')return available.openRegistration?command('open-registration',t.timeline?'Mở đăng ký ngay':'Mở đăng ký',t.timeline?'Có thể mở sớm. Nếu không thao tác, server tự mở đăng ký theo lịch.':'Kiểm tra lịch và luật trước khi công bố giải.'):go('settings','Kiểm tra cài đặt','Hoàn tất cấu hình và cập nhật lịch trước khi mở đăng ký.');
  if(['REGISTRATION_OPEN','REGISTRATION_REVIEW','WAITING_FOR_CODING','UPCOMING'].includes(phase)){
+  if(phase==='UPCOMING'&&available.openRegistration)return command('open-registration','Mở đăng ký ngay','Có thể mở sớm. Nếu không thao tác, server tự mở đăng ký theo lịch.');
   if(data?.registration?.pending)return {label:'Duyệt đăng ký',description:data.registration.pending+' đơn đang chờ xét duyệt.',href:t.timeline?'/tournament-applications.html?id='+encodeURIComponent(t.id)+'&status=PENDING':base+'&view=registration&filter=PENDING',section:'registration'};
-  if(data?.registrationControl?.enabled){if(data.registrationControl.lockedAt)return go('registration','Chờ lập trình','Danh sách đã chốt. Chờ giờ mở coding.');if(phase==='REGISTRATION_REVIEW')return {label:'Chốt danh sách thi đấu',description:'Đã đóng nhận đơn. Kiểm tra danh sách và chốt trước giờ coding.',href:'/tournament-applications.html?id='+encodeURIComponent(t.id),section:'registration'};}
+
   if(available.closeRegistration)return command('close-registration','Chốt đăng ký','Đã đủ người được duyệt. Kiểm tra các đơn còn lại trước khi chốt.');
   return go('registration',phase==='UPCOMING'?'Xem lịch đăng ký':'Theo dõi đăng ký',phase==='WAITING_FOR_CODING'?'Đã xét duyệt xong. Chờ giờ mở lập trình.':'Theo dõi danh sách và các đơn được gửi vào giải.');
  }

@@ -2,6 +2,18 @@
 
 Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách; nhóm 5 bổ sung dashboard cho Organizer; nhóm 6 bổ sung hàng xét duyệt, bộ lọc và bulk review; nhóm 7 hoàn thiện trạng thái/thông báo cho Player và tách lời nhắn công khai khỏi ghi chú nội bộ. Nhóm 8 hoàn tất kiểm chứng quyền, audit, tranh chấp transaction và luồng HTTP; phần bên dưới ghi rõ phạm vi kiểm chứng.
 
+## Cập nhật ngày 22/10/2026: đăng ký tự động theo lịch
+
+Yêu cầu mới thay thế điều kiện chốt danh sách bắt buộc của các mốc bên dưới: server tự mở đăng ký đúng registrationOpenAt và đóng nhận đơn tại registrationCloseAt. Quản trị có thể mở sớm; khi đó chỉ registrationOpenAt thay đổi, giữ nguyên giờ đóng và các mốc coding. Người đã được duyệt được vào code tại codingOpenAt, kể cả registrationCloseAt bằng codingOpenAt và chưa từng chốt danh sách. Đơn chưa duyệt không tự được thông qua. Giao diện bỏ nút/khuyến cáo phải chốt danh sách. Endpoint chốt thủ công cũ được giữ để tương thích nhưng không còn là điều kiện của code, freeze, validation hoặc start.
+
+Cửa sổ nhận đăng ký là [registrationOpenAt, registrationCloseAt): mở ở đúng mốc đầu, từ chối đơn mới ở đúng mốc cuối. Scheduler quét mỗi giây để lưu chuyển trạng thái; các request đăng ký, participant-flow, workspace và số liệu quản trị cũng kiểm tra clock và đồng bộ mốc đến hạn, không phải đợi lượt quét. Scheduler có thể bắt kịp cả hai mốc sau khi server khởi động lại, không mở lại một cửa đăng ký đã bị quản trị đóng sớm. Xét duyệt/rút đơn đã gửi vẫn được phép trước codingOpenAt nếu không có khóa thủ công cũ; đúng giờ coding thì khóa xét duyệt. Chỉ APPROVED vào code.
+
+API registration-summary thêm canOpen; canLock luôn false để UI không mời thao tác chốt. Các route cũ không đổi; không có migration. Mở sớm ghi audit mốc cũ/mới, auto mở/đóng ghi audit theo lịch. Các giải REGISTRATION nhưng còn UPCOMING từ phiên bản cũ cũng có thể mở sớm.
+
+Xác minh: 364/364 kiểm thử client PASS; tổng hợp 145/145 kiểm thử backend PASS, không skip, gồm PostgreSQL thật, race capacity, các mốc nanosecond trước/đúng giờ, trùng giờ đóng đăng ký và mở code, chưa chốt danh sách, đơn pending, mở sớm, tự mở/đóng, bắt kịp lịch và không mở lại cửa đã đóng. Bộ backend rộng ban đầu có 2 kiểm thử kỳ vọng hành vi cũ; đã cập nhật fixture về thời điểm trước giờ tự mở và quyền rút đơn trong cửa sổ xét duyệt, chạy lại các lớp đó rồi tổng hợp XML mới nhất theo lớp tại server/build/local-run/registration-clock-results (ignored). Kiểm tra trình duyệt trực quan chưa thực hiện lại do quyền URL của công cụ bị chặn ở lượt trước; DOM/controller và logic server được kiểm thử tự động. Build và server localhost được cập nhật sau khi kiểm thử.
+
+Các mục còn lại ghi lại lịch sử triển khai trước thay đổi trên.
+
 ## Luồng thực tế đã đối chiếu
 
 - `tournament/timeline/TimelineRegistration`: đơn của **người chơi**, lưu bảng `tournament_timeline_registrations`, một đơn cho mỗi cặp tournament/user. Không có bot, source hay version ở bước đăng ký. Các trạng thái lưu hiện tại: PENDING, APPROVED, WAITLISTED, REJECTED, CANCELLED.

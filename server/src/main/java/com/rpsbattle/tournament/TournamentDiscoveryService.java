@@ -15,7 +15,7 @@ public class TournamentDiscoveryService {
     public Map<String,Object> discover(Authentication auth,String category,String search,String format,int page,int size){
         if(page<0||page>10000||size<1||size>50)throw new AuthException("INVALID_PAGE",400);
         String condition=switch(category){case "live"->"t.status in ('RUNNING','PAUSED','RECOVERY_REQUIRED')";case "open"->"t.status='REGISTRATION'";case "upcoming"->"t.status in ('DRAFT','CHECK_IN','READY')";case "finished"->"t.status in ('FINISHED','CANCELLED')";case "joined"->"1=1";default->throw new AuthException("INVALID_FILTER",400);};
-        var user=accounts.current(auth);if(category.equals("joined")&&user.isEmpty())throw new AuthException("UNAUTHENTICATED",401);owned.flush();
+        var user=accounts.current(auth);if(category.equals("joined")&&user.isEmpty())throw new AuthException("UNAUTHENTICATED",401);owned.advanceTimelineRegistrations();owned.flush();
         var args=new ArrayList<Object>();
         if(category.equals("open")||category.equals("upcoming")){
             var ids=new ArrayList<UUID>();var now=clock.instant();

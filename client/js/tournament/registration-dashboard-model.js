@@ -12,8 +12,8 @@ export function applicationCount(counts,status){return counts[({'':'total',APPRO
 export function registrationDashboardState(t,summary){
  if(t.status==='CANCELLED')return {label:'Giải đã hủy'};
  if(t.status==='FINISHED')return {label:'Giải đã kết thúc'};
- if(summary.control.lockedAt)return {label:'Danh sách đã chốt'};
- if(t.status==='DRAFT')return {label:'Chưa mở đăng ký'};
+ if(summary.control.lockedAt)return {label:'Đã đóng đăng ký'};
+ if(t.status==='DRAFT')return {label:'Chưa mở đăng ký · Server tự mở theo lịch',deadline:t.timeline.registrationOpenAt};
  if(Date.parse(summary.serverNow)<Date.parse(t.timeline.registrationOpenAt))return {label:'Sắp mở đăng ký',deadline:t.timeline.registrationOpenAt};
  if(summary.registrationOpen)return {label:'Đang nhận đăng ký',deadline:summary.registrationCloseAt};
  return {label:summary.canReview?'Đã đóng nhận đơn · Còn thời gian xét duyệt':'Đã kết thúc xét duyệt'};
