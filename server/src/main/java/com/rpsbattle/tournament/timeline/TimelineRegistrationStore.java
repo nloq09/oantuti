@@ -21,7 +21,8 @@ public class TimelineRegistrationStore {
         return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t and r.status='WAITLISTED' and r.waitlistOrder<=:order",Long.class)
                 .setParameter("t",r.tournamentId).setParameter("order",r.waitlistOrder).getSingleResult();
     }
-    private Application application(TimelineRegistration r){return new Application(r.id,r.displayName,r.intendedLanguage,r.affiliation,publicStatus(r.status),r.registeredAt,r.reviewReason,r.reviewedAt,r.eligibilityReasons.isBlank()?(r.status.equals("PENDING")?List.of(EligibilityReasonCode.MANUAL_REVIEW_REQUIRED):List.of()):Arrays.stream(r.eligibilityReasons.split(",")).map(EligibilityReasonCode::valueOf).toList(),position(r),r.publicReviewMessage);}
+    private Application application(TimelineRegistration r){return application(r,position(r));}
+    private Application application(TimelineRegistration r,Long waitlistPosition){return new Application(r.id,r.displayName,r.intendedLanguage,r.affiliation,publicStatus(r.status),r.registeredAt,r.reviewReason,r.reviewedAt,r.eligibilityReasons.isBlank()?(r.status.equals("PENDING")?List.of(EligibilityReasonCode.MANUAL_REVIEW_REQUIRED):List.of()):Arrays.stream(r.eligibilityReasons.split(",")).map(EligibilityReasonCode::valueOf).toList(),waitlistPosition,r.publicReviewMessage);}
     @Transactional(readOnly=true) public boolean hasApplications(UUID tournament){return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t",Long.class).setParameter("t",tournament).getSingleResult()>0;}
     private TimelineRegistration find(UUID tournament,UUID user){return db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t and r.userId=:u",TimelineRegistration.class).setParameter("t",tournament).setParameter("u",user).getResultStream().findFirst().orElse(null);}
     private View view(TimelineRegistration r){return r==null?null:new View(r.id,r.displayName,r.intendedLanguage,r.affiliation,publicStatus(r.status),r.registeredAt,r.publicReviewMessage,r.reviewedAt,position(r));}
@@ -101,10 +102,10 @@ public class TimelineRegistrationStore {
         r.reviewReason=null;r.publicReviewMessage=null;r.reviewedAt=null;r.reviewedBy=null;
         if(previous==null)db.persist(r);db.flush();return view(r);
     }
-    @Transactional public void withdraw(UUID tournament,UUID user){
+    @Transactional public ReviewChange withdraw(UUID tournament,UUID user){
         lockCapacity(tournament);unlocked(tournament);
         var r=find(tournament,user);if(r!=null)db.refresh(r,LockModeType.PESSIMISTIC_WRITE);if(r==null||!Set.of("PENDING","APPROVED","WAITLISTED").contains(r.status))throw new AuthException("INVALID_REGISTRATION_TRANSITION",409);
-        r.status="CANCELLED";r.publicReviewMessage=null;
+        String before=r.status;r.status="CANCELLED";r.publicReviewMessage=null;return new ReviewChange(before,view(r));
     }
     private record Search(String where,Map<String,Object> parameters) {}
     private Search search(UUID tournament,ApplicationFilter filter){
@@ -126,7 +127,11 @@ public class TimelineRegistrationStore {
     @Transactional(readOnly=true) public List<Application> page(UUID tournament,ApplicationFilter filter){
         var search=search(tournament,filter);String order="WAITLISTED".equals(filter.status())?"r.waitlistOrder,r.id":"r.registeredAt,r.id";
         var query=db.createQuery("select r from TimelineRegistration r"+search.where()+" order by "+order,TimelineRegistration.class);search.parameters().forEach(query::setParameter);
-        return query.setFirstResult(filter.page()*filter.size()).setMaxResults(filter.size()).getResultList().stream().map(this::application).toList();
+        var rows=query.setFirstResult(filter.page()*filter.size()).setMaxResults(filter.size()).getResultList();
+        var waiting=rows.stream().filter(r->r.status.equals("WAITLISTED")&&r.waitlistOrder!=null).map(r->r.id).toList();
+        var positions=new HashMap<UUID,Long>();
+        if(!waiting.isEmpty())for(var pair:db.createQuery("select r.id,(select count(w) from TimelineRegistration w where w.tournamentId=:t and w.status='WAITLISTED' and w.waitlistOrder<=r.waitlistOrder) from TimelineRegistration r where r.tournamentId=:t and r.id in :ids",Object[].class).setParameter("t",tournament).setParameter("ids",waiting).getResultList())positions.put((UUID)pair[0],(Long)pair[1]);
+        return rows.stream().map(r->application(r,positions.get(r.id))).toList();
     }
     public record Details(Application application,String username,Instant rulesAcceptedAt,boolean accountActive) {}
     @Transactional(readOnly=true) public Details details(UUID tournament,UUID id){

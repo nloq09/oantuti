@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.*;
 /** Real independent DB transactions deliberately bypass the single-JVM tournament monitor. */
 @SpringBootTest(properties={"rps.bots.enabled=false","spring.datasource.hikari.maximum-pool-size=10","rps.bots.directory=${java.io.tmpdir}/rps-capacity-${random.uuid}"})
 @Testcontainers(disabledWithoutDocker=true)
+@org.springframework.context.annotation.Import(RegistrationCapacityPostgresTest.QueryStatistics.class)
 class RegistrationCapacityPostgresTest {
     @Container static final PostgreSQLContainer<?> POSTGRES=new PostgreSQLContainer<>("postgres:17-alpine");
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry){
@@ -95,6 +96,39 @@ class RegistrationCapacityPostgresTest {
     @Test void promotionRollsBackWithTheWithdrawalThatFreedItsPlace(){
         UUID cup=cup(),departing=user(),waitingUser=user();apply(cup,departing);apply(cup,user());apply(cup,waitingUser);
         assertThatThrownBy(()->new TransactionTemplate(transactions).executeWithoutResult(status->{store.withdraw(cup,departing);store.promote(cup,new RegistrationPolicy(RegistrationApprovalPolicy.HYBRID,false),Set.of("CPP"),NOW);throw new IllegalStateException("Abort promotion");})).hasMessage("Abort promotion");assertThat(store.mine(cup,departing).status()).isEqualTo("APPROVED");assertThat(store.mine(cup,waitingUser).status()).isEqualTo("WAITLISTED");
+    }
+    @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods=false)
+    static class QueryStatistics {
+        @org.springframework.context.annotation.Bean
+        org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer registrationQueryCounter(){return properties->properties.put("hibernate.session_factory.statement_inspector",new QueryCounter());}
+    }
+    static class QueryCounter implements org.hibernate.resource.jdbc.spi.StatementInspector {
+        static final ThreadLocal<Integer> statements=ThreadLocal.withInitial(()->0);
+        @Override public String inspect(String sql){statements.set(statements.get()+1);return sql;}
+    }
+    @Test void waitlistPageUsesTwoQueriesInsteadOfOnePositionQueryPerApplication(){
+        UUID cup=cup();apply(cup,user());apply(cup,user());for(int i=0;i<110;i++)apply(cup,user());
+        QueryCounter.statements.set(0);
+        var page=store.page(cup,new com.rpsbattle.tournament.timeline.ApplicationFilter(0,100,"WAITLISTED",null,null,null,null,null,null));
+        assertThat(page).hasSize(100);assertThat(page.stream().map(TimelineRegistrationStore.Application::waitlistPosition).toList()).containsExactlyElementsOf(IntStream.rangeClosed(1,100).mapToObj(i->(long)i).toList());assertThat(QueryCounter.statements.get()).isLessThanOrEqualTo(2);
+        QueryCounter.statements.set(0);store.page(cup,new com.rpsbattle.tournament.timeline.ApplicationFilter(0,100,"APPROVED",null,null,null,null,null,null));assertThat(QueryCounter.statements.get()).isEqualTo(1);
+    }
+    @Test void concurrentRosterLockAndWithdrawalNeverLeaveAnInvalidLockedRoster()throws Exception{
+        UUID cup=cup(),owner=user();apply(cup,owner);apply(cup,user());store.enable(cup);store.close(cup,NOW);
+        var results=race(List.of(()->{try{store.lockRoster(cup,owner,"Organizer",NOW,2,NOW.plusSeconds(60));return "LOCKED";}catch(AuthException e){return e.code();}},()->{try{store.withdraw(cup,owner);return "WITHDRAWN";}catch(AuthException e){return e.code();}}));
+        var control=store.control(cup);
+        if(control.lockedAt()!=null){assertThat(results).containsExactlyInAnyOrder("LOCKED","ROSTER_LOCKED");assertThat(approved(cup)).isEqualTo(2);assertThat(control.lockedCount()).isEqualTo(2);}
+        else{assertThat(results).containsExactlyInAnyOrder("NOT_ENOUGH_PARTICIPANTS","WITHDRAWN");assertThat(approved(cup)).isEqualTo(1);}
+    }
+    @Test void cachedReviewCannotAffectAWithdrawnAndRejoinedApplication()throws Exception{
+        UUID cup=cup(),person=user(),actor=user();var original=apply(cup,person);var cached=new CountDownLatch(1);var rejoined=new CountDownLatch(1);
+        var result=race(List.of(()->{try{return new TransactionTemplate(transactions).execute(status->{store.mine(cup,person);cached.countDown();try{if(!rejoined.await(10,TimeUnit.SECONDS))throw new IllegalStateException("Rejoin timeout");}catch(InterruptedException e){throw new RuntimeException(e);}return store.review(cup,original.id(),"REJECTED","Old snapshot",actor,NOW,2,"APPROVED",original.registeredAt()).after().status();});}catch(AuthException e){return e.code();}},()->{if(!cached.await(10,TimeUnit.SECONDS))throw new IllegalStateException("Cache timeout");try{store.withdraw(cup,person);store.register(cup,person,"Rejoined","CPP",null,2,NOW.plusSeconds(1),eligible);return "REJOINED";}finally{rejoined.countDown();}}));
+        assertThat(result).containsExactlyInAnyOrder("APPLICATION_CHANGED","REJOINED");assertThat(store.mine(cup,person).status()).isEqualTo("APPROVED");
+    }
+    @Test void failedReviewRollsBackPublicMessageTogetherWithStatus(){
+        UUID cup=cup(),person=user(),actor=user();var application=apply(cup,person);store.publicMessage(cup,application.id(),"Original public message");
+        assertThatThrownBy(()->new TransactionTemplate(transactions).executeWithoutResult(status->{store.review(cup,application.id(),"REJECTED","Internal reason",actor,NOW,2);store.publicMessage(cup,application.id(),"New message");throw new IllegalStateException("Abort review");})).hasMessage("Abort review");
+        var after=store.mine(cup,person);assertThat(after.status()).isEqualTo("APPROVED");assertThat(after.publicMessage()).isEqualTo("Original public message");
     }
     @Test void rollbackReleasesAllocationAndWaitingOrderAndCapacityComesFromDatabase(){
         UUID cup=cup();apply(cup,user());apply(cup,user());var tx=new TransactionTemplate(transactions);UUID rolledBack=user();

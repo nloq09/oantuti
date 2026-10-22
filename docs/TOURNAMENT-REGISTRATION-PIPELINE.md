@@ -1,6 +1,6 @@
-# Registration pipeline — nhóm 1–7
+# Registration pipeline — nhóm 1–8
 
-Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách; nhóm 5 bổ sung dashboard cho Organizer; nhóm 6 bổ sung hàng xét duyệt, bộ lọc và bulk review; nhóm 7 hoàn thiện trạng thái/thông báo cho Player và tách lời nhắn công khai khỏi ghi chú nội bộ. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
+Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách; nhóm 5 bổ sung dashboard cho Organizer; nhóm 6 bổ sung hàng xét duyệt, bộ lọc và bulk review; nhóm 7 hoàn thiện trạng thái/thông báo cho Player và tách lời nhắn công khai khỏi ghi chú nội bộ. Nhóm 8 hoàn tất kiểm chứng quyền, audit, tranh chấp transaction và luồng HTTP; phần bên dưới ghi rõ phạm vi kiểm chứng.
 
 ## Luồng thực tế đã đối chiếu
 
@@ -492,3 +492,75 @@ Trước nhóm này, personal View trả reviewReason dù reason còn được d
 - `server/src/test/java/com/rpsbattle/persistence/FlywayMigrationTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
 - `server/src/test/java/com/rpsbattle/tournament/TimelineReviewApiTest.java`
+
+
+## Nhóm 8 — Audit, quyền truy cập, concurrency và toàn luồng
+
+Ngày triển khai: 22/10/2026. Đây là nhóm cuối của prompt registration pipeline. Không sửa luật GameEngine, không thêm endpoint hay schema mới; migration cuối vẫn V41.
+
+### Các điểm được sửa
+
+- Single review trên giải không có timeline trả TIMELINE_REQUIRED (409), thay vì đi vào null timeline và lỗi 500.
+- Withdraw trả before/after từ Store. Audit mới dùng đúng application ID và trạng thái trước khi rút; Details có thể xem các sự kiện gửi/rút của chính đơn. Audit cũ giữ nguyên; projection notification vẫn nhận diện sự kiện rút cũ bằng actor như nhóm 7.
+- Thay đổi/xóa publicMessage có sự kiện PARTICIPANT_APPLICATION_MESSAGE_UPDATED riêng, gồm actor, target, lý do nội bộ và giá trị trước/sau. Manager Details hiển thị sự kiện này như đổi lời nhắn, thay vì coi nội dung lời nhắn là trạng thái.
+- Public tournament detail/summary/export xóa cả reason và before/after của sự kiện đổi lời nhắn. Personal notification không chiếu loại sự kiện chứa nội dung này; lời nhắn chỉ đọc qua personal flow của đúng người đăng ký hoặc manager Details.
+- Page applications gom vị trí waitlist vào một truy vấn bổ sung cho cả trang. Đọc 100 đơn chờ cần tối đa 2 SQL statements; đọc trang không có waitlist cần 1. Personal flow/Details vẫn chỉ tính vị trí cho đơn cần xem.
+
+### Rà soát query/index
+
+Query count/page luôn scope tournament; filter/search là tham số đã validate, không nối giá trị người dùng vào HQL. Page cap 100. Query vị trí dựa trên tournament_id, status và waitlist_order, khớp index application_waitlist_position và constraint unique order hiện có từ V39. Bỏ N+1 round trips thay vì thêm index không có bằng chứng cần thiết. Không thêm migration trong nhóm 8. Bộ đếm SQL trong test dùng ThreadLocal StatementInspector để tác vụ nền không làm sai phép đo.
+
+### Quyền và audit được kiểm chứng
+
+- Organizer của giải khác không được đọc summary/list/detail, review đơn, bulk review, sửa policy, đóng admission hoặc lock roster của giải đích. Các lần bị chặn không thêm domain audit vào giải đó.
+- userId, ownerUserId và status giả trong signup không đổi danh tính lấy từ session hoặc buộc server auto-approve; DB và audit actor vẫn là người gửi thực tế.
+- POST review thiếu CSRF bị 403 trước khi thay đổi revision; luồng admin review hợp lệ vẫn nằm trong regression suite.
+- Audit quyết định thành công giữ actor/reason/before/after; message audit giữ riêng nội dung private. Các projection công khai không lộ lời nhắn cá nhân hoặc ghi chú nội bộ.
+
+### Các tình huống đồng thời và rollback
+
+- Hai request bulk cùng revision: một request xử lý, request còn lại bị stale; mỗi quyết định chỉ có một lần audit và số approved đúng capacity.
+- Hai người tranh suất cuối, hai lần approve waitlist và hai lần auto-promotion không cùng chiếm một suất.
+- Rút đơn đối đầu lock roster: hoặc lock thành công và withdraw bị chặn, hoặc withdraw thành công và lock báo không đủ người. Không có roster locked thiếu người hoặc lockedCount sai.
+- Reviewer đã đọc cache của đơn cũ không được sửa đơn đã rút rồi đăng ký lại; expected registeredAt được đối chiếu sau khi refresh row dưới DB lock.
+- Review/public message rollback cùng nhau; promotion rollback cùng thao tác giải phóng suất. Duplicate submissions và rollback thứ tự waitlist giữ các kiểm thử trước.
+
+### Toàn luồng HTTP
+
+Hai kịch bản chạy qua API thật với session/CSRF:
+
+1. HYBRID không bắt buộc xác minh đơn vị: auto-approve, đủ capacity, waitlist, dashboard không có việc duyệt thừa, approved withdraw, đôn đúng người và notification riêng, admission close, roster lock, chặn rút sau lock, đến coding cấp workspace.
+2. HYBRID bắt buộc xác minh đơn vị: đơn cần xác nhận, chưa có coding, dashboard chỉ rõ queue, close vẫn review được, lock bị chặn khi còn NEEDS_REVIEW, bulk approve sau kiểm tra, lock và mở coding đúng giờ.
+
+Chính sách xác minh hiện áp dụng toàn giải và chưa có nguồn xác minh trường đáng tin cậy, nên hai nhánh HYBRID được kiểm chứng riêng. Không thêm cờ từ client để giả lập người đã được xác minh.
+
+### Phạm vi UI
+
+Client regression chạy DOM/component/controller integration: dashboard aggregates, Needs Review mặc định, bộ lọc và paging server, review reason hiển thị ngay, bulk confirmation/partial results, stale request, mất quyền, public/private message, Player states và notification cursor. Browser vẫn bị tắt trong Work settings; không có E2E tương tác hay screenshot trên trình duyệt thực tế trong nhóm này. HTTP toàn luồng và DOM integration không được coi là xác nhận hình ảnh.
+
+
+### Kết quả kiểm chứng nhóm 8
+
+- PASS **100/100 backend tests** theo XML mới nhất của từng class; không failure/skipped trong bộ kết quả cuối. Gồm 25 RegistrationPipelineApiTest, 14 RegistrationCapacityPostgresTest, 7 RegistrationQueueApiTest, 7 OrganizerMetricsApiTest, 9 TimelineNotificationApiTest, 4 TimelineReviewApiTest, 4 TimelineRegistrationApiTest, eligibility/policy/domain tests và các kiểm thử registration liên quan được chọn trong suite cũ.
+- Kiểm thử tải PASS: 2.000 người đã duyệt, người đến sau vào waitlist; đóng admission và lock roster, 1.000 workspace/autosave, hàng đợi tối đa 200 và running tối đa 2, freeze xử lý batch không quá 25 và đủ 2.000 bản ghi. Test tải cũ từng yêu cầu hard reject khi đủ suất; đã sửa fixture dùng AUTO_APPROVE và chốt roster theo workflow mới, rồi chạy lại PASS. Không đổi production để khôi phục luật cũ.
+- PASS **353/353 client tests**, gồm kiểm chứng Manager history hiển thị thay đổi lời nhắn bằng text, không thực thi HTML, cùng toàn bộ DOM/component/controller regression trước.
+- Query-count test PostgreSQL PASS: trang 100 waitlisted cần tối đa 2 SQL statements; trang approved không có waitlist cần 1. Bốn kiểm thử PostgreSQL mới bổ sung race lock/withdraw, stale cache sau rejoin, rollback public message/status và giới hạn query count.
+- Migration tests nhóm 8: SKIPPED do schema không đổi (V41 đã có kiểm chứng migration ở nhóm 7).
+- Browser UI E2E/screenshot: SKIPPED do Browser tắt trong Work settings. Không suy ra đã xác nhận hình ảnh từ kết quả HTTP/DOM.
+- PASS bootJar và git diff --check; server đã khởi động lại tại localhost:8080, HTTP 200 cho HTML và module lịch sử audit mới.
+
+### API/DTO nhóm 8
+
+Không thêm endpoint hoặc đổi request DTO. Manager history có thêm loại sự kiện gửi/rút/đổi lời nhắn. Public audit của message event che reason/before/after. Single review ngoài timeline trả 409 có kiểm soát. Personal và manager fields đã tách từ nhóm 7 giữ nguyên.
+
+### File thêm/sửa nhóm 8
+
+- `client/js/tournament/application-details.js`
+- `client/tests/application-queue.test.js`
+- `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
+- `server/src/main/java/com/rpsbattle/tournament/TournamentService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationStore.java`
+- `server/src/test/java/com/rpsbattle/tournament/LargeTournamentDeadlineTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/registration/RegistrationCapacityPostgresTest.java`

@@ -20,7 +20,7 @@ export function openApplicationDetails(base,entry,{request=sessionRequest,onClos
   if(application.reviewReason)body.append(node('p','Quyết định gần nhất: '+application.reviewReason),node('p','Xét duyệt: '+date(application.reviewedAt)));
   body.append(node('h3','Lịch sử xét duyệt'));
   if(!data.history.length)body.append(node('p','Chưa có quyết định xét duyệt.'));
-  const list=node('ol');for(const event of data.history){const row=node('li');row.append(node('p',date(event.at)+' · '+(applicationLabels[event.beforeValue]||event.beforeValue||'—')+' → '+(applicationLabels[event.afterValue]||event.afterValue||'—')),node('p',event.reason||'Tự động theo chính sách'),node('small','Người xử lý: '+(event.actor||'Hệ thống')));list.append(row);}body.append(list);
+  const list=node('ol');for(const event of data.history){const row=node('li');if(event.type==='PARTICIPANT_APPLICATION_MESSAGE_UPDATED'){row.append(node('p',date(event.at)+' · Đổi lời nhắn cho người đăng ký'),node('p','Trước: '+(event.beforeValue||'—')),node('p','Sau: '+(event.afterValue||'—')),node('small','Người xử lý: '+(event.actor||'Hệ thống')));list.append(row);continue;}row.append(node('p',date(event.at)+' · '+(applicationLabels[event.beforeValue]||event.beforeValue||'—')+' → '+(applicationLabels[event.afterValue]||event.afterValue||'—')),node('p',event.reason||'Tự động theo chính sách'),node('small','Người xử lý: '+(event.actor||'Hệ thống')));list.append(row);}body.append(list);
   if(data.moreHistory)body.append(node('p','Hiển thị 100 quyết định mới nhất. Xem Nhật ký quản lý để tra cứu đầy đủ.'));
   if(!data.canReview)body.append(node('p','Xét duyệt đã khóa. Chi tiết chỉ để tra cứu.'));
  }).catch(error=>{if(!abort.signal.aborted)body.replaceChildren(node('p',errorText(error.message)));});

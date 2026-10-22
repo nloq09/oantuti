@@ -39,3 +39,8 @@ test('details drawer reads manager-only detail without navigation and renders ch
 test('closing a details drawer aborts late responses and prevents resurrecting private data',async()=>{
  installDocument('<body></body>');let resolve;const {dialog,loaded}=openApplicationDetails('/cup',entry,{request:()=>new Promise(done=>resolve=done)});dialog.close();resolve({details:{application:entry}});await loaded;assert.equal(document.querySelector('dialog'),null);
 });
+
+test('manager history distinguishes public-message changes from status transitions and renders audit text safely',async()=>{
+ installDocument('<body></body>');const {dialog,loaded}=openApplicationDetails('/cup',entry,{request:async()=>({details:{application:entry,username:'player',rulesAcceptedAt:entry.registeredAt,accountActive:true},policy:{approvalPolicy:'HYBRID'},languageAllowed:true,canReview:false,history:[{type:'PARTICIPANT_APPLICATION_MESSAGE_UPDATED',at:entry.registeredAt,beforeValue:'<script>old</script>',afterValue:'New public explanation',actor:'organizer'}]})});
+ await loaded;assert.match(text(dialog),/Đổi lời nhắn cho người đăng ký/);assert.match(text(dialog),/Trước: <script>old/);assert.match(text(dialog),/Sau: New public explanation/);assert.equal(dialog.querySelector('script'),null);dialog.close();
+});
