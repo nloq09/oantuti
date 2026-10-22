@@ -1,3 +1,4 @@
+import {mountAudit} from './audit-view.js';
 import{node,link,date,message}from "./admin-shell.js";import{adminRequest}from "./admin-api.js";import{table,badge,details}from "./components.js";import{listPage,periodFields}from "./catalog.js";
 export function watchNotifications(target){
  const summary=node("summary","Cảnh báo"),content=node("div",undefined,"admin-notification-list");content.setAttribute("role","status");target.append(summary,content);let busy=false;
@@ -15,4 +16,4 @@ async function system(root){
  }catch(error){message(error,status);}finally{busy=false;}}
  await refresh();const timer=setInterval(refresh,10000);addEventListener("pagehide",()=>clearInterval(timer),{once:true});
 }
-export async function mountOperations(page,root){if(page==="system.html")return system(root);return listPage(root,{title:"Audit log · Chỉ đọc",path:"audit",fields:[["Tìm actor / action / target / lý do","q"],["Actor ID","actor"],["Action chính xác","action"],["Resource","resource_type",["USER","BOT","MATCH","TOURNAMENT","PARTICIPANT","DISPUTE","REPLAY","SYSTEM","AUDIT","DASHBOARD","OTHER"]],["Kết quả","result",["SUCCESS","FAILURE"]],...periodFields],columns:[["Thời gian","created_at",date],["Actor","actor"],["Role","actor_role"],["Nguồn role","role_source"],["Action","action"],["Resource","resource_type"],["ID","resource_id"],["Kết quả","result",badge],["HTTP","http_status"],["Lý do","reason"],["Trước","before_value"],["Sau","after_value"]]});}
+export async function mountOperations(page,root){if(page==="system.html")return system(root);return mountAudit(root);}

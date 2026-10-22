@@ -7,5 +7,5 @@ import java.util.Map;
 @RestController @RequestMapping("/api/admin/audit")
 public class AdminOperationsController {
     private final AdminAuditService audit;public AdminOperationsController(AdminAuditService audit){this.audit=audit;}
-    @GetMapping public ResponseEntity<?> audit(Authentication auth,@RequestParam Map<String,String> filters,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(audit.list(auth,filters,page,size));}
+    @GetMapping public ResponseEntity<?> audit(Authentication auth,@RequestParam Map<String,String> filters,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="25") int size){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(audit.list(auth,filters,page,size));}
 }
