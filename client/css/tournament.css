@@ -1,3 +1,4 @@
+@import url("/css/tournament-audit.css");
 .tournament-page {
   width: min(1150px, 92vw);
   margin: 32px auto;

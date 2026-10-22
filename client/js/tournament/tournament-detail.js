@@ -1,3 +1,4 @@
+import {mountTournamentAudit} from './audit-view.js';
 import {matchOpen,matchStatusText} from './match-execution.js';
 import {tournamentRoute} from './tournament-routes.js';
 import {mountMatchMonitor} from './match-monitor.js';
@@ -39,7 +40,7 @@ if (!account) {
   link.href = loginLink(); link.textContent = "Đăng nhập để đăng ký bot của bạn vào giải."; notice.append(link);
   document.querySelector("#registration").before(notice);
 }
-let organizerShell,matchMonitor;
+let organizerShell,matchMonitor,tournamentAudit;
 let latest = -1,
   busy = false, currentTournament;
 async function action(operation) {
@@ -185,12 +186,14 @@ function render(t) {
   }
   let groups=document.querySelector("#group-standings");if(!groups){groups=document.createElement("div");groups.id="group-standings";document.querySelector("#ranking-policy").after(groups);}groups.replaceChildren();renderSwiss(groups,t);renderGroups(groups,t);if(t.teamCompetition){const teamLink=document.createElement("a");teamLink.href="/tournament-detail.html?id="+encodeURIComponent(t.id)+"#teams";teamLink.textContent="Đội, đội hình và bảng điểm đồng đội →";groups.append(teamLink);}
   renderRanking(document.querySelector("#ranking-rows"), t.ranking);renderDashboard(t,owner);
+  if(!owner&&tournamentAudit){tournamentAudit.dispose();tournamentAudit=null;document.querySelector('#tournament-audit').replaceChildren();}
   if(owner){
+    if(!tournamentAudit)tournamentAudit=mountTournamentAudit(document.querySelector('#tournament-audit'),{tournament:t});else tournamentAudit.update(t);
     if(!organizerShell){
       document.querySelector('#name').hidden=true;document.querySelector('.tab-bar').hidden=true;
 
       document.querySelector('#ranking').prepend(document.querySelector('#champion'));
-      const selectPanel=target=>{for(const key of ['overview','participants-tab','organizer-check-in','matches','bracket','ranking','replays-tab','admin-tab','organizer-audit'])document.getElementById(key).hidden=key!==target;document.querySelectorAll('[data-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.tab===target)));if(target==='organizer-check-in')renderCheckIn(currentTournament);};
+      const selectPanel=target=>{const openingAudit=target==='organizer-audit'&&document.getElementById('organizer-audit').hidden;for(const key of ['overview','participants-tab','organizer-check-in','matches','bracket','ranking','replays-tab','admin-tab','organizer-audit'])document.getElementById(key).hidden=key!==target;document.querySelectorAll('[data-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.tab===target)));if(target==='organizer-check-in')renderCheckIn(currentTournament);if(openingAudit)tournamentAudit?.refresh();};
       organizerShell=mountOrganizerShell(document.querySelector('main'),{tournament:t,account,section:new URLSearchParams(location.search).get('view'),selectPanel,onSnapshot:render,onCommand:command=>document.getElementById(command)?.click(),onPhase:(snapshot,phase,options)=>{renderLifecycleControls(snapshot,phase,options);document.querySelector('main').dataset.organizerStale=String(options.stale);}});
 
     }else organizerShell.update(t);

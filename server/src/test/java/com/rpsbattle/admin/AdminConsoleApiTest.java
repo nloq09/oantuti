@@ -12,6 +12,15 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AdminConsoleApiTest {
+    @Test void tournamentAuditEndpointRequiresScopedManagerAndSupportsReadOnlyFilters()throws Exception{
+        try(var owner=new Browser();var other=new Browser();var admin=new Browser();var guest=new Browser()){
+            owner.account(false);other.account(false);admin.account(true);
+            var cup=owner.call("/api/tournaments",Map.of("name","Scoped audit endpoint","format","ROUND_ROBIN"),true,201);String path="/api/tournaments/"+cup.path("id").asText()+"/audit";
+            guest.call(path,null,false,401);other.call(path,null,false,403);
+            var page=owner.call(path+"?size=25&kind=ALL",null,false,200);assertThat(page.has("items")).isTrue();assertThat(page.path("size").asInt()).isEqualTo(25);
+            admin.call(path+"?kind=IMPORTANT",null,false,200);owner.call(path+"?category=BAD",null,false,400);owner.call(path+"?size=24",null,false,400);
+        }
+    }
     @Test void systemAndReadOnlyAuditAreAdminOnlyAndRejectedPayloadsAreNeverLogged()throws Exception{
         try(var admin=new Browser();var ordinary=new Browser();var guest=new Browser()){
             admin.account(true);ordinary.account(false);guest.call("/api/admin/audit",null,false,401);ordinary.call("/api/admin/system",null,false,403);

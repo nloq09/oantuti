@@ -1,11 +1,11 @@
+import {organizerAuditPreview} from './audit-presentation.js';
 import {node,link,date} from './player-dom.js';
 import {phaseLabels,tournamentPhase} from './tournament-header.js';
 import {organizerNextAction} from './organizer-actions.js';
 import {renderOrganizerMetrics} from './organizer-metrics.js';
 import {renderTournamentAttentionPanel} from './organizer-attention.js';
 
-const activityLabels={TOURNAMENT_CREATED:'Đã tạo giải',TIMELINE_CONFIGURED:'Đã cập nhật lịch giải',REGISTRATION_OPENED:'Đã mở đăng ký',PARTICIPANT_APPLICATION_SUBMITTED:'Đã nhận đơn đăng ký',PARTICIPANT_APPLICATION_REVIEWED:'Đã xét duyệt đăng ký',PARTICIPANT_APPROVED:'Đã duyệt người tham gia',CODING_FREEZE_APPLIED:'Đã khóa bài',FINAL_VALIDATION_QUEUED:'Đã đưa bài vào kiểm thử',FINAL_VALIDATION_PASSED:'Bot đã đạt kiểm thử',FINAL_VALIDATION_FAILED:'Bot chưa đạt kiểm thử',CHECK_IN:'Người chơi đã check-in',CHECK_IN_OPENED:'Đã mở check-in',TOURNAMENT_READY:'Giải đã sẵn sàng',TOURNAMENT_STARTED:'Giải bắt đầu',TOURNAMENT_PAUSED:'Giải tạm dừng',TOURNAMENT_RESUMED:'Giải tiếp tục',ROUND_RELEASED:'Đã mở vòng tiếp',MATCH_STARTED:'Trận đấu bắt đầu',MATCH_FINISHED:'Trận đấu hoàn tất',TOURNAMENT_FINISHED:'Giải đã hoàn tất',TOURNAMENT_CANCELLED:'Giải đã hủy',MATCH_RESULT_OVERRIDDEN:'Đã có quyết định sửa kết quả'};
-export function recentOrganizerActivity(t){return [...(t.audit||[])].reverse().slice(0,8).map(event=>({at:event.at,label:activityLabels[event.type]||'Đã cập nhật giải đấu',reason:event.reason}));}
+export function recentOrganizerActivity(t){return organizerAuditPreview(t).map(event=>({at:event.at,label:event.title}));}
 export function renderOrganizerOverview(root,t,data,{stale=false,onCommand}={}){
  root.replaceChildren();const valid=data?.tournamentId===t.id&&data?.revision===t.revision,snapshot=valid?data:null,phase=tournamentPhase(t,snapshot),top=node('div',undefined,'organizer-overview-top');
  const current=node('section',undefined,'control-card current-phase');current.setAttribute('aria-label','Giai đoạn hiện tại');current.append(node('p','GIAI ĐOẠN HIỆN TẠI','control-kicker'),node('h2',t.timeline&&!snapshot?'Đang đồng bộ':phaseLabels[phase]||'Đang cập nhật'));

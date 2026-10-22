@@ -13,6 +13,7 @@ public class AuditRedactor {
     private static final Pattern ASSIGNMENT = Pattern.compile("(?i)([\\w.-]*(?:password|passwd|secret|credential|authorization|cookie|session|token|private.?key|api.?key|database.?url|jdbc.?url)[\\w.-]*[\"']?\\s*[:=]\\s*)(?:\"[^\"]*\"|'[^']*'|[^,;\\s}]+)");
     private static final Pattern BEARER = Pattern.compile("(?i)Bearer\\s+[A-Za-z0-9._~+/-]+=*");
     private static final Pattern URI_PASSWORD = Pattern.compile("(?i)([a-z][a-z0-9+.-]*://[^\\s/:@]+:)[^\\s@]+@");
+    private static final Pattern SIGNED_QUERY = Pattern.compile("(?i)(X-Amz-Signature|X-Amz-Credential|X-Amz-Security-Token|X-Goog-Signature|sig|signature)=([^&\\s]+)");
     private static final Pattern WORKER_SECRET = Pattern.compile("\\b(?:wrt_|wrc_)[A-Za-z0-9_-]{16,}");
     public AuditRedactor(ObjectMapper json) { this.json=json; }
     public Object redact(Object value) {
@@ -29,5 +30,5 @@ public class AuditRedactor {
         if(value instanceof List<?> list) return list.stream().map(this::walk).toList();
         return value instanceof String s?redact(s):value;
     }
-    private String text(String s) { return WORKER_SECRET.matcher(URI_PASSWORD.matcher(ASSIGNMENT.matcher(BEARER.matcher(s).replaceAll("Bearer [REDACTED]")).replaceAll("$1[REDACTED]")).replaceAll("$1[REDACTED]@")).replaceAll("[REDACTED]"); }
+    private String text(String s) { return SIGNED_QUERY.matcher(WORKER_SECRET.matcher(URI_PASSWORD.matcher(ASSIGNMENT.matcher(BEARER.matcher(s).replaceAll("Bearer [REDACTED]")).replaceAll("$1[REDACTED]")).replaceAll("$1[REDACTED]@")).replaceAll("[REDACTED]")).replaceAll("$1=[REDACTED]"); }
 }

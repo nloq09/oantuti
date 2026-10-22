@@ -9,6 +9,6 @@ test('empty attention is compact and mismatched data cannot masquerade as health
  renderOrganizerOverview(root,t,{...data,tournamentId:'other'});assert.match(text(root),/Đang lấy thống kê/);assert.equal(root.querySelectorAll('dd').length,0);assert.equal(root.querySelector('[data-organizer-command]'),null);
 });
 test('recent activity is bounded readable and uses text nodes for untrusted names and reasons',()=>{
- const events=Array.from({length:20},(_,i)=>({type:i===19?'TOURNAMENT_PAUSED':'OTHER',at:'2026-11-01T10:00:00Z',reason:'<script>alert(1)</script>'})),t=cup({audit:events});assert.equal(recentOrganizerActivity(t).length,8);assert.equal(recentOrganizerActivity(t)[0].label,'Giải tạm dừng');
+ const events=Array.from({length:20},(_,i)=>({type:i===19?'TOURNAMENT_PAUSED':'OTHER',at:'2026-11-01T10:00:00Z',reason:'<script>alert(1)</script>'})),t=cup({audit:events});assert.equal(recentOrganizerActivity(t).length,8);assert.equal(recentOrganizerActivity(t)[0].label,'Tạm dừng giải đấu');
  const doc=installDocument('<body><main></main></body>');renderOrganizerOverview(doc.querySelector('main'),t,metrics(t));assert.equal(doc.querySelectorAll('script').length,0);assert.equal(doc.querySelector('.organizer-recent').querySelectorAll('li').length,8);assert.doesNotMatch(text(doc),/"type":/);
 });

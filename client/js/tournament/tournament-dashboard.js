@@ -1,3 +1,4 @@
+import {presentTournamentAudit} from './audit-presentation.js';
 import {activeMatch,matchOpen,matchStatusText} from './match-execution.js';
 import {tournamentControl,tournamentRoundPolicy,tournamentMatchOperation,tournamentRequest} from './tournament-api.js';
 import {toast} from '../ui/toast.js';
@@ -23,7 +24,7 @@ export function renderDashboard(t,owner){
  const rows=document.querySelectorAll('#participants .participant-row');t.participants.forEach((p,index)=>{const r=t.registrations?.find(r=>r.id===p.participantId);rows[index]?.append(node('small',`${t.participantOwners?.[p.participantId]||'Người chơi'} · ${statusText[t.participantStatuses?.[p.participantId]||'ACTIVE']} · ${r?.status||'—'}`));});
  const snapshot=document.querySelector('#rules-snapshot');snapshot.replaceChildren();for(const [label,value]of [['Số ván mỗi cặp','BO'+(t.rulesSnapshot?.bestOf||t.bestOf||1)],['Số trận đồng thời',t.rulesSnapshot?.maxConcurrentMatches||t.maxConcurrentMatches],['Chế độ check-in',t.checkInRequired?'Bắt buộc':'Không bắt buộc']])snapshot.append(node('dt',label),node('dd',value));
  document.querySelector('#series-setting').textContent=`BO${t.bestOf||1} · ${t.maxParticipants} suất · ${t.participantPolicy==='HUMAN_ONLY'?'Người tự chơi':t.participantPolicy==='HUMAN_OR_BOT'?'Người hoặc bot':'Bot'} · Số ván được chọn khi tạo giải.`;
- const audit=document.querySelector('#tournament-audit');if(audit.dataset.count!==String(t.audit?.length||0)){audit.dataset.count=String(t.audit?.length||0);audit.replaceChildren();for(const e of [...(t.audit||[])].reverse())audit.append(node('li',`#${e.sequence} · ${e.type} · ${new Date(e.at).toLocaleString('vi-VN')}${e.reason?' · '+e.reason:''}${e.beforeValue?' · Trước: '+e.beforeValue:''}${e.afterValue?' · Sau: '+e.afterValue:''}`));if(!audit.childElementCount)audit.append(node('li','Chưa có sự kiện quản lý.'));}
+
  const editable=['DRAFT','REGISTRATION','CHECK_IN'].includes(t.status),auto=document.querySelector('#auto-rounds');if(document.activeElement!==auto)auto.checked=t.autoAdvanceRounds;auto.disabled=!editable;
  document.querySelector('#round-policy').hidden=!owner||!editable;
  const controls=allowedControls(t);document.querySelectorAll('[data-admin-control]').forEach(button=>{button.hidden=!owner||!controls[button.dataset.adminControl];button.disabled=false;});document.querySelector('#finish-operation').hidden=!owner||!controls.finish;
@@ -37,7 +38,7 @@ export function renderMatchReview(t){
  const m=t.matches.find(m=>m.id===document.querySelector('#admin-match').value),allowed=matchOperationAvailability(t,m);
  document.querySelector('#match-review-content').hidden=!m;document.querySelector('#match-review-empty').textContent=m?'':'Chưa có trận đã kết thúc hoặc lỗi để review.';
  document.querySelector('#review-details').textContent=m?`Kết quả: ${m.result||'Chưa có'} · ${t.reviews?.[m.id]?'Đang chờ quyết định ở Kết quả':'Chưa đánh dấu review'}${m.failure?' · Lỗi: '+m.failure:''}`:'';
- const logs=document.querySelector('#match-execution-log');logs.replaceChildren();for(const e of (t.audit||[]).filter(e=>e.target===m?.id))logs.append(node('li',`${e.type} · ${new Date(e.at).toLocaleString('vi-VN')}${e.reason?' · '+e.reason:''}`));
+ const logs=document.querySelector('#match-execution-log');logs.replaceChildren();for(const e of (t.audit||[]).filter(e=>e.target===m?.id)){const p=presentTournamentAudit(e,t);logs.append(node('li',`${p.title} · ${new Date(e.at).toLocaleString('vi-VN')}${p.changeSummary?' · '+p.changeSummary:''}`));};
  document.querySelector('#request-review').hidden=!allowed.review;document.querySelector('#retry-match').hidden=!allowed.retry;document.querySelector('#match-review-actions').hidden=!allowed.review&&!allowed.retry;
 }
 export function renderResultReview(t){
