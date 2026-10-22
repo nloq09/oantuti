@@ -1,5 +1,5 @@
 const screens={detail:'/tournament-detail.html',lobby:'/tournament-lobby.html',code:'/tournament-code.html',organizer:'/tournament.html'};
-const tabs=new Set(['overview','my-match','my-matches','teams','participants','schedule','bracket','ranking','matches','replays','rules','disputes','tournament-rules','tournament-phase-content','player-submission-detail']);
+const tabs=new Set(['overview','my-match','my-matches','teams','participants','schedule','bracket','ranking','matches','replays','rules','disputes','tournament-rules','tournament-phase-content','player-submission-detail','player-validation-failure']);
 export function tournamentRoute(id,screen='detail',{tab='',stay=false}={}){
  const params=new URLSearchParams({id:String(id)});if(stay)params.set('stay','1');return (screens[screen]||screens.detail)+'?'+params+(tabs.has(tab)?'#'+tab:'');
 }

@@ -6,7 +6,7 @@ test('final PASS retains historical result without promising check-in after canc
  for(const status of ['CANCELLED','FINISHED','RUNNING','PAUSED','RECOVERY_REQUIRED']){
   const root=setup();renderFinalValidation(root,{id:'cup',status},{phase:status,finalValidation:{status:'PASSED',applied:true,steps:{}}});
   const text=descendants(root).map(n=>n.textContent).join(' ');
-  assert.match(text,/Bot đã được xác nhận/);assert.doesNotMatch(text,/Chờ giai đoạn check-in/);
+  assert.match(text,/KIỂM THỬ HOÀN TẤT/);assert.doesNotMatch(text,/Chờ giai đoạn check-in/);
  }
  assert.match(validationNextStep({status:'CANCELLED'},{phase:'CHECK_IN_OPEN',checkIn:{canCheckIn:true}}),/Giải đã hủy/);
 });

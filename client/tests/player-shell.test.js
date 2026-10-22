@@ -8,8 +8,8 @@ const tournament={id:'cup',name:'Exam',status:'REGISTRATION',format:'ROUND_ROBIN
 test('player shell preserves header stepper and exactly one action before phase content for every pre-tournament screen',()=>{
  for(const [phase,nextAction]of [['UPCOMING',null],['REGISTRATION_OPEN','REGISTER'],['WAITING_FOR_CODING','WAIT_FOR_CODING'],['CODING_OPEN','OPEN_CODE_WORKSPACE'],['SUBMISSION_FROZEN','VIEW_FROZEN_SUBMISSION'],['VALIDATING','VIEW_FINAL_VALIDATION'],['CHECK_IN_OPEN','CHECK_IN'],['READY_TO_START','OPEN_WAITING_ROOM']]){
   const root=setup();renderPlayerShell(root,{tournament,account:{id:'u'},flow:{phase,nextAction,...(phase==='SUBMISSION_FROZEN'?{frozenSubmission:{decision:'AUTO_SUBMITTED',versionId:'v'}}:phase==='VALIDATING'?{finalValidation:{status:'QUEUED'}}:{}),canAccessWorkspace:true,canModifyWorkspace:true,checkIn:{canCheckIn:true,registrationId:'r'}},commands:{CHECK_IN:async()=>{}}});
-  assert.deepEqual(root.children.map(n=>n.tag),['header','nav','section']);
-  assert.equal(descendants(root).filter(n=>n.tag==='button'||n.tag==='a').length,['WAIT_FOR_CODING','OPEN_WAITING_ROOM'].includes(nextAction)?0:1);
+  assert.deepEqual(root.children.map(n=>n.tag),phase==='VALIDATING'?['header','nav']:['header','nav','section']);
+  assert.equal(descendants(root).filter(n=>n.tag==='button'||n.tag==='a').length,['WAIT_FOR_CODING','OPEN_WAITING_ROOM','VIEW_FINAL_VALIDATION'].includes(nextAction)?0:1);
  }
 });
 test('one action dispatches only the supplied command and prevents duplicate submission',async()=>{

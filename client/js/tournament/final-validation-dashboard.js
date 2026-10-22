@@ -6,7 +6,7 @@ import {renderParticipantDiscipline} from './organizer-discipline.js';
 import {finalValidationActions} from './organizer-validation-actions.js';
 import {sessionRequest} from '../api/auth-api.js';
 import {node,link} from './player-dom.js';
-import {validationStages,validationReason} from './final-validation-view.js';
+import {validationStages,validationReason} from './validation-management-labels.js';
 import {errorText} from '../ui/toast.js';
 const isAdmin=location.pathname.startsWith('/admin/');
 const root=document.querySelector('#final-validation-dashboard'),id=new URLSearchParams(location.search).get('id'),base='/api/tournaments/'+encodeURIComponent(id);let page=0,busy=false;

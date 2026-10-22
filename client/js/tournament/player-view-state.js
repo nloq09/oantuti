@@ -22,8 +22,11 @@ export function resolvePlayerTournamentViewState({tournament:t,flow={},workspace
   if(missing)primaryAction=playerAction('WAIT_VALIDATION','Không có bài nộp hợp lệ','Hiện không có thao tác nào cần thực hiện. Hãy chờ giai đoạn kiểm thử chính thức.');
   else if(hasLockedSubmission)primaryAction=playerAction('VIEW_FROZEN_SUBMISSION','Xem bài đã khóa','Bạn có thể xem phiên bản đã chốt. Kiểm thử chính thức chưa bắt đầu.','#player-submission-detail');
   else primaryAction=playerAction('WAIT_FREEZE','Đang chốt bài nộp','Hiện không có thao tác nào cần thực hiện. Chờ server xác nhận kết quả chốt bài.');
- }else if(showValidation&&!(flow.nextAction==='CHECK_IN'||flow.nextAction==='OPEN_WAITING_ROOM'||flow.nextAction==='CHECK_IN_MISSED')){
-  primaryAction=playerAction(validation.status==='FAILED'?'VIEW_VALIDATION_FAILURE':'VIEW_VALIDATION',validation.status==='FAILED'?'Xem kết quả kiểm thử':'Theo dõi kiểm thử',validation.status==='INFRA_ERROR'?'Kiểm thử bị gián đoạn do hạ tầng; chờ chủ giải xử lý.':validation.status==='QUEUED'?'Bài đang chờ lượt kiểm thử chính thức.':'Xem trạng thái kiểm thử chính thức của bài nộp.','#player-submission-detail');
+ }else if(showValidation&&!(phase!=='VALIDATING'&&(flow.nextAction==='CHECK_IN'||flow.nextAction==='OPEN_WAITING_ROOM'||flow.nextAction==='CHECK_IN_MISSED'))){
+  if(submissionState==='VALIDATION_PASSED')primaryAction=playerAction('WAIT_CHECK_IN','Chờ check-in','Bạn không cần thực hiện thêm thao tác nào lúc này.',null,{opensAt:t.timeline?.checkInOpenAt,serverNow:flow.serverNow});
+  else if(validation.status==='FAILED')primaryAction=playerAction('VIEW_VALIDATION_FAILURE','Xem bước chưa đạt','Xem bước lỗi và hướng dẫn trong kết quả kiểm thử.','#player-validation-failure');
+  else if(validation.status==='INFRA_ERROR')primaryAction=playerAction('WAIT_INFRA_RETRY','Chờ xử lý kiểm thử','Kiểm thử bị gián đoạn do hạ tầng. Ban tổ chức cần xử lý; bạn không cần nộp lại.');
+  else primaryAction=playerAction('WAIT_VALIDATION','Chờ kết quả kiểm thử',validation.status==='RUNNING'?'Bot đang được kiểm thử. Bạn không cần thao tác lúc này.':validation.status==='PASSED'?'Các bước đã hoàn tất; đang chờ server xác nhận kết quả.':'Bài đang chờ lượt kiểm thử chính thức.');
  }else if(closed&&missing){
   primaryAction=playerAction('NO_VALID_SUBMISSION','Không có bài nộp hợp lệ','Hiện không có thao tác nào cần thực hiện. Theo dõi kết quả và thông báo từ server.');
  }else if(phase==='VALIDATING'){

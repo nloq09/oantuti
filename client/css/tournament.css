@@ -223,3 +223,17 @@ th {
 .player-tournament-header .tournament-header-timer{grid-row:auto;font-size:clamp(1.4rem,3vw,2rem);font-weight:700}
 .frozen-submission{display:flex;flex-direction:column;gap:14px;scroll-margin-top:1rem}.frozen-submission h2{font-size:.9rem;letter-spacing:.08em;text-transform:uppercase}.frozen-submission h3{font-size:1.25rem}.frozen-submission h2,.frozen-submission h3,.frozen-submission p{margin:0}.frozen-submission .phase-facts{margin:4px 0}.frozen-submission .submission-technical-details{font-size:.85rem;color:var(--muted,#c1c9d2)}.submission-next-milestone{border-top:1px solid var(--line,#53616a);padding-top:16px;display:grid;gap:8px}.submission-next-milestone h3{font-size:.9rem;text-transform:uppercase}.submission-next-milestone p{font-size:.95rem}.player-next-action+.frozen-submission,#tournament-phase-content{margin-top:18px}
 @media(max-width:700px){.player-tournament-header .player-milestone-label{grid-column:1}.frozen-submission .phase-facts{grid-template-columns:minmax(0,1fr);gap:5px}.frozen-submission .phase-facts dd{margin-bottom:10px}.frozen-submission .button{width:100%;text-align:center}}
+
+/* Player validation results: compact steps, separate next action, readable on narrow screens. */
+.player-validation-stages{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem 1.25rem}
+.player-validation-stages .validation-step{display:block;min-width:0;overflow-wrap:anywhere;padding:.5rem .65rem}
+.player-validation-stages [data-status="FAILED"]{border-left:3px solid #ff9393;background:#6b243333;color:#ffd5d5}
+.player-validation-stages [data-status="RUNNING"]{border-left:3px solid #e9bd64}
+.validation-readonly{font-size:.9rem;color:var(--text-muted,#becbd6)}
+.validation-summary{display:block;margin:1rem 0}
+.validation-panel,.player-next-action{min-width:0;overflow-wrap:anywhere}
+.validation-panel + .player-next-action{margin-top:1.25rem}
+.coding-reference{margin-top:1.25rem}
+.coding-reference>summary{cursor:pointer;font-weight:700;padding:.4rem 0}
+.coding-reference[open]>summary{margin-bottom:1rem}
+@media(max-width:700px){.player-validation-stages{grid-template-columns:minmax(0,1fr)}.validation-panel a{max-width:100%;white-space:normal}}

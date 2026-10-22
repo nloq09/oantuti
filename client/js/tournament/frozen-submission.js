@@ -10,8 +10,7 @@ export function renderFrozenSubmission(root,t,flow){
  if(view.hasLockedSubmission){
   panel.append(node('h3','✓ Bài đã được khóa'),node('p',frozen.decision==='AUTO_SUBMITTED'?'Hệ thống tự nộp phiên bản READY mới nhất hợp lệ trước hạn.':'Đã giữ phiên bản bạn nộp trước hạn.'));
   phaseFacts(panel,[['Phiên bản','v'+frozen.version],['Ngôn ngữ',frozen.language],['Nộp lúc',date(frozen.submittedAt)],['Đóng lập trình',date(frozen.codingCloseAt)]]);
-  const hashes=node('details',undefined,'submission-technical-details');hashes.append(node('summary','Thông tin toàn vẹn bài nộp'));phaseFacts(hashes,[['Source hash',frozen.sourceHash],['Artifact hash',frozen.artifactHash]]);panel.append(hashes);
-  if(flow.canAccessWorkspace)panel.append(link('Xem source của tôi','/tournament-code.html?id='+encodeURIComponent(t.id)+'&view=source&version='+encodeURIComponent(frozen.versionId)+'&language='+encodeURIComponent(frozen.language)));
+  if(flow.canAccessWorkspace)panel.append(link('XEM SOURCE ĐÃ KHÓA','/tournament-code.html?id='+encodeURIComponent(t.id)+'&view=source&version='+encodeURIComponent(frozen.versionId)+'&language='+encodeURIComponent(frozen.language)));
  }else if(view.reason)panel.append(node('h3',view.submissionState==='NO_READY_AT_DEADLINE'?'✕ Không có phiên bản READY trước hạn':'✕ Không có bài nộp hợp lệ'),node('p',view.reason));
  else panel.append(statusBadge('QUEUED'),node('p','Server đang chốt bài nộp. Trang sẽ tự cập nhật.'));
  panel.append(node('p','Phần lập trình đã kết thúc'),node('p','Không thể chỉnh sửa source, build mới, kiểm thử mới hoặc nộp bài mới.'));
