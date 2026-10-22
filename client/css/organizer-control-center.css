@@ -117,3 +117,17 @@
 .organizer-page .registration-queue .actions{display:flex;flex-wrap:wrap;gap:10px}
 @media(max-width:1100px){.organizer-page .registration-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.organizer-page .registration-dashboard-columns{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:480px){.organizer-page .registration-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.organizer-page .organizer-content .registration-stat{padding:12px}.organizer-page .registration-policy-card dl{grid-template-columns:minmax(0,1fr);gap:4px}.organizer-page .registration-policy-card dd{margin-bottom:12px}}
+
+.organizer-page .organizer-content .registration-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:none;padding:18px;background:#102639;border:1px solid var(--control-line);border-radius:8px}
+.organizer-page .registration-filters label{min-width:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.organizer-page .registration-filters input,.organizer-page .registration-filters select{width:100%;min-width:0}
+.organizer-page .registration-filters .actions{grid-column:1/-1;margin:0}
+.organizer-page #bulk-review-controls:not(:empty){padding:16px;background:#17364d;border:1px solid var(--control-line);border-radius:8px}
+.organizer-page #bulk-review-controls label,.organizer-page .application-review-card>label:first-child{display:flex;align-items:center;gap:10px;overflow-wrap:anywhere}
+.organizer-page #bulk-review-controls input[type=checkbox],.organizer-page .application-review-card input[type=checkbox]{flex:0 0 auto;width:18px;height:18px}
+.organizer-page .application-review-reason{border-left:3px solid #d4ad60;padding:8px 12px;background:#40392566}
+.organizer-page #bulk-review-result:empty{display:none}
+.application-details-dialog{width:min(720px,calc(100vw - 32px));overflow-wrap:anywhere}
+.application-details-dialog ol{display:grid;gap:14px;padding-left:24px}.application-details-dialog li{border-bottom:1px solid #41576b;padding-bottom:12px}
+@media(max-width:1000px){.organizer-page .organizer-content .registration-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:580px){.organizer-page .organizer-content .registration-filters{grid-template-columns:minmax(0,1fr)}.organizer-page #bulk-review-controls .actions{align-items:stretch;flex-direction:column}}

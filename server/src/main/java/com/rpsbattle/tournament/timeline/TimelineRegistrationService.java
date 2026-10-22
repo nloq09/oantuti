@@ -77,15 +77,66 @@ public class TimelineRegistrationService {
         return "REGISTRATION_APPROVED";
     }
     private boolean reviewOpen(Tournament t){if(store.control(UUID.fromString(t.id)).lockedAt()!=null||!clock.instant().isBefore(t.timeline.codingOpenAt()))return false;var phase=resolve(t,clock.instant()).phase();return Set.of(TournamentPhase.REGISTRATION_OPEN,TournamentPhase.REGISTRATION_REVIEW,TournamentPhase.WAITING_FOR_CODING).contains(phase);}
-    public record Applications(List<TimelineRegistrationStore.Application> items,int page,int size,long revision,boolean reviewOpen,Instant codingOpenAt,TimelineRegistrationStore.Control registrationControl) {}
-    public Applications list(Authentication auth,String id,int page,String status){var t=tournaments.find(id);authorization.requireManager(auth,t);if(page<0||page>10000)throw new AuthException("INVALID_PAGING",400);if(status!=null&&!Set.of("PENDING","NEEDS_REVIEW","APPROVED","WAITLISTED","REJECTED","CANCELLED").contains(status))throw new AuthException("INVALID_FILTER",400);synchronized(t){return new Applications(store.page(UUID.fromString(id),page,status),page,25,t.revision,reviewOpen(t),t.timeline.codingOpenAt(),store.control(UUID.fromString(t.id)));}}
+    public record Applications(List<TimelineRegistrationStore.Application> items,int page,int size,long revision,boolean reviewOpen,Instant codingOpenAt,TimelineRegistrationStore.Control registrationControl,long total) {}
+    public Applications list(Authentication auth,String id,int page,String status){return list(auth,id,new ApplicationFilter(page,25,status,null,null,null,null,null,null));}
+    public Applications list(Authentication auth,String id,ApplicationFilter filter){
+        var t=tournaments.find(id);authorization.requireManager(auth,t);
+        synchronized(t){
+            if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);
+            UUID key=UUID.fromString(id);long total=store.count(key,filter);
+            int page=(int)Math.min(filter.page(),Math.max(0,(total-1)/filter.size()));var bounded=filter.atPage(page);
+            return new Applications(store.page(key,bounded),page,filter.size(),t.revision,reviewOpen(t),t.timeline.codingOpenAt(),store.control(key),total);
+        }
+    }
+    public record ApplicationDetails(TimelineRegistrationStore.Details details,RegistrationPolicy policy,boolean languageAllowed,
+            List<TournamentAuditEvent> history,boolean moreHistory,long revision,boolean canReview) {}
+    public ApplicationDetails details(Authentication auth,String id,UUID application){
+        var t=tournaments.find(id);authorization.requireManager(auth,t);
+        synchronized(t){
+            if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);
+            var facts=store.details(UUID.fromString(id),application);
+            var history=t.operations.audit().stream().filter(e->application.toString().equals(e.target())&&Set.of("PARTICIPANT_APPLICATION_REVIEWED","WAITLIST_PROMOTED","WAITLIST_REJECTED").contains(e.type())).sorted(Comparator.comparingLong(TournamentAuditEvent::sequence).reversed()).limit(101).toList();
+            return new ApplicationDetails(facts,t.registrationPolicy,t.botPolicy.allowedLanguages().contains(facts.application().intendedLanguage()),history.stream().limit(100).toList(),history.size()>100,t.revision,reviewOpen(t));
+        }
+    }
+    public record BulkEntry(UUID id,String status,Instant registeredAt) {}
+    public record BulkReview(Long revision,String decision,String reason,List<BulkEntry> items) {}
+    public record BulkItem(UUID id,boolean success,String error) {}
+    public record BulkResult(List<BulkItem> items,long revision,int succeeded,int failed) {}
+    public BulkResult bulkReview(Authentication auth,String id,BulkReview request){
+        accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);
+        synchronized(t){
+            if(request.revision()==null||request.revision()!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
+            if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);
+            if(!reviewOpen(t))throw new AuthException("APPLICATION_REVIEW_CLOSED",409);
+            if(request.decision()==null||!Set.of("APPROVED","REJECTED","WAITLISTED").contains(request.decision()))throw new AuthException("INVALID_REGISTRATION_TRANSITION",400);
+            String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
+            if(request.items()==null||request.items().isEmpty()||request.items().size()>100)throw new AuthException("INVALID_BULK_REVIEW",400);
+            var ids=new HashSet<UUID>();
+            for(var entry:request.items())if(entry==null||entry.id()==null||entry.status()==null||!Set.of("NEEDS_REVIEW","APPROVED","WAITLISTED","REJECTED","CANCELLED").contains(entry.status())||entry.registeredAt()==null||!ids.add(entry.id()))throw new AuthException("INVALID_BULK_REVIEW",400);
+            var results=new ArrayList<BulkItem>();
+            for(var entry:request.items()){
+                try{review(auth,id,entry.id(),new Review(t.revision,request.decision(),reason),entry.status(),entry.registeredAt());results.add(new BulkItem(entry.id(),true,null));}
+                catch(AuthException error){results.add(new BulkItem(entry.id(),false,error.code()));}
+            }
+            int succeeded=(int)results.stream().filter(BulkItem::success).count();
+            return new BulkResult(List.copyOf(results),t.revision,succeeded,results.size()-succeeded);
+        }
+    }
     public record Review(Long revision,String decision,String reason) {}
-    public void review(Authentication auth,String id,UUID application,Review request){var actor=accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){
+    public void review(Authentication auth,String id,UUID application,Review request){review(auth,id,application,request,null,null);}
+    private void review(Authentication auth,String id,UUID application,Review request,String expectedStatus,Instant expectedRegisteredAt){var actor=accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){
         if(request.revision()==null||request.revision()!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
         if(!reviewOpen(t))throw new AuthException("APPLICATION_REVIEW_CLOSED",409);
         if(request.decision()==null||!Set.of("APPROVED","REJECTED","WAITLISTED").contains(request.decision()))throw new AuthException("INVALID_REGISTRATION_TRANSITION",400);
         String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
-        owned.submissionMutation(t,auth,()->{var change=store.review(UUID.fromString(id),application,request.decision(),reason,actor.id().value(),clock.instant(),t.maxParticipants);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_REVIEWED",actor.id().value(),application.toString(),reason,change.before(),request.decision());promote(t,application);tournaments.changed(t);});
+        owned.submissionMutation(t,auth,()->{
+            if(request.decision().equals("APPROVED")){
+                var facts=store.details(UUID.fromString(id),application);
+                if(!facts.accountActive())throw new AuthException("ACCOUNT_NOT_ELIGIBLE",409);
+                if(!t.botPolicy.allowedLanguages().contains(facts.application().intendedLanguage()))throw new AuthException("LANGUAGE_NOT_ALLOWED",409);
+            }
+            var change=store.review(UUID.fromString(id),application,request.decision(),reason,actor.id().value(),clock.instant(),t.maxParticipants,expectedStatus,expectedRegisteredAt);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_REVIEWED",actor.id().value(),application.toString(),reason,change.before(),request.decision());promote(t,application);tournaments.changed(t);});
     }}
     public record PolicyUpdate(Long revision,RegistrationPolicy policy,String reason) {}
     public void configurePolicy(Authentication auth,String id,PolicyUpdate request){

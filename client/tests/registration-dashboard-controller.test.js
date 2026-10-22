@@ -21,10 +21,11 @@ test('review controller preserves drafts and explicit filters, blocks stale cont
    calls.push({url,options});if(fail)return{ok:false,status:fail==='UNAUTHENTICATED'?401:503,json:async()=>({error:fail})};
    let data;
    if(url.endsWith('/csrf'))data={headerName:'X-CSRF',token:'token'};
+   else if(url.endsWith('/bulk-review')){revision++;data={succeeded:1,failed:1,items:[{id:'entry',success:true},{id:'second',success:false,error:'CAPACITY_FULL'}]};}
    else if(url.endsWith('/review')){revision++;counts.needsReview--;counts.approved++;data={};}
    else if(url===base)data=t();
    else if(url.endsWith('/registration-summary'))data=summary();
-   else data={revision,reviewOpen:true,codingOpenAt:summary().codingOpenAt,items:[{...pending,status:url.includes('APPROVED')?'APPROVED':'NEEDS_REVIEW'}]};
+   else data={revision,reviewOpen:true,codingOpenAt:summary().codingOpenAt,items:[{...pending,status:url.includes('APPROVED')?'APPROVED':'NEEDS_REVIEW'},{...pending,id:'second',displayName:'Second'}]};
    return{ok:true,status:200,json:async()=>data};
   };
   await import('../js/tournament/application-review.js?controller-test');
@@ -39,6 +40,11 @@ test('review controller preserves drafts and explicit filters, blocks stale cont
   assert.equal(calls.filter(c=>c.url.endsWith('/review')).length,1);assert.equal(filter.value,'NEEDS_REVIEW');
   filter.value='';filter.onchange();await settle(()=>calls.at(-1).url===base+'/participant-applications?page=0');assert.match(location.search,/status=ALL/);
   invalidate();await new Promise(resolve=>setImmediate(resolve));await new Promise(resolve=>setImmediate(resolve));assert.equal(filter.value,'');
+  const selectPage=doc.querySelector('#select-current-applications');selectPage.checked=true;selectPage.onchange();
+  const beforeBulk=calls.length;doc.querySelector('#bulk-review-controls .actions button').click();assert.equal(calls.length,beforeBulk,'opening confirmation does not send a mutation');
+  const dialog=doc.querySelector('dialog');dialog.querySelector('textarea').value='Batch confirmation';await dialog.querySelector('form').onsubmit({preventDefault(){}});
+  const bulk=calls.find(c=>c.url.endsWith('/bulk-review'));assert.equal(JSON.parse(bulk.options.body).items.length,2);assert.equal(JSON.parse(bulk.options.body).reason,'Batch confirmation');assert.match(text(doc.querySelector('#bulk-review-result')),/1 đơn đã xử lý · 1 đơn không xử lý được/);assert.match(text(doc.querySelector('#bulk-review-result')),/Second/);assert.equal(doc.querySelector('dialog'),null);assert.ok(root.querySelectorAll('[data-application-selection]').every(input=>!input.checked));
+  doc.querySelector('#filter-search').value='queue_7_';doc.querySelector('#filter-size').value='50';doc.querySelector('#application-filters').onsubmit({preventDefault(){}});await settle(()=>calls.some(c=>c.url.includes('size=50&search=queue_7_')));await new Promise(resolve=>setImmediate(resolve));assert.match(location.search,/search=queue_7_/);
   fail='SERVER_ERROR';await doc.querySelector('#refresh-applications').click();
   assert.ok(root.querySelector('textarea'));assert.ok([...root.querySelectorAll('button,textarea'),...dashboard.querySelectorAll('button')].every(control=>control.disabled));
   assert.equal(doc.querySelector('#refresh-applications').disabled,false);

@@ -1,4 +1,10 @@
 const errors = {
+  ACCOUNT_NOT_ELIGIBLE:"Tài khoản người đăng ký không còn đủ điều kiện hoạt động.",
+  LANGUAGE_NOT_ALLOWED:"Ngôn ngữ của đơn không nằm trong danh sách cho phép của giải.",
+  INVALID_BULK_REVIEW:"Chọn từ 1 đến 100 đơn khác nhau trên trang hiện tại.",
+  APPLICATION_CHANGED:"Đơn đã thay đổi. Hãy cập nhật và xem lại trước khi xử lý.",
+  APPLICATION_NOT_FOUND:"Không tìm thấy đơn trong giải này.",
+  INVALID_FILTER:"Bộ lọc không hợp lệ. Kiểm tra nội dung tìm kiếm và khoảng thời gian.",
   REGISTRATION_SNAPSHOT_CHANGED:"Dữ liệu đăng ký vừa thay đổi. Hãy cập nhật danh sách để tiếp tục xử lý.",
   FINAL_VALIDATION_REQUIRED:"Bot phải qua kiểm thử chính thức trước khi check-in hoặc thi đấu.",
   FINAL_VALIDATION_NOT_FOUND:"Không tìm thấy kết quả kiểm thử chính thức.",

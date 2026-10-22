@@ -106,15 +106,39 @@ public class TimelineRegistrationStore {
         var r=find(tournament,user);if(r!=null)db.refresh(r,LockModeType.PESSIMISTIC_WRITE);if(r==null||!Set.of("PENDING","APPROVED","WAITLISTED").contains(r.status))throw new AuthException("INVALID_REGISTRATION_TRANSITION",409);
         r.status="CANCELLED";
     }
-    @Transactional(readOnly=true) public List<Application> page(UUID tournament,int page,String status){
-        String filter=status==null?"":" and r.status=:status";
-        String order="WAITLISTED".equals(status)?"r.waitlistOrder,r.id":"r.registeredAt,r.id";
-        var query=db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t"+filter+" order by "+order,TimelineRegistration.class).setParameter("t",tournament);
-        if(status!=null)query.setParameter("status",status.equals("NEEDS_REVIEW")?"PENDING":status);
-        return query.setFirstResult(page*25).setMaxResults(25).getResultList().stream().map(this::application).toList();
+    private record Search(String where,Map<String,Object> parameters) {}
+    private Search search(UUID tournament,ApplicationFilter filter){
+        var where=new StringBuilder(" where r.tournamentId=:t");var params=new LinkedHashMap<String,Object>();params.put("t",tournament);
+        if(filter.status()!=null){where.append(" and r.status=:status");params.put("status",filter.status());}
+        if(filter.search()!=null){where.append(" and (lower(r.displayName) like :search escape '!' or r.userId in (select u.id from UserEntity u where lower(u.username) like :search escape '!'))");params.put("search",pattern(filter.search()));}
+        if(filter.affiliation()!=null){where.append(" and lower(r.affiliation) like :affiliation escape '!'");params.put("affiliation",pattern(filter.affiliation()));}
+        if(filter.language()!=null){where.append(" and r.intendedLanguage=:language");params.put("language",filter.language());}
+        if(filter.reason()!=null){where.append(" and (concat(',',r.eligibilityReasons,',') like :reason escape '!'");params.put("reason","%,"+filter.reason().replace("_","!_")+",%");if(filter.reason().equals("MANUAL_REVIEW_REQUIRED"))where.append(" or (r.status='PENDING' and r.eligibilityReasons='')");where.append(")");}
+        if(filter.from()!=null){where.append(" and r.registeredAt>=:from");params.put("from",filter.from());}
+        if(filter.until()!=null){where.append(" and r.registeredAt<:until");params.put("until",filter.until());}
+        return new Search(where.toString(),params);
+    }
+    private String pattern(String value){return "%"+value.toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_")+"%";}
+    @Transactional(readOnly=true) public long count(UUID tournament,ApplicationFilter filter){
+        var search=search(tournament,filter);var query=db.createQuery("select count(r) from TimelineRegistration r"+search.where(),Long.class);search.parameters().forEach(query::setParameter);return query.getSingleResult();
+    }
+    @Transactional(readOnly=true) public List<Application> page(UUID tournament,int page,String status){return page(tournament,new ApplicationFilter(page,25,status,null,null,null,null,null,null));}
+    @Transactional(readOnly=true) public List<Application> page(UUID tournament,ApplicationFilter filter){
+        var search=search(tournament,filter);String order="WAITLISTED".equals(filter.status())?"r.waitlistOrder,r.id":"r.registeredAt,r.id";
+        var query=db.createQuery("select r from TimelineRegistration r"+search.where()+" order by "+order,TimelineRegistration.class);search.parameters().forEach(query::setParameter);
+        return query.setFirstResult(filter.page()*filter.size()).setMaxResults(filter.size()).getResultList().stream().map(this::application).toList();
+    }
+    public record Details(Application application,String username,Instant rulesAcceptedAt,boolean accountActive) {}
+    @Transactional(readOnly=true) public Details details(UUID tournament,UUID id){
+        var r=db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t and r.id=:id",TimelineRegistration.class).setParameter("t",tournament).setParameter("id",id).getResultStream().findFirst().orElseThrow(()->new AuthException("APPLICATION_NOT_FOUND",404));
+        var user=db.createQuery("select u.username,u.status from UserEntity u where u.id=:u",Object[].class).setParameter("u",r.userId).getSingleResult();
+        return new Details(application(r),user[0].toString(),r.rulesAcceptedAt,"ACTIVE".equals(user[1].toString()));
     }
     public record ReviewChange(String before,View after) {}
     @Transactional public ReviewChange review(UUID tournament,UUID id,String next,String reason,UUID actor,Instant now,int capacity){
+        return review(tournament,id,next,reason,actor,now,capacity,null,null);
+    }
+    @Transactional public ReviewChange review(UUID tournament,UUID id,String next,String reason,UUID actor,Instant now,int capacity,String expectedStatus,Instant expectedRegisteredAt){
         if(!Set.of("APPROVED","REJECTED","WAITLISTED").contains(next))throw new AuthException("INVALID_REGISTRATION_TRANSITION",400);
         int currentCapacity=lockCapacity(tournament);
         unlocked(tournament);
@@ -124,6 +148,7 @@ public class TimelineRegistrationStore {
                 .setParameter("t",tournament).setParameter("id",id).setLockMode(LockModeType.PESSIMISTIC_WRITE).getResultStream().findFirst().orElse(null);
         if(r==null)throw new AuthException("APPLICATION_NOT_FOUND",404);
         db.refresh(r,LockModeType.PESSIMISTIC_WRITE);
+        if(expectedStatus!=null&&(!publicStatus(r.status).equals(expectedStatus)||!r.registeredAt.equals(expectedRegisteredAt)))throw new AuthException("APPLICATION_CHANGED",409);
         if(r.status.equals("CANCELLED")||r.status.equals(next))throw new AuthException("INVALID_REGISTRATION_TRANSITION",409);
         if(next.equals("APPROVED")&&approvedCount(tournament)>=currentCapacity)throw new AuthException("CAPACITY_FULL",409);
         if(next.equals("WAITLISTED"))r.waitlistOrder=nextWaitlistOrder(tournament);

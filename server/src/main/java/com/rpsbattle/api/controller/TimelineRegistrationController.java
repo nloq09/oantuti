@@ -17,6 +17,15 @@ public class TimelineRegistrationController {
     @GetMapping("/participant-flow") public ResponseEntity<?> flow(Authentication auth,@PathVariable String id){return response(service.read(auth,id));}
     @PostMapping("/participant-registration") public ResponseEntity<?> register(Authentication auth,@PathVariable String id,@RequestBody TimelineRegistrationService.Signup request){return response(service.register(auth,id,request));}
     @DeleteMapping("/participant-registration") public ResponseEntity<?> withdraw(Authentication auth,@PathVariable String id){return response(service.withdraw(auth,id));}
-    @GetMapping("/participant-applications") public ResponseEntity<?> list(Authentication auth,@PathVariable String id,@RequestParam(defaultValue="0")int page,@RequestParam(required=false)String status){return response(service.list(auth,id,page,status));}
+    @GetMapping("/participant-applications") public ResponseEntity<?> list(Authentication auth,@PathVariable String id,
+            @RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="25")int size,
+            @RequestParam(required=false)String status,@RequestParam(required=false)String search,
+            @RequestParam(required=false)String affiliation,@RequestParam(required=false)String language,@RequestParam(required=false)String reason,
+            @RequestParam(required=false)@org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)java.time.Instant from,
+            @RequestParam(required=false)@org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)java.time.Instant until){
+        return response(service.list(auth,id,new com.rpsbattle.tournament.timeline.ApplicationFilter(page,size,status,search,affiliation,language,reason,from,until)));
+    }
+    @GetMapping("/participant-applications/{application}") public ResponseEntity<?> details(Authentication auth,@PathVariable String id,@PathVariable java.util.UUID application){return response(service.details(auth,id,application));}
+    @PostMapping("/participant-applications/bulk-review") public ResponseEntity<?> bulk(Authentication auth,@PathVariable String id,@RequestBody TimelineRegistrationService.BulkReview request){return response(service.bulkReview(auth,id,request));}
     @PostMapping("/participant-applications/{application}/review") public ResponseEntity<?> review(Authentication auth,@PathVariable String id,@PathVariable java.util.UUID application,@RequestBody TimelineRegistrationService.Review request){service.review(auth,id,application,request);return response(java.util.Map.of("status","OK"));}
 }

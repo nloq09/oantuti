@@ -1,6 +1,6 @@
-# Registration pipeline — nhóm 1–5
+# Registration pipeline — nhóm 1–6
 
-Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách; nhóm 5 bổ sung dashboard cho Organizer. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
+Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách; nhóm 5 bổ sung dashboard cho Organizer; nhóm 6 bổ sung hàng xét duyệt, bộ lọc và bulk review. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
 
 ## Luồng thực tế đã đối chiếu
 
@@ -347,3 +347,68 @@ Các trường control, counts, revision, serverNow và mốc giờ giữ nguyê
 - `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
 - `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationService.java`
 - `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
+
+
+## Nhóm 6 — Review card, chi tiết, bộ lọc, phân trang và bulk review
+
+Ngày triển khai: 22/10/2026. Tiếp tục trên dashboard nhóm 5; không sửa luồng GameEngine hay Player.
+
+### Giao diện và hành vi
+
+- Review card hiển thị ngay tên, trường, ngôn ngữ, trạng thái, lý do cần xác nhận, vị trí waitlist và quyết định gần nhất. Không cần mở modal để biết vì sao đơn cần con người xử lý.
+- “Xem chi tiết” mở dialog ngay trên trang, tải một application được scope theo giải: username, thời gian đăng ký/chấp nhận luật, trạng thái tài khoản, ngôn ngữ được phép, chính sách xác minh, reason codes và tối đa 100 sự kiện review/promotion mới nhất. Không trả email, mật khẩu hoặc source bot. Đóng dialog hủy request đang chờ.
+- Bộ lọc chạy ở server: username/display name, trạng thái, affiliation, ngôn ngữ, reason code, thời gian gửi từ/đến. Tìm tên/đơn vị không phân biệt hoa thường; `%`, `_`, `!` được coi là ký tự literal. Thời gian là khoảng [from, until), UI nhập theo giờ máy người dùng và gửi UTC ISO.
+- Chọn 25/50/100 đơn mỗi trang. Server đếm total sau khi áp filter, giới hạn size tối đa 100, scope tournament và clamp trang cuối khi số kết quả giảm. Dashboard vẫn hiển thị aggregate toàn giải, danh sách dùng filtered total riêng. Không tải toàn bộ đơn để lọc ở client.
+- Checkbox chọn từng đơn hoặc chọn các đơn có thể xét duyệt trên trang hiện tại. Không có lựa chọn toàn bộ hàng nghìn kết quả. Đổi bộ lọc/trang hoặc revision làm mất hiệu lực lựa chọn trước; khi revision đổi, UI thông báo cần chọn lại.
+- Bulk chấp nhận/waitlist/từ chối đều có confirm và lý do bắt buộc. Kết quả hiển thị số thành công/thất bại và lỗi theo từng người. Không tự gửi lại mutation khi mạng lỗi. Mất phiên/quyền sẽ xóa dữ liệu riêng tư, đóng dialog và bỏ lựa chọn.
+- Form/bulk controls có khoảng cách, layout grid thu về một cột trên màn hình nhỏ. Giữ cách render bằng textContent cho tên, lý do và audit, tránh chèn HTML từ dữ liệu người dùng.
+
+### API/DTO nhóm 6
+
+Các endpoint mới và mở rộng đều manager/admin, cache no-store, Vary Cookie, dùng session/CSRF hiện hành.
+
+1. GET `/api/tournaments/{id}/participant-applications`:
+   - Query mới: `size` (25/50/100, mặc định 25), `search` (tối đa 80), `affiliation` (80), `language` (CPP/PYTHON/JAVA), `reason` (enum EligibilityReasonCode), `from`, `until` (UTC Instant).
+   - Giữ `page`, `status` và alias PENDING/NEEDS_REVIEW; total sau lọc được bổ sung vào Applications DTO. Response page có thể được clamp xuống trang hợp lệ cuối cùng.
+   - HQL parameterized, kiểm tra kích thước/enum/khoảng giờ trước khi query; không nối dữ liệu người dùng vào HQL.
+2. GET `/api/tournaments/{id}/participant-applications/{application}`:
+   - ApplicationDetails gồm details (application, username, rulesAcceptedAt, accountActive), policy, languageAllowed, history, moreHistory, revision, canReview.
+   - Tìm application trong đúng tournament, trả 404 khi không thuộc giải; chỉ lọc audit target application và loại event liên quan review/promotion.
+3. POST `/api/tournaments/{id}/participant-applications/bulk-review`:
+   - Body: `{revision,decision,reason,items:[{id,status,registeredAt}]}`; 1–100 ID không trùng, lý do không rỗng. `status` dùng public status (NEEDS_REVIEW).
+   - Global guard yêu cầu revision mới, quyền quản lý và review còn mở trước khi xử lý bất kỳ row nào.
+   - Mỗi row dùng transaction submissionMutation riêng cùng khóa parent/child hiện có. Đối chiếu expected status và registeredAt dưới child lock để tránh áp quyết định lên đơn đã thay đổi hoặc đã rút rồi đăng ký lại. Không tự bỏ qua validation vì cùng batch.
+   - Kiểm tra scope, trạng thái, capacity, roster lock và giờ coding cho từng row. Chấp nhận còn xác nhận tài khoản đang hoạt động và ngôn ngữ hợp lệ; áp dụng cho cả single review. Audit riêng từng quyết định với actor, reason, before/after; waitlist promotion giữ transaction hiện có.
+   - Lỗi nghiệp vụ của một row không rollback những row đã commit. Response `{items:[{id,success,error}],revision,succeeded,failed}`. Lỗi hạ tầng bất ngờ có thể trả lỗi request sau một số commit; client yêu cầu cập nhật và không tự retry.
+
+Không có migration mới; giữ schema V40. Không mở rộng nhóm 7 (Player status/notifications) trong lần này.
+
+### File thêm/sửa nhóm 6
+
+- `client/css/organizer-control-center.css`
+- `client/js/tournament/application-details.js` (mới)
+- `client/js/tournament/application-queue-model.js` (mới)
+- `client/js/tournament/application-review-card.js` (mới)
+- `client/js/tournament/application-review.js`
+- `client/js/tournament/registration-dashboard-model.js`
+- `client/js/ui/toast.js`
+- `client/tests/application-queue.test.js` (mới)
+- `client/tests/registration-dashboard-controller.test.js`
+- `client/tournament-applications.html`
+- `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
+- `server/src/main/java/com/rpsbattle/api/controller/TimelineRegistrationController.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/ApplicationFilter.java` (mới)
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationStore.java`
+- `server/src/test/java/com/rpsbattle/tournament/RegistrationQueueApiTest.java` (mới)
+
+
+### Kiểm chứng nhóm 6
+
+- PASS 37/37 API/backend tests: RegistrationQueueApiTest (7), RegistrationPipelineApiTest (15), TimelineReviewApiTest (4), TimelineRegistrationApiTest (4), OrganizerMetricsApiTest (7).
+- PASS 10/10 PostgreSQL capacity/concurrency tests của RegistrationCapacityPostgresTest. Lượt đầu bị SKIPPED vì Testcontainers không tìm thấy default Docker pipe; chạy lại với DOCKER_HOST=npipe:////./pipe/dockerDesktopLinuxEngine trong môi trường lệnh test, không sửa cấu hình Docker toàn máy. Kết quả cuối tổng 47/47 backend tests theo XML mới nhất của từng class, không failure/skipped.
+- API tests kiểm tra lọc trước paging, total, size cap/clamp, username/display name, literal wildcard, date interval, reason fallback, partial capacity failure, audit từng row, stale/foreign/changed/rejoined applications, bắt buộc lý do, duplicate/empty/oversized batch, closed vs locked, tài khoản bị khóa và quyền manager.
+- PASS 346/346 client tests. Bổ sung component/model/controller tests cho bộ lọc, page size/filtered total, select page, confirm không gửi sớm, một lần bulk kèm reason/revision/expected rows, partial results, detail modal/checks/history, text-only rendering và abort khi đóng.
+- PASS bootJar, kiểm tra cú pháp application-review.js và git diff --check. Server đã khởi động lại tại localhost:8080; HTTP 200 cho HTML/bulk controller/details module mới.
+- Migration tests: SKIPPED (schema không đổi).
+- Kiểm tra trực quan bằng trình duyệt: SKIPPED (Browser bị tắt trong Work settings). Không coi DOM/CSS tests là kiểm tra hình ảnh.
