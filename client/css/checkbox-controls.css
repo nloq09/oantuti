@@ -1,0 +1,46 @@
+/* Shared by global.css and admin.css via layout-spacing.css.
+   Choice controls must override the legacy stacked-label/full-width-input rules.
+   Important declarations in this layer isolate that exception from page specificity.
+   Exclude hidden labels so conditional fields keep their native hidden behavior. */
+@layer checkbox-controls {
+  label:not([hidden]):has(> input[type="checkbox"]) {
+    display: grid !important;
+    grid-template-columns: 18px minmax(0, 1fr) !important;
+    grid-auto-flow: row !important;
+    align-items: start !important;
+    gap: 0 10px !important;
+    min-height: 26px !important;
+    min-width: 0 !important;
+    line-height: 1.5 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    text-align: start !important;
+    cursor: pointer;
+  }
+
+  label > input[type="checkbox"] {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    justify-self: start !important;
+    align-self: start !important;
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    margin-block-start: max(0px, calc((1lh - 18px) / 2)) !important;
+    accent-color: var(--accent, var(--gold, #8ab4f8));
+    cursor: inherit;
+  }
+
+  label:has(> input[type="checkbox"]) > :not(input) {
+    min-width: 0;
+  }
+
+  label:has(> input[type="checkbox"]:disabled) {
+    cursor: default;
+  }
+}

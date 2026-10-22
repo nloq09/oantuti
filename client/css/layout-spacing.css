@@ -1,4 +1,5 @@
 /* Shared spacing for block-flow screens. Grid/card/board children keep their own gaps. */
+@import url("/css/checkbox-controls.css");
 :root { --section-gap: 24px; --control-gap: 12px; }
 .panel { min-width: 0; overflow-wrap: anywhere; }
 .panel > :first-child { margin-block-start: 0; }
