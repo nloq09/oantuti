@@ -26,9 +26,15 @@
 .worker-ops-dialog>button{float:right}.worker-ops-dialog details{margin:16px 0}.worker-ops-dialog summary{cursor:pointer;padding:8px 0}
 .worker-group-create,.worker-assignment-search{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:20px}
 .worker-group-create label,.worker-assignment-search label{flex:1 1 240px;margin:0!important}
+.worker-ops .worker-field,.worker-ops-dialog .worker-field{display:grid;gap:8px;min-width:0;max-width:680px;margin:0 0 18px;line-height:1.5}
+.worker-field>input:not([type=checkbox]),.worker-field>select,.worker-field>textarea{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.worker-ops .worker-group-create,.worker-ops .worker-assignment-search,.worker-ops .admin-form{width:100%;max-width:680px}
+.worker-group-create>button,.worker-assignment-search>button{min-height:48px;margin:0}
+.worker-ops .worker-field>input:not([type=checkbox]),.worker-ops .worker-field>select{min-height:48px}
 .worker-group-card{margin-top:16px}.worker-group-card .worker-row-actions{margin-top:14px}
 .worker-capacity-preview,.worker-policy-saved{padding:16px;margin:16px 0;border:1px solid #4b6b82;background:#132f43;border-radius:8px}
 .worker-capacity-preview small{display:block;margin-top:12px}.worker-ops [role=tabpanel]{min-width:0}
 @media(max-width:1150px){.worker-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.worker-ops{padding:14px}.worker-ops .worker-table,.worker-ops .worker-table tbody{display:block}.worker-ops .worker-table thead{display:none}.worker-ops .worker-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border:1px solid #50677b;border-radius:8px;padding:14px;margin-bottom:14px}.worker-ops .worker-table td{display:block;padding:0;border:0;width:auto}.worker-ops .worker-table td:first-child,.worker-ops .worker-table td:last-child{grid-column:1/-1}.worker-ops .worker-table td::before{content:attr(data-label);display:block;color:#bbcad5;font-size:.75rem;margin-bottom:4px}.worker-ops .worker-table td:first-child::before{display:none}.worker-ops .worker-filters label{flex-basis:180px}}
 @media(max-width:540px){.worker-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.worker-ops-dialog{padding:16px}.worker-ops-dialog dl{grid-template-columns:minmax(0,1fr)}.worker-row-actions{align-items:stretch}.worker-ops .worker-filters label{flex-basis:100%}}
+@media(max-width:540px){.worker-ops .worker-group-create,.worker-ops .worker-assignment-search{flex-direction:column;align-items:stretch}.worker-group-create label,.worker-assignment-search label{flex:0 1 auto}.worker-group-create>button,.worker-assignment-search>button{align-self:flex-start}}
