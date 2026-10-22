@@ -1,3 +1,4 @@
+import {normalizeValidationStep} from './validation-detail-state.js';
 import {node,date} from './player-dom.js';
 import {finalValidationActions} from './organizer-validation-actions.js';
 export const validationLabels={QUEUED:'Đang chờ',RUNNING:'Đang kiểm thử',PASSED:'Đạt',FAILED:'Không đạt',INFRA_ERROR:'Lỗi hạ tầng',EMERGENCY_OPEN:'Đang nộp lại khẩn cấp'};
@@ -32,7 +33,7 @@ export function renderValidationSummary(root,t,data,metrics,{filter=()=>{}}={}){
 }
 export function renderValidationCard(root,v,data,{act=async()=>{},remember=()=>{},saved={}}={}){
  const card=node('article',undefined,'control-card organizer-validation-card');card.dataset.validationId=v.id;
- const steps=Object.entries(stageLabels),complete=steps.filter(([key])=>['PASSED','FAILED','INFRA_ERROR','SKIPPED'].includes(v.steps?.[key])).length,passed=steps.filter(([key])=>v.steps?.[key]==='PASSED').length;
+ const steps=Object.entries(stageLabels),complete=steps.filter(([key])=>['PASSED','FAILED','INFRA_ERROR','SKIPPED'].includes(normalizeValidationStep(v.steps?.[key]))).length,passed=steps.filter(([key])=>normalizeValidationStep(v.steps?.[key])==='PASSED').length;
  card.append(node('h3',v.displayName||'Người chơi'),node('p',(({PYTHON:'Python',CPP:'C++',JAVA:'Java'})[v.language]||'Bot')+' · v'+v.version));
  const result=node('strong',(v.status==='PASSED'?'✓ ':v.status==='FAILED'?'✕ ':v.status==='RUNNING'?'● ':'')+(validationLabels[v.status]||'Đang cập nhật'),'validation-result');result.dataset.status=v.status;card.append(result,node('p',complete+' / '+steps.length+' bước kiểm thử hoàn tất'+(v.status==='PASSED'?' · '+passed+' / '+steps.length+' đạt':'')));
  if(v.status==='PASSED'&&v.applied!==true)card.append(node('small','Đang chờ server áp dụng kết quả.'));
@@ -40,7 +41,7 @@ export function renderValidationCard(root,v,data,{act=async()=>{},remember=()=>{
  const detail=node('details',undefined,'validation-detail');detail.open=saved.open===true;detail.append(node('summary','Xem chi tiết'));
  const list=node('ul',undefined,'organizer-validation-stages');
  for(const [key,label]of steps){
-  const state=v.steps?.[key]||'PENDING',row=node('li');
+  const state=normalizeValidationStep(v.steps?.[key])||'PENDING',row=node('li');
   row.dataset.status=state;
   const suffix=({RUNNING:' — Đang chạy',FAILED:' — Không đạt',INFRA_ERROR:' — Gián đoạn',PENDING:' — Chờ kiểm thử',SKIPPED:' — Không chạy'})[state]||(state==='PASSED'?'':' — Chờ cập nhật');
   row.append(node('span',(state==='PASSED'?'✓ ':state==='FAILED'?'✕ ':state==='RUNNING'?'● ':'○ ')+label+suffix));list.append(row);

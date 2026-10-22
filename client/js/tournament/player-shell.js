@@ -30,5 +30,5 @@ export function renderTournamentShell(root,{tournament,flow}){
 export function renderPlayerShell(root,{tournament,flow,me,account,commands}){
  renderTournamentShell(root,{tournament,flow});
  const action=tournamentNextAction({tournament,flow,me,account});
- if(!(flow?.phase==='VALIDATING'&&flow.finalValidation))renderPlayerNextActionCard(root,action,commands);return action;
+ if(!(flow?.phase==='VALIDATING'&&(flow.finalValidation||flow.validationDetailState)))renderPlayerNextActionCard(root,action,commands);return action;
 }

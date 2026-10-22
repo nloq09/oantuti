@@ -1,3 +1,4 @@
+import {validationDetailState} from './validation-detail-state.js';
 import {renderFrozenSubmission} from './frozen-submission.js';
 import {renderPlayerNextActionCard} from './player-shell.js';
 import {resolvePlayerTournamentViewState} from './player-view-state.js';
@@ -21,14 +22,25 @@ export function validationNextStep(t,flow){
 
 // Explicit allowlist: technical identifiers and hashes never enter the presentation model.
 export function playerValidationModel(v){
- const steps=Object.entries(validationStages).map(([key,label])=>({label,status:v.steps?.[key]||'PENDING'}));
- return {status:v.status,ready:v.status==='PASSED'&&v.applied===true,language:({CPP:'C++',PYTHON:'Python',JAVA:'Java'})[v.language]||'Bot',version:v.version,
- steps,passed:steps.filter(s=>s.status==='PASSED').length,reason:v.reason?validationReason(v.reason):null,
+ const detail=validationDetailState(v);
+ const steps=detail.status==='READY'?Object.entries(validationStages).map(([key,label])=>({label,status:detail.steps[key]})):[];
+ return {detailState:detail.status,status:v.status,ready:detail.status==='READY'&&v.status==='PASSED'&&v.applied===true,language:({CPP:'C++',PYTHON:'Python',JAVA:'Java'})[v.language]||'Bot',version:v.version,
+ steps,passed:detail.status==='READY'?detail.passed:null,total:detail.total??null,reason:v.reason?validationReason(v.reason):null,
  fallback:Boolean(v.originalVersionId&&v.versionId&&v.originalVersionId!==v.versionId)};
 }
-export function renderFinalValidation(root,t,flow){
+export function renderFinalValidation(root,t,flow,{refresh}={}){
  if(flow.phase==='SUBMISSION_FROZEN'){renderFrozenSubmission(root,t,flow);return;}
- const v=flow.finalValidation;if(!v)return;
+ const v=flow.finalValidation,detail=validationDetailState(v,flow.validationDetailState);
+ if(detail.status==='IDLE')return;
+ if(detail.status!=='READY'){
+  const panel=node('section',undefined,'panel validation-panel');panel.id='player-submission-detail';panel.dataset.validationLoadState=detail.status;
+  panel.append(node('h2','Kiểm thử chính thức'),node('p',detail.status==='LOADING'?'Đang tải kết quả kiểm thử…':'Không thể tải đầy đủ chi tiết kiểm thử.'));
+  if(detail.status==='ERROR'){
+   if(detail.code==='VALIDATION_STATE_INCONSISTENT')console.warn('VALIDATION_STATE_INCONSISTENT');
+   const retry=node('button','Thử lại');retry.onclick=()=>refresh?refresh():globalThis.dispatchEvent(new CustomEvent('rps-tournament-update',{detail:{id:t.id}}));panel.append(retry);
+  }
+  root.append(panel);return;
+ }
  const model=playerValidationModel(v),panel=node('section',undefined,'panel validation-panel');
  panel.id='player-submission-detail';panel.dataset.validationStatus=model.status;
  panel.append(node('p','Bài nộp đã được khóa và đang ở chế độ chỉ đọc.','validation-readonly'));

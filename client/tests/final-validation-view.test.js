@@ -1,10 +1,12 @@
+import {validationStageCodes} from '../js/tournament/validation-detail-state.js';
+const serverSteps=(state='PENDING',patch={})=>({...Object.fromEntries(validationStageCodes.map(code=>[code,state])),...patch});
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validationNextStep,renderFinalValidation} from '../js/tournament/final-validation-view.js';
 import {setup,descendants} from './helpers/tournament-dom.js';
 test('final PASS retains historical result without promising check-in after cancellation or completion',()=>{
  for(const status of ['CANCELLED','FINISHED','RUNNING','PAUSED','RECOVERY_REQUIRED']){
-  const root=setup();renderFinalValidation(root,{id:'cup',status},{phase:status,finalValidation:{status:'PASSED',applied:true,steps:{}}});
+  const root=setup();renderFinalValidation(root,{id:'cup',status},{phase:status,finalValidation:{status:'PASSED',applied:true,steps:serverSteps('PASS')}});
   const text=descendants(root).map(n=>n.textContent).join(' ');
   assert.match(text,/KIỂM THỬ HOÀN TẤT/);assert.doesNotMatch(text,/Chờ giai đoạn check-in/);
  }

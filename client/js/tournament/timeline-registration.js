@@ -10,9 +10,10 @@ import {renderFrozenSubmission} from './frozen-submission.js';
 import {renderFinalValidation} from './final-validation-view.js';
 
 export function renderTimelineRegistration(root,t,account,flow,refresh,options={}){
- if(account&&['CHECK_IN_OPEN','READY_TO_START'].includes(flow.phase)&&checkInScreen(flow)){renderTimelineCheckIn(root,t,flow,refresh,options);return;}
  const view=resolvePlayerTournamentViewState({tournament:t,flow});
- if(account&&view.showValidation){renderFinalValidation(root,t,flow);return;}
+ if(account&&view.showValidation&&view.validationView.status!=='READY'){renderFinalValidation(root,t,flow,{refresh});return;}
+ if(account&&['CHECK_IN_OPEN','READY_TO_START'].includes(flow.phase)&&checkInScreen(flow)){renderTimelineCheckIn(root,t,flow,refresh,options);return;}
+ if(account&&view.showValidation){renderFinalValidation(root,t,flow,{refresh});return;}
  if(account&&flow.registrationStatus==='APPROVED'&&view.showSubmission){renderFrozenSubmission(root,t,flow);return;}
  const panel=node('section',undefined,'panel timeline-registration-panel');root.append(panel);
  if(flow.phase==='DRAFT'){panel.append(node('h2','Giải chưa công bố đăng ký'));return;}

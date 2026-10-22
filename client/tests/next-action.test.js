@@ -1,3 +1,5 @@
+import {validationStageCodes} from '../js/tournament/validation-detail-state.js';
+const serverSteps=(state='PENDING',patch={})=>({...Object.fromEntries(validationStageCodes.map(code=>[code,state])),...patch});
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {tournamentNextAction} from '../js/tournament/next-action.js';
@@ -13,8 +15,8 @@ test('server decisions map one primary action for registration coding freeze val
  for(const [nextAction,type]of cases)assert.equal(resolve({phase:nextAction==='VIEW_FROZEN_SUBMISSION'?'SUBMISSION_FROZEN':'REGISTRATION_OPEN',nextAction,...(nextAction==='VIEW_FROZEN_SUBMISSION'?{frozenSubmission:{decision:'AUTO_SUBMITTED',versionId:'v'}}:{})}).type,type);
  assert.equal(resolve({phase:'CODING_OPEN',nextAction:'OPEN_CODE_WORKSPACE',canAccessWorkspace:true,canModifyWorkspace:true}).href,'/tournament-code.html?id=cup%2Fa');
  const check=resolve({nextAction:'CHECK_IN',checkIn:{canCheckIn:true,registrationId:'r'}});assert.equal(check.command,'CHECK_IN');assert.deepEqual(check.payload,{registrationId:'r'});
- assert.equal(resolve({phase:'VALIDATING',nextAction:'VIEW_FINAL_VALIDATION',finalValidation:{status:'FAILED'}}).type,'VIEW_VALIDATION_FAILURE');
- assert.match(resolve({phase:'VALIDATING',nextAction:'VIEW_FINAL_VALIDATION',finalValidation:{status:'INFRA_ERROR'}}).description,/hạ tầng/);
+ assert.equal(resolve({phase:'VALIDATING',nextAction:'VIEW_FINAL_VALIDATION',finalValidation:{status:'FAILED',steps:serverSteps('PENDING',{BUILD:'FAIL'})}}).type,'VIEW_VALIDATION_FAILURE');
+ assert.match(resolve({phase:'VALIDATING',nextAction:'VIEW_FINAL_VALIDATION',finalValidation:{status:'INFRA_ERROR',steps:serverSteps()}}).description,/hạ tầng/);
 });
 test('running action requires an assigned local room and suppresses stale terminal participant actions',()=>{
  const base={tournament:{...tournament,status:'RUNNING'},account},item={status:'PLAYING',registration:{id:'r',controllerType:'HUMAN'},currentMatch:{id:'m',onlineMatchId:'room'}};

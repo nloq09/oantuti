@@ -1,3 +1,5 @@
+import {validationStageCodes} from '../js/tournament/validation-detail-state.js';
+const serverSteps=(state='PENDING',patch={})=>({...Object.fromEntries(validationStageCodes.map(code=>[code,state])),...patch});
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {installDocument,text} from './helpers/organizer-dom.js';
 const tick=async()=>{for(let n=0;n<12;n++)await new Promise(done=>setImmediate(done));};
@@ -11,7 +13,7 @@ test('real player page replaces missing, immutable frozen, queued and running va
  const refresh=async()=>{events.dispatchEvent(new CustomEvent('rps-tournament-update',{detail:{id:'cup',revision:9}}));await tick();};
  try{await import('../js/tournament/player-detail.js?frozen-controller');await tick();const root=doc.querySelector('#tournament-player');assert.match(text(root),/Không có bài nộp hợp lệ/);assert.equal(root.querySelectorAll('[aria-current=step]').length,0);assert.equal(root.querySelector('.player-next-action a'),null);
   flow={...flow,submissionStatus:'SUBMISSION_FROZEN',frozenSubmission:{decision:'AUTO_SUBMITTED',versionId:'version12',version:12,language:'CPP'}};await refresh();assert.ok(root.querySelector('#player-primary-action-VIEW_FROZEN_SUBMISSION'));assert.match(root.querySelector('.frozen-submission a').href,/version=version12/);
-  flow={...flow,phase:'VALIDATING',nextAction:'VIEW_FINAL_VALIDATION',submissionStatus:'VALIDATING',finalValidation:{status:'QUEUED',versionId:'version12',originalVersionId:'version12',version:12,language:'CPP'}};await refresh();assert.equal(root.querySelectorAll('.frozen-submission').length,0);assert.match(text(root.querySelector('.validation-panel')),/Chờ kiểm thử chính thức/);assert.match(text(root.querySelector('[aria-current=step]')),/Kiểm thử/);
+  flow={...flow,phase:'VALIDATING',nextAction:'VIEW_FINAL_VALIDATION',submissionStatus:'VALIDATING',finalValidation:{status:'QUEUED',steps:serverSteps(),versionId:'version12',originalVersionId:'version12',version:12,language:'CPP'}};await refresh();assert.equal(root.querySelectorAll('.frozen-submission').length,0);assert.match(text(root.querySelector('.validation-panel')),/Chờ kiểm thử chính thức/);assert.match(text(root.querySelector('[aria-current=step]')),/Kiểm thử/);
   flow={...flow,finalValidation:{...flow.finalValidation,status:'RUNNING'}};await refresh();assert.match(text(root.querySelector('.validation-panel')),/Đang kiểm thử bot chính thức/);assert.equal(root.querySelectorAll('.player-next-action').length,1);assert.ok(calls.every(call=>call.options.method==='GET'||call.options.method===undefined));
  }finally{events.dispatchEvent(new Event('pagehide'));globalThis.fetch=original;}
 });

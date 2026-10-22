@@ -1,3 +1,5 @@
+import {validationStageCodes} from '../js/tournament/validation-detail-state.js';
+const serverSteps=(state='PENDING',patch={})=>({...Object.fromEntries(validationStageCodes.map(code=>[code,state])),...patch});
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderPlayerShell} from '../js/tournament/player-shell.js';
@@ -22,7 +24,7 @@ test('player journey keeps one authorized next action from upcoming through chec
   ['VALIDATING','VIEW_FINAL_VALIDATION','WAIT_VALIDATION'],['CHECK_IN_OPEN','CHECK_IN','CHECK_IN'],
   ['READY_TO_START','OPEN_WAITING_ROOM','WAIT_START']
  ];
- for(const [phase,nextAction,type]of steps){const root=dom();const action=renderPlayerShell(root,{tournament:cup,account:{id:'u'},flow:{phase,nextAction,...(phase==='SUBMISSION_FROZEN'?{frozenSubmission:{decision:'AUTO_SUBMITTED',versionId:'v'}}:phase==='VALIDATING'?{finalValidation:{status:'QUEUED'}}:{}),canAccessWorkspace:true,canModifyWorkspace:true,checkIn:{canCheckIn:true,registrationId:'r'}},commands:{CHECK_IN:async()=>{}}});assert.equal(action.type,type,phase);assert.equal(descendants(root).filter(n=>n.tag==='a'||n.tag==='button').length,action.enabled?1:0);if(phase!=='VALIDATING')assert.equal(root.children[2].dataset.nextAction,type);}
+ for(const [phase,nextAction,type]of steps){const root=dom();const action=renderPlayerShell(root,{tournament:cup,account:{id:'u'},flow:{phase,nextAction,...(phase==='SUBMISSION_FROZEN'?{frozenSubmission:{decision:'AUTO_SUBMITTED',versionId:'v'}}:phase==='VALIDATING'?{finalValidation:{status:'QUEUED',steps:serverSteps()}}:{}),canAccessWorkspace:true,canModifyWorkspace:true,checkIn:{canCheckIn:true,registrationId:'r'}},commands:{CHECK_IN:async()=>{}}});assert.equal(action.type,type,phase);assert.equal(descendants(root).filter(n=>n.tag==='a'||n.tag==='button').length,action.enabled?1:0);if(phase!=='VALIDATING')assert.equal(root.children[2].dataset.nextAction,type);}
 });
 
 test('remote execution journey never opens a live board before replay is available; final result overrides stale coding rights',()=>{
