@@ -1,0 +1,34 @@
+.worker-ops{min-width:0;background:rgba(10,30,46,.97);border-radius:12px;padding:22px}
+.worker-ops-heading{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.worker-ops .worker-ops-heading h1{margin:0;font-size:clamp(1.35rem,3vw,1.8rem);text-shadow:none}
+.worker-row-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.worker-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.worker-ops .stat-card{padding:14px;border:1px solid #50677b;background:#10293b;box-shadow:none;margin:0}
+.worker-attention{padding:16px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.worker-attention h2{flex-basis:100%;margin:0}.worker-attention p{margin:0}
+.worker-ops .worker-filters{padding:14px;background:#10293b;border:1px solid #50677b}
+.worker-ops .worker-filters label{flex:1 1 130px}.worker-ops .worker-filters label:first-child{flex:2 1 200px}
+.worker-ops .worker-table{width:100%;white-space:normal;table-layout:fixed;background:#0c2233}
+.worker-ops .worker-table :is(thead,tbody,tr,th,td){background-image:none;background-color:#0c2233;min-width:0;overflow-wrap:anywhere}
+.worker-ops .worker-table th{background:#17354b;padding:12px 8px;font-size:.8rem}
+.worker-ops .worker-table td{padding:14px 8px;vertical-align:top;max-width:none;font-size:.9rem}
+.worker-table th:first-child{width:17%}.worker-table th:last-child{width:15%}
+.worker-table small{display:block;margin-top:6px}.worker-table strong{font-size:1rem;color:#fff}
+.worker-ops .worker-table .badge{white-space:normal}
+.worker-ops .worker-action-menu{position:relative}.worker-action-menu>summary{cursor:pointer;list-style:none;border:1px solid #778b9c;padding:8px 12px;border-radius:6px;min-height:40px}
+.worker-action-menu[open]{min-width:150px;padding:8px;background:#122e44;border:1px solid #778b9c;border-radius:6px}
+.worker-action-menu button{display:block;width:100%;text-align:start;margin:8px 0!important}
+.worker-ops .panel,.worker-ops-dialog{background:#0c2233;border:1px solid #61778a;box-shadow:none}
+.worker-ops-dialog{width:min(900px,94vw);max-width:94vw;max-height:90dvh;overflow:auto;color:#f4f1e8}
+.worker-ops-dialog dl{margin:20px 0}.worker-ops-dialog dd{min-width:0}
+.worker-ops-dialog pre{padding:14px;background:#071a28;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
+.worker-ops-dialog input,.worker-ops-dialog textarea,.worker-ops-dialog select{max-width:100%;box-sizing:border-box}
+.worker-ops-dialog>button{float:right}.worker-ops-dialog details{margin:16px 0}.worker-ops-dialog summary{cursor:pointer;padding:8px 0}
+.worker-group-create,.worker-assignment-search{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.worker-group-create label,.worker-assignment-search label{flex:1 1 240px;margin:0!important}
+.worker-group-card{margin-top:16px}.worker-group-card .worker-row-actions{margin-top:14px}
+.worker-capacity-preview,.worker-policy-saved{padding:16px;margin:16px 0;border:1px solid #4b6b82;background:#132f43;border-radius:8px}
+.worker-capacity-preview small{display:block;margin-top:12px}.worker-ops [role=tabpanel]{min-width:0}
+@media(max-width:1150px){.worker-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.worker-ops{padding:14px}.worker-ops .worker-table,.worker-ops .worker-table tbody{display:block}.worker-ops .worker-table thead{display:none}.worker-ops .worker-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border:1px solid #50677b;border-radius:8px;padding:14px;margin-bottom:14px}.worker-ops .worker-table td{display:block;padding:0;border:0;width:auto}.worker-ops .worker-table td:first-child,.worker-ops .worker-table td:last-child{grid-column:1/-1}.worker-ops .worker-table td::before{content:attr(data-label);display:block;color:#bbcad5;font-size:.75rem;margin-bottom:4px}.worker-ops .worker-table td:first-child::before{display:none}.worker-ops .worker-filters label{flex-basis:180px}}
+@media(max-width:540px){.worker-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.worker-ops-dialog{padding:16px}.worker-ops-dialog dl{grid-template-columns:minmax(0,1fr)}.worker-row-actions{align-items:stretch}.worker-ops .worker-filters label{flex-basis:100%}}

@@ -17,7 +17,7 @@ public class WorkerIdentityService {
     private static final SecureRandom RANDOM = new SecureRandom();
     public WorkerIdentityService(JdbcTemplate db, Clock clock) { this.db=db; this.clock=clock; }
     public record Token(UUID id, String registrationToken, Instant expiresAt, int remainingUses) {}
-    public record TokenView(UUID id, Instant expiresAt, int remainingUses, boolean revoked) {}
+    public record TokenView(UUID id, Instant expiresAt, int remainingUses, boolean revoked,Instant createdAt,String createdBy,String status,List<Map<String,Object>> usedBy,Instant lastUsed) {}
     public record Registration(String registrationToken, String name, String workerVersion, Integer protocolVersion) {}
     public record Identity(UUID workerId, String name, String workerVersion, int protocolVersion, String status, String approvalStatus, String trustLevel) {}
     public record Enrolled(Identity worker, String workerCredential) {}
@@ -37,8 +37,11 @@ public class WorkerIdentityService {
         db.update("insert into worker_registration_tokens(id,token_hash,remaining_uses,expires_at,created_by,created_at) values(?,?,?,?,?,?)",id,hash(raw),uses,at(end),actor,at(now));
         event("REGISTRATION_TOKEN_CREATED",id,actor); return new Token(id,raw,end,uses);
     }
+    private static Instant eventInstant(Object value){return value instanceof java.time.OffsetDateTime t?t.toInstant():((java.sql.Timestamp)value).toInstant();}
     public List<TokenView> tokens() {
-        return db.query("select id,expires_at,remaining_uses,revoked_at from worker_registration_tokens order by created_at desc limit 100",(r,n)->new TokenView(r.getObject(1,UUID.class),r.getTimestamp(2).toInstant(),r.getInt(3),r.getTimestamp(4)!=null));
+        var usage=db.queryForList("select e.resource_id,w.id,w.name,e.occurred_at from worker_identity_events e join workers w on w.id=case when e.event_type='REGISTRATION_TOKEN_USED' then cast(e.after_value as uuid) else null end where e.event_type='REGISTRATION_TOKEN_USED' and e.resource_id in (select id from worker_registration_tokens order by created_at desc limit 100) order by e.occurred_at desc");
+
+        return db.query("select t.id,t.expires_at,t.remaining_uses,t.revoked_at,t.created_at,u.username from worker_registration_tokens t left join users u on u.id=t.created_by order by t.created_at desc limit 100",(r,n)->{UUID tokenId=r.getObject("id",UUID.class);boolean revoked=r.getTimestamp("revoked_at")!=null;Instant end=r.getTimestamp("expires_at").toInstant();int uses=r.getInt("remaining_uses");return new TokenView(r.getObject("id",UUID.class),end,uses,revoked,r.getTimestamp("created_at").toInstant(),r.getString("username"),revoked?"REVOKED":!clock.instant().isBefore(end)?"EXPIRED":uses==0?"USED":"ACTIVE",usage.stream().filter(v->tokenId.equals(v.get("resource_id"))).map(v->Map.<String,Object>of("id",v.get("id"),"name",v.get("name"))).toList(),usage.stream().filter(v->tokenId.equals(v.get("resource_id"))).map(v->eventInstant(v.get("occurred_at"))).findFirst().orElse(null));});
     }
     @Transactional
     public void revokeToken(UUID id, UUID actor) {
@@ -60,6 +63,8 @@ public class WorkerIdentityService {
         var id=UUID.randomUUID(); var credential=secret("wrc_");
         db.update("insert into workers(id,name,worker_version,protocol_version,status,approval_status,trust_level,registered_at) values(?,?,?,1,'STARTING','PENDING_APPROVAL','UNTRUSTED',?)",id,body.name().strip(),body.workerVersion(),at(now));
         db.update("insert into worker_credentials(worker_id,credential_hash,created_at) values(?,?,?)",id,hash(credential),at(now));
+        UUID registrationId=db.queryForObject("select id from worker_registration_tokens where token_hash=?",UUID.class,hash(body.registrationToken()));
+        db.update("insert into worker_identity_events(id,event_type,resource_id,occurred_at,after_value) values(?,?,?,?,?)",UUID.randomUUID(),"REGISTRATION_TOKEN_USED",registrationId,at(now),id.toString());
         event("WORKER_REGISTERED",id,null); return new Enrolled(identity(id),credential);
     }
     public UUID authenticate(String credential) {

@@ -11,8 +11,8 @@ test('worker review is only available to pending machines and missing resource m
 });
 test('worker control policy offers finish-current drain and cancel-current disable, with irreversible revoke',()=>{
  const actions=row=>workerControls({approvalStatus:'APPROVED',credentialRevoked:false,...row}).map(a=>a[1]);
- assert.deepEqual(actions({status:'ONLINE'}),['DRAIN','DISABLE','REVOKE']);
- for(const status of ['DRAINING','DRAINED'])assert.deepEqual(actions({status}),['RESUME','DISABLE','REVOKE']);
+ assert.deepEqual(actions({status:'ONLINE'}),['DRAIN','DISABLE']);
+ for(const status of ['DRAINING','DRAINED'])assert.deepEqual(actions({status}),['RESUME','DISABLE']);
  assert.deepEqual(actions({status:'DISABLED'}),['RESUME','REVOKE']);
  assert.deepEqual(actions({status:'DISABLED',credentialRevoked:true}),[]);
  assert.deepEqual(actions({approvalStatus:'PENDING_APPROVAL'}),['REVOKE']);

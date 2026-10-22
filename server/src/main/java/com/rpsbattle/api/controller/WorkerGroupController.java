@@ -7,6 +7,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 @RestController
 public class WorkerGroupController {
+    @org.springframework.beans.factory.annotation.Autowired private WorkerOperationsService operations;
+    @GetMapping("/api/admin/workers/operations") public ResponseEntity<?> operations(Authentication auth,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="25") int size,@RequestParam(defaultValue="") String search,@RequestParam(defaultValue="") String status,@RequestParam(defaultValue="") String trust,@RequestParam(required=false) UUID group,@RequestParam(defaultValue="name") String sort){accounts.requireAdmin(auth);return ok(operations.workers(page,size,search,status,trust,group,sort));}
+    @GetMapping("/api/admin/workers/operations/{id}") public ResponseEntity<?> operationsDetail(Authentication auth,@PathVariable UUID id){accounts.requireAdmin(auth);return ok(operations.detail(id));}
+    @GetMapping("/api/admin/worker-assignments/tournaments") public ResponseEntity<?> tournamentOptions(Authentication auth,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="") String search){accounts.requireAdmin(auth);return ok(operations.tournamentOptions(page,search));}
+    @GetMapping("/api/admin/worker-groups/capacity") public ResponseEntity<?> groupCapacity(Authentication auth){accounts.requireAdmin(auth);return ok(Map.of("items",operations.groupCapacity()));}
+    @GetMapping("/api/admin/tournaments/{id}/worker-capacity") public ResponseEntity<?> capacity(Authentication auth,@PathVariable UUID id,@RequestParam(required=false) UUID group,@RequestParam(defaultValue="TRUSTED") String trust,@RequestParam(defaultValue="4") int requested){accounts.requireAdmin(auth);return ok(operations.capacity(id,group,trust,requested));}
     @org.springframework.beans.factory.annotation.Autowired private WorkerMetricsService metrics;
     @GetMapping("/api/admin/workers/metrics") public ResponseEntity<?> metrics(Authentication auth,@RequestParam(required=false) UUID tournamentId){accounts.requireAdmin(auth);return ok(metrics.read(tournamentId));}
     private final AccountAuthorizationService accounts;private final WorkerGroupService groups;private final RemoteRoutingService routing;private final WorkerTelemetryService telemetry;

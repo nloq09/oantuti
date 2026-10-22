@@ -72,27 +72,36 @@ public class WorkerTelemetryService {
         var rows=db.query("select * from workers where id=?",(r,n)->{
             Instant last=r.getTimestamp("last_heartbeat_at")==null?null:r.getTimestamp("last_heartbeat_at").toInstant();
             Instant first=r.getTimestamp("registered_at").toInstant();String status=r.getString("status");
-            if(!Set.of("DISABLED","DRAINING").contains(status)&&!clock.instant().isBefore((last==null?first:last).plusSeconds(30)))status="OFFLINE";
+            status=statusAt(status,last,first,clock.instant());
             return new View(id,r.getString("name"),status,r.getString("approval_status"),r.getString("trust_level"),r.getLong("revision"),r.getString("remote_address"),r.getString("worker_version"),r.getInt("protocol_version"),last,null,null,0,0,false,null,0);
         },id);
         if(rows.isEmpty())throw new AuthException("WORKER_NOT_FOUND",404);
         var w=rows.getFirst();var c=capabilitiesOf(id);
         var samples=db.query("select * from worker_heartbeats where worker_id=?",(r,n)->new Heartbeat(r.getLong("heartbeat_epoch"),r.getLong("sequence_number"),r.getInt("active_matches"),r.getInt("offered_slots"),r.getInt("active_bot_processes"),(Double)r.getObject("cpu_usage"),(Double)r.getObject("memory_usage"),r.getLong("disk_free_mb"),r.getLong("cache_size_mb"),r.getLong("cache_hits"),r.getLong("cache_misses")),id);
-        var h=samples.isEmpty()?null:samples.getFirst();int free=0;int reserved=db.queryForObject("select count(*) from match_execution_attempts where worker_id=? and active_marker=1",Integer.class,id);
+        var h=samples.isEmpty()?null:samples.getFirst();
+        int reserved=db.queryForObject("select count(*) from match_execution_attempts where worker_id=? and active_marker=1",Integer.class,id);
+        var overrides=db.queryForList("select max_matches from worker_capacity_limits where worker_id=?",id);
+        Integer adminLimit=overrides.isEmpty()?null:((Number)overrides.getFirst().get("max_matches")).intValue();
+        boolean revoked=db.queryForObject("select count(*) from worker_credentials where worker_id=? and revoked_at is not null",Integer.class,id)>0;
+        return project(w,c,h,revoked,adminLimit,reserved);
+    }
+    public static String statusAt(String status,Instant last,Instant registered,Instant now){return !Set.of("DISABLED","DRAINING").contains(status)&&!now.isBefore((last==null?registered:last).plusSeconds(30))?"OFFLINE":status;}
+    /** Shared admission projection for detail and the operations read model. */
+    public static View project(View w,Capabilities c,Heartbeat h,boolean revoked,Integer adminLimit,int reserved){
+        int free=0;
         if(w.approvalStatus().equals("APPROVED")&&Set.of("ONLINE","BUSY").contains(w.status())&&c!=null&&h!=null)free=Math.max(0,Math.min(h.freeSlots(),Math.min(c.maxConcurrentMatches()-Math.max(h.activeMatches(),reserved),(c.maxBotProcesses()-Math.max(h.activeBotProcesses(),reserved*2))/2)));
-        int budget=0;Integer adminLimit=null;
+        int budget=0;
         if(c!=null&&h!=null){
-            var overrides=db.queryForList("select max_matches from worker_capacity_limits where worker_id=?",id);
             budget=Math.min(c.maxConcurrentMatches(),Math.min(c.cpuCores(),(int)Math.max(0,(c.memoryMb()-512)/896)));
-            if(!overrides.isEmpty()){adminLimit=((Number)overrides.getFirst().get("max_matches")).intValue();budget=Math.min(budget,adminLimit);}
+            if(adminLimit!=null)budget=Math.min(budget,adminLimit);
             if(h.cpuUsage()!=null&&h.cpuUsage()>=98||h.memoryUsage()!=null&&h.memoryUsage()>=90)budget=0;
             else if(h.cpuUsage()!=null&&h.cpuUsage()>=90)budget=Math.min(budget,Math.max(1,budget/4));
             free=Math.min(free,Math.max(0,budget-Math.max(reserved,h.activeMatches())));
         }
-        boolean revoked=db.queryForObject("select count(*) from worker_credentials where worker_id=? and revoked_at is not null",Integer.class,id)>0;
         String status=w.status().equals("DRAINING")&&reserved==0?"DRAINED":w.approvalStatus().equals("APPROVED")&&Set.of("ONLINE","BUSY").contains(w.status())&&free==0?"BUSY":w.status();
         return new View(w.id(),w.name(),status,w.approvalStatus(),w.trustLevel(),w.revision(),w.remoteAddress(),w.workerVersion(),w.protocolVersion(),w.lastHeartbeatAt(),c,h,free,reserved,revoked,adminLimit,budget);
     }
+
     public Page list(int page,int size) {
         if(page<0||page>100000||size<1||size>100)throw new AuthException("INVALID_PAGE",400);
         var ids=db.query("select id from workers order by registered_at desc,id limit ? offset ?",(r,n)->r.getObject(1,UUID.class),size,(long)page*size);
