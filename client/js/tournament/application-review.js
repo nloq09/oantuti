@@ -105,5 +105,6 @@ document.querySelector('#refresh-applications').onclick=load;
 filter.onchange=applyFilters;
 filterForm.onsubmit=event=>{event.preventDefault();applyFilters();};
 document.querySelector('#clear-application-filters').onclick=()=>{if(acting)return;filters={size:25};fillFilters();filter.value='';applyFilters();};
-document.querySelector('#back-to-tournament').href=(location.pathname.startsWith('/admin/')?'/admin/tournament-detail.html?id=':'/tournament.html?id=')+encodeURIComponent(id);
+const backToTournament=document.querySelector('#back-to-tournament');
+if(backToTournament)backToTournament.href=(location.pathname.startsWith('/admin/')?'/admin/tournament-detail.html?id=':'/tournament.html?id=')+encodeURIComponent(id);
 refresh=createTournamentRefresh(readApplications,{tournamentId:id,connected:()=>root.isConnected});
