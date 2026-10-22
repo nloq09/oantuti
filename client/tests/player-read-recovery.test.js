@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {TournamentClientState} from '../js/tournament/player-state.js';
+import {TournamentClientState,playerFlowCapabilities} from '../js/tournament/player-state.js';
 import {readSnapshotKey} from '../js/tournament/read-snapshot.js';
 
 // Execute the real page reader with injected transports/rendering. Importing the entire page
@@ -12,7 +12,7 @@ assert.ok(start>=0&&end>start,'page reader must be available for the integration
 const readerSource=source.slice(start,end);
 function harness(){
  let failed=false,snapshot={id:'cup',revision:7,status:'RUNNING',matches:[]},screen='empty',renders=0,clears=0;
- const dependencies={account:null,getAccount:async()=>null,tournamentRequest:async()=>{if(failed)throw Error('NETWORK');return snapshot;},id:'cup',state:new TournamentClientState(),readSnapshotKey,flow:null,serverClock:{update(){}},timelineLobbyDestination:()=>null,playerRefresh:{dispose(){}},location:{},renderPending:false,onRender(){renders++;screen='content';},currentHumanMatch:()=>null,document:{hidden:false},tabView:{clear(){clears++;}},root:{replaceChildren(){screen='error';}},node:()=>({}),link:()=>({}),matchEntry:{}};
+ const dependencies={account:null,getAccount:async()=>null,tournamentRequest:async()=>{if(failed)throw Error('NETWORK');return snapshot;},id:'cup',state:new TournamentClientState(),playerFlowCapabilities,readSnapshotKey,flow:null,serverClock:{update(){}},timelineLobbyDestination:()=>null,playerRefresh:{dispose(){}},location:{},renderPending:false,onRender(){renders++;screen='content';},currentHumanMatch:()=>null,document:{hidden:false},tabView:{clear(){clears++;}},root:{replaceChildren(){screen='error';}},node:()=>({}),link:()=>({}),matchEntry:{}};
  const read=new Function(...Object.keys(dependencies),readerSource+';function render(){renderPending=false;onRender();}return readPlayer;')(...Object.values(dependencies));
  return{read:(isCurrent=()=>true)=>read({force:false,isCurrent,signal:new AbortController().signal}),fail(value){failed=value;},revision(value){snapshot={...snapshot,revision:value};},get screen(){return screen;},get renders(){return renders;},get clears(){return clears;}};
 }

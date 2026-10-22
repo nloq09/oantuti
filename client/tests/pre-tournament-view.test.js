@@ -16,7 +16,7 @@ test('coding screen never displays the already elapsed waiting countdown',()=>{
  const root=setup();renderTimelineRegistration(root,t,{id:'u'},{phase:'CODING_OPEN',registrationStatus:'APPROVED'},()=>{},{primaryWorkspace:true});assert.equal(descendants(root).some(n=>n.dataset.codingStarts),false);
 });
 test('registration status cards preserve reasons while never offering source or final bot selection',()=>{
- for(const registrationStatus of ['PENDING','APPROVED','WAITLISTED','REJECTED']){const root=setup();renderTimelineRegistration(root,t,{id:'u'},{phase:'REGISTRATION_REVIEW',registrationStatus,registration:{displayName:'Player',intendedLanguage:'PYTHON',reviewReason:'Reviewed'}},()=>{});assert.match(text(root),/Reviewed/);assert.equal(descendants(root).some(n=>['form','textarea','select'].includes(n.tag)),false);}
+ for(const registrationStatus of ['PENDING','APPROVED','WAITLISTED','REJECTED']){const root=setup();renderTimelineRegistration(root,t,{id:'u'},{phase:'REGISTRATION_REVIEW',registrationStatus,registration:{displayName:'Player',intendedLanguage:'PYTHON',publicMessage:'Reviewed'}},()=>{});assert.match(text(root),/Reviewed/);assert.equal(descendants(root).some(n=>['form','textarea','select'].includes(n.tag)),false);}
 });
 test('frozen source link identifies the selected immutable version and missing submissions have no fake snapshot',()=>{
  const root=setup();renderFrozenSubmission(root,t,{canAccessWorkspace:true,frozenSubmission:{versionId:'a/b',version:12,language:'CPP',decision:'AUTO_SUBMITTED',sourceHash:'s',artifactHash:'a'}});

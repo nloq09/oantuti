@@ -27,7 +27,7 @@ class TimelineReviewApiTest extends StageThreeWebFixture {
  }
  @Test void rejectionAndWaitlistKeepPrivateReasonsAndAuditAndNeverAuthorizeCode()throws Exception{
   String base=cup(),application=apply(base);review(base,application,"WAITLISTED","Private waitlist reason",revision(base),200);assertThat(request(base+"/participant-flow","GET",null,200).path("registrationStatus").asText()).isEqualTo("WAITLISTED");review(base,application,"REJECTED","Private rejection reason",revision(base),200);
-  var flow=request(base+"/participant-flow","GET",null,200);assertThat(flow.path("registration").path("reviewReason").asText()).isEqualTo("Private rejection reason");assertThat(flow.path("nextAction").asText()).isEqualTo("REGISTRATION_REJECTED");
+  var flow=request(base+"/participant-flow","GET",null,200);assertThat(flow.toString()).doesNotContain("Private rejection reason","Private waitlist reason","reviewReason","reasonCodes");assertThat(flow.path("nextAction").asText()).isEqualTo("REGISTRATION_REJECTED");
   for(String path:List.of("","/summary","/export"))assertThat(request(base+path,"GET",null,200).toString()).doesNotContain("Private rejection reason","Private waitlist reason");
   var tournament=tournaments.find(base.substring(base.lastIndexOf('/')+1));assertThat(tournament.operations.audit()).anyMatch(e->e.type().equals("PARTICIPANT_APPLICATION_REVIEWED")&&e.reason().equals("Private rejection reason")&&e.beforeValue().equals("WAITLISTED")&&e.afterValue().equals("REJECTED"));
   when(clock.instant()).thenReturn(START.plusSeconds(120));request(base+"/workspace","POST",Map.of("language","CPP"),403);

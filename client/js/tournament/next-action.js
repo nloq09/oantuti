@@ -39,7 +39,7 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
  if(t.format==='TEAM_ROUND_ROBIN'&&flow.nextAction==='OPEN_WAITING_ROOM'&&(me?.states||[]).some(s=>s.participantId&&!t.teamCompetition?.teams?.some(team=>team.roster.includes(s.participantId)&&team.roster.length>=3)))return action('MANAGE_TEAM','Hoàn tất đội của bạn','Đã check-in. Tạo hoặc gia nhập đội đủ ít nhất ba thành viên trước giờ thi.','#teams');
  switch(flow.nextAction){
   case 'REGISTER':return action('REGISTER','Đăng ký tham gia','Điền thông tin và đồng ý luật giải.','#tournament-registration-form',{tone:'primary'});
-  case 'WAIT_FOR_APPROVAL':return action('WAIT_APPROVAL','Chờ xét duyệt','Đơn đăng ký đã được gửi.');
+  case 'WAIT_FOR_APPROVAL':return action('WAIT_APPROVAL','Chờ ban tổ chức xác nhận','Đơn đăng ký đã được gửi; không cần gửi lại.');
   case 'WAIT_FOR_CODING':return action('WAIT_CODING','Chờ mở lập trình','Theo dõi giờ coding, luật và bot protocol.');
   case 'OPEN_CODE_WORKSPACE':return flow.canAccessWorkspace&&flow.canModifyWorkspace?action('OPEN_CODE','Vào phòng code','Hoàn thành, kiểm thử và nộp bot trước hạn.',code,{tone:'primary'}):action('WAIT_SERVER','Đang cập nhật quyền workspace','Chờ server xác nhận cửa sổ lập trình.');
   case 'VIEW_FROZEN_SUBMISSION':return action('VIEW_FROZEN_SUBMISSION','Xem bài đã khóa','Bài được chốt theo chính sách deadline.',content);
@@ -47,7 +47,7 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
   case 'CHECK_IN':return flow.checkIn?.canCheckIn===true?action('CHECK_IN','Check-in','Bot đã đủ điều kiện; xác nhận tham gia trước hạn.',null,{enabled:true,command:'CHECK_IN',payload:{registrationId:flow.checkIn.registrationId},deadline:flow.checkIn.closesAt,tone:'primary'}):action('WAIT_SERVER','Đang cập nhật check-in','Chờ server xác nhận điều kiện tham gia.');
   case 'OPEN_WAITING_ROOM':return action('WAIT_START','Đã check-in · Chờ bắt đầu','Theo dõi lịch, thông báo và thời gian bắt đầu.');
   case 'CHECK_IN_MISSED':return action('CHECK_IN_MISSED','Đã hết hạn check-in','Bạn chưa có suất thi đấu; xem thông báo của chủ giải.');
-  case 'REGISTRATION_REJECTED':return action('REGISTRATION_REJECTED','Đăng ký bị từ chối',flow.registration?.reviewReason||'Xem lý do xét duyệt bên dưới.');
+  case 'REGISTRATION_REJECTED':return action('REGISTRATION_REJECTED','Đăng ký bị từ chối',flow.registration?.publicMessage||'Liên hệ ban tổ chức nếu cần làm rõ điều kiện đăng ký.');
   case 'WAITLISTED':return action('WAITLISTED','Đang trong danh sách chờ','Chờ chủ giải xác nhận suất tham gia.');
   default:return action('VIEW_STATUS','Theo dõi trạng thái','Chưa có thao tác được server cấp tại thời điểm này.');
  }

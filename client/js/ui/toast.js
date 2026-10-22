@@ -1,4 +1,5 @@
 const errors = {
+  INVALID_PUBLIC_MESSAGE:"Lời nhắn cho người đăng ký tối đa 500 ký tự và không chứa ký tự điều khiển.",
   ACCOUNT_NOT_ELIGIBLE:"Tài khoản người đăng ký không còn đủ điều kiện hoạt động.",
   LANGUAGE_NOT_ALLOWED:"Ngôn ngữ của đơn không nằm trong danh sách cho phép của giải.",
   INVALID_BULK_REVIEW:"Chọn từ 1 đến 100 đơn khác nhau trên trang hiện tại.",

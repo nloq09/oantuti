@@ -16,6 +16,7 @@ export function openApplicationDetails(base,entry,{request=sessionRequest,onClos
   body.append(node('h3','Kiểm tra điều kiện'),node('p',details.accountActive?'Tài khoản đang hoạt động':'Tài khoản không còn hoạt động'),node('p',data.languageAllowed?'Ngôn ngữ nằm trong danh sách cho phép':'Ngôn ngữ không được phép'),node('p','Chính sách: '+registrationPolicyLabels[policy.approvalPolicy]),node('p',policy.requireAffiliationVerification?'Cần ban tổ chức xác minh đơn vị tự khai':'Không yêu cầu xác minh đơn vị'));
   for(const code of application.reasonCodes||[])body.append(node('p',(eligibilityReasonLabels[code]||'Cần kiểm tra')+' · '+code));
   if(application.waitlistPosition)body.append(node('p','Vị trí chờ: #'+application.waitlistPosition));
+  if(application.publicMessage)body.append(node('p','Lời nhắn cho người đăng ký: '+application.publicMessage));
   if(application.reviewReason)body.append(node('p','Quyết định gần nhất: '+application.reviewReason),node('p','Xét duyệt: '+date(application.reviewedAt)));
   body.append(node('h3','Lịch sử xét duyệt'));
   if(!data.history.length)body.append(node('p','Chưa có quyết định xét duyệt.'));

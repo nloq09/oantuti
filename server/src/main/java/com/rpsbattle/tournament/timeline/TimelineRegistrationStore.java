@@ -13,18 +13,18 @@ public class TimelineRegistrationStore {
     @PersistenceContext EntityManager db;
     private final RegistrationEligibilityService eligibility;
     public TimelineRegistrationStore(RegistrationEligibilityService eligibility){this.eligibility=eligibility;}
-    public record View(UUID id,String displayName,String intendedLanguage,String affiliation,String status,Instant registeredAt,String reviewReason,Instant reviewedAt,Long waitlistPosition) {}
-    public record Application(UUID id,String displayName,String intendedLanguage,String affiliation,String status,Instant registeredAt,String reviewReason,Instant reviewedAt,List<EligibilityReasonCode> reasonCodes,Long waitlistPosition) {}
+    public record View(UUID id,String displayName,String intendedLanguage,String affiliation,String status,Instant registeredAt,String publicMessage,Instant reviewedAt,Long waitlistPosition) {}
+    public record Application(UUID id,String displayName,String intendedLanguage,String affiliation,String status,Instant registeredAt,String reviewReason,Instant reviewedAt,List<EligibilityReasonCode> reasonCodes,Long waitlistPosition,String publicMessage) {}
     private String publicStatus(String status){return status.equals("PENDING")?"NEEDS_REVIEW":status;}
     private Long position(TimelineRegistration r){
         if(!r.status.equals("WAITLISTED")||r.waitlistOrder==null)return null;
         return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t and r.status='WAITLISTED' and r.waitlistOrder<=:order",Long.class)
                 .setParameter("t",r.tournamentId).setParameter("order",r.waitlistOrder).getSingleResult();
     }
-    private Application application(TimelineRegistration r){return new Application(r.id,r.displayName,r.intendedLanguage,r.affiliation,publicStatus(r.status),r.registeredAt,r.reviewReason,r.reviewedAt,r.eligibilityReasons.isBlank()?(r.status.equals("PENDING")?List.of(EligibilityReasonCode.MANUAL_REVIEW_REQUIRED):List.of()):Arrays.stream(r.eligibilityReasons.split(",")).map(EligibilityReasonCode::valueOf).toList(),position(r));}
+    private Application application(TimelineRegistration r){return new Application(r.id,r.displayName,r.intendedLanguage,r.affiliation,publicStatus(r.status),r.registeredAt,r.reviewReason,r.reviewedAt,r.eligibilityReasons.isBlank()?(r.status.equals("PENDING")?List.of(EligibilityReasonCode.MANUAL_REVIEW_REQUIRED):List.of()):Arrays.stream(r.eligibilityReasons.split(",")).map(EligibilityReasonCode::valueOf).toList(),position(r),r.publicReviewMessage);}
     @Transactional(readOnly=true) public boolean hasApplications(UUID tournament){return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t",Long.class).setParameter("t",tournament).getSingleResult()>0;}
     private TimelineRegistration find(UUID tournament,UUID user){return db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t and r.userId=:u",TimelineRegistration.class).setParameter("t",tournament).setParameter("u",user).getResultStream().findFirst().orElse(null);}
-    private View view(TimelineRegistration r){return r==null?null:new View(r.id,r.displayName,r.intendedLanguage,r.affiliation,publicStatus(r.status),r.registeredAt,r.reviewReason,r.reviewedAt,position(r));}
+    private View view(TimelineRegistration r){return r==null?null:new View(r.id,r.displayName,r.intendedLanguage,r.affiliation,publicStatus(r.status),r.registeredAt,r.publicReviewMessage,r.reviewedAt,position(r));}
     @Transactional(readOnly=true) public View mine(UUID tournament,UUID user){return view(find(tournament,user));}
     @Transactional(readOnly=true) public boolean reviewComplete(UUID tournament){return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t and r.status='PENDING'",Long.class).setParameter("t",tournament).getSingleResult()==0;}
 
@@ -63,7 +63,7 @@ public class TimelineRegistrationStore {
                 Object account=db.createNativeQuery("select status from users where id=:id").setParameter("id",candidate.userId).getResultStream().findFirst().orElse(null);
                 var decision=eligibility.evaluate(new RegistrationEligibilityService.Context("ACTIVE".equals(account),true,false,true,candidate.intendedLanguage,languages,candidate.affiliation,policy));
                 if(decision.decision()==EligibilityDecision.Decision.REVIEW)continue;
-                candidate.status=switch(decision.decision()){case APPROVE->"APPROVED";case REVIEW->"PENDING";default->"REJECTED";};candidate.eligibilityReasons=String.join(",",decision.reasonCodes().stream().map(Enum::name).toList());
+                candidate.status=switch(decision.decision()){case APPROVE->"APPROVED";case REVIEW->"PENDING";default->"REJECTED";};candidate.publicReviewMessage=null;candidate.eligibilityReasons=String.join(",",decision.reasonCodes().stream().map(Enum::name).toList());
                 result.add(new Promotion(candidate.id,"WAITLISTED",publicStatus(candidate.status),candidate.eligibilityReasons));if(candidate.status.equals("APPROVED"))remaining--;
             }db.flush();
         }return result;
@@ -98,13 +98,13 @@ public class TimelineRegistrationStore {
         r.displayName=name;r.intendedLanguage=language;r.affiliation=affiliation;
         r.status=switch(allocated.decision()){case APPROVE->"APPROVED";case REVIEW->"PENDING";case WAITLIST->"WAITLISTED";default->throw new IllegalStateException("Invalid allocation");};
         r.eligibilityReasons=String.join(",",allocated.reasonCodes().stream().map(Enum::name).toList());r.registeredAt=now;r.rulesAcceptedAt=now;
-        r.reviewReason=null;r.reviewedAt=null;r.reviewedBy=null;
+        r.reviewReason=null;r.publicReviewMessage=null;r.reviewedAt=null;r.reviewedBy=null;
         if(previous==null)db.persist(r);db.flush();return view(r);
     }
     @Transactional public void withdraw(UUID tournament,UUID user){
         lockCapacity(tournament);unlocked(tournament);
         var r=find(tournament,user);if(r!=null)db.refresh(r,LockModeType.PESSIMISTIC_WRITE);if(r==null||!Set.of("PENDING","APPROVED","WAITLISTED").contains(r.status))throw new AuthException("INVALID_REGISTRATION_TRANSITION",409);
-        r.status="CANCELLED";
+        r.status="CANCELLED";r.publicReviewMessage=null;
     }
     private record Search(String where,Map<String,Object> parameters) {}
     private Search search(UUID tournament,ApplicationFilter filter){
@@ -133,6 +133,9 @@ public class TimelineRegistrationStore {
         var r=db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t and r.id=:id",TimelineRegistration.class).setParameter("t",tournament).setParameter("id",id).getResultStream().findFirst().orElseThrow(()->new AuthException("APPLICATION_NOT_FOUND",404));
         var user=db.createQuery("select u.username,u.status from UserEntity u where u.id=:u",Object[].class).setParameter("u",r.userId).getSingleResult();
         return new Details(application(r),user[0].toString(),r.rulesAcceptedAt,"ACTIVE".equals(user[1].toString()));
+    }
+    @Transactional public void publicMessage(UUID tournament,UUID application,String message){
+        var row=db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t and r.id=:id",TimelineRegistration.class).setParameter("t",tournament).setParameter("id",application).getSingleResult();row.publicReviewMessage=message;db.flush();
     }
     public record ReviewChange(String before,View after) {}
     @Transactional public ReviewChange review(UUID tournament,UUID id,String next,String reason,UUID actor,Instant now,int capacity){

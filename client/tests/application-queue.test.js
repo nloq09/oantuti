@@ -28,7 +28,7 @@ test('review cards expose reasons immediately, support selection and keep untrus
  const card=renderApplicationCard(entry,{reviewOpen:true,onSelect:(entry,checked)=>selected={entry,checked},onDecision:(...args)=>decision=args,onDetails:value=>opened=value});
  assert.match(text(card),/Đơn vị tự khai cần được xác minh/);assert.equal(card.querySelector('img'),null);
  const checkbox=card.querySelector('input');checkbox.checked=true;checkbox.onchange();assert.equal(selected.entry,entry);assert.equal(selected.checked,true);
- card.querySelector('textarea').value='Checked';card.querySelector('button').click();assert.deepEqual(decision,[entry,'APPROVED','Checked']);card.querySelectorAll('button').at(-1).click();assert.equal(opened,entry);
+ card.querySelector('textarea').value='Checked';card.querySelector('button').click();assert.deepEqual(decision,[entry,'APPROVED','Checked','']);card.querySelectorAll('button').at(-1).click();assert.equal(opened,entry);
  const readOnly=renderApplicationCard(entry,{reviewOpen:false,onDetails(){}});assert.equal(readOnly.querySelectorAll('textarea,input').length,0);assert.equal(readOnly.querySelectorAll('button').length,1);
 });
 test('details drawer reads manager-only detail without navigation and renders checks and audit history safely',async()=>{

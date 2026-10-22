@@ -24,7 +24,7 @@ public class TimelineRegistrationService {
     public TimelineRegistrationService(AccountAuthorizationService a,TournamentService t,OwnedTournamentService o,TimelineRegistrationStore s,Clock c){accounts=a;tournaments=t;owned=o;store=s;clock=c;}
     public record Signup(Boolean rulesAccepted,String intendedLanguage,String affiliation,String botId,String sourceCode,String versionId) {}
     public record CheckIn(String status,UUID registrationId,Instant checkedInAt,boolean canCheckIn,Instant opensAt,Instant closesAt,Instant startsAt,long checkedInCount) {}
-    public record Flow(TournamentPhase phase,String registrationStatus,TimelineRegistrationStore.View registration,String nextAction,Instant serverNow,Instant phaseEndsAt,Instant codingOpenAt,Set<String> allowedLanguages,long revision,Instant codingCloseAt,boolean canAccessWorkspace,boolean canModifyWorkspace,String submissionStatus,com.rpsbattle.tournament.coding.CodingFreeze.View frozenSubmission,com.rpsbattle.tournament.coding.FinalValidationStore.View finalValidation,CheckIn checkIn,String participantStatus,boolean emergencyCoding,TimelineRegistrationStore.Control registrationControl) {}
+    public record Flow(TournamentPhase phase,String registrationStatus,TimelineRegistrationStore.View registration,String nextAction,Instant serverNow,Instant phaseEndsAt,Instant codingOpenAt,Set<String> allowedLanguages,long revision,Instant codingCloseAt,boolean canAccessWorkspace,boolean canModifyWorkspace,String submissionStatus,com.rpsbattle.tournament.coding.CodingFreeze.View frozenSubmission,com.rpsbattle.tournament.coding.FinalValidationStore.View finalValidation,CheckIn checkIn,String participantStatus,boolean emergencyCoding,TimelineRegistrationStore.Control registrationControl,boolean canWithdraw) {}
     private TournamentPhaseResolver.Resolution resolve(Tournament t,Instant now){if(t.timeline==null)throw new AuthException("TIMELINE_REQUIRED",409);return store.phase(t,now);}
     private void registrationOpen(Tournament t){if(resolve(t,clock.instant()).phase()!=TournamentPhase.REGISTRATION_OPEN)throw new AuthException("REGISTRATION_NOT_OPEN",409);}
     public Flow read(Authentication auth,String id){var user=accounts.requireUser(auth).id().value();var t=tournaments.find(id);synchronized(t){return flow(t,user);}}
@@ -49,7 +49,7 @@ public class TimelineRegistrationService {
         String checkStatus=checked?"CHECKED_IN":approved&&submissionStatus.equals("BOT_READY")&&entry!=null&&!now.isBefore(t.timeline.checkInCloseAt())?"MISSED":eligible?"BOT_READY":"NOT_ELIGIBLE";
         var checkIn=new CheckIn(checkStatus,entry==null?null:entry.id(),entry==null?null:entry.checkedInAt(),eligible&&open&&!checked,t.timeline.checkInOpenAt(),t.timeline.checkInCloseAt(),t.timeline.tournamentStartAt(),t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.CHECKED_IN).count());
         if(checked)action="OPEN_WAITING_ROOM";else if(checkIn.canCheckIn())action="CHECK_IN";else if(approved&&checkStatus.equals("MISSED"))action="CHECK_IN_MISSED";
-        return new Flow(phase.phase(),status,registration,action,now,phase.phaseEndsAt(),t.timeline.codingOpenAt(),t.botPolicy.allowedLanguages(),t.revision,cutoff,approved&&store.codingAllowed(t.id)&&t.status!=TournamentStatus.DRAFT&&!now.isBefore(t.timeline.codingOpenAt()),approved&&phase.phase()==TournamentPhase.CODING_OPEN,submissionStatus,frozen,validation,checkIn,participantStatus(t,user,phase.phase(),status,submissionStatus,checkIn),emergencyOpen,store.control(UUID.fromString(t.id)));
+        return new Flow(phase.phase(),status,registration,action,now,phase.phaseEndsAt(),t.timeline.codingOpenAt(),t.botPolicy.allowedLanguages(),t.revision,cutoff,approved&&store.codingAllowed(t.id)&&t.status!=TournamentStatus.DRAFT&&!now.isBefore(t.timeline.codingOpenAt()),approved&&phase.phase()==TournamentPhase.CODING_OPEN,submissionStatus,frozen,validation,checkIn,participantStatus(t,user,phase.phase(),status,submissionStatus,checkIn),emergencyOpen,store.control(UUID.fromString(t.id)),Set.of("NEEDS_REVIEW","PENDING","APPROVED","WAITLISTED").contains(status)&&(store.control(UUID.fromString(t.id)).enabled()?reviewOpen(t):phase.phase()==TournamentPhase.REGISTRATION_OPEN));
     }
     private String participantStatus(Tournament t,UUID user,TournamentPhase phase,String registration,String submission,CheckIn check){
         if(phase==TournamentPhase.DRAFT||phase==TournamentPhase.UPCOMING)return "REGISTER_NOT_OPEN";
@@ -100,7 +100,7 @@ public class TimelineRegistrationService {
         }
     }
     public record BulkEntry(UUID id,String status,Instant registeredAt) {}
-    public record BulkReview(Long revision,String decision,String reason,List<BulkEntry> items) {}
+    public record BulkReview(Long revision,String decision,String reason,List<BulkEntry> items,String publicMessage) {}
     public record BulkItem(UUID id,boolean success,String error) {}
     public record BulkResult(List<BulkItem> items,long revision,int succeeded,int failed) {}
     public BulkResult bulkReview(Authentication auth,String id,BulkReview request){
@@ -111,32 +111,40 @@ public class TimelineRegistrationService {
             if(!reviewOpen(t))throw new AuthException("APPLICATION_REVIEW_CLOSED",409);
             if(request.decision()==null||!Set.of("APPROVED","REJECTED","WAITLISTED").contains(request.decision()))throw new AuthException("INVALID_REGISTRATION_TRANSITION",400);
             String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
+            String message=publicMessage(request.publicMessage());
             if(request.items()==null||request.items().isEmpty()||request.items().size()>100)throw new AuthException("INVALID_BULK_REVIEW",400);
             var ids=new HashSet<UUID>();
             for(var entry:request.items())if(entry==null||entry.id()==null||entry.status()==null||!Set.of("NEEDS_REVIEW","APPROVED","WAITLISTED","REJECTED","CANCELLED").contains(entry.status())||entry.registeredAt()==null||!ids.add(entry.id()))throw new AuthException("INVALID_BULK_REVIEW",400);
             var results=new ArrayList<BulkItem>();
             for(var entry:request.items()){
-                try{review(auth,id,entry.id(),new Review(t.revision,request.decision(),reason),entry.status(),entry.registeredAt());results.add(new BulkItem(entry.id(),true,null));}
+                try{review(auth,id,entry.id(),new Review(t.revision,request.decision(),reason,message),entry.status(),entry.registeredAt());results.add(new BulkItem(entry.id(),true,null));}
                 catch(AuthException error){results.add(new BulkItem(entry.id(),false,error.code()));}
             }
             int succeeded=(int)results.stream().filter(BulkItem::success).count();
             return new BulkResult(List.copyOf(results),t.revision,succeeded,results.size()-succeeded);
         }
     }
-    public record Review(Long revision,String decision,String reason) {}
+    public record Review(Long revision,String decision,String reason,String publicMessage) {
+        public Review(Long revision,String decision,String reason){this(revision,decision,reason,null);}
+    }
+    private static String publicMessage(String value){
+        if(value==null||value.isBlank())return null;
+        value=value.trim();if(value.length()>500||value.chars().anyMatch(c->Character.isISOControl(c)&&c!='\n'&&c!='\t'))throw new AuthException("INVALID_PUBLIC_MESSAGE",400);return value;
+    }
     public void review(Authentication auth,String id,UUID application,Review request){review(auth,id,application,request,null,null);}
     private void review(Authentication auth,String id,UUID application,Review request,String expectedStatus,Instant expectedRegisteredAt){var actor=accounts.requireUser(auth);var t=tournaments.find(id);authorization.requireManager(auth,t);synchronized(t){
         if(request.revision()==null||request.revision()!=t.revision)throw new AuthException("STALE_TOURNAMENT_REVISION",409);
         if(!reviewOpen(t))throw new AuthException("APPLICATION_REVIEW_CLOSED",409);
         if(request.decision()==null||!Set.of("APPROVED","REJECTED","WAITLISTED").contains(request.decision()))throw new AuthException("INVALID_REGISTRATION_TRANSITION",400);
         String reason=com.rpsbattle.admin.AdminDirectoryService.reason(request.reason());
+        String message=publicMessage(request.publicMessage());
         owned.submissionMutation(t,auth,()->{
             if(request.decision().equals("APPROVED")){
                 var facts=store.details(UUID.fromString(id),application);
                 if(!facts.accountActive())throw new AuthException("ACCOUNT_NOT_ELIGIBLE",409);
                 if(!t.botPolicy.allowedLanguages().contains(facts.application().intendedLanguage()))throw new AuthException("LANGUAGE_NOT_ALLOWED",409);
             }
-            var change=store.review(UUID.fromString(id),application,request.decision(),reason,actor.id().value(),clock.instant(),t.maxParticipants,expectedStatus,expectedRegisteredAt);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_REVIEWED",actor.id().value(),application.toString(),reason,change.before(),request.decision());promote(t,application);tournaments.changed(t);});
+            var change=store.review(UUID.fromString(id),application,request.decision(),reason,actor.id().value(),clock.instant(),t.maxParticipants,expectedStatus,expectedRegisteredAt);store.publicMessage(UUID.fromString(id),application,message);TournamentAudit.append(t,"PARTICIPANT_APPLICATION_REVIEWED",actor.id().value(),application.toString(),reason,change.before(),request.decision());promote(t,application);tournaments.changed(t);});
     }}
     public record PolicyUpdate(Long revision,RegistrationPolicy policy,String reason) {}
     public void configurePolicy(Authentication auth,String id,PolicyUpdate request){

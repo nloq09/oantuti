@@ -39,7 +39,7 @@ test('approved participants wait with rules and protocol but no editor before co
  assert.ok(nodes.some(x=>x.textContent==='Phần thi lập trình chưa bắt đầu'));assert.ok(nodes.some(x=>x.href==='/bot-protocol.html'));assert.equal(nodes.some(x=>x.tag==='textarea'||String(x.href).includes('tournament-code')),false);
 });
 test('rejected participants see their reason and cannot open coding or submit another application',()=>{
- const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_REVIEW',registrationStatus:'REJECTED',registration:{displayName:'Player',intendedLanguage:'CPP',reviewReason:'Missing information'}},()=>{});const nodes=all(root);
+ const root=setup();renderTimelineRegistration(root,tournament,{username:'player'},{phase:'REGISTRATION_REVIEW',registrationStatus:'REJECTED',registration:{displayName:'Player',intendedLanguage:'CPP',publicMessage:'Missing information'}},()=>{});const nodes=all(root);
  assert.ok(nodes.some(x=>x.textContent.includes('Missing information')));assert.equal(nodes.some(x=>x.tag==='form'||String(x.href).includes('tournament-code')),false);
 });
 

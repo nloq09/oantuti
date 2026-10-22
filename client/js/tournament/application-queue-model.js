@@ -13,12 +13,13 @@ export function applicationQuery(page,status,filters={}){
  for(const key of filterKeys)if(filters[key])params.set(key,filters[key]);
  return params.toString();
 }
-export function bulkReviewPayload(decision,reason,revision,entries){
+export function bulkReviewPayload(decision,reason,revision,entries,publicMessage){
  const explanation=(reason||'').trim();
  if(!['APPROVED','WAITLISTED','REJECTED'].includes(decision))throw Error('INVALID_REGISTRATION_TRANSITION');
  if(!explanation||explanation.length>500)throw Error('REASON_REQUIRED');
  if(!entries.length||entries.length>100||new Set(entries.map(entry=>entry.id)).size!==entries.length)throw Error('INVALID_BULK_REVIEW');
- return {decision,reason:explanation,revision,items:entries.map(({id,status,registeredAt})=>({id,status,registeredAt}))};
+ const message=(publicMessage||'').trim();if(message.length>500)throw Error('INVALID_PUBLIC_MESSAGE');
+ return {decision,reason:explanation,revision,...(message?{publicMessage:message}:{}),items:entries.map(({id,status,registeredAt})=>({id,status,registeredAt}))};
 }
 export function localDateTime(iso){
  if(!iso||!Number.isFinite(Date.parse(iso)))return '';

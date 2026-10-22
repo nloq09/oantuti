@@ -1,6 +1,6 @@
-# Registration pipeline — nhóm 1–6
+# Registration pipeline — nhóm 1–7
 
-Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách; nhóm 5 bổ sung dashboard cho Organizer; nhóm 6 bổ sung hàng xét duyệt, bộ lọc và bulk review. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
+Ngày: 21/10/2026. Các phần bên dưới ghi nhận từng mốc triển khai; nhóm 4 bổ sung promotion, đóng nhận đơn và chốt danh sách; nhóm 5 bổ sung dashboard cho Organizer; nhóm 6 bổ sung hàng xét duyệt, bộ lọc và bulk review; nhóm 7 hoàn thiện trạng thái/thông báo cho Player và tách lời nhắn công khai khỏi ghi chú nội bộ. Tiếp tục dừng sau mỗi nhóm theo mục 52–53 của yêu cầu.
 
 ## Luồng thực tế đã đối chiếu
 
@@ -412,3 +412,83 @@ Không có migration mới; giữ schema V40. Không mở rộng nhóm 7 (Player
 - PASS bootJar, kiểm tra cú pháp application-review.js và git diff --check. Server đã khởi động lại tại localhost:8080; HTTP 200 cho HTML/bulk controller/details module mới.
 - Migration tests: SKIPPED (schema không đổi).
 - Kiểm tra trực quan bằng trình duyệt: SKIPPED (Browser bị tắt trong Work settings). Không coi DOM/CSS tests là kiểm tra hình ảnh.
+
+
+## Nhóm 7 — Trạng thái đăng ký Player và thông báo cá nhân
+
+Ngày triển khai: 22/10/2026. Không sửa GameEngine, không mở rộng sang nhóm 8.
+
+### Trạng thái và thao tác của Player
+
+- Gửi đơn hiển thị “Đang xử lý đăng ký…” đúng lúc POST đang chờ; khóa gửi lặp, không dựng trạng thái PENDING giả. Khi server trả kết quả, card chuyển thẳng sang APPROVED / NEEDS_REVIEW / WAITLISTED trước khi tải lại toàn trang dữ liệu.
+- APPROVED xác nhận đã có suất, phân biệt đang chờ roster lock và đang chờ coding. NEEDS_REVIEW/PENDING nói rõ đang chờ ban tổ chức xác nhận, không yêu cầu gửi lại. WAITLISTED hiển thị vị trí hợp lệ của chính người chơi, không tự dựng #0 hoặc hứa chắc được đôn. REJECTED hiển thị lời nhắn cho người chơi nếu có; không mở coding hoặc gửi lại. CANCELLED cho phép đăng ký lại khi cửa đăng ký còn mở.
+- Khi đã lock hoặc qua hạn review, waitlist/needs-review không còn nói sẽ được xác nhận trong tương lai; giải thích chưa có suất chính thức và hướng liên hệ ban tổ chức.
+- Flow bổ sung `canWithdraw`, tính bằng thời gian/trạng thái/roster control của server. Đóng admission sớm vẫn có thể rút trước coding nếu chưa lock. Client không tự dùng đồng hồ máy để cấp quyền hủy; cập nhật capability này ngay cả khi phase và revision không đổi.
+- Giao diện trạng thái chỉ render plain text, lời nhắn dài có ngắt dòng; trạng thái chấp nhận/từ chối có màu và tiêu đề riêng.
+
+### Tách ghi chú nội bộ khỏi lời nhắn công khai
+
+Trước nhóm này, personal View trả reviewReason dù reason còn được dùng làm ghi chú/audit cho Organizer. Luồng mới tách rõ:
+
+- `reason` / `review_reason`: bắt buộc cho quyết định, chỉ Organizer/admin và audit quản lý được đọc.
+- `publicMessage` / `public_review_message`: tùy chọn, tối đa 500 ký tự, dùng để giải thích cho chính người đăng ký. Không tự sao chép reason nếu thiếu lời nhắn.
+- Form xét duyệt đơn và confirm bulk có hai trường được gắn nhãn rõ. Body single review và bulk review thêm `publicMessage` tùy chọn; API cũ không gửi trường này vẫn hoạt động.
+- Personal registration DTO bỏ `reviewReason`, thay bằng `publicMessage`. Không có fallback UI đọc reviewReason từ dữ liệu cũ. Đây là thay đổi có chủ đích của projection cá nhân để loại ghi chú nội bộ khỏi payload Player.
+- Application/Details DTO cho manager vẫn giữ reviewReason và thêm publicMessage để biết nội dung đang gửi cho người đăng ký. Next-action của Player dùng publicMessage.
+- Quyết định mới không có publicMessage sẽ xóa lời nhắn trước. Withdraw/rejoin và auto-promotion cũng xóa lời nhắn cũ để không giữ lý do sai trạng thái. Ghi chú và audit nội bộ cũ được giữ nguyên.
+
+### Thông báo
+
+- `PARTICIPANT_APPLICATION_SUBMITTED` được chiếu thành thông báo cá nhân theo kết quả cuối: được chấp nhận, chờ xác nhận hoặc vào waitlist. Không tạo một notification PENDING trung gian cho auto approval.
+- Review, waitlist promotion/rejection tiếp tục chỉ gửi cho người sở hữu đơn. Bổ sung thông báo hủy đơn. Các audit hủy cũ gắn target với tournament ID được nhận diện bằng actor của chính sự kiện; không gửi cho người đăng ký khác.
+- Projection notification không chứa reason nội bộ, reason codes, public message của người khác hoặc source bot. Link dẫn về trang trạng thái để đọc dữ liệu hiện hành.
+- Dùng ID/sequence audit bền vững, cơ chế đọc/đánh dấu đã đọc hiện hành. NotificationCursor tránh toast lặp lại; reload không tự tạo sự kiện mới.
+
+### API/DTO và migration nhóm 7
+
+- Personal Flow thêm boolean `canWithdraw`; personal registration View thay `reviewReason` bằng `publicMessage`.
+- POST `/participant-applications/{application}/review` và `/participant-applications/bulk-review`: thêm `publicMessage` tùy chọn, validate length/control characters trước mutation. Reason nội bộ vẫn bắt buộc.
+- Manager Application DTO thêm publicMessage; các URL API giữ nguyên. Không thêm endpoint Player riêng.
+- Migration **V41__application_public_message.sql** thêm nullable VARCHAR(500) `public_review_message` vào `tournament_timeline_registrations`. Không backfill từ review_reason; không thay status/roster hoặc biến ghi chú cũ thành nội dung công khai.
+
+
+### Kiểm chứng nhóm 7
+
+- PASS **79/79 backend/migration tests** theo XML mới nhất của từng class: RegistrationPipelineApiTest (19), RegistrationQueueApiTest (7), TimelineReviewApiTest (4), TimelineRegistrationApiTest (4), TimelineNotificationApiTest (9), FlywayMigrationTest (36). Không skipped/failure trong kết quả cuối.
+- Migration test kiểm tra nâng V40 → V41 giữ nguyên ghi chú nội bộ, không backfill public message; các đường nâng cấp và constraint cũ vẫn PASS.
+- API tests kiểm tra public/private message, validation trước bulk mutation, xóa lời nhắn khi quyết định mới không gửi lời nhắn, notification gửi đơn/hủy riêng từng người, read cursor ổn định, canWithdraw trước/sau admission close, roster lock và coding deadline. Waitlist promotion/ownership giữ các kiểm thử nhóm trước.
+- Lượt đầu phát hiện thiếu notification hủy vì event target là tournament ID; đã sửa projection nhận diện đúng actor và kiểm tra người khác không nhận sự kiện đó. Lượt chạy lại gặp race của Mockito Clock với scheduler; thay riêng clock của RegistrationPipelineApiTest bằng primary test clock có Instant volatile, chạy lại cả class và TimelineNotificationApiTest PASS. Không thay clock production hoặc bỏ qua test lỗi.
+- PASS **352/352 client tests**. Kiểm tra các trạng thái Player, không render private reason/reason codes, plain-text public message, vị trí waitlist hợp lệ, hết quyền hủy khi cùng phase/revision, gửi một lần và render final server decision trước khi refresh hoàn tất, payload public/private riêng và notification deduplication.
+- PASS bootJar, kiểm tra cú pháp player-detail.js/timeline-registration.js, git diff --check. Server đã khởi động lại trên localhost:8080 với V41; HTTP 200 cho các module trạng thái/thông báo mới.
+- Kiểm tra trực quan bằng Browser: SKIPPED (Browser bị tắt trong Work settings). DOM/component tests không thay thế xác nhận layout bằng hình ảnh.
+
+### File thêm/sửa nhóm 7
+
+- `client/css/tournament-mode.css`
+- `client/js/tournament/application-details.js`
+- `client/js/tournament/application-queue-model.js`
+- `client/js/tournament/application-review-card.js`
+- `client/js/tournament/application-review-model.js`
+- `client/js/tournament/application-review.js`
+- `client/js/tournament/next-action.js`
+- `client/js/tournament/notifications.js`
+- `client/js/tournament/organizer-decision-dialog.js`
+- `client/js/tournament/player-detail.js`
+- `client/js/tournament/player-state.js`
+- `client/js/tournament/timeline-registration-model.js`
+- `client/js/tournament/timeline-registration.js`
+- `client/js/ui/toast.js`
+- `client/tests/application-queue.test.js`
+- `client/tests/player-read-recovery.test.js`
+- `client/tests/player-registration-status.test.js`
+- `client/tests/pre-tournament-view.test.js`
+- `client/tests/timeline-registration.test.js`
+- `docs/TOURNAMENT-REGISTRATION-PIPELINE.md`
+- `server/src/main/java/com/rpsbattle/tournament/TournamentNotificationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistration.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationService.java`
+- `server/src/main/java/com/rpsbattle/tournament/timeline/TimelineRegistrationStore.java`
+- `server/src/main/resources/db/migration/V41__application_public_message.sql`
+- `server/src/test/java/com/rpsbattle/persistence/FlywayMigrationTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/RegistrationPipelineApiTest.java`
+- `server/src/test/java/com/rpsbattle/tournament/TimelineReviewApiTest.java`

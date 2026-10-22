@@ -39,17 +39,17 @@ function renderBulkControls(){
  all.onchange=()=>{selected.clear();if(all.checked)for(const entry of entries)selected.set(entry.id,entry);for(const control of root.querySelectorAll('[data-application-selection]'))control.checked=selected.has(control.dataset.applicationSelection);renderBulkControls();};label.prepend(all);bulkRoot.append(label,node('p',`Đã chọn ${selected.size} đơn. Lựa chọn chỉ áp dụng cho trang hiện tại.`));
  const actions=node('div',undefined,'actions');for(const [decision,title]of Object.entries(decisionLabels)){const button=node('button',title+' các đơn đã chọn');button.type='button';button.disabled=!selected.size||acting;button.onclick=()=>{
   if(acting||!selected.size)return;const entries=[...selected.values()],revision=snapshotRevision;
-  bulkDialog=confirmOrganizerDecision(title+' '+entries.length+' đơn',`Áp dụng cho ${entries.length} đơn đã chọn. Server kiểm tra từng đơn, số suất và trạng thái mới nhất. Các đơn lỗi sẽ được báo riêng.`,async reason=>{
-   const payload=bulkReviewPayload(decision,reason,revision,entries);acting=true;disableSnapshot();setFiltersDisabled(true);
+  bulkDialog=confirmOrganizerDecision(title+' '+entries.length+' đơn',`Áp dụng cho ${entries.length} đơn đã chọn. Server kiểm tra từng đơn, số suất và trạng thái mới nhất. Các đơn lỗi sẽ được báo riêng.`,async (reason,publicMessage)=>{
+   const payload=bulkReviewPayload(decision,reason,revision,entries,publicMessage);acting=true;disableSnapshot();setFiltersDisabled(true);
    try{const result=await sessionRequest(base+'/participant-applications/bulk-review',payload);bulkResult.replaceChildren(node('p',`${result.succeeded} đơn đã xử lý · ${result.failed} đơn không xử lý được.`));for(const item of result.items.filter(item=>!item.success)){const entry=entries.find(entry=>entry.id===item.id);bulkResult.append(node('p',(entry?.displayName||'Đơn đăng ký')+': '+errorText(item.error)));}clearSelection();}
    catch(error){bulkResult.replaceChildren(node('p',errorText(error.message)+' Hãy cập nhật trước khi thử lại; không tự gửi lại yêu cầu.'));throw error;}
    finally{acting=false;setFiltersDisabled(false);}
    await load();
-  },{danger:decision==='REJECTED'});
+  },{danger:decision==='REJECTED',publicMessage:true});
  };actions.append(button);}bulkRoot.append(actions);
 }
-async function decide(entry,decision,explanation){
- if(acting)return;let payload;try{payload=reviewPayload(decision,explanation,snapshotRevision);}catch(error){notice.textContent=errorText(error.message);return;}
+async function decide(entry,decision,explanation,publicMessage){
+ if(acting)return;let payload;try{payload=reviewPayload(decision,explanation,snapshotRevision,publicMessage);}catch(error){notice.textContent=errorText(error.message);return;}
  acting=true;disableSnapshot();setFiltersDisabled(true);bulkResult.replaceChildren();
  try{await sessionRequest(base+'/participant-applications/'+encodeURIComponent(entry.id)+'/review',payload);clearSelection();}
  catch(error){notice.textContent=errorText(error.message)+' Hãy cập nhật danh sách trước khi thử lại.';return;}
