@@ -8,6 +8,6 @@ import org.springframework.web.bind.annotation.*;
 public class FinalValidationController {
  private final FinalValidationService service;
  public FinalValidationController(FinalValidationService service){this.service=service;}
- @GetMapping public ResponseEntity<?> dashboard(Authentication auth,@PathVariable String id,@RequestParam(defaultValue="0") int page,@RequestParam(required=false) String status){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.dashboard(auth,id,page,status));}
+ @GetMapping public ResponseEntity<?> dashboard(Authentication auth,@PathVariable String id,@RequestParam(defaultValue="0") int page,@RequestParam(required=false) String status,@RequestParam(required=false) String view,@RequestParam(required=false) String search,@RequestParam(defaultValue="false") boolean history){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body("dashboard".equals(view)?service.dashboardView(auth,id,page,status,search,history):service.dashboard(auth,id,page,status));}
  @PostMapping("/{validation}/{action}") public ResponseEntity<?> action(Authentication auth,@PathVariable String id,@PathVariable UUID validation,@PathVariable String action,@RequestBody FinalValidationService.Action request){service.action(auth,id,validation,action,request);return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(Map.of("status","OK"));}
 }

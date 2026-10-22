@@ -8,6 +8,25 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import static org.assertj.core.api.Assertions.*;
 
 class OrganizerMetricsApiTest extends StageThreeWebFixture {
+ @Autowired com.rpsbattle.tournament.coding.FinalValidationStore validationStore;
+ @Test void validationDashboardUsesCurrentSummaryAndServerSearchIndependentOfHistoryAndFilters()throws Exception{
+  String base=cup();UUID t=tid(base),a=person(),b=person(),c=person();for(UUID u:List.of(a,b,c))application(t,u,"APPROVED");
+  db.update("update users set username='validation_alpha' where id=?",a);db.update("update tournament_timeline_registrations set display_name='Unique Alpha' where user_id=? and tournament_id=?",a,t);
+  validation(t,a,100,"FAILED",true,false,"[]");validation(t,a,200,"PASSED",true,false,"[]");validation(t,b,200,"INFRA_ERROR",false,false,"[]");validation(t,c,200,"FAILED",true,true,"[]");
+  assertThat(validationStore.dashboardPage(t.toString(),0,null,"",false).total()).isEqualTo(3);
+  var all=request(base+"/final-validations?view=dashboard","GET",null,200);assertThat(all.path("total").asInt()).isEqualTo(3);assertThat(all.path("summary").path("total").asInt()).isEqualTo(3);assertThat(all.path("summary").path("passed").asInt()).isEqualTo(1);assertThat(all.path("summary").path("infraError").asInt()).isEqualTo(1);assertThat(all.path("summary").path("failed").asInt()).isZero();assertThat(all.path("summary").path("emergencyOpen").asInt()).isEqualTo(1);
+  var alpha=request(base+"/final-validations?view=dashboard&search=VALIDATION_ALPHA","GET",null,200);assertThat(alpha.path("total").asInt()).isEqualTo(1);assertThat(alpha.path("items").get(0).path("displayName").asText()).isEqualTo("Unique Alpha");assertThat(alpha.path("summary")).isEqualTo(all.path("summary"));
+  var history=request(base+"/final-validations?view=dashboard&history=true&search=unique&status=FAILED","GET",null,200);assertThat(history.path("total").asInt()).isEqualTo(1);assertThat(history.path("history").asBoolean()).isTrue();assertThat(history.path("summary")).isEqualTo(all.path("summary"));
+  assertThat(request(base+"/final-validations?view=dashboard&search=%25","GET",null,200).path("total").asInt()).isZero();assertThat(request(base+"/final-validations?view=dashboard&search=%27%20or%201%3D1","GET",null,200).path("total").asInt()).isZero();
+  assertThat(all.toString()).doesNotContain("PRIVATE_SOURCE","PRIVATE_LOG","sourceCode","buildLog");
+ }
+ @Test void validationDashboardPaginatesAfterFilterAndKeepsManagerAuthorization()throws Exception{
+  String base=cup();UUID t=tid(base);for(int i=0;i<27;i++)validation(t,person(),100,"FAILED",true,false,"[]");validation(t,person(),100,"RUNNING",false,false,"[]");
+  var page=request(base+"/final-validations?view=dashboard&status=FAILED&page=1","GET",null,200);assertThat(page.path("total").asInt()).isEqualTo(27);assertThat(page.path("items").size()).isEqualTo(2);assertThat(page.path("summary").path("total").asInt()).isEqualTo(28);assertThat(page.path("summary").path("running").asInt()).isEqualTo(1);
+  request(base+"/final-validations?view=dashboard&page=-1","GET",null,400);request(base+"/final-validations?view=dashboard&status=HACK","GET",null,400);request(base+"/final-validations?view=dashboard&search="+"x".repeat(101),"GET",null,400);
+  String other=cup();assertThat(request(other+"/final-validations?view=dashboard","GET",null,200).path("total").asInt()).isZero();
+  request("/api/auth/logout","POST",Map.of(),200);request(base+"/final-validations?view=dashboard","GET",null,401);account=null;loginAccount();request(base+"/final-validations?view=dashboard","GET",null,403);
+ }
  @Autowired JdbcTemplate db;
  String cup()throws Exception{loginAccount();var t=request("/api/tournaments","POST",Map.of("name","Metrics scope","format","SINGLE_ELIMINATION","maxParticipants",64,"botPolicy",Map.of("submissionMode","BOTH")),201);String base="/api/tournaments/"+t.path("id").asText();request(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",TournamentTimelineTest.timeline()),200);return base;}
  UUID tid(String base){return UUID.fromString(base.substring(base.lastIndexOf('/')+1));}

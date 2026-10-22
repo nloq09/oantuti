@@ -36,6 +36,24 @@ public class FinalValidationStore {
   var q=db.createQuery("select f from FinalValidation f,CodingFreeze c where f.freezeId=c.id and f.tournamentId=:t and f.historyJson not like '%TIMELINE_EXTENDED%' and not exists(select n.id from CodingFreeze n where n.tournamentId=f.tournamentId and n.userId=f.userId and n.codingCloseAt>c.codingCloseAt) and "+state+" order by f.createdAt desc,f.id",FinalValidation.class).setParameter("t",UUID.fromString(t)).setParameter("now",clock.instant());if(!status.equals("EMERGENCY_OPEN"))q.setParameter("status",status);
   return q.setFirstResult(page*25).setMaxResults(25).getResultStream().map(this::view).toList();
  }
+ public record DashboardPage(List<View> items,long total,int page,int size,boolean history,Map<String,Long> summary){}
+ /** Current-cutoff summary is independent of filters and historical browsing. Only a bounded page loads details. */
+ @Transactional(readOnly=true,isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+ public DashboardPage dashboardPage(String tournament,int page,String status,String search,boolean history){
+  UUID t=UUID.fromString(tournament);Instant now=clock.instant();
+  String current=" and f.history_json not like '%TIMELINE_EXTENDED%' and not exists(select 1 from tournament_coding_freezes n where n.tournament_id=f.tournament_id and n.user_id=f.user_id and n.coding_close_at>c.coding_close_at)";
+  String state="case when f.emergency_deadline>:now then 'EMERGENCY_OPEN' else f.status end";
+  String from=" from tournament_final_validations f join tournament_coding_freezes c on c.id=f.freeze_id join users u on u.id=f.user_id left join tournament_timeline_registrations r on r.tournament_id=f.tournament_id and r.user_id=f.user_id where f.tournament_id=:t";
+  String where=(history?"":current)+" and (position(:search in lower(u.username))>0 or position(:search in lower(coalesce(r.display_name,u.display_name)))>0)"+(status==null?"":" and "+state+"=:status");
+  var count=db.createNativeQuery("select count(*)"+from+where).setParameter("t",t).setParameter("search",search);if(status!=null)count.setParameter("now",now).setParameter("status",status);
+  long total=((Number)count.getSingleResult()).longValue();
+  var ids=db.createNativeQuery("select f.id"+from+where+" order by f.created_at desc,f.id",UUID.class).setParameter("t",t).setParameter("search",search);if(status!=null)ids.setParameter("now",now).setParameter("status",status);
+  List<View> items=new ArrayList<>();for(Object id:ids.setFirstResult(page*25).setMaxResults(25).getResultList())items.add(view(require(tournament,(UUID)id)));
+  var summary=new LinkedHashMap<String,Long>();for(String key:List.of("total","queued","running","passed","failed","infraError","emergencyOpen","unapplied"))summary.put(key,0L);
+  var rows=db.createNativeQuery("select validation_state,count(*),sum(unapplied) from (select "+state+" as validation_state,case when f.applied_at is null and f.status in ('PASSED','FAILED') then 1 else 0 end as unapplied"+from+current+") snapshot group by validation_state").setParameter("t",t).setParameter("now",now).getResultList();
+  for(Object value:rows){Object[] row=(Object[])value;long n=((Number)row[1]).longValue();summary.merge("total",n,Long::sum);String key=switch(row[0].toString()){case "INFRA_ERROR"->"infraError";case "EMERGENCY_OPEN"->"emergencyOpen";default->row[0].toString().toLowerCase(Locale.ROOT);};summary.merge(key,n,Long::sum);summary.merge("unapplied",((Number)row[2]).longValue(),Long::sum);}
+  return new DashboardPage(List.copyOf(items),total,page,25,history,Map.copyOf(summary));
+ }
  /** Latest frozen submissions awaiting a conclusive, applied validation must not become no-shows. */
  @Transactional(readOnly=true) public boolean blocksTimelineStart(String tournament){
   var count=(Number)db.createNativeQuery("select count(*) from tournament_coding_freezes c join tournament_timeline_registrations a on a.tournament_id=c.tournament_id and a.user_id=c.user_id join users u on u.id=c.user_id where c.tournament_id=:t and c.decision<>'MISSING' and a.status='APPROVED' and u.status='ACTIVE' and not exists(select 1 from tournament_coding_freezes newer where newer.tournament_id=c.tournament_id and newer.user_id=c.user_id and newer.coding_close_at>c.coding_close_at) and not exists(select 1 from tournament_final_validations f where f.freeze_id=c.id and f.applied_at is not null and (f.status='PASSED' or (f.status='FAILED' and (f.emergency_deadline is null or f.emergency_deadline<=:now))))").setParameter("t",UUID.fromString(tournament)).setParameter("now",clock.instant()).getSingleResult();return count.longValue()>0;
