@@ -1,3 +1,4 @@
+import {resolvePlayerTournamentViewState} from './player-view-state.js';
 import {statusBadge,phaseFacts,phaseCountdown,renderPhaseRules,renderPhaseTimeline} from './phase-view.js';
 import {checkInScreen,renderTimelineCheckIn} from './timeline-check-in.js';
 import {node,link,date} from './player-dom.js';
@@ -9,9 +10,10 @@ import {renderFrozenSubmission} from './frozen-submission.js';
 import {renderFinalValidation} from './final-validation-view.js';
 
 export function renderTimelineRegistration(root,t,account,flow,refresh,options={}){
- if(account&&checkInScreen(flow)){renderTimelineCheckIn(root,t,flow,refresh,options);return;}
- if(account&&flow.finalValidation){renderFinalValidation(root,t,flow);return;}
- if(account&&flow.registrationStatus==='APPROVED'&&['FREEZE_PENDING','SUBMISSION_MISSING','SUBMISSION_FROZEN'].includes(flow.submissionStatus)){renderFrozenSubmission(root,t,flow);return;}
+ if(account&&['CHECK_IN_OPEN','READY_TO_START'].includes(flow.phase)&&checkInScreen(flow)){renderTimelineCheckIn(root,t,flow,refresh,options);return;}
+ const view=resolvePlayerTournamentViewState({tournament:t,flow});
+ if(account&&view.showValidation){renderFinalValidation(root,t,flow);return;}
+ if(account&&flow.registrationStatus==='APPROVED'&&view.showSubmission){renderFrozenSubmission(root,t,flow);return;}
  const panel=node('section',undefined,'panel timeline-registration-panel');root.append(panel);
  if(flow.phase==='DRAFT'){panel.append(node('h2','Giải chưa công bố đăng ký'));return;}
  if(flow.phase==='UPCOMING'){

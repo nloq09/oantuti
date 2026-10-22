@@ -10,11 +10,11 @@ test('global coding and check-in phases never manufacture personal permission',(
 });
 test('server decisions map one primary action for registration coding freeze validation and check-in',()=>{
  const cases=[['REGISTER','REGISTER'],['WAIT_FOR_APPROVAL','WAIT_APPROVAL'],['WAIT_FOR_CODING','WAIT_CODING'],['VIEW_FROZEN_SUBMISSION','VIEW_FROZEN_SUBMISSION'],['VIEW_FINAL_VALIDATION','WAIT_VALIDATION'],['OPEN_WAITING_ROOM','WAIT_START'],['CHECK_IN_MISSED','CHECK_IN_MISSED'],['WAITLISTED','WAITLISTED']];
- for(const [nextAction,type]of cases)assert.equal(resolve({phase:'REGISTRATION_OPEN',nextAction}).type,type);
+ for(const [nextAction,type]of cases)assert.equal(resolve({phase:nextAction==='VIEW_FROZEN_SUBMISSION'?'SUBMISSION_FROZEN':'REGISTRATION_OPEN',nextAction,...(nextAction==='VIEW_FROZEN_SUBMISSION'?{frozenSubmission:{decision:'AUTO_SUBMITTED',versionId:'v'}}:{})}).type,type);
  assert.equal(resolve({phase:'CODING_OPEN',nextAction:'OPEN_CODE_WORKSPACE',canAccessWorkspace:true,canModifyWorkspace:true}).href,'/tournament-code.html?id=cup%2Fa');
  const check=resolve({nextAction:'CHECK_IN',checkIn:{canCheckIn:true,registrationId:'r'}});assert.equal(check.command,'CHECK_IN');assert.deepEqual(check.payload,{registrationId:'r'});
- assert.equal(resolve({nextAction:'VIEW_FINAL_VALIDATION',finalValidation:{status:'FAILED'}}).type,'VIEW_VALIDATION_FAILURE');
- assert.match(resolve({nextAction:'VIEW_FINAL_VALIDATION',finalValidation:{status:'INFRA_ERROR'}}).description,/hạ tầng/);
+ assert.equal(resolve({phase:'VALIDATING',nextAction:'VIEW_FINAL_VALIDATION',finalValidation:{status:'FAILED'}}).type,'VIEW_VALIDATION_FAILURE');
+ assert.match(resolve({phase:'VALIDATING',nextAction:'VIEW_FINAL_VALIDATION',finalValidation:{status:'INFRA_ERROR'}}).description,/hạ tầng/);
 });
 test('running action requires an assigned local room and suppresses stale terminal participant actions',()=>{
  const base={tournament:{...tournament,status:'RUNNING'},account},item={status:'PLAYING',registration:{id:'r',controllerType:'HUMAN'},currentMatch:{id:'m',onlineMatchId:'room'}};

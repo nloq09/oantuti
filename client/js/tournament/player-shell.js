@@ -1,3 +1,4 @@
+import {resolvePlayerTournamentViewState} from './player-view-state.js';
 import {node,link} from './player-dom.js';
 import {renderTournamentHeader} from './tournament-header.js';
 import {renderProgressStepper} from './progress-stepper.js';
@@ -18,9 +19,9 @@ export function renderPlayerNextActionCard(root,action,commands={}){
  root.append(card);return card;
 }
 export function renderTournamentShell(root,{tournament,flow}){
- renderTournamentHeader(root,tournament,flow);
+ const view=resolvePlayerTournamentViewState({tournament,flow});renderTournamentHeader(root,tournament,flow,{audience:'player',phase:tournament.timeline?view.phase:tournamentPhase(tournament,flow),phaseLabel:tournament.timeline?view.phaseLabel:null});
  const optionalSteps=tournament.timeline?[]:[1,2,...(tournament.checkInRequired?[]:[3])];
- renderProgressStepper(root,tournamentPhase(tournament,flow),{optionalSteps,failedStep:flow?.submissionStatus==='VALIDATION_FAILED'?2:null});
+ renderProgressStepper(root,tournament.timeline?view.phase:tournamentPhase(tournament,flow),{optionalSteps});
 }
 export function renderPlayerShell(root,{tournament,flow,me,account,commands}){
  renderTournamentShell(root,{tournament,flow});

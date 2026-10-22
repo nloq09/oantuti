@@ -75,7 +75,7 @@ public class TimelineRegistrationStore {
         if(rows.isEmpty())throw new AuthException("TOURNAMENT_NOT_FOUND",404);
         return ((Number)rows.getFirst()).intValue();
     }
-    private long approvedCount(UUID tournament){return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t and r.status='APPROVED'",Long.class).setParameter("t",tournament).getSingleResult();}
+    @Transactional(readOnly=true) public long approvedCount(UUID tournament){return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t and r.status='APPROVED'",Long.class).setParameter("t",tournament).getSingleResult();}
     private long nextWaitlistOrder(UUID tournament){return Math.addExact(db.createQuery("select coalesce(max(r.waitlistOrder),0) from TimelineRegistration r where r.tournamentId=:t",Long.class).setParameter("t",tournament).getSingleResult(),1L);}
 
     @Transactional public View register(UUID tournament,UUID user,String name,String language,String affiliation,int capacity,Instant now){

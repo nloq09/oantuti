@@ -1,13 +1,14 @@
+import {resolvePlayerTournamentViewState,playerAction as action} from './player-view-state.js';
 import {activeMatch,isRemoteMatch,matchExecutionState} from './match-execution.js';
 import {tournamentRoute,playerTournamentRoute,actionDestination} from './tournament-routes.js';
 import {isKnockout,roundLabel} from './bracket-renderer.js';
 // Presentation of server decisions only. These links never grant admission or workspace rights.
-const action=(type,label,description,href=null,extra={})=>({type,label,href,enabled:Boolean(href),tone:'neutral',description,reasonDisabled:href?null:description,...extra});
+
 export function tournamentNextAction({tournament:t,flow,me,account}){
  const detail=tournamentRoute(t.id),code=tournamentRoute(t.id,'code'),content='#tournament-phase-content',competition=playerTournamentRoute(t);
  if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Bạn có thể tìm giải khác.','/tournaments.html');
  if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem thành tích, bảng điểm và replay.',detail+'#ranking');
- if(['DRAFT','UPCOMING'].includes(flow?.phase)||t.status==='DRAFT')return action('VIEW_RULES','Xem luật','Theo dõi lịch; đăng ký chưa mở.','#tournament-rules');
+ if(flow?.phase?['DRAFT','UPCOMING'].includes(flow.phase):t.status==='DRAFT')return action('VIEW_RULES','Xem luật','Theo dõi lịch; đăng ký chưa mở.','#tournament-rules');
  if(!account)return action('LOGIN','Đăng nhập','Đăng nhập để xem việc cần làm của tài khoản.','/login.html?next='+encodeURIComponent(detail));
  const states=me?.states||[];
  if(['RUNNING','PAUSED','RECOVERY_REQUIRED'].includes(t.status)||!t.timeline){
@@ -36,14 +37,13 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
   if(t.status==='RUNNING')return action('VIEW_SCHEDULE','Xem lịch thi đấu','Bạn chưa có suất thi đấu đang hoạt động.',competition+'#schedule');
  }
  if(!flow)return action('WAIT_SERVER','Đang cập nhật trạng thái','Chờ dữ liệu quyền từ server.');
+ const view=resolvePlayerTournamentViewState({tournament:t,flow});if(view.primaryAction)return view.primaryAction;
  if(t.format==='TEAM_ROUND_ROBIN'&&flow.nextAction==='OPEN_WAITING_ROOM'&&(me?.states||[]).some(s=>s.participantId&&!t.teamCompetition?.teams?.some(team=>team.roster.includes(s.participantId)&&team.roster.length>=3)))return action('MANAGE_TEAM','Hoàn tất đội của bạn','Đã check-in. Tạo hoặc gia nhập đội đủ ít nhất ba thành viên trước giờ thi.','#teams');
  switch(flow.nextAction){
   case 'REGISTER':return action('REGISTER','Đăng ký tham gia','Điền thông tin và đồng ý luật giải.','#tournament-registration-form',{tone:'primary'});
   case 'WAIT_FOR_APPROVAL':return action('WAIT_APPROVAL','Chờ ban tổ chức xác nhận','Đơn đăng ký đã được gửi; không cần gửi lại.');
   case 'WAIT_FOR_CODING':return action('WAIT_CODING','Chờ mở lập trình','Theo dõi giờ coding, luật và bot protocol.');
   case 'OPEN_CODE_WORKSPACE':return flow.canAccessWorkspace&&flow.canModifyWorkspace?action('OPEN_CODE','Vào phòng code','Hoàn thành, kiểm thử và nộp bot trước hạn.',code,{tone:'primary'}):action('WAIT_SERVER','Đang cập nhật quyền workspace','Chờ server xác nhận cửa sổ lập trình.');
-  case 'VIEW_FROZEN_SUBMISSION':return action('VIEW_FROZEN_SUBMISSION','Xem bài đã khóa','Bài được chốt theo chính sách deadline.',content);
-  case 'VIEW_FINAL_VALIDATION':return action(flow.finalValidation?.status==='FAILED'?'VIEW_VALIDATION_FAILURE':'WAIT_VALIDATION',flow.finalValidation?.status==='FAILED'?'Xem kết quả kiểm thử':'Theo dõi kiểm thử',flow.finalValidation?.status==='INFRA_ERROR'?'Kiểm thử bị gián đoạn do hạ tầng; chờ chủ giải xử lý.':'Theo dõi kết quả kiểm thử chính thức.',content);
   case 'CHECK_IN':return flow.checkIn?.canCheckIn===true?action('CHECK_IN','Check-in','Bot đã đủ điều kiện; xác nhận tham gia trước hạn.',null,{enabled:true,command:'CHECK_IN',payload:{registrationId:flow.checkIn.registrationId},deadline:flow.checkIn.closesAt,tone:'primary'}):action('WAIT_SERVER','Đang cập nhật check-in','Chờ server xác nhận điều kiện tham gia.');
   case 'OPEN_WAITING_ROOM':return action('WAIT_START','Đã check-in · Chờ bắt đầu','Theo dõi lịch, thông báo và thời gian bắt đầu.');
   case 'CHECK_IN_MISSED':return action('CHECK_IN_MISSED','Đã hết hạn check-in','Bạn chưa có suất thi đấu; xem thông báo của chủ giải.');

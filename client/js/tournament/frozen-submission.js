@@ -1,17 +1,21 @@
 import {phaseFacts,statusBadge} from './phase-view.js';
 import {node,link,date} from './player-dom.js';
+import {resolvePlayerTournamentViewState} from './player-view-state.js';
+export {frozenReason} from './player-view-state.js';
 
-export const frozenReason=reason=>({EXPLICIT_SUBMIT_REQUIRED:'Bạn chưa bấm nộp bài trước hạn.',NO_READY_VERSION_BEFORE_DEADLINE:'Không có phiên bản READY trước hạn.',ACCOUNT_INACTIVE:'Tài khoản không còn hoạt động.',SUBMISSION_REJECTED:'Bài đã bị từ chối hoặc loại.',ARTIFACT_CHANGED:'Artifact không vượt qua kiểm tra toàn vẹn.'}[reason]||'Không có bài nộp hợp lệ.');
 export function renderFrozenSubmission(root,t,flow){
- const panel=node('section',undefined,'panel frozen-submission');panel.append(node('h2','Bài đã được khóa'),node('p','Phần lập trình đã kết thúc'),node('p','Đã khóa chỉnh sửa, build, kiểm thử mới và nộp lại.'));
- const frozen=flow.frozenSubmission;
- if(!frozen)panel.append(statusBadge('QUEUED'),node('p','Server đang chốt bài nộp. Trang sẽ tự cập nhật.'));
- else if(frozen.decision==='MISSING')panel.append(node('h3','Chưa có bài nộp'),node('p',frozenReason(frozen.reason)));
- else{
-  panel.append(node('h3','Bài nộp đã khóa · v'+frozen.version),node('p',frozen.decision==='AUTO_SUBMITTED'?'Hệ thống tự nộp phiên bản READY trước hạn.':'Đã giữ phiên bản bạn nộp trước hạn.'));
-  phaseFacts(panel,[['Phiên bản','v'+frozen.version],['Ngôn ngữ',frozen.language],['Nộp lúc',date(frozen.submittedAt)],['Đóng lập trình',date(frozen.codingCloseAt)],['Build','PASS'],['Source hash',frozen.sourceHash],['Artifact hash',frozen.artifactHash]]);
-  panel.append(node('p','Bài đã khóa sẽ được kiểm thử chính thức ở giai đoạn tiếp theo.'));
- }
- if(flow.canAccessWorkspace&&frozen?.versionId)panel.append(link('Xem source của tôi','/tournament-code.html?id='+encodeURIComponent(t.id)+'&view=source'+(frozen?.versionId?'&version='+encodeURIComponent(frozen.versionId)+'&language='+encodeURIComponent(frozen.language):'')));
+ const view=resolvePlayerTournamentViewState({tournament:t,flow}),frozen=flow.frozenSubmission;
+ const panel=node('section',undefined,'panel frozen-submission');panel.id='player-submission-detail';panel.dataset.submissionState=view.submissionState;
+ panel.append(node('h2','Trạng thái bài nộp'));
+ if(view.hasLockedSubmission){
+  panel.append(node('h3','✓ Bài đã được khóa'),node('p',frozen.decision==='AUTO_SUBMITTED'?'Hệ thống tự nộp phiên bản READY mới nhất hợp lệ trước hạn.':'Đã giữ phiên bản bạn nộp trước hạn.'));
+  phaseFacts(panel,[['Phiên bản','v'+frozen.version],['Ngôn ngữ',frozen.language],['Nộp lúc',date(frozen.submittedAt)],['Đóng lập trình',date(frozen.codingCloseAt)]]);
+  const hashes=node('details',undefined,'submission-technical-details');hashes.append(node('summary','Thông tin toàn vẹn bài nộp'));phaseFacts(hashes,[['Source hash',frozen.sourceHash],['Artifact hash',frozen.artifactHash]]);panel.append(hashes);
+  if(flow.canAccessWorkspace)panel.append(link('Xem source của tôi','/tournament-code.html?id='+encodeURIComponent(t.id)+'&view=source&version='+encodeURIComponent(frozen.versionId)+'&language='+encodeURIComponent(frozen.language)));
+ }else if(view.reason)panel.append(node('h3',view.submissionState==='NO_READY_AT_DEADLINE'?'✕ Không có phiên bản READY trước hạn':'✕ Không có bài nộp hợp lệ'),node('p',view.reason));
+ else panel.append(statusBadge('QUEUED'),node('p','Server đang chốt bài nộp. Trang sẽ tự cập nhật.'));
+ panel.append(node('p','Phần lập trình đã kết thúc'),node('p','Không thể chỉnh sửa source, build mới, kiểm thử mới hoặc nộp bài mới.'));
+ if(view.secondaryInfo.validationNotStarted){const next=node('div',undefined,'submission-next-milestone');next.append(node('h3','Bước tiếp theo'),node('p','Kiểm thử chính thức chưa bắt đầu.'));if(view.secondaryInfo.validationStartsAt)next.append(node('p','Kiểm thử bắt đầu lúc: '+date(view.secondaryInfo.validationStartsAt)));panel.append(next);}
+ else panel.append(node('p','Kết quả và quyền tham gia tiếp theo do server xác nhận.'));
  root.append(panel);
 }

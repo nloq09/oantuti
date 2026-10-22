@@ -7,9 +7,11 @@ export function tournamentPhase(t,flow){
  if(t.timeline&&!flow&&!['DRAFT','CANCELLED','FINISHED','RUNNING','PAUSED','RECOVERY_REQUIRED'].includes(t.status))return 'SYNCING';
  return flow?.phase||({REGISTRATION:'REGISTRATION_OPEN',CHECK_IN:'CHECK_IN_OPEN',READY:'READY_TO_START'})[t.status]||t.status;
 }
-export function headerModel(t,flow){
- const phase=tournamentPhase(t,flow);
- return {name:t.name,format:formatLabel(t.format),phase,phaseLabel:phaseLabels[phase]||'Đang cập nhật',status:t.status,count:flow?.registration?.approved??(t.timeline?'—':t.participants?.length??0),countLabel:flow?.registration||t.timeline?'người được duyệt':'người trong roster',capacity:t.maxParticipants,deadline:flow?.phaseEndsAt??null,serverNow:flow?.serverNow??null};
+export function headerModel(t,flow,options={}){
+ const phase=options.phase??tournamentPhase(t,flow),player=options.audience==='player';
+ const approved=player?t.approvedParticipantCount:flow?.registration?.approved;
+ const count=Number.isSafeInteger(approved)&&approved>=0?approved:t.timeline?(player?null:'—'):t.participants?.length??0;
+ return {name:t.name,format:formatLabel(t.format),phase,phaseLabel:options.phaseLabel||phaseLabels[phase]||'Đang cập nhật',status:t.status,count,countLabel:flow?.registration||t.timeline?'người được duyệt':'người trong roster',capacity:t.maxParticipants,deadline:flow?.phaseEndsAt??null,serverNow:flow?.serverNow??null};
 }
 export function countdownText(deadline,serverNow,elapsedMs=0){
  const end=Date.parse(deadline),now=Date.parse(serverNow);
@@ -18,18 +20,18 @@ export function countdownText(deadline,serverNow,elapsedMs=0){
  if(!seconds)return 'Đã đến mốc giờ · Chờ server cập nhật';
  return 'Còn '+[Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
 }
-export function renderTournamentHeader(root,t,flow){
- const model=headerModel(t,flow),header=node('header',undefined,'tournament-header'),meta=node('p',undefined,'tournament-header-meta');
+export function renderTournamentHeader(root,t,flow,options={}){
+ const player=options.audience==='player',model=headerModel(t,flow,options),header=node('header',undefined,'tournament-header'+(player?' player-tournament-header':'')),meta=node('p',undefined,'tournament-header-meta');
  header.append(node('h1',model.name));
- meta.append(node('span',model.format),node('span',`${model.count} / ${model.capacity??'—'} ${model.countLabel}`));
+ meta.append(node('span',model.format),node('span',player&&model.count===null?'Người được duyệt: Đang tải…':`${model.count} / ${model.capacity??'—'} ${model.countLabel}`));
  const phase=node('p',model.phaseLabel,'tournament-phase-badge');phase.dataset.phase=model.phase;
  const status=node('small','Trạng thái giải: '+(phaseLabels[model.status]||({REGISTRATION:'Đăng ký',CHECK_IN:'Check-in',READY:'Sẵn sàng'})[model.status]||model.status));
  header.append(meta,phase);if(!t.timeline)header.append(status);
- if(model.deadline){const prefix=milestoneLabel(model.phase);const timer=node('p',prefix+countdownText(model.deadline,model.serverNow),'tournament-header-timer');timer.setAttribute('role','timer');timer.dataset.timerPrefix=prefix;timer.dataset.phaseDeadline=model.deadline;timer.dataset.serverNow=model.serverNow||'';timer.dataset.receivedAt=String(performance.now());header.append(timer);}
+ if(model.deadline){if(player)header.append(node('p',milestoneLabel(model.phase).replace(/ · $/,''),'player-milestone-label'));const prefix=player?'':milestoneLabel(model.phase);const timer=node('p',prefix+countdownText(model.deadline,model.serverNow),'tournament-header-timer');timer.setAttribute('role','timer');if(player){timer.dataset.timerFormat='clock';timer.textContent=timer.textContent.replace(/^Còn /,'');}timer.dataset.timerPrefix=prefix;timer.dataset.phaseDeadline=model.deadline;timer.dataset.serverNow=model.serverNow||'';timer.dataset.receivedAt=String(performance.now());header.append(timer);}
  root.append(header);return header;
 }
 export function updateHeaderTimers(root,now=performance.now()){
- for(const timer of root.querySelectorAll('[data-phase-deadline]'))timer.textContent=(timer.dataset.timerPrefix||'')+countdownText(timer.dataset.phaseDeadline,timer.dataset.serverNow,now-Number(timer.dataset.receivedAt));
+ for(const timer of root.querySelectorAll('[data-phase-deadline]')){const value=countdownText(timer.dataset.phaseDeadline,timer.dataset.serverNow,now-Number(timer.dataset.receivedAt));timer.textContent=(timer.dataset.timerPrefix||'')+(timer.dataset.timerFormat==='clock'?value.replace(/^Còn /,''):value);}
 }
 
 export function milestoneLabel(phase){return ({UPCOMING:'Đăng ký mở sau · ',REGISTRATION_OPEN:'Đăng ký kết thúc sau · ',WAITING_FOR_CODING:'Lập trình bắt đầu sau · ',CODING_OPEN:'Lập trình kết thúc sau · ',SUBMISSION_FROZEN:'Kiểm thử bắt đầu sau · ',VALIDATING:'Check-in mở sau · ',CHECK_IN_OPEN:'Check-in kết thúc sau · ',READY_TO_START:'Giải bắt đầu sau · '})[phase]||'Mốc tiếp theo · ';}

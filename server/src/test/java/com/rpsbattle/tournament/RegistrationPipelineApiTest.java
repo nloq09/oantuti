@@ -272,4 +272,7 @@ class RegistrationPipelineApiTest extends StageThreeWebFixture {
     @Test void previouslyPublishedUpcomingTournamentCanAlsoOpenEarly()throws Exception{
         clock.at(START.minusSeconds(30));String base=cup("AUTO_APPROVE",false,false);String id=base.substring(base.lastIndexOf('/')+1);tournaments.openRegistration(id);assertThat(request(base+"/registration-summary","GET",null,200).path("canOpen").asBoolean()).isTrue();request(base+"/open-registration","POST",Map.of(),200);assertThat(request(base+"/participant-registration","POST",signup(),200).path("phase").asText()).isEqualTo("REGISTRATION_OPEN");
     }
+    @Test void publicPlayerHeaderCountsApprovedPeopleInsteadOfExecutionParticipants()throws Exception{
+        String base=cup("AUTO_APPROVE",false,true);assertThat(request(base+"/summary","GET",null,200).path("approvedParticipantCount").asInt()).isZero();request(base+"/participant-registration","POST",signup(),200);var summary=request(base+"/summary","GET",null,200);assertThat(summary.path("approvedParticipantCount").asInt()).isEqualTo(1);assertThat(summary.path("maxParticipants").asInt()).isEqualTo(10);assertThat(summary.path("participants")).isEmpty();assertThat(summary.toString()).doesNotContain("reviewReason","eligibilityReasons");
+    }
 }
