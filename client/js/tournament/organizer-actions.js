@@ -33,6 +33,7 @@ export function organizerNextAction(t,data,{stale=false}={}){
  if(phase==='CANCELLED')return go('audit','Xem lịch sử','Giải đã hủy. Các kết quả và quyết định trước đó được giữ lại.');
  if(phase==='FINISHED')return go('results',Object.keys(t.reviews||{}).length?'Xử lý kết quả':'Xem kết quả',Object.keys(t.reviews||{}).length?'Còn trận đang chờ quyết định; kết quả vô địch chưa được xác nhận.':'Giải đã hoàn tất. Xem bảng xếp hạng và báo cáo.');
  if(available.start)return command('start','Bắt đầu giải','Danh sách hợp lệ đã sẵn sàng và đã đến thời điểm bắt đầu.');
+ if(Object.keys(t.reviews||{}).length)return go('results','Xử lý kết quả','Xem các trận chờ xét duyệt và đưa ra quyết định trước khi tiếp tục giải.');
  if(available.finish)return go('results','Hoàn tất giải','Các trận đã kết thúc. Kiểm tra kết quả và xác nhận hoàn tất.');
  if(['PAUSED','RECOVERY_REQUIRED'].includes(phase))return go('matches','Xử lý thi đấu',available.resume?'Có thể tiếp tục giải sau khi kiểm tra.':'Kiểm tra trận lỗi và các review trước khi tiếp tục.');
  if(phase==='DRAFT')return available.openRegistration?command('open-registration',t.timeline?'Mở đăng ký ngay':'Mở đăng ký',t.timeline?'Có thể mở sớm. Nếu không thao tác, server tự mở đăng ký theo lịch.':'Kiểm tra lịch và luật trước khi công bố giải.'):go('settings','Kiểm tra cài đặt','Hoàn tất cấu hình và cập nhật lịch trước khi mở đăng ký.');

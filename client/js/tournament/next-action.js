@@ -1,6 +1,6 @@
 import {resolvePlayerTournamentViewState,playerAction as action} from './player-view-state.js';
 import {activeMatch,isRemoteMatch,matchExecutionState} from './match-execution.js';
-import {tournamentRoute,playerTournamentRoute,actionDestination} from './tournament-routes.js';
+import {tournamentRoute,playerTournamentRoute,actionDestination,ownerTournamentRoute} from './tournament-routes.js';
 import {isKnockout,roundLabel} from './bracket-renderer.js';
 // Presentation of server decisions only. These links never grant admission or workspace rights.
 
@@ -22,10 +22,10 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
   const candidate=assignedMatch(matches,item),current=item?.currentMatch;
   if(current?.onlineMatchId&&item.registration.controllerType==='HUMAN'&&(!candidate||!isRemoteMatch(candidate)&&matchExecutionState(candidate)==='RUNNING_LOCAL'))return action('ENTER_MATCH','Vào trận','Trận đã được server cấp cho bạn.',null,{enabled:true,command:'ENTER_MATCH',payload:{matchId:current.id},tone:'primary'});
   if(!['PAUSED','RECOVERY_REQUIRED'].includes(t.status)&&item?.status==='READY_CHECK'&&item.registration.controllerType==='HUMAN'&&item.nextMatch?.readyWindowId)return action('READY_CHECK','Sẵn sàng thi đấu','Xác nhận trước hạn do server cấp.',null,{enabled:true,command:'READY_CHECK',payload:{matchId:item.nextMatch.id,windowId:item.nextMatch.readyWindowId},deadline:item.nextMatch.readyDeadline,tone:'primary'});
-  if(item&&candidate&&isRemoteMatch(candidate)&&activeMatch(candidate))return action('TRACK_MATCH','Theo dõi trận của tôi',({QUEUED:'Đang chờ máy thi đấu.',ASSIGNED:'Đã cấp máy chạy.',STARTING:'Đang khởi động bot.',RUNNING_REMOTE:'Trận đang chạy trên máy thi đấu; live board chưa khả dụng.',RESULT_PENDING:'Đã chạy xong, đang xác nhận kết quả.',RETRYING:'Trận đang chờ chạy lại.',RECOVERING:'Đang chờ khôi phục execution.'})[candidate.executionState]||'Đang cập nhật execution.',competition+'#my-match');
+  if(item&&candidate&&isRemoteMatch(candidate)&&activeMatch(candidate))return action('TRACK_MATCH','Theo dõi trận của tôi',({QUEUED:'Đang chờ máy thi đấu.',ASSIGNED:'Đã cấp máy chạy.',STARTING:'Đang khởi động bot.',RUNNING_REMOTE:'Trận đang chạy trên máy thi đấu; live board chưa khả dụng.',RESULT_PENDING:'Đã chạy xong, đang xác nhận kết quả.',RETRYING:'Trận đang chờ chạy lại.',RECOVERING:'Đang chờ khôi phục execution.'})[candidate.executionState]||'Đang cập nhật execution.',competition+'#my-matches');
   if(current&&item.registration.controllerType==='BOT'){
    if(candidate&&!isRemoteMatch(candidate)&&candidate.status==='RUNNING'&&matchExecutionState(candidate)==='RUNNING_LOCAL'&&candidate.onlineMatchId)return action('WATCH_MATCH','Xem trận','Theo dõi trận đang diễn ra.','/game.html?spectate='+encodeURIComponent(candidate.onlineMatchId)+'&tournament='+encodeURIComponent(t.id));
-   return action('TRACK_MATCH','Theo dõi trận của tôi',me?.matchMonitorError?'Chưa tải được trạng thái trận. Đang đồng bộ lại trước khi mở bàn cờ.':'Đang đồng bộ trạng thái trận; xem kết quả và khả năng mở replay trong Trận của tôi.',competition+'#my-match');
+   return action('TRACK_MATCH','Theo dõi trận của tôi',me?.matchMonitorError?'Chưa tải được trạng thái trận. Đang đồng bộ lại trước khi mở bàn cờ.':'Đang đồng bộ trạng thái trận; xem kết quả và khả năng mở replay trong Trận của tôi.',competition+'#my-matches');
   }
   if(t.status==='RECOVERY_REQUIRED')return action('WAIT_RECOVERY','Chờ khôi phục','Chủ giải đang xử lý; không tự chạy lại trận.');
   if(t.status==='PAUSED')return action('WAIT_RESUME','Giải tạm dừng','Chờ chủ giải tiếp tục thi đấu.');
@@ -61,9 +61,13 @@ function progressDescription(item,t){
 }
 // Discovery lacks personal capabilities. Only a fresh participant flow can enable coding/check-in.
 export function tournamentNavigation(t,context={}){
+ if(t.owned===true||ownerTournamentRoute(t,context.account))return action('MANAGE_TOURNAMENT','Quản lý giải','Mở trang quản lý giải của bạn.',tournamentRoute(t.id,'organizer'));
  if(context.flow||context.me){const resolved=tournamentNextAction({tournament:t,...context});return{...resolved,enabled:true,command:undefined,payload:undefined,href:actionDestination(resolved,t)};}
  if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem kết quả do server công bố.',tournamentRoute(t.id,'detail',{tab:'ranking'}));
  if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Xem thông tin giải đã hủy.',tournamentRoute(t.id));
+ if(t.registered&&t.applicationStatus==='APPROVED'&&t.phase==='CODING_OPEN')return action('OPEN_CODE','Tiếp tục lập trình','Mở giải để xác nhận quyền lập trình hiện tại.',tournamentRoute(t.id));
+ if(t.registered&&t.phase==='CHECK_IN_OPEN')return action('CHECK_IN','Check-in','Xác nhận tham gia theo trạng thái server.',tournamentRoute(t.id));
+ if(!t.registered&&(t.phase==='REGISTRATION_OPEN'||t.acceptingRegistrations===true))return action('REGISTER','Đăng ký','Xem điều kiện và đăng ký tham gia.',tournamentRoute(t.id));
  return action('VIEW_STATUS',t.registered?'Xem trạng thái':'Xem giải','Mở giải để lấy giai đoạn và quyền hiện tại từ server.',playerTournamentRoute(t));
 }
 

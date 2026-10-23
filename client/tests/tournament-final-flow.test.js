@@ -29,7 +29,7 @@ test('player journey keeps one authorized next action from upcoming through chec
 
 test('remote execution journey never opens a live board before replay is available; final result overrides stale coding rights',()=>{
  for(const executionState of ['QUEUED','ASSIGNED','STARTING','RUNNING_REMOTE','RESULT_PENDING','RETRYING','RECOVERING']){
-  const root=dom(),action=renderPlayerShell(root,{tournament:{...cup,status:'RUNNING'},account:{id:'u'},me:{states:[{participantId:'entry',status:'PLAYING',registration:{controllerType:'BOT'},currentMatch:{id:'remote-game'}}],matchMonitor:{items:[{id:'remote-game',participantA:{participantId:'entry'},executionState,execution:{attempt:1}}]}}});assert.equal(action.type,'TRACK_MATCH');assert.equal(action.href,'/tournament-lobby.html?id=cup#my-match');assert.ok(!descendants(root).some(n=>n.href?.includes('/game.html')));
+  const root=dom(),action=renderPlayerShell(root,{tournament:{...cup,status:'RUNNING'},account:{id:'u'},me:{states:[{participantId:'entry',status:'PLAYING',registration:{controllerType:'BOT'},currentMatch:{id:'remote-game'}}],matchMonitor:{items:[{id:'remote-game',participantA:{participantId:'entry'},executionState,execution:{attempt:1}}]}}});assert.equal(action.type,'TRACK_MATCH');assert.equal(action.href,'/tournament-lobby.html?id=cup#my-matches');assert.ok(!descendants(root).some(n=>n.href?.includes('/game.html')));
  }
  const root=dom(),action=renderPlayerShell(root,{tournament:{...cup,status:'FINISHED',timeline:{resultPublishAt:'2099-01-01T00:00:00Z'}},account:{id:'u'},flow:{nextAction:'OPEN_CODE_WORKSPACE',canAccessWorkspace:true,canModifyWorkspace:true}});assert.equal(action.type,'VIEW_RESULT');assert.equal(action.href,'/tournament-detail.html?id=cup#ranking');
 });
@@ -37,7 +37,7 @@ test('remote execution journey never opens a live board before replay is availab
 test('organizer journey keeps each phase in the appropriate scoped dashboard and warnings link to existing review screens',()=>{
  for(const [phase,focus]of [['REGISTRATION_OPEN','registration'],['CODING_OPEN','submissions'],['VALIDATING','validation'],['CHECK_IN_OPEN','check-in'],['READY_TO_START','check-in'],['RUNNING','matches'],['RECOVERY_REQUIRED','matches'],['FINISHED','results']]){
   const root=dom(),data={tournamentId:cup.id,revision:cup.revision,phase,registration:{pending:2},coding:{available:true},validation:{infraError:1},checkIn:{missing:2},running:{error:1},workers:{offline:1}};
-  assert.equal(organizerFocus(phase),focus);const nav=organizerNavigation(cup);assert.ok(nav.some(item=>item.key===focus));renderOrganizerMetrics(root,cup,data);assert.ok(text(root).length);for(const item of attentionItems(cup,data)){assert.ok(item.href.includes('id=cup'));assert.ok(!item.href.startsWith('/admin/'));}
+  assert.equal(organizerFocus(phase),focus);const nav=organizerNavigation({...cup,checkInRequired:true,progress:{total:['RUNNING','RECOVERY_REQUIRED','FINISHED'].includes(phase)?1:0}},data);assert.ok(nav.some(item=>item.key===focus));renderOrganizerMetrics(root,cup,data);assert.ok(text(root).length);for(const item of attentionItems(cup,data)){assert.ok(item.href.includes('id=cup'));assert.ok(!item.href.startsWith('/admin/'));}
  }
 });
 

@@ -12,7 +12,7 @@
 body {
   background:
     linear-gradient(#10223468, #102234bd),
-    url("/assets/castle-courtyard.png") center/cover fixed;
+    url("/assets/castle-courtyard.620b83a9efcb.webp") center/cover fixed;
 }
 header {
   background: linear-gradient(#14283eee, #0c1c2aee);

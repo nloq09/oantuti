@@ -39,7 +39,7 @@ const playing={...tournament,status:'RUNNING'},bot={participantId:'bot-entry',st
 test('bot primary action uses public remote projection when personal monitor fails',()=>{
  for(const state of ['QUEUED','ASSIGNED','STARTING','RUNNING_REMOTE','RESULT_PENDING','RETRYING','RECOVERING']){
   const action=tournamentNextAction({tournament:{...playing,matches:[{...remote,executionState:state}]},account,me:{states:[bot],matchMonitorError:true}});
-  assert.equal(action.type,'TRACK_MATCH');assert.ok(action.href.endsWith('#my-match'));assert.equal(action.command,undefined);assert.ok(!action.href.includes('old-room'));
+  assert.equal(action.type,'TRACK_MATCH');assert.ok(action.href.endsWith('#my-matches'));assert.equal(action.command,undefined);assert.ok(!action.href.includes('old-room'));
  }
 });
 test('missing or terminal execution data cannot turn a stale bot assignment into a live link',()=>{

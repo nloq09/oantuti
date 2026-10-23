@@ -1,9 +1,10 @@
+import {resolveTournamentViewState} from './navigation.js';
 import {progressSteps} from './progress-stepper.js';
 import {tournamentRoute} from './tournament-routes.js';
 import {validationDetailState} from './validation-detail-state.js';
 
 export const playerAction=(type,label,description,href=null,extra={})=>({type,label,href,enabled:Boolean(href),tone:'neutral',description,reasonDisabled:href?null:description,...extra});
-export const frozenReason=reason=>({EXPLICIT_SUBMIT_REQUIRED:'Bạn chưa bấm nộp bài trước hạn.',NO_READY_VERSION_BEFORE_DEADLINE:'Bạn không có phiên bản READY trước thời hạn.',ACCOUNT_INACTIVE:'Tài khoản không còn hoạt động.',SUBMISSION_REJECTED:'Bài đã bị từ chối hoặc loại.',ARTIFACT_CHANGED:'Artifact không vượt qua kiểm tra toàn vẹn.'}[reason]||'Server không ghi nhận bài nộp hợp lệ tại thời hạn.');
+export const frozenReason=reason=>({EXPLICIT_SUBMIT_REQUIRED:'Bạn chưa bấm nộp bài trước hạn.',NO_READY_VERSION_BEFORE_DEADLINE:'Bạn không có phiên bản sẵn sàng trước thời hạn.',ACCOUNT_INACTIVE:'Tài khoản không còn hoạt động.',SUBMISSION_REJECTED:'Bài đã bị từ chối hoặc loại.',ARTIFACT_CHANGED:'Bài nộp không vượt qua kiểm tra toàn vẹn.'}[reason]||'Server không ghi nhận bài nộp hợp lệ tại thời hạn.');
 const closedPhases=new Set(['SUBMISSION_FROZEN','VALIDATING','CHECK_IN_OPEN','READY_TO_START','RUNNING','PAUSED','RECOVERY_REQUIRED','FINISHED']);
 const validationStates={QUEUED:'VALIDATION_PENDING',PENDING:'VALIDATION_PENDING',RUNNING:'VALIDATION_RUNNING',FAILED:'VALIDATION_FAILED',INFRA_ERROR:'VALIDATION_INFRA_ERROR'};
 /** Pure presentation of independent server facts. A phase never creates an artifact or permission. */
@@ -22,7 +23,7 @@ export function resolvePlayerTournamentViewState({tournament:t,flow={},workspace
  if(emergency)primaryAction=playerAction('EMERGENCY_RESUBMIT','Nộp lại','Bạn được cấp quyền nộp lại khẩn cấp. Hoàn thành trước hạn mới do server cấp.',tournamentRoute(t.id,'code'),{tone:'primary'});
  else if(beforeValidation){
   if(missing)primaryAction=playerAction('WAIT_VALIDATION','Không có bài nộp hợp lệ','Hiện không có thao tác nào cần thực hiện. Hãy chờ giai đoạn kiểm thử chính thức.');
-  else if(hasLockedSubmission)primaryAction=playerAction('VIEW_FROZEN_SUBMISSION','Xem bài đã khóa','Bạn có thể xem phiên bản đã chốt. Kiểm thử chính thức chưa bắt đầu.','#player-submission-detail');
+  else if(hasLockedSubmission)primaryAction=playerAction('VIEW_FROZEN_SUBMISSION','Xem bài đã khóa','Bạn có thể xem phiên bản đã chốt. Kiểm thử chính thức chưa bắt đầu.','#validation');
   else primaryAction=playerAction('WAIT_FREEZE','Đang chốt bài nộp','Hiện không có thao tác nào cần thực hiện. Chờ server xác nhận kết quả chốt bài.');
  }else if(showValidation&&validationView.status!=='READY'){
   primaryAction=playerAction(validationView.status==='ERROR'?'RETRY_VALIDATION':'LOADING_VALIDATION',validationView.status==='ERROR'?'Không tải được chi tiết kiểm thử':'Đang tải kết quả kiểm thử…','Chờ dữ liệu kiểm thử đầy đủ từ server.');
@@ -36,7 +37,7 @@ export function resolvePlayerTournamentViewState({tournament:t,flow={},workspace
  }else if(phase==='VALIDATING'){
   primaryAction=playerAction('WAIT_VALIDATION','Chờ thông tin kiểm thử','Chưa có kết quả hoặc công việc kiểm thử của bạn được server xác nhận. Hiện không có thao tác nào cần thực hiện.');
  }else if(flow.nextAction==='VIEW_FROZEN_SUBMISSION'){
-  primaryAction=closed&&hasLockedSubmission?playerAction('VIEW_FROZEN_SUBMISSION','Xem bài đã khóa','Xem phiên bản do server chốt.','#player-submission-detail'):playerAction('WAIT_FREEZE','Chờ xác nhận bài nộp','Server chưa xác nhận bản khóa. Hiện không có thao tác nào cần thực hiện.');
+  primaryAction=closed&&hasLockedSubmission?playerAction('VIEW_FROZEN_SUBMISSION','Xem bài đã khóa','Xem phiên bản do server chốt.','#validation'):playerAction('WAIT_FREEZE','Chờ xác nhận bài nộp','Server chưa xác nhận bản khóa. Hiện không có thao tác nào cần thực hiện.');
  }else if(flow.nextAction==='VIEW_FINAL_VALIDATION')primaryAction=playerAction('WAIT_VALIDATION','Chờ thông tin kiểm thử','Chưa có công việc kiểm thử cá nhân được server xác nhận.');
- return {phase,phaseLabel:beforeValidation?'Đã hết hạn nộp bài':null,submissionState,hasLockedSubmission,showSubmission:closed&&!showValidation,showValidation,validationView,emergency,primaryAction,primaryTitle:primaryAction?.label,primaryDescription:primaryAction?.description,reason:missing?frozenReason(frozen?.reason):null,secondaryInfo:{validationStartsAt:t.timeline?.validationStartAt,validationNotStarted:beforeValidation},stepperState:progressSteps(phase),failedStep:showValidation&&validation?.status==='FAILED'?2:null};
+ return {...resolveTournamentViewState(t,flow,null),phase,phaseLabel:beforeValidation?'Đã hết hạn nộp bài':null,submissionState,hasLockedSubmission,showSubmission:closed&&!showValidation,showValidation,validationView,emergency,primaryAction,primaryTitle:primaryAction?.label,primaryDescription:primaryAction?.description,reason:missing?frozenReason(frozen?.reason):null,secondaryInfo:{validationStartsAt:t.timeline?.validationStartAt,validationNotStarted:beforeValidation},stepperState:progressSteps(phase),failedStep:showValidation&&validation?.status==='FAILED'?2:null};
 }

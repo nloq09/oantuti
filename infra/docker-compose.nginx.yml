@@ -1,0 +1,8 @@
+# Overlay for host Nginx: keep backend private and leave Caddy disabled.
+# Use after docker-compose.yml; add docker-compose.bots.yml for bot execution.
+services:
+  rps-server:
+    ports:
+      - "127.0.0.1:8080:8080"
+  reverse-proxy:
+    profiles: [caddy]

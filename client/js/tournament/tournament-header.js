@@ -11,7 +11,7 @@ export function headerModel(t,flow,options={}){
  const phase=options.phase??tournamentPhase(t,flow),player=options.audience==='player';
  const approved=player?t.approvedParticipantCount:flow?.registration?.approved;
  const count=Number.isSafeInteger(approved)&&approved>=0?approved:t.timeline?(player?null:'—'):t.participants?.length??0;
- return {name:t.name,format:formatLabel(t.format),phase,phaseLabel:options.phaseLabel||phaseLabels[phase]||'Đang cập nhật',status:t.status,count,countLabel:flow?.registration||t.timeline?'người được duyệt':'người trong roster',capacity:t.maxParticipants,deadline:flow?.phaseEndsAt??null,serverNow:flow?.serverNow??null};
+ return {name:t.name,format:formatLabel(t.format),phase,phaseLabel:options.phaseLabel||phaseLabels[phase]||'Đang cập nhật',status:t.status,count,countLabel:flow?.registration||t.timeline?'người được duyệt':'người tham gia',capacity:t.maxParticipants,deadline:flow?.phaseEndsAt??null,serverNow:flow?.serverNow??null};
 }
 export function countdownText(deadline,serverNow,elapsedMs=0){
  const end=Date.parse(deadline),now=Date.parse(serverNow);
@@ -26,7 +26,7 @@ export function renderTournamentHeader(root,t,flow,options={}){
  meta.append(node('span',model.format),node('span',player&&model.count===null?'Người được duyệt: Đang tải…':`${model.count} / ${model.capacity??'—'} ${model.countLabel}`));
  const phase=node('p',model.phaseLabel,'tournament-phase-badge');phase.dataset.phase=model.phase;
  const status=node('small','Trạng thái giải: '+(phaseLabels[model.status]||({REGISTRATION:'Đăng ký',CHECK_IN:'Check-in',READY:'Sẵn sàng'})[model.status]||model.status));
- header.append(meta,phase);if(!t.timeline)header.append(status);
+ header.append(meta,phase);if(model.phase==='FINISHED')header.className+=' compact-completed';
  if(model.deadline){if(player)header.append(node('p',milestoneLabel(model.phase).replace(/ · $/,''),'player-milestone-label'));const prefix=player?'':milestoneLabel(model.phase);const timer=node('p',prefix+countdownText(model.deadline,model.serverNow),'tournament-header-timer');timer.setAttribute('role','timer');if(player){timer.dataset.timerFormat='clock';timer.textContent=timer.textContent.replace(/^Còn /,'');}timer.dataset.timerPrefix=prefix;timer.dataset.phaseDeadline=model.deadline;timer.dataset.serverNow=model.serverNow||'';timer.dataset.receivedAt=String(performance.now());header.append(timer);}
  root.append(header);return header;
 }

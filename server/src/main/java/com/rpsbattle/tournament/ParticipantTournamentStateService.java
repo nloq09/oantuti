@@ -19,7 +19,7 @@ import com.rpsbattle.account.AccountAuthorizationService;import com.rpsbattle.to
    if(t.swiss!=null){row.put("swissHistory",swissHistory(t,key));row.put("swiss",t.swiss);row.put("buchholz",com.rpsbattle.tournament.scheduler.SwissScheduler.buchholz(t,key));row.put("byeRounds",t.rounds.stream().filter(round->round.byeParticipantIds().contains(key)).map(TournamentRound::number).toList());}
    if(t.format==TournamentFormat.TEAM_ROUND_ROBIN){var team=t.teams.teams().stream().filter(x->x.roster().contains(key)).findFirst().orElse(null);row.put("team",team);row.put("captain",team!=null&&actor.id().value().equals(team.captain()));}
    if(t.groupStage!=null){String group=t.groupStage.groups().entrySet().stream().filter(e->e.getValue().contains(key)).map(Map.Entry::getKey).findFirst().orElse(null);row.put("group",group);row.put("qualified",t.groupStage.locked()&&t.groupStage.qualifiers().contains(key));row.put("groupRank",group==null?null:com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.standings(t,group).stream().filter(rank->rank.participantId().equals(key)).findFirst().orElse(null));}
-   row.put("rank",ranks.get(key));states.add(row);
+   row.put("rank",ranks.get(key));if(r.status()==TournamentRegistration.Status.REJECTED)row.put("rejectionReason",tournaments.registrationRejectionReason(t,key));states.add(row);
   }
   return Map.of("teamLineups",com.rpsbattle.tournament.scheduler.TeamScheduler.privateLineups(t,actor.id().value()),"tournamentId",id,"tournamentStatus",t.status,"revision",t.revision,"serverTime",Instant.now(),"states",states);
  }}

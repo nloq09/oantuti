@@ -1,10 +1,12 @@
 # Triển khai RPS Battle
 
+**VPS Ubuntu:** bắt đầu bằng [hướng dẫn triển khai từng bước](DEPLOY-VPS-UBUNTU.md), cập nhật theo cấu hình hiện tại. Các ghi chú chặng ở cuối tài liệu này là lịch sử nâng cấp; không dùng giới hạn của bản cũ để suy ra năng lực bản hiện tại.
+
 ## Mô hình được hỗ trợ
 
 Một máy Linux có Docker Engine/Compose chạy ba dịch vụ: **Caddy HTTPS → rps-server → PostgreSQL 17**. Client được đóng trong JAR và phục vụ cùng domain với REST/WebSocket; không cần deploy client riêng. Docker Desktop Linux containers dùng được để thử trên Windows.
 
-Các volume lưu PostgreSQL, source bot, replay JSON và dữ liệu chứng chỉ Caddy. Phòng đang chơi/session và hàng đợi vẫn ở một JVM; không scale server nhiều replica. Metadata đã commit giữ qua restart; giải đang dở cần hủy theo chính sách RECOVERY_REQUIRED. READY chưa có lịch đấu giữ nguyên để chủ giải bắt đầu sau restart. Chưa có resume bàn cờ hoặc distributed worker; xem [vòng đời giải đấu](CHANG-5-NHOM-1-LIFECYCLE.md).
+Các volume lưu PostgreSQL, source bot, replay JSON và dữ liệu chứng chỉ Caddy. Phòng đang chơi/session và tournament registry còn ở một JVM; không scale server nhiều replica. Metadata đã commit giữ qua restart; giải đang dở có thể chuyển RECOVERY_REQUIRED để chủ giải/admin kiểm tra, review/retry rồi resume khi đủ điều kiện, hoặc hủy. READY chưa có lịch đấu giữ nguyên. Đã có remote bot worker cho giải BOT_ONLY dùng submission LOCKED; build/test/final validation vẫn cần Docker trên Central. Xem [routing worker](CHANG-11-NHOM-9-CAPACITY-GROUPS.md).
 
 ## Chuẩn bị
 
@@ -116,6 +118,8 @@ Restore chỉ nhận bộ backup tin cậy do bạn quản lý; checksum phát h
 Nâng cấp: backup → dừng server → pull code/build image mới → up → kiểm tra health/login/history/bot/replay. Migration mới có thể không tương thích JAR cũ: rollback an toàn là khôi phục bộ backup vào deployment riêng với phiên bản code tương ứng, kiểm tra rồi mới chuyển traffic. Không dùng `down -v`, volume prune hay xóa source/replay khi nâng cấp.
 
 ## Kiểm chứng deployment
+
+Phần script bên dưới là công cụ của luồng cũ: hiện còn cho tài khoản tạo giải tự đăng ký bot thi đấu, không tương thích quy tắc tách chủ giải khỏi người tham gia. Chưa dùng script này để xác nhận deploy bản hiện tại; thực hiện checklist ở [hướng dẫn VPS Ubuntu](DEPLOY-VPS-UBUNTU.md) bằng chủ giải và người chơi riêng.
 
 Trên **server thử riêng**, có Node.js 22+:
 

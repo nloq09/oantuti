@@ -14,3 +14,8 @@ export function withdrawalControl(root,t,item,reload){
   dialog.onclose=()=>dialog.remove();
  };
 }
+
+export function renderWithdrawalActions(root,t,me,reload){
+ const entries=(me?.states||[]).filter(item=>canWithdraw(t,item));
+ for(const item of entries){const group=node('div',undefined,'actions');if(entries.length>1)group.append(node('span',item.registration.displayName));withdrawalControl(group,t,item,reload);root.append(group);}
+}

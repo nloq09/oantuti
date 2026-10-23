@@ -4,9 +4,22 @@ import {participantNextAction} from '../js/tournament/progression.js';
 import {tournamentHref,tournamentCta} from '../js/tournament/hub-model.js';
 import {notificationHref} from '../js/tournament/notifications.js';
 import {timelineLobbyDestination} from '../js/tournament/timeline-lobby.js';
-import {tournamentRoute} from '../js/tournament/tournament-routes.js';
+import {tournamentRoute,ownerTournamentRoute} from '../js/tournament/tournament-routes.js';
 import {TournamentClientState} from '../js/tournament/player-state.js';
-test('discovery coding approval and check-in phase never substitute for current personal capabilities',()=>{for(const phase of ['CODING_OPEN','CHECK_IN_OPEN','READY_TO_START']){const t={id:'a/b',status:'REGISTRATION',phase,applicationStatus:'APPROVED',registered:true};assert.equal(tournamentHref(t),'/tournament-detail.html?id=a%2Fb');assert.equal(tournamentCta(t),'Xem trạng thái');assert.equal(tournamentNavigation(t).command,undefined);}});
+test('owner entry opens management in every phase without giving other players a management link',()=>{
+ for(const status of ['DRAFT','REGISTRATION','RUNNING','PAUSED','FINISHED','CANCELLED']){
+  const t={id:'a/b',ownerUserId:'owner',status};
+  assert.equal(ownerTournamentRoute(t,{id:'owner'}),'/tournament.html?id=a%2Fb');
+  assert.equal(tournamentHref(t,{account:{id:'owner'}}),'/tournament.html?id=a%2Fb');
+  assert.equal(tournamentCta({...t,owned:true}),'Quản lý giải');
+  assert.equal(tournamentNavigation({...t,owned:true}).command,undefined);
+  assert.equal(ownerTournamentRoute(t,{id:'other',role:'ADMIN'}),null);
+  assert.equal(ownerTournamentRoute(t,null),null);
+ }
+ assert.equal(ownerTournamentRoute({id:'cup'},{}),null);
+ assert.equal(tournamentHref({id:'cup',status:'FINISHED',owned:false}),'/tournament-detail.html?id=cup#ranking');
+});
+test('discovery coding approval and check-in phase never substitute for current personal capabilities',()=>{for(const phase of ['CODING_OPEN','CHECK_IN_OPEN','READY_TO_START']){const t={id:'a/b',status:'REGISTRATION',phase,applicationStatus:'APPROVED',registered:true};assert.equal(tournamentHref(t),'/tournament-detail.html?id=a%2Fb');assert.equal(tournamentCta(t),({CODING_OPEN:'Tiếp tục lập trình',CHECK_IN_OPEN:'Check-in'})[phase]||'Xem trạng thái');assert.equal(tournamentNavigation(t).command,undefined);}});
 test('hub navigation and player action share the authorized flow decision without issuing its mutation',()=>{const t={id:'cup',status:'REGISTRATION',timeline:{}},context={account:{id:'u'},flow:{nextAction:'CHECK_IN',checkIn:{canCheckIn:true,registrationId:'r'}}};const action=tournamentNextAction({tournament:t,...context}),navigation=tournamentNavigation(t,context);assert.equal(navigation.label,action.label);assert.equal(navigation.type,action.type);assert.equal(navigation.command,undefined);assert.equal(navigation.payload,undefined);assert.equal(navigation.href,'/tournament-detail.html?id=cup#tournament-phase-content');context.flow={nextAction:'OPEN_CODE_WORKSPACE',canAccessWorkspace:true,canModifyWorkspace:true};assert.equal(tournamentHref(t,context),'/tournament-code.html?id=cup');context.flow.canModifyWorkspace=false;assert.equal(tournamentHref(t,context),'/tournament-detail.html?id=cup#tournament-phase-content');});
 test('historical notifications always open current guarded detail rather than assuming coding is still open',()=>{for(const type of ['TIMELINE_CODING_STARTED','TIMELINE_CODING_1_MIN_LEFT','MATCH_STARTED','TOURNAMENT_FINISHED','UNKNOWN'])assert.equal(notificationHref({type,tournamentId:'x/y'}),'/tournament-detail.html?id=x%2Fy&stay=1');});
 test('timeline lobby redirects retain explicit stay and selected tab without carrying arbitrary redirect params',()=>{assert.equal(timelineLobbyDestination('/tournament-detail.html','a/b','RUNNING','?id=old&stay=1&next=https://evil.invalid','#my-matches'),'/tournament-lobby.html?id=a%2Fb&stay=1#my-matches');assert.equal(timelineLobbyDestination('/tournament-detail.html','cup','RUNNING','?stay=0','#unknown'),'/tournament-lobby.html?id=cup');assert.equal(tournamentRoute('x&next=bad','unknown',{tab:'javascript:bad'}),'/tournament-detail.html?id=x%26next%3Dbad');});

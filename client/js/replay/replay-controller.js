@@ -1,3 +1,4 @@
+import {replayEventText} from './event-presentation.js';
 import { renderBoard } from "../game/board-renderer.js?v=diagonal";
 import { ClientState } from "../game/game-state.js";
 import {
@@ -36,7 +37,7 @@ function render() {
   log.replaceChildren();
   for (const e of game.events.slice(-20)) {
     const li = document.createElement("li");
-    li.textContent = `#${e.sequence} · ${e.type}${e.type === "PIECE_MOVED" ? ` · ${e.payload.pieceId}: ${String.fromCharCode(65 + e.payload.to.col)}${e.payload.to.row + 1}` : ""}`;
+    const text=replayEventText(e);if(!text)continue;li.textContent=text;
     log.append(li);
   }
   document.querySelector("#first").disabled = document.querySelector(
@@ -103,7 +104,9 @@ async function load() {
       .map((p) => p.botName || (p.playerId === "P1" ? "Xanh" : "Đỏ"))
       .join(" vs ");
     document.querySelector("#replay-status").textContent =
-      `Trận ${id} · ${replay.result.winner === "DRAW" ? "Hòa" : "Thắng: " + replay.result.winner} · Replay đầy đủ`;
+      `${replay.result.winner === "DRAW" || !replay.result.winner ? "Hòa" : "Thắng: " + (replay.result.winner === "P1" ? "Xanh" : "Đỏ")} · Replay đầy đủ`;
+    const tournamentId=new URLSearchParams(location.search).get('tournament');
+    if(tournamentId){const back=document.querySelector('.replay-page > nav');if(back){const link=document.createElement('a');link.className='button';link.textContent='← Quay lại trận đấu';link.href='/tournament-detail.html?id='+encodeURIComponent(tournamentId)+'#matches';back.replaceChildren(link);}}
     render();
   } catch (error) {
     toast(error.message, true);
@@ -115,3 +118,4 @@ async function load() {
   }
 }
 load();
+window.addEventListener("pageshow",event=>{if(event.persisted){pause();load();}});

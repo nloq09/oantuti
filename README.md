@@ -4,6 +4,10 @@ Game chiến thuật trên bàn cờ **9 × 9**, kết hợp luật Búa–Bao�
 
 Repository: [nloq09/oantuti](https://github.com/nloq09/oantuti).
 
+**Deploy lên VPS Ubuntu:** xem [hướng dẫn từng bước](docs/DEPLOY-VPS-UBUNTU.md): Docker Compose, domain/HTTPS, PostgreSQL, bot sandbox, admin, backup và cập nhật.
+
+Nếu VPS đã có Nginx: [Nginx + domain + HTTPS](docs/DEPLOY-VPS-NGINX-DOMAIN.md). Khi chỉ có IP public: [HTTPS cho IP](docs/DEPLOY-VPS-NGINX-IP.md).
+
 ## Chức năng hiện tại
 
 ### Tài khoản và lịch sử

@@ -1,0 +1,3 @@
+const side=value=>value==='P1'?'Xanh':value==='P2'?'Đỏ':'Người chơi';
+const cell=p=>p?String.fromCharCode(65+p.col)+(p.row+1):'';
+export function replayEventText(event){const p=event.payload||{};switch(event.type){case 'PIECE_MOVED':return 'Đi quân '+cell(p.from)+' → '+cell(p.to);case 'COMBAT_OCCURRED':return 'Giao chiến';case 'PIECE_REMOVED':return 'Một quân bị loại';case 'TURN_CHANGED':return 'Đến lượt '+side(p.currentPlayer);case 'TURN_STARTED':return 'Bắt đầu lượt';case 'TURN_ENDED':return 'Kết thúc lượt';case 'MATCH_STARTED':return 'Ván đấu bắt đầu';case 'MATCH_FINISHED':case 'GAME_FINISHED':return 'Ván đấu kết thúc';default:return null;}}

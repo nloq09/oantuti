@@ -11,7 +11,7 @@ test("bracket preserves server advancement and shows BYE separately from unresol
     {id:"one",round:1,position:0,slotA:"a",slotB:null,sourceA:null,sourceB:null,winnerParticipantId:"a",resolution:"BYE"},
     {id:"final",round:2,position:0,slotA:"a",slotB:null,sourceA:"one",sourceB:"two"},
   ]};
-  const rounds=bracketRounds(t);assert.equal(rounds[0].nodes[0].b,"BYE");assert.equal(rounds[0].nodes[0].winner,"<Alpha>");assert.equal(rounds[1].nodes[0].b,"Chờ người thắng");assert.equal(rounds[1].nodes[0].winner,undefined);assert.equal(rounds[1].label,"Chung kết");
+  const rounds=bracketRounds(t);assert.equal(rounds[0].nodes[0].b,"Miễn đấu");assert.equal(rounds[0].nodes[0].winner,"<Alpha>");assert.equal(rounds[1].nodes[0].b,"Chờ người thắng");assert.equal(rounds[1].nodes[0].winner,undefined);assert.equal(rounds[1].label,"Chung kết");
 });
 test("round and format labels distinguish round robin from elimination",()=>{
   assert.equal(roundLabel(3,5,"SINGLE_ELIMINATION"),"Tứ kết");assert.equal(roundLabel(3,7,"ROUND_ROBIN"),"Vòng 3");assert.equal(formatLabel("SINGLE_ELIMINATION"),"Loại trực tiếp");

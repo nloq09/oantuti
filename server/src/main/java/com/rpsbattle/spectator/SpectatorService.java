@@ -24,11 +24,11 @@ public class SpectatorService {
         online.listen(update->{for(var s:List.copyOf(subscriptions.values()))if(update.match().id().equals(s.matchId()))
             state(s,online.snapshot(update.match(),OnlineMatch.P1,update.events()));});
         tournaments.listen(t->{for(var s:List.copyOf(subscriptions.values()))if(t.id.equals(s.tournamentId())){
-            send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",compactSubscriptions.contains(s.session().getId())?Map.of("id",t.id,"revision",t.revision):tournaments.view(t)));
+            send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",compactSubscriptions.contains(s.session().getId())?Map.of("id",t.id,"revision",t.revision):tournaments.publicView(t)));
             send(s.session(),"TOURNAMENT_UPDATED",Map.of("tournamentId",t.id,"revision",t.revision));
             long cursor=auditCursors.getOrDefault(s.session().getId(),0L);
             for(var e:t.operations.audit())if(e.sequence()>cursor){String type=switch(e.type()){case "PARTICIPANT_APPROVED","CHECK_IN","CHECK_IN_OPENED","REGISTRATION_UPDATED"->"REGISTRATION_UPDATED";case "ROUND_STARTED","MATCH_STARTED","MATCH_FINISHED","TOURNAMENT_FINISHED"->e.type();default->"TOURNAMENT_UPDATED";};
-                send(s.session(),type,Map.of("tournamentId",t.id,"revision",t.revision,"event",e));
+                send(s.session(),type,Map.of("tournamentId",t.id,"revision",t.revision,"event",Map.of("id",e.id(),"sequence",e.sequence(),"type",type,"at",e.at())));
                 if(e.type().equals("MATCH_FINISHED")||e.type().equals("RESULT_OVERRIDDEN")){send(s.session(),"STANDINGS_UPDATED",Map.of("revision",t.revision));send(s.session(),"BRACKET_UPDATED",Map.of("revision",t.revision));}
             }
             if(subscriptions.containsKey(s.session().getId()))auditCursors.put(s.session().getId(),(long)t.operations.audit().size());
@@ -54,7 +54,7 @@ public class SpectatorService {
             } else if(type.equals("WATCH_TOURNAMENT")) {
                 var t=tournaments.find(message.path("tournamentId").asText());
                 var s=new MatchSubscription(new ConcurrentWebSocketSessionDecorator(session,5000,1048576),null,t.id);
-                synchronized(t){if(message.path("updatesOnly").asBoolean(false))compactSubscriptions.add(session.getId());else compactSubscriptions.remove(session.getId());subscriptions.put(session.getId(),s);auditCursors.put(session.getId(),(long)t.operations.audit().size());send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",compactSubscriptions.contains(s.session().getId())?Map.of("id",t.id,"revision",t.revision):tournaments.view(t)));}
+                synchronized(t){if(message.path("updatesOnly").asBoolean(false))compactSubscriptions.add(session.getId());else compactSubscriptions.remove(session.getId());subscriptions.put(session.getId(),s);auditCursors.put(session.getId(),(long)t.operations.audit().size());send(s.session(),"TOURNAMENT_STATE",Map.of("tournament",compactSubscriptions.contains(s.session().getId())?Map.of("id",t.id,"revision",t.revision):tournaments.publicView(t)));}
             } else send(session,"ACTION_REJECTED",Map.of("error","SPECTATOR_READ_ONLY"));
         }catch(DemoRequestException error){send(session,"ACTION_REJECTED",Map.of("error",error.code()));}
         catch(com.rpsbattle.auth.AuthException error){send(session,"ACTION_REJECTED",Map.of("error",error.code()));}

@@ -7,3 +7,9 @@
 .coding-page #entry-choice > button { margin:0; }
 .coding-page #import-panel > button { margin-block:var(--control-gap); }
 .coding-page #source-pane > button { margin-block:var(--control-gap); }
+.coding-page .submission-choice{flex:1 1 280px;text-align:left;white-space:normal;padding:20px;min-height:130px}
+.submission-choice small{display:block;font-weight:400;line-height:1.6;margin-top:12px;color:#e9e2d3}
+.technical-details{max-width:100%;overflow:hidden}.technical-details summary{cursor:pointer;font-weight:600}
+.coding-page #version-history{max-height:180px;overflow:auto}
+.coding-page .coding-toolbar{position:sticky;top:0;z-index:2}
+@media(max-width:800px){.coding-page .coding-toolbar{position:static}.coding-page .submission-choice{flex-basis:100%}.code-editor{height:min(480px,60dvh)}}

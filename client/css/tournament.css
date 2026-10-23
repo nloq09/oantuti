@@ -269,3 +269,28 @@ th {
 .validation-action-form textarea{min-height:96px;resize:vertical}
 .validation-pagination{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
 @media(max-width:700px){.validation-dashboard-heading{align-items:flex-start;flex-wrap:wrap}.validation-filters{display:grid;grid-template-columns:minmax(0,1fr)}.validation-filters label{width:100%}.organizer-validation-stages{grid-template-columns:minmax(0,1fr)}}
+
+/* Player hierarchy: one header, one selected view, no repeated match dashboards. */
+.player-tournament-header.compact-completed{padding:16px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px}
+.compact-completed h1{font-size:clamp(1.3rem,2vw,1.8rem);flex:1 1 100%;margin:0}
+.compact-completed .tournament-header-meta,.compact-completed .tournament-phase-badge{margin:0}
+.tournament-page .tournament-tabs{margin-block:20px;gap:8px}
+.series-card{margin-block:16px}.series-card h3{font-size:clamp(1rem,1.4vw,1.3rem);overflow-wrap:anywhere}
+.series-game{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #9b895044}
+.series-game>:nth-child(2){flex:1;min-width:140px}
+.series-card summary{cursor:pointer;padding:10px 0;font-weight:600}
+.incident-dialog{width:min(600px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
+.incident-dialog form,.incident-dialog label{display:grid;gap:12px}.incident-dialog form{gap:20px}
+.incident-dialog select,.incident-dialog textarea{width:100%;box-sizing:border-box}.incident-dialog textarea{min-height:120px;resize:vertical}
+.incident-dialog textarea{font:inherit;padding:12px;background:#f9edd5;color:#203249;border:2px solid #b8a484;border-radius:7px}
+.dispute-row{padding:16px 0;border-bottom:1px solid #9b895044}
+.tournament-page .table-scroll{max-width:100%;overflow:auto}
+@media(max-width:800px){.tournament-page{min-width:0;box-sizing:border-box}.tournament-tabs{display:flex;flex-wrap:wrap}.tournament-tabs button{min-width:0}.player-tournament-header.compact-completed{padding:16px}}
+@media(max-width:700px){
+ .tournament-page .tournament-tabs{flex-wrap:wrap;overflow:visible;padding-bottom:0}
+ .tournament-page .tournament-tabs button{flex:1 1 calc(50% - 8px);white-space:normal}
+ .tournament-page .tournament-filters{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+ .tournament-page .tournament-filters label{display:grid;gap:8px;margin:0;min-width:0}
+ .tournament-page .tournament-filters label:has(input[type=checkbox]){display:flex;align-items:center}
+ .tournament-page .tournament-filters select{width:100%;margin:0;box-sizing:border-box}
+}

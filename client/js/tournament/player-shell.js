@@ -24,11 +24,12 @@ export function renderPlayerNextActionCard(root,action,commands={}){
 }
 export function renderTournamentShell(root,{tournament,flow}){
  const view=resolvePlayerTournamentViewState({tournament,flow});renderTournamentHeader(root,tournament,flow,{audience:'player',phase:tournament.timeline?view.phase:tournamentPhase(tournament,flow),phaseLabel:tournament.timeline?view.phaseLabel:null});
+ if(view.compact||tournament.status==='FINISHED')return;
  const optionalSteps=tournament.timeline?[]:[1,2,...(tournament.checkInRequired?[]:[3])];
  renderProgressStepper(root,tournament.timeline?view.phase:tournamentPhase(tournament,flow),{optionalSteps});
 }
 export function renderPlayerShell(root,{tournament,flow,me,account,commands}){
  renderTournamentShell(root,{tournament,flow});
  const action=tournamentNextAction({tournament,flow,me,account});
- if(!(flow?.phase==='VALIDATING'&&(flow.finalValidation||flow.validationDetailState)))renderPlayerNextActionCard(root,action,commands);return action;
+ if(tournament.status!=='FINISHED'&&!(flow?.phase==='VALIDATING'&&(flow.finalValidation||flow.validationDetailState)))renderPlayerNextActionCard(root,action,commands);return action;
 }

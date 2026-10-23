@@ -1,3 +1,4 @@
+import {languageText} from './presentation.js';
 import {resolvePlayerTournamentViewState} from './player-view-state.js';
 import {statusBadge,phaseFacts,phaseCountdown,renderPhaseRules,renderPhaseTimeline} from './phase-view.js';
 import {checkInScreen,renderTimelineCheckIn} from './timeline-check-in.js';
@@ -30,7 +31,7 @@ export function renderTimelineRegistration(root,t,account,flow,refresh,options={
  if(flow.registrationStatus==='WAITLISTED'&&Number.isSafeInteger(flow.registration?.waitlistPosition)&&flow.registration.waitlistPosition>0)panel.append(node('p','Vị trí danh sách chờ: #'+flow.registration.waitlistPosition));
  if(['REGISTRATION_OPEN','REGISTRATION_REVIEW','WAITING_FOR_CODING'].includes(flow.phase)&&(!flow.serverNow||Date.parse(flow.serverNow)<Date.parse(flow.codingOpenAt||t.timeline.codingOpenAt)))phaseCountdown(panel,'Phần lập trình của giải bắt đầu: '+date(flow.codingOpenAt||t.timeline.codingOpenAt),flow.codingOpenAt||t.timeline.codingOpenAt,flow,'codingStarts');
  if(flow.registrationStatus==='APPROVED'&&flow.phase==='CODING_OPEN'){panel.append(node('h3','Phần lập trình đã mở'));if(!options.primaryWorkspace)panel.append(link('Vào phần nộp bot','/tournament-code.html?id='+encodeURIComponent(t.id)));return;}
- if(flow.registrationStatus==='APPROVED'&&['WAITING_FOR_CODING','REGISTRATION_REVIEW'].includes(flow.phase)){panel.append(node('h3','Phần thi lập trình chưa bắt đầu'),node('p','Ngôn ngữ cho phép: '+(flow.allowedLanguages||t.botPolicy.allowedLanguages).join(', ')),link('Xem bot protocol','/bot-protocol.html'));renderPhaseRules(panel,t);}
+ if(flow.registrationStatus==='APPROVED'&&['WAITING_FOR_CODING','REGISTRATION_REVIEW'].includes(flow.phase)){panel.append(node('h3','Phần thi lập trình chưa bắt đầu'),node('p','Ngôn ngữ cho phép: '+(flow.allowedLanguages||t.botPolicy.allowedLanguages).map(languageText).join(', ')),link('Xem bot protocol','/bot-protocol.html'));renderPhaseRules(panel,t);}
  const applyResponse=result=>{if(!result?.registrationStatus||!result.phase)return;const host=node('div');renderTimelineRegistration(host,t,account,result,refresh,options);const next=host.children[0];if(next){panel.before(...host.childNodes);panel.remove();}};
  if(canWithdrawRegistration(flow)){
   const cancel=node('button','Hủy đăng ký'),notice=node('p');notice.setAttribute('role','status');cancel.onclick=()=>{if(cancel.disabled)return;

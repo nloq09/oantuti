@@ -2,6 +2,8 @@ export function modal(title, content, actions = []) {
   const dialog = document.createElement("dialog");
   const h = document.createElement("h2");
   h.textContent = title;
+  h.id = 'dialog-title-' + Math.random().toString(36).slice(2);
+  dialog.setAttribute('aria-labelledby',h.id);
   dialog.append(h);
   if (typeof content === "string") {
     const p = document.createElement("p");
@@ -22,7 +24,17 @@ export function modal(title, content, actions = []) {
   }
   dialog.append(footer);
   document.body.append(dialog);
-  dialog.addEventListener("close", () => dialog.remove());
+  const previousFocus=document.activeElement;
+  dialog.addEventListener("close", () => {dialog.remove();previousFocus?.focus();});
+  dialog.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();dialog.close();return;}
+    if(event.key!=='Tab')return;
+    const controls=[...dialog.querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]')].filter(el=>!el.disabled&&!el.hidden);
+    if(!controls.length){event.preventDefault();return;}
+    const first=controls[0],last=controls.at(-1);
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  });
   dialog.showModal();
   return dialog;
 }

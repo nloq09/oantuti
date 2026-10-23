@@ -5,7 +5,7 @@ export async function listPage(root,{title,path,fields=[],columns,actions}){
   let params=new URLSearchParams(location.search),page=Math.max(0,Number(params.get("page"))||0),version=0;
   root.replaceChildren(node("h1",title));const form=node("form",undefined,"filters"),result=node("section",undefined,"panel");result.setAttribute("aria-live","polite");
   for(const [label,key,choices,type] of fields){const wrap=node("label",label),input=node(choices?"select":"input");input.name=key;
-    if(choices){input.append(new Option("Tất cả",""));for(const choice of choices)input.append(new Option(choice,choice));}else input.type=type||"search";
+    if(choices){input.append(new Option("Tất cả",""));for(const choice of choices)input.append(new Option(Array.isArray(choice)?choice[1]:choice,Array.isArray(choice)?choice[0]:choice));}else input.type=type||"search";
     input.value=params.get(key)||"";wrap.append(input);form.append(wrap);}
   const reset=node("button","Xóa bộ lọc");reset.type="reset";form.append(node("button","Lọc / Cập nhật"),reset);root.append(form,result);
   async function load(){const generation=++version;result.setAttribute("aria-busy","true");result.replaceChildren(node("p","Đang tải…"));try{

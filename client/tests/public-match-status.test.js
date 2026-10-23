@@ -23,7 +23,7 @@ function response(data,ok=true){return{ok,json:async()=>data};}
 test('public remote labels never turn stale room IDs into live or pending replay links',()=>{
  env();for(const state of ['QUEUED','ASSIGNED','STARTING','RUNNING_REMOTE','RESULT_PENDING','RETRYING','RECOVERING']){const m={...match,executionState:state,historyMatchId:'unconfirmed'};assert.equal(activeMatch(m),true);assert.equal(matchOpen(m,cup.id),null);assert.notEqual(matchStatusText(m),matchStatusText({status:'PENDING'}));}
  assert.equal(matchOpen({...match,status:'FINISHED',executionState:'FINISHED'},cup.id),null);
- assert.equal(matchOpen({...match,status:'FINISHED',executionState:'FINISHED',historyMatchId:'real/history'},cup.id).href,'/replay.html?match=real%2Fhistory');
+ assert.equal(matchOpen({...match,status:'FINISHED',executionState:'FINISHED',historyMatchId:'real/history'},cup.id).href,'/replay.html?match=real%2Fhistory&tournament=public-status');
  assert.match(matchOpen({...match,remote:false,status:'RUNNING',executionState:'RUNNING_LOCAL'},cup.id).href,/spectate=stale-room/);
  assert.equal(matchOpen({...match,remote:false,status:'RUNNING',executionState:'CANCELLED'},cup.id),null);
 });

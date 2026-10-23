@@ -14,8 +14,9 @@ export function bracketRounds(t) {
   return [...new Set((t.bracket||[]).map(n=>n.round))].sort((a,b)=>a-b).map(number=>({
     number,label:roundLabel(number,total,t.format),
     nodes:t.bracket.filter(n=>n.round===number).sort((a,b)=>a.position-b.position).map(n=>({...n,
-      a:players.get(n.slotA)?.displayName || (n.sourceA ? "Chờ người thắng" : "BYE"),
-      b:players.get(n.slotB)?.displayName || (n.sourceB ? "Chờ người thắng" : "BYE"),
+      a:players.get(n.slotA)?.displayName || (n.sourceA ? "Chờ người thắng" : "Miễn đấu"),
+      b:players.get(n.slotB)?.displayName || (n.sourceB ? "Chờ người thắng" : "Miễn đấu"),
+      reviewRequired:Boolean(t.series?.find(s=>s.id===n.matchId)?.reviewRequired||t.reviews?.[n.matchId]||t.series?.find(s=>s.id===n.matchId)?.gameIds?.some(id=>t.reviews?.[id]||games.get(id)?.reviewRequired)||t.matches.some(m=>(m.seriesId===n.matchId||m.id===n.matchId)&&m.reviewRequired)),
       winner:players.get(n.winnerParticipantId)?.displayName,series:t.series?.find(s=>s.id===n.matchId),game:games.get(t.series?.find(s=>s.id===n.matchId)?.gameIds?.at(-1)||n.matchId),
     })),
   }));
@@ -23,7 +24,7 @@ export function bracketRounds(t) {
 export function renderBracket(element,t) {
   element.replaceChildren();
   const rounds=bracketRounds(t);
-  if(!rounds.length){element.textContent="Bracket được tạo sau khi chốt người đi tiếp hoặc bắt đầu giải loại trực tiếp.";return;}
+  if(!rounds.length){element.textContent="Nhánh đấu được tạo sau khi chốt người đi tiếp hoặc bắt đầu giải loại trực tiếp.";return;}
   for(const round of rounds) {
     const column=document.createElement("section");column.className="bracket-round";
     const title=document.createElement("h3");title.textContent=round.label;column.append(title);
@@ -32,12 +33,13 @@ export function renderBracket(element,t) {
       const card=document.createElement("article");card.className="panel bracket-node";if(n.matchId)card.dataset.matchId=n.matchId;
       for(const [id,name] of [[n.slotA,n.a],[n.slotB,n.b]]) {
         const row=document.createElement("p");row.textContent=name;
-        if(id && id===n.winnerParticipantId&&!n.game?.reviewRequired){row.className="bracket-winner";row.prepend("✓ ");}card.append(row);
+        if(id && id===n.winnerParticipantId&&!n.reviewRequired){row.className="bracket-winner";row.prepend("✓ ");}card.append(row);
       }
       if(n.series?.bestOf>1){const score=document.createElement("p");score.textContent=`BO${n.series.bestOf} · ${n.series.winsA} – ${n.series.winsB} · Ván ${n.series.currentGame}`;card.append(score);}
-      if(n.resolution&&!n.game?.reviewRequired) {const note=document.createElement("small");note.textContent=({BYE:"Miễn đấu",WALKOVER:"Đi tiếp do nhánh đối thủ trống",NO_ELIGIBLE_PARTICIPANT:"Không còn người tham gia đủ điều kiện",DOUBLE_FORFEIT:"Cả hai bị xử thua",WIN:"Đã có kết quả",DRAW_REMAINING_PIECES:"Hòa · đi tiếp nhờ quân còn lại",DRAW_SEED:"Hòa · đi tiếp theo hạt giống"})[n.resolution];card.append(note);}
+      if(n.resolution&&!n.reviewRequired) {const note=document.createElement("small");note.textContent=({BYE:"Miễn đấu",WALKOVER:"Đi tiếp do nhánh đối thủ trống",NO_ELIGIBLE_PARTICIPANT:"Không còn người tham gia đủ điều kiện",DOUBLE_FORFEIT:"Cả hai bị xử thua",WIN:"Đã có kết quả",DRAW_REMAINING_PIECES:"Hòa · đi tiếp nhờ quân còn lại",DRAW_SEED:"Hòa · đi tiếp theo hạt giống"})[n.resolution];card.append(note);}
+      if(n.reviewRequired){const note=document.createElement('p');note.textContent='Kết quả đang được trọng tài xem xét · Tỉ số tạm thời';card.append(note);}
       if(n.game?.failure){const note=document.createElement("small");note.textContent="Lỗi trận: "+n.game.failure;card.append(note);}
-      if(n.game){const state=document.createElement('small');state.textContent=matchStatusText(n.game);card.append(state);const open=matchOpen(n.game,t.id);if(open)card.append(open);}
+      if(n.game){const state=document.createElement('small');state.textContent=matchStatusText(n.reviewRequired?{...n.game,reviewRequired:true}:n.game);card.append(state);const open=matchOpen(n.game,t.id);if(open)card.append(open);}
       slots.append(card);
     }
     element.append(column);

@@ -11,4 +11,18 @@ class ParticipantTournamentStateTest {
   assertThat(service.me(auth,t.id).toString()).contains("CHECK_IN_REQUIRED").doesNotContain("Other private registration","never-public");
   t.status=TournamentStatus.RUNNING;assertThat(service.me(auth,t.id).toString()).contains("WAITING_MATCH","Opponent");match.status=TournamentMatch.Status.RUNNING;assertThat(service.me(auth,t.id).toString()).contains("PLAYING");
  }
+ @Test void rejectionReasonIsPersonalAndDoesNotRequirePublishingAudit(){
+  var now=Instant.now();var user=new User(UserId.random(),"player","player@example.invalid","secret","Player",UserRole.USER,AccountStatus.ACTIVE,now,now,null,0);var auth=AuthService.sessionAuthentication(user);
+  var service=spy(new TournamentService(null,null,null,mock(com.rpsbattle.tournament.ranking.RankingService.class)));var owned=mock(OwnedTournamentService.class);var accounts=mock(AccountAuthorizationService.class);when(accounts.requireUser(auth)).thenReturn(user);
+  var t=new Tournament(UUID.randomUUID().toString(),"Cup",TournamentFormat.ROUND_ROBIN,now);t.status=TournamentStatus.REGISTRATION;
+  var mine=UUID.randomUUID();var other=UUID.randomUUID();
+  t.registrations.add(new TournamentRegistration(mine,UUID.fromString(t.id),user.id().value(),null,null,"Mine",TournamentRegistration.Status.REJECTED,now,null,null));
+  t.registrations.add(new TournamentRegistration(other,UUID.fromString(t.id),UUID.randomUUID(),null,null,"Other",TournamentRegistration.Status.REJECTED,now,null,null));
+  TournamentAudit.append(t,"REGISTRATION_UPDATED",null,mine.toString(),"Thiếu thông tin trường học","PENDING","REJECTED");
+  TournamentAudit.append(t,"REGISTRATION_UPDATED",null,other.toString(),"Other private reason","PENDING","REJECTED");
+  doReturn(t).when(service).find(t.id);
+  var result=new ParticipantTournamentStateService(service,owned,accounts).me(auth,t.id);
+  assertThat(result.toString()).contains("rejectionReason=Thiếu thông tin trường học").doesNotContain("Other private reason");
+  assertThat(service.summary(t)).doesNotContainKey("audit");
+ }
 }

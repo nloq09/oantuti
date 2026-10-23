@@ -15,7 +15,7 @@ export function attentionItems(t,data){
  if(['RUNNING','PAUSED','RECOVERY_REQUIRED'].includes(data.phase)){
   if(data.phase==='RECOVERY_REQUIRED')items.push({key:'recovery',severity:'CRITICAL',count:1,text:'Giải cần kiểm tra để khôi phục',href:local('matches')});
   add('match-error','CRITICAL',data.running?.error,'trận lỗi cần kiểm tra',local('matches','FAILED'));
-  add('review','WARNING',Object.keys(t.reviews||{}).length,'trận đang chờ review',local('matches','REVIEW'));
+  add('review','WARNING',Object.keys(t.reviews||{}).length,'trận đang chờ review',local('results'));
   add('worker-offline','CRITICAL',data.workers?.offline,'máy đang giữ assignment của giải mất kết nối',local('matches')+'#organizer-worker-summary');
  }
  const priority={CRITICAL:0,WARNING:1,INFO:2};return items.sort((a,b)=>priority[a.severity]-priority[b.severity]);
