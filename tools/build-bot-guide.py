@@ -4,14 +4,17 @@ from pathlib import Path
 import re
 
 root = Path(__file__).resolve().parents[1]
-source = root / "docs" / "BOT-PROTOCOL.md"
+source = root / "docs" / "bot" / "protocol.md"
 target = root / "client" / "bot-protocol.html"
 
 
 def inline(text):
     text = html.escape(text)
     text = re.sub(r"\[([^]]+)\]\(([^)]+)\)", lambda m: '<a href="' +
-                  ("/bot-guide.html" if m[2] == "BOT-UPLOAD.md" else m[2]) + '">' + m[1] + "</a>", text)
+                  ("/bot-guide.html" if m[2] == "bot-guide.md" else
+                   "https://github.com/nloq09/oantuti/blob/main/" +
+                   (source.parent / m[2]).resolve().relative_to(root).as_posix()
+                   if not m[2].startswith(("https://", "http://", "#")) else m[2]) + '">' + m[1] + "</a>", text)
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
     return re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
 
@@ -78,4 +81,4 @@ target.write_text('''<!doctype html>
 <main class="bot-guide"><p class="eyebrow">DỮ LIỆU VÀ CHIẾN THUẬT</p>
 <nav class="panel" aria-label="Mục lục"><strong>Nội dung hướng dẫn</strong><ul>''' + "".join(toc) +
                   '</ul></nav><article class="panel">' + "\n".join(blocks) + '</article></main></body></html>\n', encoding="utf-8")
-print("Generated client/bot-protocol.html from docs/BOT-PROTOCOL.md")
+print("Generated client/bot-protocol.html from docs/bot/protocol.md")
