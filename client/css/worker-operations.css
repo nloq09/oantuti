@@ -1,4 +1,24 @@
 .worker-ops{min-width:0;background:rgba(10,30,46,.97);border-radius:12px;padding:22px}
+.worker-onboarding{max-width:1160px;margin-inline:auto;min-width:0}
+.worker-setup-heading{display:grid;gap:12px;margin-bottom:24px}.worker-setup-heading h1,.worker-setup-heading p{margin:0}
+.worker-setup-progress{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:0;list-style-position:inside;margin:0 0 24px}
+.worker-setup-progress li{padding:12px;border:1px solid #61778a;border-radius:8px;background:#10293b;color:#ffe2a0;line-height:1.5}
+.worker-setup-progress a{color:inherit}.worker-setup-progress a:hover{text-decoration:underline}.worker-setup-step{scroll-margin-top:110px}
+.worker-setup-settings{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;padding:20px;margin-bottom:24px;border:1px solid #61778a;border-radius:10px;background:#10293b}
+.worker-setup-settings>details,.worker-setup-settings>[role=status]{grid-column:1/-1}.worker-setup-settings>[role=status]:empty{display:none}
+.worker-onboarding .worker-field{display:grid;gap:8px;min-width:0;margin:0 0 12px}.worker-onboarding .worker-field input,.worker-onboarding .worker-field select{width:100%;box-sizing:border-box}
+.worker-setup-step{padding:24px;margin-bottom:24px!important;min-width:0}.worker-step-number{margin:0 0 8px;color:#f2c35b;font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.worker-setup-step h2{margin:0 0 14px;font-size:1.35rem}.worker-setup-step p,.worker-setup-step li,.worker-setup-help p{line-height:1.65}.worker-setup-step li{margin-bottom:10px}
+.worker-command{margin:18px 0;padding:16px;background:#071a28;border:1px solid #4b6b82;border-radius:8px;min-width:0}
+.worker-command-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.worker-command-heading button{font-size:.85rem;min-height:40px}
+.worker-command pre{padding:0;margin:16px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font-size:.88rem;line-height:1.65;color:#edf5ff}
+.worker-command>[role=status]{margin:8px 0 0}.worker-command>[role=status]:empty{display:none}
+.worker-onboarding summary{cursor:pointer;color:#ffe2a0;padding:10px 0}.worker-onboarding details .worker-field{max-width:520px}
+.worker-registration-form{margin:20px 0;max-width:680px}.worker-registration-form>button{margin-top:12px}
+.worker-registration-secret{margin:16px 0;padding:18px;border:1px solid #77969b;border-radius:8px;background:#12333d}.worker-registration-secret[hidden]{display:none}
+.worker-registration-secret input{font-family:monospace}.worker-registration-secret .worker-row-actions{margin:12px 0}
+.worker-setup-help{padding:20px}.worker-setup-help h3{margin:20px 0 8px}.worker-setup-help p{margin:0}
+@media(max-width:800px){.worker-setup-progress{grid-template-columns:repeat(2,minmax(0,1fr))}.worker-setup-settings{grid-template-columns:1fr}.worker-setup-step{padding:18px}.worker-command{padding:12px}}
 .worker-ops-heading{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
 .worker-ops .worker-ops-heading h1{margin:0;font-size:clamp(1.35rem,3vw,1.8rem);text-shadow:none}
 .worker-row-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
