@@ -6,7 +6,7 @@ import {isKnockout,roundLabel} from './bracket-renderer.js';
 
 export function tournamentNextAction({tournament:t,flow,me,account}){
  const detail=tournamentRoute(t.id),code=tournamentRoute(t.id,'code'),competition=playerTournamentRoute(t);
- if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Bạn có thể tìm giải khác.','/tournaments.html');
+ if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Tìm giải khác','Bạn có thể tìm giải khác.','/tournaments.html',{title:'Giải đã hủy'});
  if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem thành tích, bảng điểm và replay.',detail+'#ranking');
  if(flow?.phase?['DRAFT','UPCOMING'].includes(flow.phase):t.status==='DRAFT')return action('VIEW_RULES','Xem luật','Theo dõi lịch; đăng ký chưa mở.','#tournament-rules');
  if(!account)return action('LOGIN','Đăng nhập','Đăng nhập để xem việc cần làm của tài khoản.','/login.html?next='+encodeURIComponent(detail));

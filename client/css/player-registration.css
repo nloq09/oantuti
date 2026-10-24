@@ -13,6 +13,8 @@
 .player-registration-disclosure .registration-acceptance{display:flex;align-items:center;gap:10px;margin:0}
 .player-registration-disclosure input[type=checkbox]{flex:0 0 auto;width:18px;height:18px;margin:0}
 .player-registration-disclosure .registration-rules-link,.registration-information-link{color:var(--link,#7bc9ff);text-decoration:underline;cursor:pointer}
+.player-next-action .registration-information-link{width:auto;min-height:44px;padding:8px 0;border:0;border-radius:0;background:none;box-shadow:none;text-shadow:none;font:inherit;text-align:left;justify-content:flex-start}
+.player-next-action .registration-information-link:hover{background:none;transform:none}
 .player-registration-disclosure button[type=submit]{justify-self:start;margin:0}
 .player-registration-disclosure [role=status]{margin:0;color:#ffe09a}
 .player-registration-disclosure [role=status]:empty{display:none}

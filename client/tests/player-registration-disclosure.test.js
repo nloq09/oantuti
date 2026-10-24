@@ -80,6 +80,15 @@ test('single detail page preserves registration, disclosures and server-authorit
    root.querySelector('.registration-information-link').onclick(event);assert.equal(panel().hidden,false);assert.equal(form(),null);assert.match(text(panel()),/UET Team/);assert.match(text(panel()),/Java/);
    await boot();assert.equal(panel().hidden,true);assert.equal(form(),null);assert.match(text(root.querySelector('.player-next-action')),/Chờ ban tổ chức xác nhận/);
   });
+  await t.test('registration information toggles without losing its content or reopening on polling',async()=>{
+   const toggle=()=>root.querySelector('#player-registration-toggle');
+   assert.equal(toggle().tag,'button');assert.equal(toggle().getAttribute('aria-controls'),panel().id);assert.equal(toggle().getAttribute('aria-expanded'),'false');
+   toggle().onclick();const original=panel(),facts=panel().querySelector('.phase-facts');assert.equal(panel().hidden,false);assert.equal(toggle().getAttribute('aria-expanded'),'true');assert.equal(location.hash,'#registration');
+   toggle().onclick();assert.equal(panel().hidden,true);assert.equal(toggle().getAttribute('aria-expanded'),'false');assert.equal(location.hash,'');assert.equal(doc.activeElement,toggle());
+   await refresh();assert.equal(panel().hidden,true);assert.equal(toggle().getAttribute('aria-expanded'),'false');
+   toggle().onclick();assert.equal(panel(),original);assert.equal(panel().querySelector('.phase-facts'),facts);assert.match(text(panel()),/UET Team/);assert.equal(root.querySelectorAll('#player-registration-panel').length,1);
+   toggle().onclick();visit('registration');assert.equal(panel().hidden,false);assert.equal(toggle().getAttribute('aria-expanded'),'true');toggle().onclick();assert.equal(panel().hidden,true);
+  });
   await t.test('approved status and coding access follow server capabilities',async()=>{
    flow={...flow,registrationStatus:'APPROVED',nextAction:'WAIT_FOR_CODING'};await refresh();assert.match(text(root.querySelector('.player-next-action')),/đã được duyệt/);
    flow={...flow,phase:'CODING_OPEN',nextAction:'OPEN_CODE_WORKSPACE',canAccessWorkspace:true,canModifyWorkspace:true};await refresh();const cta=root.querySelector('#player-primary-action-OPEN_CODE');assert.equal(cta.textContent,'Vào lập trình');assert.match(cta.href,/tournament-code/);

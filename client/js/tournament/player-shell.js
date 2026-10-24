@@ -10,7 +10,7 @@ import {playerSurface} from './player-surface.js';
 
 export function renderPlayerNextActionCard(root,action,commands={}){
  const card=playerSurface(root,'player-next-action');card.dataset.nextAction=action.type;
- card.append(node('h2',['WAIT_CHECK_IN','WAIT_VALIDATION','VIEW_VALIDATION_FAILURE','WAIT_INFRA_RETRY'].includes(action.type)?'Bước tiếp theo':'Việc của bạn'),node('h3',action.label));
+ card.append(node('h2',['WAIT_CHECK_IN','WAIT_VALIDATION','VIEW_VALIDATION_FAILURE','WAIT_INFRA_RETRY'].includes(action.type)?'Bước tiếp theo':'Việc của bạn'),node('h3',action.title||action.label));
  if(action.opensAt){card.append(node('p','Check-in mở lúc: '+date(action.opensAt)));const timer=node('p',countdownText(action.opensAt,action.serverNow));timer.dataset.phaseDeadline=action.opensAt;timer.dataset.serverNow=action.serverNow||'';timer.dataset.receivedAt=String(performance.now());timer.setAttribute('role','timer');card.append(timer);}
  if(action.type==='WAIT_CHECK_IN'&&!action.opensAt)card.append(node('p','Giờ mở check-in: Chưa công bố.'));
  card.append(node('p',action.description));

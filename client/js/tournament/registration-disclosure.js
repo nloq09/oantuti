@@ -1,4 +1,4 @@
-import {node,link} from './player-dom.js';
+import {node} from './player-dom.js';
 import {renderTimelineRegistration} from './timeline-registration.js';
 import {registrationForm} from './registration-form.js';
 export const registrationDisclosureAvailable=(t,flow)=>t.timeline
@@ -6,7 +6,7 @@ export const registrationDisclosureAvailable=(t,flow)=>t.timeline
  :['REGISTRATION','CHECK_IN'].includes(t.status);
 
 // Keep one mounted view per account/tournament, including its unsent inputs.
-export function createRegistrationDisclosure({selectTab,refresh,onRegistered,onRules,onOpen,sectionMode=false}){
+export function createRegistrationDisclosure({selectTab,refresh,onRegistered,onRules,onOpen,onClose,sectionMode=false}){
  let scope,host,snapshot,activeTab,draft={};
  const pending=()=>Boolean(host?.querySelector('[data-submitting=true]'));
  function open(){
@@ -23,15 +23,17 @@ export function createRegistrationDisclosure({selectTab,refresh,onRegistered,onR
    const key=JSON.stringify([t.id,account?.id||account?.username||null]);
    if(scope!==key){scope=key;host=null;snapshot=null;draft={};}
    const available=registrationDisclosureAvailable(t,flow);
+   const visible=available&&tab==='registration';
    const card=root.querySelector('.player-next-action');
    const cta=card?.querySelector('#player-primary-action-REGISTER');
    if(cta){cta.href='#registration';cta.onclick=event=>{event.preventDefault();open();};}
    const registered=t.timeline?flow?.registration&&!['NOT_REGISTERED','CANCELLED'].includes(flow.registrationStatus):me?.states?.length;
    if(account&&registered&&available&&card){
-    const info=link(sectionMode?'Xem đăng ký của tôi':'Xem thông tin đăng ký','#registration');
-    info.className='registration-information-link';info.onclick=event=>{event.preventDefault();open();};card.append(info);
+    const info=node('button',sectionMode?'Xem đăng ký của tôi':'Xem thông tin đăng ký');
+    info.type='button';info.id='player-registration-toggle';info.className='registration-information-link';
+    info.setAttribute('aria-controls','player-registration-panel');info.setAttribute('aria-expanded',String(visible));
+    info.onclick=()=>{if(!host||host.hidden){open();return;}onClose?.();selectTab('overview');root.querySelector('#player-registration-toggle')?.focus({preventScroll:true});};card.append(info);
    }
-   const visible=available&&tab==='registration';
    if(!host){host=node('section',undefined,'panel player-registration-disclosure');host.id='player-registration-panel';host.tabIndex=-1;host.setAttribute('role',sectionMode?'region':'tabpanel');if(sectionMode)host.setAttribute('aria-label','Đăng ký của tôi');else host.setAttribute('aria-labelledby','player-tab-registration');}
    root.append(host);host.hidden=!visible;
    const nextSnapshot=JSON.stringify([t.status,t.timeline,t.botPolicy,t.registrationPolicy,t.acceptingRegistrations,account,flow?.phase,flow?.registrationStatus,flow?.registration,flow?.canWithdraw,flow?.registrationControl,flow?.allowedLanguages,me?.states]);

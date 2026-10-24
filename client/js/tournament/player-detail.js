@@ -38,7 +38,7 @@ const refreshPlayerTournamentState=(force=false,reason='manual')=>playerRefresh.
 const load=refreshPlayerTournamentState;
 const refreshAfterAction=()=>load(true);
 const refreshSectionAfterAction=async key=>{pageSections.clearDirty(key);await load(true);};
-const registrationView=createRegistrationDisclosure({sectionMode:true,selectTab:()=>{registrationOpen=true;render(true);},onOpen:()=>rememberSection('registration'),onRules:()=>navigateSection('rules'),refresh:refreshAfterAction,onRegistered:async result=>{if(result)flow=result;registrationOpen=false;history.replaceState(null,'',location.pathname+location.search);render(true);await load(true);}});
+const registrationView=createRegistrationDisclosure({sectionMode:true,selectTab:key=>{registrationOpen=key==='registration';render(true);},onOpen:()=>rememberSection('registration'),onClose:()=>{if(playerSectionTarget(location.hash.slice(1))==='player-registration-panel')history.replaceState(null,'',location.pathname+location.search);},onRules:()=>navigateSection('rules'),refresh:refreshAfterAction,onRegistered:async result=>{if(result)flow=result;registrationOpen=false;history.replaceState(null,'',location.pathname+location.search);render(true);await load(true);}});
 function rememberSection(key){history.replaceState(null,'',location.pathname+location.search+'#'+key);}
 function navigateSection(hash,remember=true){
  if(!state.tournament)return;
