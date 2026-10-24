@@ -24,7 +24,7 @@ export function renderTournamentAttentionPanel(root,t,data,{stale=false}={}){
  root.replaceChildren();root.dataset.empty='false';root.setAttribute('aria-label','Các vấn đề cần chủ giải xử lý');
  if(!data||data.tournamentId!==t.id||data.revision!==t.revision){root.append(node('p',stale?'Chưa cập nhật được vấn đề của giải. Đang chờ dữ liệu server.':'Đang kiểm tra dữ liệu của giải…'));return;}
  if(stale)root.append(node('p','Dữ liệu có thể đã cũ. Mở mục chi tiết và kiểm tra trạng thái mới trước khi xử lý.','metrics-warning'));
- const items=attentionItems(t,data);if(!items.length){root.dataset.empty='true';root.append(node('p',['FINISHED','CANCELLED'].includes(data.phase)?'✓ Giải đã kết thúc hoặc hủy; xem Audit để kiểm tra lịch sử.':'✓ Không có vấn đề cần xử lý trong dữ liệu hiện có.'));return;}
+ const items=attentionItems(t,data);if(!items.length){root.dataset.empty='true';return;}
  root.append(node('h2','Cần xử lý'),node('p','Ghi nhận lúc '+date(data.serverNow)));
  const list=node('ul',undefined,'organizer-attention-list');for(const item of items){const row=node('li'),severity=node('strong',({CRITICAL:'Khẩn cấp',WARNING:'Cần chú ý',INFO:'Thông tin'})[item.severity]);row.dataset.severity=item.severity;row.append(severity,link(item.text,item.href));list.append(row);}root.append(list);
 }

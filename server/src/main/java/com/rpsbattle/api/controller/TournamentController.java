@@ -31,7 +31,7 @@ public class TournamentController {
     @PostMapping("/{id}/check-in") public Map<String,Object> checkIn(Authentication auth,@PathVariable String id,@RequestBody(required=false) CheckIn request) {owned.checkIn(auth,id,request==null?null:request.registrationId());return detail(auth,id);}
     @PostMapping("/{id}/close-check-in") public Map<String,Object> closeCheckIn(Authentication auth,@PathVariable String id) {owned.closeCheckIn(auth,id);return detail(auth,id);}
     @PostMapping("/{id}/rules") public Map<String,Object> rules(Authentication auth,@PathVariable String id,@RequestBody Rules request) {owned.configureRules(auth,id,request.maxConcurrentMatches(),request.tieBreakOrder());return detail(auth,id);}
-    public record Rules(int maxConcurrentMatches,List<com.rpsbattle.tournament.ranking.TieBreak> tieBreakOrder) {}
+    public record Rules(Integer maxConcurrentMatches,List<com.rpsbattle.tournament.ranking.TieBreak> tieBreakOrder) {}
     public record CheckIn(String registrationId) {}
     @PostMapping("/{id}/seeding") public Map<String,Object> seeding(Authentication auth,@PathVariable String id,@RequestBody Seeds request){owned.configureSeeding(auth,id,request.strategy(),request.seed(),request.manualSeeds());return detail(auth,id);}
     public record Seeds(SeedingStrategy strategy,Long seed,Map<String,Integer> manualSeeds) {}

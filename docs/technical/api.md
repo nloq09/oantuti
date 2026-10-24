@@ -68,7 +68,7 @@ Contract cụ thể: [AuthController](../../server/src/main/java/com/rpsbattle/a
 
 | Method / path | Auth / role | Request | Response / guard |
 | --- | --- | --- | --- |
-| POST `/api/tournaments` | Session USER + CSRF, quyền create | Create: name, format, visibility, checkInRequired, maxParticipants, maxConcurrentMatches, tieBreakOrder, participantPolicy, bestOf, botPolicy, registrationPolicy | 201 manager view; validate cấu hình/giới hạn. |
+| POST `/api/tournaments` | Session USER + CSRF, quyền create | Create: name, format, visibility, checkInRequired, maxParticipants, maxConcurrentMatches, tieBreakOrder, participantPolicy, bestOf, botPolicy, registrationPolicy | 201 manager view; validate cấu hình/giới hạn. `maxConcurrentMatches` chỉ ADMIN được gửi; USER bỏ trường này để dùng mặc định server. |
 | GET `/api/tournaments/discover` | Đọc theo viewer | category, q, format, page, size | Discovery page; không lộ giải private của người khác. |
 | GET `T` | Viewer/manager | Không body | Manager view hoặc public view đã lọc. |
 | GET `T/me` | Session/Self | Không body | State và next action của người chơi. |
@@ -139,6 +139,8 @@ Nhóm/team, tranh chấp, replay moderation, cleanup, notifications, group membe
 ## Danh mục mapping trong source
 
 Phần này kiểm tra tự động với controller, bao gồm alias/redirect; **không** tự suy luận auth từ tên URL. Khi đổi route chạy `node tools/documentation-routes.mjs --write`, cập nhật contract phía trên nếu hành vi đổi, rồi `node tools/check-documentation.mjs`.
+
+Thay đổi `maxConcurrentMatches` khi tạo giải hoặc qua `POST /api/tournaments/{id}/rules` yêu cầu ADMIN, kể cả người gửi là chủ giải. Chủ giải vẫn sửa `tieBreakOrder` theo quyền/giai đoạn hiện có bằng cách bỏ `maxConcurrentMatches`; server giữ nguyên mức đang áp dụng.
 
 <!-- ROUTES:START -->
 176 mappings khai báo trong các API controller (bao gồm redirect UI; không bao gồm Actuator và WebSocket). Auth/guard không được suy ra từ annotation.

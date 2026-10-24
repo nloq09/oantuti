@@ -87,7 +87,7 @@ public class OwnedTournamentService {
         return create(auth,name,format,visibility,false,10);
     }
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants) {
-        return create(auth,name,format,visibility,checkInRequired,maxParticipants,4,null);
+        return create(auth,name,format,visibility,checkInRequired,maxParticipants,null,null);
     }
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order) {
         return create(auth,name,format,visibility,checkInRequired,maxParticipants,concurrency,order,ParticipantPolicy.BOT_ONLY);
@@ -102,7 +102,7 @@ public class OwnedTournamentService {
     public Tournament create(Authentication auth,String name,TournamentFormat format,String visibility,boolean checkInRequired,Integer maxParticipants,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order,ParticipantPolicy policy,Integer bestOf,TournamentBotPolicy botPolicy,com.rpsbattle.tournament.registration.RegistrationPolicy registrationPolicy) {
         format=format==null?TournamentFormat.ROUND_ROBIN:format;
         boolean enroll=botPolicy!=null;int seriesLength=TournamentSeries.validate(bestOf);
-        var actor=accounts.requireUser(auth);botPolicy=botPolicy==null?TournamentBotPolicy.defaults():botPolicy;
+        var actor=accounts.requireUser(auth);if(concurrency!=null)accounts.requireAdmin(auth);botPolicy=botPolicy==null?TournamentBotPolicy.defaults():botPolicy;
         if(policy==ParticipantPolicy.HUMAN_ONLY&&botPolicy.submissionMode()!=BotSubmissionMode.PRE_UPLOADED_ONLY)throw new DemoRequestException("INVALID_BOT_SUBMISSION_POLICY");
         validateRules(concurrency==null?4:concurrency,order);
         int limit=maxParticipants==null?10:maxParticipants;
@@ -349,10 +349,11 @@ public class OwnedTournamentService {
         if(concurrency<1||concurrency>4)throw new DemoRequestException("INVALID_CONCURRENCY");
         if(order!=null && (order.isEmpty() || order.size()>5 || order.stream().anyMatch(Objects::isNull) || order.getFirst()!=com.rpsbattle.tournament.ranking.TieBreak.POINTS || new HashSet<>(order).size()!=order.size()))throw new DemoRequestException("INVALID_TIE_BREAK_ORDER");
     }
-    public void configureRules(Authentication auth,String id,int concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order) {
-        var t=tournaments.find(id);authorization.requireManager(auth,t);validateRules(concurrency,order);
+    public void configureRules(Authentication auth,String id,Integer concurrency,List<com.rpsbattle.tournament.ranking.TieBreak> order) {
+        var t=tournaments.find(id);authorization.requireManager(auth,t);if(concurrency!=null)accounts.requireAdmin(auth);
         mutate(t,auth,()->{if(!List.of(TournamentStatus.DRAFT,TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN).contains(t.status))throw new DemoRequestException("TOURNAMENT_LOCKED");
-            t.maxConcurrentMatches=concurrency;if(order!=null)t.tieBreakOrder=List.copyOf(order);tournaments.changed(t);
+            int capacity=concurrency==null?t.maxConcurrentMatches:concurrency;validateRules(capacity,order);
+            t.maxConcurrentMatches=capacity;if(order!=null)t.tieBreakOrder=List.copyOf(order);tournaments.changed(t);
         });
     }
     private void registrationPhase(Tournament t) {

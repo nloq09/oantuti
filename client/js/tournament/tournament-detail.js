@@ -313,9 +313,7 @@ function renderRules(t,owner) {
   const section=document.querySelector("#competition-rules");section.hidden=!owner;
   const editable=["DRAFT","REGISTRATION","CHECK_IN"].includes(t.status);
   document.querySelector('#rules-form').hidden=!editable;
-  const concurrency=document.querySelector("#rule-concurrency");
   if(!section.contains(document.activeElement)) {
-    concurrency.value=t.maxConcurrentMatches;
     section.querySelectorAll("select").forEach((select,index)=>select.value=t.tieBreakOrder?.[index+1]||"");
   }
   section.querySelectorAll("input,select,button").forEach(input=>input.disabled=!editable);
@@ -323,5 +321,5 @@ function renderRules(t,owner) {
 document.querySelector("#rules-form").onsubmit=event=>{
   event.preventDefault();const tieBreakOrder=["POINTS",...[...ruleInputs.querySelectorAll("select")].map(select=>select.value).filter(Boolean)];
   if(new Set(tieBreakOrder).size!==tieBreakOrder.length){toast("Các tiêu chí phụ không được trùng nhau.",true);return;}
-  action(()=>configureRules(id,{maxConcurrentMatches:Number(document.querySelector("#rule-concurrency").value),tieBreakOrder}));
+  action(()=>configureRules(id,{tieBreakOrder}));
 };

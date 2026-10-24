@@ -42,11 +42,12 @@ class DockerTournamentPersistenceTest {
     @Autowired UserStatsService stats;
     @Autowired com.rpsbattle.replay.ReplayRegistry replays;
     User user() {var id=UserId.random();var now=Instant.now();var name="docker_"+id.value().toString().substring(0,8);return users.save(new User(id,name,name+"@example.com","unused","Player",UserRole.USER,AccountStatus.ACTIVE,now,now,null));}
+    User administrator(){var u=user();return users.save(new User(u.id(),u.username(),u.email(),u.passwordHash(),u.displayName(),UserRole.ADMIN,u.status(),u.createdAt(),u.updatedAt(),u.lastLoginAt(),u.authVersion()));}
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"ROUND_ROBIN,5,10","SINGLE_ELIMINATION,6,5","ROUND_ROBIN,8,28","SINGLE_ELIMINATION,16,15","SINGLE_ELIMINATION,32,31"})
     void dockerScheduleCompletesRoundsAndPersistsBracketAndTiming(TournamentFormat format,int count,int expected) throws Exception {
         assumeTrue(artifacts.available(BotLanguage.PYTHON),"Docker Linux/python image unavailable");
-        int concurrency=count>=8?4:1;var auth=AuthService.sessionAuthentication(user());var cup=owned.create(auth,"Docker rounds "+format,format,"PUBLIC",false,32,concurrency,null);
+        int concurrency=count>=8?4:1;var auth=AuthService.sessionAuthentication(administrator());var cup=owned.create(auth,"Docker rounds "+format,format,"PUBLIC",false,32,concurrency,null);
         for(int i=0;i<count;i++) {var bot=bots.upload(auth,"Round bot "+i,new MockMultipartFile("file","main.py","text/plain","raise SystemExit(1)\n".getBytes()));owned.add(auth,cup.id,bot.id().toString(),null,(long)i);}
         owned.start(auth,cup.id);long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(120);
         boolean finished=false;

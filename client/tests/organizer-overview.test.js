@@ -5,7 +5,7 @@ test('overview answers phase, next action and issues without configuration forms
 });
 test('empty attention is compact and mismatched data cannot masquerade as healthy or invent zero counts',()=>{
  const doc=installDocument('<body><main></main></body>'),root=doc.querySelector('main'),t=cup(),data=metrics(t,{registration:{pending:0},phase:'REGISTRATION_OPEN'});renderOrganizerOverview(root,t,data);
- const attention=root.querySelector('.organizer-attention');assert.equal(attention.dataset.empty,'true');assert.equal(attention.querySelector('h2'),null);assert.match(text(attention),/Không có vấn đề cần xử lý/);
+ const attention=root.querySelector('.organizer-attention');assert.equal(attention.dataset.empty,'true');assert.equal(attention.childElementCount,0);
  renderOrganizerOverview(root,t,{...data,tournamentId:'other'});assert.match(text(root),/Đang lấy thống kê/);assert.equal(root.querySelectorAll('dd').length,0);assert.equal(root.querySelector('[data-organizer-command]'),null);
 });
 test('recent activity is bounded readable and uses text nodes for untrusted names and reasons',()=>{

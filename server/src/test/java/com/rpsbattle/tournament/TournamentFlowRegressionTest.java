@@ -20,10 +20,10 @@ class TournamentFlowRegressionTest {
  }
  @Test void humanCapacityDependsOnFormatRatherThanCodingEnrollment(){
   var f=new TeamTournamentTest();for(var format:java.util.List.of(TournamentFormat.SWISS,TournamentFormat.SINGLE_ELIMINATION)){
-   var t=f.owned.create(f.aa,"Large humans",format,"PUBLIC",false,4000,2,null,ParticipantPolicy.HUMAN_ONLY,1,null);assertThat(t.maxParticipants).isEqualTo(4000);
+   var t=f.owned.create(f.aa,"Large humans",format,"PUBLIC",false,4000,null,null,ParticipantPolicy.HUMAN_ONLY,1,null);assertThat(t.maxParticipants).isEqualTo(4000);
   }
-  assertThatThrownBy(()->f.owned.create(f.aa,"Too large",TournamentFormat.ROUND_ROBIN,"PUBLIC",false,33,2,null,ParticipantPolicy.HUMAN_ONLY,1,null)).hasMessage("INVALID_PARTICIPANT_LIMIT");
-  assertThatThrownBy(()->f.owned.create(f.aa,"Default format",null,"PUBLIC",false,33,2,null,ParticipantPolicy.HUMAN_ONLY,1,null)).hasMessage("INVALID_PARTICIPANT_LIMIT");
+  assertThatThrownBy(()->f.owned.create(f.aa,"Too large",TournamentFormat.ROUND_ROBIN,"PUBLIC",false,33,null,null,ParticipantPolicy.HUMAN_ONLY,1,null)).hasMessage("INVALID_PARTICIPANT_LIMIT");
+  assertThatThrownBy(()->f.owned.create(f.aa,"Default format",null,"PUBLIC",false,33,null,null,ParticipantPolicy.HUMAN_ONLY,1,null)).hasMessage("INVALID_PARTICIPANT_LIMIT");
  }
  @Test void expiredSchedulesCanBeSavedButCannotBePublishedAndBoundaryIsStrict(){
   var f=new TeamTournamentTest();f.owned.clock(Clock.fixed(NOW,ZoneOffset.UTC));

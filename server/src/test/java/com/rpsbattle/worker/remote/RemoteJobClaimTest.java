@@ -75,7 +75,7 @@ class RemoteJobClaimTest extends WorkerRegistrationTest {
     }
     @Test void fifoDoesNotStarveCacheMissAndCompletedMatchesAreNotClaimable()throws Exception {
         try(var admin=new Browser()) {
-            UUID actor=admin.account(true);var m=machine(actor,Set.of("CPP"),1,"TRUSTED");var old=spec(actor,"CPP","CPP","TRUSTED");var cached=spec(actor,"CPP","CPP","TRUSTED");UUID first=queue.enqueue(old);queue.enqueue(cached);db.update("update match_execution_jobs set created_at=? where id=?",java.sql.Timestamp.from(Instant.now().minusSeconds(30)),first);
+            UUID actor=admin.account(true);var m=machine(actor,Set.of("CPP"),1,"TRUSTED");var old=spec(actor,"CPP","CPP","TRUSTED");var cached=spec(actor,"CPP","CPP","TRUSTED");UUID first=queue.enqueue(old);queue.enqueue(cached);db.update("update match_execution_jobs set created_at=? where id=?",java.sql.Timestamp.from(Instant.now().minusSeconds(31)),first);
             var req=claim(m,1);var withCache=new RemoteMatchQueue.Claim(req.requestId(),req.epoch(),1,List.of(cached.botA().artifactHash(),cached.botB().artifactHash()),req.gameCoreVersion(),req.ruleSetVersion(),1);assertThat(queue.claim(m.id(),withCache).jobs().getFirst().jobId()).isEqualTo(first);
             var held=queue.assigned(m.id()).jobs().getFirst();queue.decline(m.id(),held.jobId(),new RemoteMatchQueue.Decline(held.executionId(),"EXECUTION_NOT_AVAILABLE"));db.update("update tournament_matches set status='FINISHED' where id=?",old.matchId());assertThat(queue.claim(m.id(),claim(m,1)).jobs().getFirst().match().matchId()).isEqualTo(cached.matchId());
         }

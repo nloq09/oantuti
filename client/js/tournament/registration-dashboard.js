@@ -12,7 +12,7 @@ export function renderRegistrationDashboard(root,t,summary,{status='',selectFilt
  root.append(heading);
  const metrics=node('div',undefined,'registration-summary-grid');metrics.setAttribute('aria-label','Số liệu toàn bộ đơn đăng ký');
  for(const [key,label,filter]of registrationMetrics){const card=node('button',undefined,'registration-stat');card.type='button';card.dataset.registrationMetric=key;card.dataset.registrationFocus='metric-'+key;card.setAttribute('aria-pressed',String(status===filter));card.setAttribute('aria-label',`${label}: ${number(summary.counts[key])}. Lọc danh sách.`);card.append(node('strong',number(summary.counts[key])),node('span',label));card.onclick=()=>selectFilter?.(filter);metrics.append(card);}
- root.append(metrics,node('p',`${number(summary.counts.approved)} / ${number(summary.capacity)} suất đã duyệt · Còn ${number(summary.remainingSlots)} suất · ${number(summary.counts.cancelled)} đơn đã hủy`,'registration-capacity'));
+ root.append(metrics);
  const attention=node('section',undefined,'control-card registration-primary-action');attention.setAttribute('aria-label','Việc cần xử lý');
  if(summary.counts.needsReview>0){
   attention.append(node('h2',summary.canReview?'Cần bạn xử lý':'Đơn chưa được xử lý'),node('p',`${number(summary.counts.needsReview)} đơn cần ban tổ chức xác nhận. ${summary.canReview?'Các đơn rõ ràng hợp lệ được xử lý theo chính sách của giải.':'Phần xét duyệt hiện đã khóa; chỉ có thể xem danh sách.'}`));

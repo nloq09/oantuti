@@ -7,6 +7,8 @@ test('actual page keeps configuration in Settings and moves every operation to i
  assert.ok(doc.querySelector('#matches').querySelector('#request-review'));assert.ok(doc.querySelector('#matches').querySelector('[data-admin-control=pause]'));assert.ok(doc.querySelector('#ranking').querySelector('#override-result'));assert.ok(doc.querySelector('#ranking').querySelector('[data-admin-control=finish]'));assert.ok(doc.querySelector('#bracket').querySelector('#seeding'));
  assert.ok(doc.querySelector('#participants-tab').querySelector('#open-registration'));assert.ok(doc.querySelector('#organizer-check-in').querySelector('#close-check-in'));
  assert.equal(settings.children.at(-1).id,'organizer-danger-zone');const ids=descendants(doc).filter(n=>n.id).map(n=>n.id);assert.equal(new Set(ids).size,ids.length,'duplicate ids break handlers');assert.equal(settings.querySelector('pre'),null);
+ assert.equal(doc.querySelector('#rule-concurrency'),null,'organizers cannot configure runner capacity');
+ const createPage=installDocument(readFileSync(new URL('../tournaments.html',import.meta.url),'utf8'));assert.equal(createPage.querySelector('#match-concurrency'),null,'creation uses server capacity');
 });
 test('manual timing edits use existing POST endpoint and reject invalid equality before sending',async()=>{
  const doc=installDocument('<body><main></main></body>'),root=doc.querySelector('main'),t=cup({status:'DRAFT',participants:[]});let refreshes=0;renderManualTiming(root,t,()=>{refreshes++;});const inputs=root.querySelectorAll('input'),form=root.querySelector('form');inputs[0].value=inputs[1].value='2026-11-01T10:00';let calls=[];const original=globalThis.fetch;

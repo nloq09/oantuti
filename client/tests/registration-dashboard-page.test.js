@@ -54,7 +54,7 @@ test('aggregate cards have exact totals and route directly to each queue',()=>{
  for(const card of cards)card.click();assert.deepEqual(filters,['','APPROVED','NEEDS_REVIEW','WAITLISTED','REJECTED']);
  assert.equal(cards[2].getAttribute('aria-pressed'),'true');
  const primary=root.querySelector('[data-registration-focus="review-queue"]');assert.equal(primary.textContent,'Xử lý 24 đơn');primary.click();assert.equal(filters.at(-1),'NEEDS_REVIEW');
- assert.match(text(root),/299 suất/);assert.equal(root.querySelectorAll('.registration-roster').length,1);
+ assert.equal(root.querySelector('.registration-capacity'),null);assert.equal(root.querySelectorAll('.registration-roster').length,1);
 });
 test('closed review is read only, policy edit is server authorized and locked roster has no mutations',()=>{
  const root=host();renderRegistrationDashboard(root,tournament,{...summary,canReview:false,canClose:false,registrationOpen:false,control:{enabled:true,lockedAt:'2026-10-21T13:30:00Z',lockedCount:3701,lockedByName:'<img onerror=alert(1)>'}});

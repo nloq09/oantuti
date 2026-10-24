@@ -12,7 +12,7 @@ class TournamentTimelineApiTest extends StageThreeWebFixture {
     @Autowired OwnedTournamentService ownedTournaments;
     @Test void fullCreateFlowKeepsDraftAndAlignedBotPolicyUntilOwnerOpensRegistration()throws Exception{
         loginAccount();var schedule=TournamentTimelineTest.timeline();
-        var t=request("/api/tournaments","POST",Map.of("name","Full timeline create","format","SINGLE_ELIMINATION","participantPolicy","BOT_ONLY","checkInRequired",true,"maxParticipants",64,"maxConcurrentMatches",2,"botPolicy",Map.of("submissionMode","BOTH","allowedLanguages",List.of("PYTHON","CPP"),"submissionOpenAt",schedule.codingOpenAt().toString(),"submissionDeadline",schedule.codingCloseAt().toString(),"deadlineBehavior","AUTO_SUBMIT_LATEST_READY","lockAtDeadline",true)),201);
+        var t=request("/api/tournaments","POST",Map.of("name","Full timeline create","format","SINGLE_ELIMINATION","participantPolicy","BOT_ONLY","checkInRequired",true,"maxParticipants",64,"botPolicy",Map.of("submissionMode","BOTH","allowedLanguages",List.of("PYTHON","CPP"),"submissionOpenAt",schedule.codingOpenAt().toString(),"submissionDeadline",schedule.codingCloseAt().toString(),"deadlineBehavior","AUTO_SUBMIT_LATEST_READY","lockAtDeadline",true)),201);
         String base="/api/tournaments/"+t.path("id").asText();
         var invalid=json.valueToTree(schedule);((com.fasterxml.jackson.databind.node.ObjectNode)invalid).put("codingOpenAt",schedule.registrationOpenAt().toString());
         request(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",invalid),400);

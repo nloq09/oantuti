@@ -12,7 +12,7 @@ Mở **Giải đấu → Tạo giải**. Wizard có sáu bước:
 2. **Người tham gia:** chọn BOT_ONLY, HUMAN_ONLY hoặc MIXED nếu tổ hợp thể thức cho phép, sức chứa, chính sách duyệt đơn và check-in. Client và server đều kiểm tra tổ hợp; không ép giá trị bị vô hiệu hóa bằng DevTools.
 3. **Bot:** với giải có bot, chọn ngôn ngữ, cách nộp và các giới hạn. Giải có workspace cần đủ thời gian build, test và kiểm thử chính thức. Đọc [Build/Test/Submit](../bot/build-test-submit.md) trước khi công bố policy.
 4. **Timeline:** đặt giờ mở/đóng đăng ký, coding, validation, check-in và bắt đầu. Giao diện nhập giờ theo máy người dùng, server lưu thời điểm tuyệt đối; kiểm tra phần xác nhận để tránh nhầm múi giờ. Giờ đóng đăng ký có thể bằng giờ mở coding.
-5. **Thi đấu:** kiểm tra concurrency, seeding, tie-break và tự chuyển vòng. Concurrency của giải vẫn chịu giới hạn thực tế của server/nhóm worker.
+5. **Thi đấu:** chọn yêu cầu check-in. Số trận chạy đồng thời và tài nguyên chạy bot do quản trị viên cấu hình; chủ giải không được tự đặt khi tạo hoặc sửa luật giải. Hạt giống, tiêu chí xếp hạng và các vòng đấu tiếp tục được quản lý theo luật giải hiện có.
 6. **Xác nhận:** đọc lại toàn bộ lịch và policy rồi tạo. Sửa bước trước có thể yêu cầu kiểm tra lại những bước sau.
 
 Sau khi tạo, mở giải của mình sẽ vào **Quản lý giải**. Các phần nằm trong nhóm Tổng quan, Người chơi, Thi đấu và Quản trị; tab không áp dụng cho mode hiện tại có thể bị ẩn. Với timeline hợp lệ, server tự mở đăng ký khi đến giờ. Có thể mở sớm qua thao tác hiện trong UI; không cần chốt danh sách thủ công mới cho phép coding.

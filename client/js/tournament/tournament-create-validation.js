@@ -18,6 +18,5 @@ export function validateCreateStep(step,data){
   if(r!=null&&c!=null&&r>=c)fail('Hạn check-in phải sau hạn đăng ký.');
   if(c!=null&&s!=null&&c>s||r!=null&&s!=null&&r>s)fail('Các mốc đăng ký, check-in và bắt đầu phải theo thứ tự thời gian.');
  }
- if(step===4&&(!Number.isInteger(data.maxConcurrentMatches)||data.maxConcurrentMatches<1||data.maxConcurrentMatches>4))fail('Số trận đồng thời phải từ 1 đến 4.');
  return true;
 }

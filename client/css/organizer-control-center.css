@@ -44,12 +44,15 @@
 .organizer-page .organizer-content form{display:grid;gap:12px;max-width:760px}
 .organizer-page .organizer-content form label{display:block;min-width:0;margin:0}
 .organizer-page .organizer-content form button{justify-self:start}
+.organizer-page .timeline-override-form>[role=status]{margin:0}
+.organizer-page .timeline-override-form>[role=status]:empty{display:none}
 .organizer-page .organizer-phase-metrics{margin:0!important}
 .organizer-page .organizer-metrics-grid{grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:12px}
 .organizer-page .organizer-metrics-grid>div{border:0;border-radius:6px;padding:14px;background:#0d2233}
 .organizer-page .organizer-metrics-grid dd{font-size:26px;line-height:1.2}
 .organizer-page .organizer-metrics-grid dt{color:#c6d3de;font-size:14px}
 .organizer-page .organizer-attention{margin:0!important;padding:16px 20px;background:#162e41;border:1px solid var(--control-line);border-radius:8px}
+.organizer-page .organizer-attention:empty{display:none}
 .organizer-page .organizer-attention[data-empty=true]{padding:7px 4px;border:0;background:transparent;font-size:14px;color:#b9dac2}
 .organizer-page .organizer-attention[data-empty=true] p{margin:0}
 .organizer-page .organizer-attention-list{margin:12px 0 0;gap:8px}
@@ -99,7 +102,6 @@
 .organizer-page .registration-stat strong{font:700 28px/1.2 system-ui,sans-serif;color:#fff0c9}
 .organizer-page .registration-stat span{font-size:14px;color:#c6d3de}
 .organizer-page .organizer-content .registration-stat[aria-pressed=true]{background:#204d75;border-color:#d4b16c}
-.organizer-page .registration-capacity{margin:0;color:var(--control-muted);overflow-wrap:anywhere}
 .organizer-page .registration-primary-action{border-left:4px solid #c9a75f}
 .organizer-page .registration-primary-action h2,.organizer-page .registration-dashboard-columns h2{font-size:20px;margin-top:0}
 .organizer-page .registration-dashboard-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}

@@ -1,8 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {validateCreateStep} from '../js/tournament/tournament-create-validation.js';
-const data={name:'Cup',format:'ROUND_ROBIN',bestOf:3,maxParticipants:10,participantPolicy:'BOT_ONLY',maxConcurrentMatches:2,botPolicy:{submissionMode:'PRE_UPLOADED_ONLY',allowedLanguages:['PYTHON'],maxSubmissionVersions:10,maxSourceBytes:524288}};
-test('wizard rejects blank names unsupported formats capacity and concurrency before create',()=>{
- for(const [step,patch]of [[0,{name:' '}],[0,{format:'FAKE'}],[0,{bestOf:7}],[1,{maxParticipants:1}],[1,{format:'TEAM_ROUND_ROBIN',maxParticipants:5}],[1,{maxParticipants:33}],[4,{maxConcurrentMatches:5}]])assert.throws(()=>validateCreateStep(step,{...data,...patch}));assert.equal(validateCreateStep(1,{...data,format:'SWISS',maxParticipants:4000}),true);
+const data={name:'Cup',format:'ROUND_ROBIN',bestOf:3,maxParticipants:10,participantPolicy:'BOT_ONLY',botPolicy:{submissionMode:'PRE_UPLOADED_ONLY',allowedLanguages:['PYTHON'],maxSubmissionVersions:10,maxSourceBytes:524288}};
+test('wizard validates names formats and participant capacity without requiring a user concurrency setting',()=>{
+ for(const [step,patch]of [[0,{name:' '}],[0,{format:'FAKE'}],[0,{bestOf:7}],[1,{maxParticipants:1}],[1,{format:'TEAM_ROUND_ROBIN',maxParticipants:5}],[1,{maxParticipants:33}]])assert.throws(()=>validateCreateStep(step,{...data,...patch}));assert.equal(validateCreateStep(1,{...data,format:'SWISS',maxParticipants:4000}),true);assert.equal(validateCreateStep(4,data),true);
 });
 test('existing bot language source/version limits and group stages remain validated',()=>{
  assert.throws(()=>validateCreateStep(2,{...data,botPolicy:{...data.botPolicy,allowedLanguages:[]}}));assert.throws(()=>validateCreateStep(2,{...data,botPolicy:{...data.botPolicy,maxSourceBytes:524289}}));assert.throws(()=>validateCreateStep(2,{...data,bots:[{language:'CPP'}]}));assert.equal(validateCreateStep(2,{...data,participantPolicy:'HUMAN_ONLY',botPolicy:null}),true);assert.throws(()=>validateCreateStep(1,{...data,format:'GROUP_KNOCKOUT',stages:[{groups:16,qualifyTopN:2}]}));
