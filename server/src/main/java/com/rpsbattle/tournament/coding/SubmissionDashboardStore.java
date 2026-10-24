@@ -28,7 +28,7 @@ public class SubmissionDashboardStore {
   from tournament_code_workspaces w where w.tournament_id=:t group by w.user_id
  ), ready_users as (
   select distinct w.user_id from tournament_code_workspaces w join tournament_submission_versions v on v.workspace_id=w.id
-  where w.tournament_id=:t and v.status in ('READY','SUBMITTED','LOCKED') and v.public_passed=true and v.sample_passed=true
+  where w.tournament_id=:t and v.status in ('READY','SUBMITTED','LOCKED') and v.public_passed=true and (v.pipeline_submission=true or v.sample_passed=true)
  ), languages as (
   select user_id,string_agg(language, ', ' order by language) language from tournament_code_workspaces where tournament_id=:t group by user_id
  ), facts as (

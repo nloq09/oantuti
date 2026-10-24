@@ -60,3 +60,9 @@ Chưa có lịch purge toàn bộ artifact/replay tùy ý theo số ngày. Ngư�
 - [Cấu hình JPA/Flyway](../../server/src/main/resources/application.yml), [prod datasource](../../server/src/main/resources/application-prod.yml), [Compose volumes](../../infra/docker-compose.yml).
 - [Persistence giải](../../server/src/main/java/com/rpsbattle/tournament/persistence/TournamentPersistenceCoordinator.java), [cleanup](../../server/src/main/java/com/rpsbattle/tournament/cleanup/TournamentCleanupPolicy.java).
 - [Remote constraints](../../server/src/main/resources/db/migration/V31__remote_match_claims.sql), [registration controls](../../server/src/main/resources/db/migration/V40__registration_close_and_roster_lock.sql).
+
+## Lần nộp bot tự động
+
+Migration [V42](../../server/src/main/resources/db/migration/V42__submission_attempts.sql) thêm `tournament_submission_attempts` và cờ `pipeline_submission` cho version. Mã yêu cầu là khóa chính, version snapshot là duy nhất; hàng đợi dùng job BUILD hiện có và lease/token như trước. Admission được khóa bằng hàng guard và user để chặn xử lý trùng qua nhiều request. Source của version không đổi khi lưu nháp.
+
+Tiến trình QUEUED/BUILDING/TESTING/FINALIZING/SUCCEEDED/FAILED được lưu trong database. Giao dịch chốt cùng lúc cập nhật bài nộp, registration, audit, kết quả job và lần nộp; lỗi rollback giữ bản trước đó. Bộ đọc dashboard và fallback hiểu version từ pipeline có kiểm thử giao thức/hidden bắt buộc; đấu mẫu tùy chọn không được giả ghi là đã đạt.

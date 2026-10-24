@@ -13,6 +13,7 @@ export function resolvePlayerTournamentViewState({tournament:t,flow={},workspace
  const hasLockedSubmission=Boolean(frozen?.versionId&&['AUTO_SUBMITTED','EXPLICIT_SUBMIT'].includes(frozen.decision));
  const missing=frozen?.decision==='MISSING'||flow.submissionStatus==='SUBMISSION_MISSING';
  const beforeValidation=phase==='SUBMISSION_FROZEN',closed=closedPhases.has(phase);
+ const checkInView=['CHECK_IN_OPEN','READY_TO_START'].includes(phase)&&['CHECK_IN','OPEN_WAITING_ROOM','CHECK_IN_MISSED'].includes(flow.nextAction);
  const emergency=(flow.canEmergencyResubmit===true||flow.emergencyCoding===true)&&flow.canAccessWorkspace===true&&flow.canModifyWorkspace===true&&phase==='CODING_OPEN';
  let submissionState=workspace?.status||submission?.status||({NO_WORKSPACE:'NO_WORKSPACE',NO_SUBMISSION:'UNKNOWN'})[flow.submissionStatus]||flow.submissionStatus||'UNKNOWN';
  if(closed){submissionState=missing?(frozen?.reason==='NO_READY_VERSION_BEFORE_DEADLINE'?'NO_READY_AT_DEADLINE':'NO_VALID_SUBMISSION_AT_DEADLINE'):hasLockedSubmission?'LOCKED':'FREEZE_PENDING';}
@@ -25,7 +26,7 @@ export function resolvePlayerTournamentViewState({tournament:t,flow={},workspace
   if(missing)primaryAction=playerAction('WAIT_VALIDATION','Không có bài nộp hợp lệ','Hiện không có thao tác nào cần thực hiện. Hãy chờ giai đoạn kiểm thử chính thức.');
   else if(hasLockedSubmission)primaryAction=playerAction('VIEW_FROZEN_SUBMISSION','Xem bài đã khóa','Bạn có thể xem phiên bản đã chốt. Kiểm thử chính thức chưa bắt đầu.','#validation');
   else primaryAction=playerAction('WAIT_FREEZE','Đang chốt bài nộp','Hiện không có thao tác nào cần thực hiện. Chờ server xác nhận kết quả chốt bài.');
- }else if(showValidation&&validationView.status!=='READY'){
+ }else if(showValidation&&!checkInView&&validationView.status!=='READY'){
   primaryAction=playerAction(validationView.status==='ERROR'?'RETRY_VALIDATION':'LOADING_VALIDATION',validationView.status==='ERROR'?'Không tải được chi tiết kiểm thử':'Đang tải kết quả kiểm thử…','Chờ dữ liệu kiểm thử đầy đủ từ server.');
  }else if(showValidation&&!(phase!=='VALIDATING'&&(flow.nextAction==='CHECK_IN'||flow.nextAction==='OPEN_WAITING_ROOM'||flow.nextAction==='CHECK_IN_MISSED'))){
   if(submissionState==='VALIDATION_PASSED')primaryAction=playerAction('WAIT_CHECK_IN','Chờ check-in','Bạn không cần thực hiện thêm thao tác nào lúc này.',null,{opensAt:t.timeline?.checkInOpenAt,serverNow:flow.serverNow});

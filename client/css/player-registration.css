@@ -1,0 +1,25 @@
+/* Only the on-demand registration body; header, phase stepper and task card keep their existing styles. */
+.player-registration-disclosure{margin:16px 0 24px;scroll-margin-top:20px;min-width:0;overflow-wrap:anywhere}
+.player-registration-disclosure>h2{margin:0 0 8px}
+.player-registration-disclosure>p{margin:0 0 16px}
+.player-registration-disclosure .registration-coding-time{font-size:.9rem;color:var(--muted,#c1c9d2)}
+.tournament-page .player-registration-disclosure .tournament-mode-form{display:grid;gap:20px;max-width:780px;margin:0}
+.player-registration-disclosure .registration-identity{display:flex;flex-wrap:wrap;gap:8px 32px}
+.player-registration-disclosure .registration-identity p{margin:0}
+.player-registration-disclosure .tournament-mode-form>label{display:grid;gap:8px;min-width:0;margin:0}
+.player-registration-disclosure input:not([type=checkbox]),.player-registration-disclosure select{width:100%;box-sizing:border-box;min-width:0;margin:0}
+.player-registration-disclosure small{font-size:.85rem;color:var(--muted,#c1c9d2);line-height:1.5}
+.player-registration-disclosure .registration-agreement{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px}
+.player-registration-disclosure .registration-acceptance{display:flex;align-items:center;gap:10px;margin:0}
+.player-registration-disclosure input[type=checkbox]{flex:0 0 auto;width:18px;height:18px;margin:0}
+.player-registration-disclosure .registration-rules-link,.registration-information-link{color:var(--link,#7bc9ff);text-decoration:underline;cursor:pointer}
+.player-registration-disclosure button[type=submit]{justify-self:start;margin:0}
+.player-registration-disclosure [role=status]{margin:0;color:#ffe09a}
+.player-registration-disclosure [role=status]:empty{display:none}
+.player-registration-disclosure .phase-facts{margin:16px 0}
+@media(max-width:600px){
+ .tournament-page .player-registration-disclosure .tournament-mode-form{gap:18px}
+ .player-registration-disclosure .registration-identity{flex-direction:column;gap:8px}
+ .player-registration-disclosure .registration-agreement{align-items:flex-start;flex-direction:column;gap:12px}
+ .player-registration-disclosure button[type=submit]{width:100%}
+}

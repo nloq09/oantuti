@@ -13,9 +13,9 @@
 
 ## Trong giờ làm bài
 
-Chọn **Viết bot trên hệ thống** hoặc **Dùng bot đã có** theo luật giải. Dùng đúng ngôn ngữ, lưu, build và chạy kiểm thử. [Build/Test/Submit](../bot/build-test-submit.md) giải thích từng nút và version.
+Chọn ngôn ngữ, viết code (hoặc chọn bot có sẵn nếu được phép) rồi bấm **Submit** dưới editor. Hệ thống tự chụp source, build, kiểm thử bắt buộc và chốt bản dự thi. [Hướng dẫn nộp bot](../bot/build-test-submit.md) giải thích tiến trình, nháp và lịch sử.
 
-READY của version nghĩa đã qua điều kiện trước nộp. Chọn version READY, đồng ý luật và **Nộp bot**; xác nhận server đã ghi nhận phiên bản. Giải có thể khóa ngay khi nộp hoặc cho nộp lại trước deadline.
+Chỉ kết quả chốt thành công mới thay bản dự thi. Nháp và các lần thử thất bại không thay bản trước. Lần bắt đầu trước hạn nhưng hoàn tất sau hạn không được nộp; cần để đủ thời gian cho hàng đợi và kiểm thử. Giải có thể khóa ngay khi nộp hoặc cho nộp lại trước deadline.
 
 ## Hai chính sách deadline theo timeline
 

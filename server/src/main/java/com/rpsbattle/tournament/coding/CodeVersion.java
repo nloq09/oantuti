@@ -22,6 +22,7 @@ public class CodeVersion {
  @Column(name="hidden_passed",nullable=false) boolean hiddenPassed;
  @Column(name="public_passed",nullable=false) boolean publicPassed;
  @Column(name="sample_passed",nullable=false) boolean samplePassed;
+ @Column(name="pipeline_submission",nullable=false) boolean pipelineSubmission;
  @Column(name="execution_bot_id") UUID executionBotId;
  @Column(name="imported_bot_id") UUID importedBotId;
  @Column(name="runtime_language",length=16) String runtimeLanguage;

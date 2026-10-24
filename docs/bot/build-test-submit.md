@@ -1,57 +1,45 @@
-# Build, kiểm thử và nộp bot
+# Viết và Submit bot
 
-Đầu tiên xem [Luồng tham gia giải](../player/tournament-flow.md). Hướng dẫn này dành cho workspace `/tournament-code.html?id=...`; không đồng nhất bot đã upload trong **Bot của tôi** với bài đã nộp vào một giải.
+Mở trang lập trình từ [luồng tham gia giải](../player/tournament-flow.md). Phần đầu giải giữ tên giải, số người, đồng hồ và tiến trình. Bên dưới là editor và nút **Submit**.
 
-## Chọn cách làm bài
+## Nộp bài
 
-Chính sách giải có ba mode: `PRE_UPLOADED_ONLY`, `CODE_IN_PLATFORM_ONLY`, `BOTH`. UI chỉ hiện những lựa chọn được giải cho phép:
+1. Chọn ngôn ngữ và viết code. Nếu giải cho dùng bot có sẵn, đổi **Cách nộp** và chọn bot của bạn.
+2. Bấm **Submit** ngay dưới editor. Thao tác này xác nhận tuân thủ luật giải; không phải tích lại checkbox hoặc chọn phiên bản.
+3. Hệ thống chụp source/ngôn ngữ tại lúc bấm, build, chạy các test cases bắt buộc và ghi nhận bản dự thi nếu đạt. Xem kết quả ngay dưới nút.
 
-- **Viết bot trên hệ thống:** chọn Python/C++/Java, soạn source trong workspace riêng.
-- **Dùng bot đã có:** chọn bot thuộc tài khoản rồi **Chụp phiên bản và kiểm thử bot này**. Việc nhập tạo một phiên bản riêng và xếp build; thay bot gốc sau đó không tự đổi snapshot của giải. JAR được dùng qua lựa chọn này khi Java được phép, không sửa JAR trong editor.
+Không cần bấm Lưu, Build hay Kiểm thử riêng. Source của lần nộp không thay đổi khi bạn sửa tiếp editor. Nháp tự lưu khi chính sách cho phép; trạng thái nằm cạnh ngôn ngữ. Tự lưu không phải Submit.
 
-Với giải có timeline, chỉ người `APPROVED` mới truy cập được workspace từ giờ coding. Server kiểm tra quyền ở từng thao tác, không dựa vào đồng hồ hoặc trạng thái nút trên máy bạn.
+## Kết quả chấm
 
-## Các bước trong workspace
+- **AC — Accepted:** mọi kiểm thử bắt buộc đạt và backend đã chốt bản dự thi thành công. Build thành công riêng chưa phải AC.
+- **CE — Compilation Error:** không build được; đọc lỗi compiler bên dưới.
+- **WA — Wrong Answer:** sai giao thức, sequence, nước đi hoặc test case; xem test bị lỗi và thông báo.
+- **TLE / MLE / RE:** quá thời gian, vượt bộ nhớ hoặc lỗi khi chạy. Xem chi tiết để sửa.
+- **ERROR:** không thể hoàn tất vì máy chấm, hạn nộp, quyền hoặc giao dịch. Đây không phải kết luận AC/WA.
 
-1. **Lưu nháp** hoặc Ctrl/Cmd+S nếu giải cho lưu draft. Xác nhận thông báo lưu, không chỉ nhìn nội dung editor.
-2. **Build** để tạo phiên bản và artifact. Mỗi lần build tạo một version; build lỗi vẫn tiêu tốn version đã tạo.
-3. **Kiểm thử công khai:** kiểm tra giao thức, sequence và nước đi bằng codec/engine thật. Có thể xem dữ liệu public tests khi giải cho phép.
-4. **Đấu mẫu:** chạy trận với bot tham chiếu. Cần hoàn tất hợp lệ, không bắt buộc thắng.
-5. **Kiểm tra toàn bộ điều kiện giải:** chạy public, đấu mẫu và hidden tests khi chính sách yêu cầu. Đây là kiểm tra trước nộp, chưa phải Final Validation sau khóa bài.
-6. Chờ phiên bản thành **READY**. Chọn phiên bản, đồng ý luật và bấm **Nộp bot**.
-7. Xem lại trạng thái/phiên bản server đã nhận. Khi cần nộp lại, làm trước hạn và chỉ khi chính sách cho phép.
+Test cases có trạng thái và thời gian chạy khi server cung cấp. Kiểm thử ẩn chỉ hiện đạt/không đạt, không lộ input. Lần nộp thất bại không thay bản dự thi thành công trước; giao diện nhắc ngắn gọn bản cũ vẫn được dùng.
 
-## Trạng thái thật
+**Lịch sử nộp** và **Hướng dẫn viết bot** được thu gọn dưới kết quả. Lịch sử có liên kết xem source bất biến của từng phiên bản và lỗi đã ghi nhận.
 
-| Trạng thái | Ý nghĩa | Việc tiếp theo |
-| --- | --- | --- |
-| `DRAFT` | Source đang sửa, chưa có bản build tương ứng | Lưu/build |
-| `BUILDING` | Job build đang chờ hoặc xử lý | Chờ kết quả; không gửi job trùng |
-| `BUILD_FAILED` | Không tạo được artifact hợp lệ | Đọc build output, sửa và build bản mới |
-| `BUILT` | Build thành công, điều kiện kiểm thử chưa đầy đủ | Chạy public/đấu mẫu/điều kiện giải |
-| `TESTING` | Đang kiểm thử phiên bản | Chờ server |
-| `TEST_FAILED` | Ít nhất một kiểm thử chưa đạt | Đọc kết quả; sửa/build lại nếu cần |
-| `READY` | Đạt public, đấu mẫu và hidden nếu yêu cầu | Chọn bản và nộp |
-| `SUBMITTED` | Đã có bài nộp, có thể còn thay được theo policy | Kiểm tra phiên bản và deadline |
-| `LOCKED` | Bài dùng snapshot cố định | Chỉ đọc, theo dõi Final Validation |
-| `REJECTED` / `DISQUALIFIED` | Bài không được chấp nhận hoặc bị loại | Xem thông báo/quyền được server cấp |
+## Mất mạng, tải lại và bản nháp
 
-Đây là trạng thái của workspace/version/bài nộp ở những lớp tương ứng, không phải một enum chung của tất cả dữ liệu. Build PASS không tự chuyển thành SUBMITTED; READY không tự bảo đảm được thi đấu.
+Mỗi lần gửi có mã yêu cầu bền vững. Server và giao diện chặn gửi trùng khi một lần còn đang xử lý. Tải lại đọc tiến trình từ database, không tạo job mới.
 
-## Lưu, xung đột và mất mạng
+Nếu mất phản hồi, **Kiểm tra lần gửi** dùng lại cùng mã và snapshot đã chụp, kể cả khi editor đã sửa tiếp. Nội dung chưa đồng bộ được giữ trong tab khi bộ nhớ trình duyệt còn khả dụng. Khi có hai bản nháp khác nhau, các thao tác giải quyết xung đột chỉ xuất hiện lúc cần; không ghi đè source đang gõ.
 
-Sửa source làm bản đang hiển thị quay về draft; cần build và kiểm thử lại nội dung mới. Đổi ngôn ngữ không xóa giới hạn tổng version theo tài khoản trong giải.
+Worker dùng lease/token và số lần thử hữu hạn để khôi phục job bị gián đoạn. Mở lại giờ coding do ban tổ chức sẽ kết thúc lần nộp trong cửa cũ và cho biết cần nộp lại.
 
-Nếu revision xung đột, dùng **So sánh với server**, giữ bản local/server hoặc tải cả hai. Không mở nhiều tab rồi ghi đè mù. Mất mạng có thể giữ bản tạm trong tab; khi có mạng cần đối chiếu revision. Sau deadline, bản chưa lưu có thể tải về nhưng không được gửi thành bài mới.
+## Hạn nộp và giới hạn
 
-## Deadline và nộp lại
+Lần nộp phải đạt và được chốt trước khi cửa nộp đóng. Bắt đầu trước hạn nhưng xử lý xong sau hạn không được nhận; bản cũ vẫn giữ theo luật giải. Giới hạn tài nguyên và tổng phiên bản vẫn tính cả lần build thất bại.
 
-`lockOnSubmit` có thể khóa ngay khi nộp. Nếu chưa khóa, `allowResubmitBeforeDeadline` quyết định có thay được bài trước hạn không. Giải theo timeline luôn khóa ở hạn coding; xem [coding phase](../tournament/coding-phase.md) để phân biệt tự nộp và bắt buộc tự nộp.
+Quyền nộp lại, khóa ngay khi nộp, hạn riêng và cửa nộp khẩn cấp do backend kiểm tra. Đấu mẫu không thành điều kiện của Submit. Kiểm thử chính thức sau coding vẫn chạy theo [quy trình của giải](../tournament/validation.md).
 
-Giới hạn version, CPU/RAM và hạn job: [Limits](limits.md). Lỗi cụ thể: [Troubleshooting](troubleshooting.md).
+Xem [giờ coding](../tournament/coding-phase.md), [giới hạn](limits.md), [xử lý lỗi](troubleshooting.md).
 
 ## Nguồn đối chiếu
 
-- [Workspace UI](../../client/tournament-code.html), [workspace controller](../../client/js/tournament/code-workspace.js), [submission model](../../client/js/tournament/submission-model.js).
-- [CodeWorkspaceService](../../server/src/main/java/com/rpsbattle/tournament/coding/CodeWorkspaceService.java), [WorkspaceStore](../../server/src/main/java/com/rpsbattle/tournament/coding/WorkspaceStore.java), [CodingWorker](../../server/src/main/java/com/rpsbattle/tournament/coding/CodingWorker.java), [CodingQueueStore](../../server/src/main/java/com/rpsbattle/tournament/coding/CodingQueueStore.java).
-- [PreuploadedSubmissionService](../../server/src/main/java/com/rpsbattle/tournament/coding/PreuploadedSubmissionService.java), [TournamentSubmissionService](../../server/src/main/java/com/rpsbattle/tournament/coding/TournamentSubmissionService.java).
+- [Giao diện](../../client/tournament-code.html), [controller](../../client/js/tournament/code-workspace.js), [verdict](../../client/js/tournament/submission-attempt.js).
+- [SubmissionAttemptService](../../server/src/main/java/com/rpsbattle/tournament/coding/SubmissionAttemptService.java), [SubmissionAttemptStore](../../server/src/main/java/com/rpsbattle/tournament/coding/SubmissionAttemptStore.java), [CodingWorker](../../server/src/main/java/com/rpsbattle/tournament/coding/CodingWorker.java), [SubmissionStore](../../server/src/main/java/com/rpsbattle/tournament/coding/SubmissionStore.java).
+- [API](../technical/api.md).

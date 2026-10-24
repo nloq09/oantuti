@@ -5,8 +5,8 @@
 ## Thao tác của người tham gia
 
 1. Đăng nhập tài khoản người chơi.
-2. Tại tab **Đăng ký**, chọn ngôn ngữ dự kiến được giải cho phép, khai trường/đội nếu cần.
-3. Đồng ý luật và bấm **Gửi đăng ký** một lần; chờ server phản hồi.
+2. Bấm **Đăng ký tham gia** trong **Việc của bạn** để mở form; chọn ngôn ngữ dự kiến được giải cho phép, khai trường/đội nếu cần.
+3. Đồng ý luật và bấm **Xác nhận đăng ký** một lần; chờ server phản hồi.
 4. Theo dõi kết quả, lời nhắn công khai hoặc vị trí waitlist nếu có.
 5. Chỉ khi `APPROVED` và đến giờ coding mới được chọn/viết bot. [Coding phase](coding-phase.md).
 

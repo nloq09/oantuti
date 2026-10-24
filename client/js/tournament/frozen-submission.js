@@ -2,11 +2,12 @@ import {languageText} from './presentation.js';
 import {phaseFacts,statusBadge} from './phase-view.js';
 import {node,link,date} from './player-dom.js';
 import {resolvePlayerTournamentViewState} from './player-view-state.js';
+import {playerSurface} from './player-surface.js';
 export {frozenReason} from './player-view-state.js';
 
 export function renderFrozenSubmission(root,t,flow){
  const view=resolvePlayerTournamentViewState({tournament:t,flow}),frozen=flow.frozenSubmission;
- const panel=node('section',undefined,'panel frozen-submission');panel.id='player-submission-detail';panel.dataset.submissionState=view.submissionState;
+ const panel=playerSurface(root,'frozen-submission');panel.id='player-submission-detail';panel.dataset.submissionState=view.submissionState;
  panel.append(node('h2','Trạng thái bài nộp'));
  if(view.hasLockedSubmission){
   panel.append(node('h3','✓ Bài đã được khóa'),node('p',frozen.decision==='AUTO_SUBMITTED'?'Hệ thống tự nộp phiên bản sẵn sàng mới nhất hợp lệ trước hạn.':'Đã giữ phiên bản bạn nộp trước hạn.'));

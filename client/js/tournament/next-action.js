@@ -5,7 +5,7 @@ import {isKnockout,roundLabel} from './bracket-renderer.js';
 // Presentation of server decisions only. These links never grant admission or workspace rights.
 
 export function tournamentNextAction({tournament:t,flow,me,account}){
- const detail=tournamentRoute(t.id),code=tournamentRoute(t.id,'code'),content='#tournament-phase-content',competition=playerTournamentRoute(t);
+ const detail=tournamentRoute(t.id),code=tournamentRoute(t.id,'code'),competition=playerTournamentRoute(t);
  if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Bạn có thể tìm giải khác.','/tournaments.html');
  if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem thành tích, bảng điểm và replay.',detail+'#ranking');
  if(flow?.phase?['DRAFT','UPCOMING'].includes(flow.phase):t.status==='DRAFT')return action('VIEW_RULES','Xem luật','Theo dõi lịch; đăng ký chưa mở.','#tournament-rules');
@@ -33,17 +33,17 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
   if(item?.status==='PENDING_APPROVAL')return action('WAIT_APPROVAL','Chờ xét duyệt','Chủ giải đang xét duyệt đăng ký.');
   if(item?.status==='READY_CONFIRMED')return action('WAIT_START','Đã sẵn sàng','Chờ đối thủ xác nhận và server cấp trận.');
   if(item)return action(t.status==='RUNNING'?'WAIT_NEXT_MATCH':'WAIT_START','Chờ thi đấu',progressDescription(item,t));
-  if(!t.timeline&&t.status==='REGISTRATION')return t.acceptingRegistrations===false?action('REGISTRATION_CLOSED','Đã đóng nhận đơn','Chủ giải đang xét duyệt các đăng ký đã gửi.'):action('REGISTER','Đăng ký tham gia','Chọn cách thi đấu theo luật giải.',content);
+  if(!t.timeline&&t.status==='REGISTRATION')return t.acceptingRegistrations===false?action('REGISTRATION_CLOSED','Đã đóng nhận đơn','Chủ giải đang xét duyệt các đăng ký đã gửi.'):action('REGISTER','Đăng ký tham gia','Chọn cách thi đấu theo luật giải.','#registration');
   if(t.status==='RUNNING')return action('VIEW_SCHEDULE','Xem lịch thi đấu','Bạn chưa có suất thi đấu đang hoạt động.',competition+'#schedule');
  }
  if(!flow)return action('WAIT_SERVER','Đang cập nhật trạng thái','Chờ dữ liệu quyền từ server.');
  const view=resolvePlayerTournamentViewState({tournament:t,flow});if(view.primaryAction)return view.primaryAction;
  if(t.format==='TEAM_ROUND_ROBIN'&&flow.nextAction==='OPEN_WAITING_ROOM'&&(me?.states||[]).some(s=>s.participantId&&!t.teamCompetition?.teams?.some(team=>team.roster.includes(s.participantId)&&team.roster.length>=3)))return action('MANAGE_TEAM','Hoàn tất đội của bạn','Đã check-in. Tạo hoặc gia nhập đội đủ ít nhất ba thành viên trước giờ thi.','#teams');
  switch(flow.nextAction){
-  case 'REGISTER':return action('REGISTER','Đăng ký tham gia','Điền thông tin và đồng ý luật giải.','#tournament-registration-form',{tone:'primary'});
+  case 'REGISTER':return action('REGISTER','Đăng ký tham gia','Điền thông tin và đồng ý luật giải.','#registration',{tone:'primary'});
   case 'WAIT_FOR_APPROVAL':return action('WAIT_APPROVAL','Chờ ban tổ chức xác nhận','Đơn đăng ký đã được gửi; không cần gửi lại.');
-  case 'WAIT_FOR_CODING':return action('WAIT_CODING','Chờ mở lập trình','Theo dõi giờ coding, luật và bot protocol.');
-  case 'OPEN_CODE_WORKSPACE':return flow.canAccessWorkspace&&flow.canModifyWorkspace?action('OPEN_CODE','Vào phòng code','Hoàn thành, kiểm thử và nộp bot trước hạn.',code,{tone:'primary'}):action('WAIT_SERVER','Đang cập nhật quyền workspace','Chờ server xác nhận cửa sổ lập trình.');
+  case 'WAIT_FOR_CODING':return action('WAIT_CODING','Chờ mở lập trình',flow.registrationStatus==='APPROVED'?'Đăng ký đã được duyệt. Theo dõi lịch mở lập trình và luật giải.':'Theo dõi lịch mở lập trình và trạng thái đăng ký.');
+  case 'OPEN_CODE_WORKSPACE':return flow.canAccessWorkspace&&flow.canModifyWorkspace?action('OPEN_CODE','Vào lập trình','Hoàn thành, kiểm thử và nộp bot trước hạn.',code,{tone:'primary'}):action('WAIT_SERVER','Đang cập nhật quyền workspace','Chờ server xác nhận cửa sổ lập trình.');
   case 'CHECK_IN':return flow.checkIn?.canCheckIn===true?action('CHECK_IN','Check-in','Bot đã đủ điều kiện; xác nhận tham gia trước hạn.',null,{enabled:true,command:'CHECK_IN',payload:{registrationId:flow.checkIn.registrationId},deadline:flow.checkIn.closesAt,tone:'primary'}):action('WAIT_SERVER','Đang cập nhật check-in','Chờ server xác nhận điều kiện tham gia.');
   case 'OPEN_WAITING_ROOM':return action('WAIT_START','Đã check-in · Chờ bắt đầu','Theo dõi lịch, thông báo và thời gian bắt đầu.');
   case 'CHECK_IN_MISSED':return action('CHECK_IN_MISSED','Đã hết hạn check-in','Bạn chưa có suất thi đấu; xem thông báo của chủ giải.');
@@ -54,7 +54,7 @@ export function tournamentNextAction({tournament:t,flow,me,account}){
 }
 
 function progressDescription(item,t){
- if(t.format==='TEAM_ROUND_ROBIN'&&!item.currentMatch&&!item.nextMatch)return 'Mở tab Đồng đội để xem đội và đội hình đã được server ghi nhận.';
+ if(t.format==='TEAM_ROUND_ROBIN'&&!item.currentMatch&&!item.nextMatch)return 'Mở mục Đồng đội để xem đội và đội hình đã được server ghi nhận.';
  if(item.qualified&&item.nextMatch)return '✓ Đã vượt qua vòng bảng. Chờ vòng tiếp theo được mở.';
  if(isKnockout(t.format)&&item.nextMatch&&(t.bestOf>1?t.series||[]:t.matches||[]).some(m=>m.status==='FINISHED'&&m.winnerParticipantId===item.participantId))return '✓ Đã đi tiếp vào '+roundLabel(item.nextMatch.round,t.rounds?.length||1,t.format)+'. Chờ vòng được mở và xác nhận sẵn sàng.';
  return 'Theo dõi lịch và trạng thái trận của bạn.';

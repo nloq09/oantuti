@@ -3,6 +3,7 @@ import {renderFrozenSubmission} from './frozen-submission.js';
 import {renderPlayerNextActionCard} from './player-shell.js';
 import {resolvePlayerTournamentViewState} from './player-view-state.js';
 import {node,link} from './player-dom.js';
+import {playerSurface} from './player-surface.js';
 export const validationStages={BUILD:'Build',PROTOCOL:'Giao thức bot',TIMEOUT:'Thời gian phản hồi',RESOURCE:'Giới hạn tài nguyên',LEGAL_ACTION:'Nước đi hợp lệ',HIDDEN_TESTS:'Kiểm thử ẩn',TOURNAMENT_TESTS:'Kiểm thử theo luật giải',ARTIFACT_HASH:'Tính toàn vẹn bài nộp'};
 export const validationReason=reason=>({PUBLIC_TESTS_FAILED:'Bot không qua kiểm thử giao thức hoặc nước đi.',HIDDEN_TESTS_FAILED:'Bot không qua bộ kiểm thử ẩn.',TOURNAMENT_TESTS_FAILED:'Bot không hoàn tất trận kiểm thử hợp lệ.',ARTIFACT_CHANGED:'Bài nộp không còn toàn vẹn.',SOURCE_CHANGED:'Mã nguồn không khớp bài đã khóa.',VALIDATION_DEADLINE:'Đã hết thời gian kiểm thử; cần chủ giải xem xét.',SANDBOX_UNAVAILABLE:'Hệ thống kiểm thử chưa sẵn sàng.',FINAL_WORKER_ERROR:'Máy kiểm thử bị gián đoạn; cần ban tổ chức chạy lại.',WORKER_RECOVERY_EXHAUSTED:'Kiểm thử bị gián đoạn nhiều lần.',ACCOUNT_INACTIVE:'Tài khoản không còn hoạt động.',SUBMISSION_NOT_LOCKED:'Bài không còn ở trạng thái khóa.',REGISTRATION_NOT_APPROVED:'Đăng ký không còn hợp lệ.'}[reason]||'Kiểm thử chưa đạt; theo dõi thông báo của chủ giải.');
 export function validationNextStep(t,flow){
@@ -33,7 +34,7 @@ export function renderFinalValidation(root,t,flow,{refresh}={}){
  const v=flow.finalValidation,detail=validationDetailState(v,flow.validationDetailState);
  if(detail.status==='IDLE')return;
  if(detail.status!=='READY'){
-  const panel=node('section',undefined,'panel validation-panel');panel.id='player-submission-detail';panel.dataset.validationLoadState=detail.status;
+  const panel=playerSurface(root,'validation-panel');panel.id='player-submission-detail';panel.dataset.validationLoadState=detail.status;
   panel.append(node('h2','Kiểm thử chính thức'),node('p',detail.status==='LOADING'?'Đang tải kết quả kiểm thử…':'Không thể tải đầy đủ chi tiết kiểm thử.'));
   if(detail.status==='ERROR'){
    if(detail.code==='VALIDATION_STATE_INCONSISTENT')console.warn('VALIDATION_STATE_INCONSISTENT');
@@ -41,7 +42,7 @@ export function renderFinalValidation(root,t,flow,{refresh}={}){
   }
   root.append(panel);return;
  }
- const model=playerValidationModel(v),panel=node('section',undefined,'panel validation-panel');
+ const model=playerValidationModel(v),panel=playerSurface(root,'validation-panel');
  panel.id='player-submission-detail';panel.dataset.validationStatus=model.status;
  panel.append(node('p','Bài nộp đã được khóa và đang ở chế độ chỉ đọc.','validation-readonly'));
  panel.append(node('h2',model.ready?'✓ KIỂM THỬ HOÀN TẤT':model.status==='FAILED'?'Kiểm thử bot chưa đạt':model.status==='INFRA_ERROR'?'Kiểm thử bị gián đoạn':model.status==='RUNNING'?'Đang kiểm thử bot chính thức':model.status==='PASSED'?'Đang xác nhận kết quả':'Chờ kiểm thử chính thức'));

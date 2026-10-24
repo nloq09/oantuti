@@ -2,7 +2,9 @@
 
 Mở **Giải đấu** từ trang chủ, đăng nhập và chọn giải trong trang khám phá `/tournaments.html`. Đọc **Luật giải**, cách tham gia và lịch trước khi đăng ký. Chủ giải vào giải của mình sẽ tới trang quản lý; hướng dẫn dưới đây dành cho tài khoản người tham gia.
 
-Giao diện dùng giờ thiết bị để hiển thị lịch, nhưng **server quyết định giờ mở/đóng và quyền thao tác**. Thẻ **Việc của bạn** chỉ dẫn bước đang được phép làm. Nếu bạn không có quyền, đổi URL hoặc chỉnh đồng hồ máy không mở được bước tiếp theo.
+Giao diện dùng giờ thiết bị để hiển thị lịch, nhưng **server quyết định giờ mở/đóng và quyền thao tác**. Thẻ **Việc của bạn** chỉ dẫn bước đang được phép làm. Nội dung chính bên dưới tự theo giai đoạn, không còn nhóm nút quay lại/Tổng quan/Đăng ký/Luật giải. **Giải đấu** trên thanh điều hướng đầu trang vẫn mở danh sách giải.
+
+Các mục **Thông tin giải**, **Luật giải**, trận đấu, bảng xếp hạng, nhánh đấu và replay mở/thu gọn ngay trên cùng trang khi có nội dung phù hợp. Có thể dùng Tab và Enter/Space để mở các mục. Hash cũ như `#overview`, `#registration`, `#rules`, `#validation` và `#check-in` vẫn dẫn tới phần tương ứng; chúng không cấp thêm quyền. Nếu bạn không có quyền, đổi URL hoặc chỉnh đồng hồ máy không mở được bước tiếp theo.
 
 ## Giải bot có lịch coding
 
@@ -10,7 +12,11 @@ Luồng chính là: **Xem giải → đăng ký người chơi → được duy�
 
 ### 1. Đăng ký người chơi
 
-Trong **Đăng ký**, chọn ngôn ngữ dự kiến, điền trường/đội nếu được yêu cầu, đồng ý luật rồi bấm **Gửi đăng ký**. Đây là đăng ký người tham gia; bạn chưa cần nộp bot ngay ở bước này.
+Bấm **Đăng ký tham gia** trong **Việc của bạn**. Form mở ngay dưới thẻ, tự cuộn và focus trường đầu tiên. Mở **Thông tin giải** hoặc liên kết **Xem luật giải** cạnh checkbox không đóng form và vẫn giữ nội dung đã nhập trong lần mở trang đó. Bấm lại nút đăng ký chỉ cuộn và focus form hiện có.
+
+Chọn ngôn ngữ dự kiến, điền trường/đội nếu được yêu cầu, đồng ý luật rồi bấm **Xác nhận đăng ký**. Khi gửi, nút hiện **Đang đăng ký…** và không nhận lượt gửi trùng. Lỗi hiển thị ngay dưới nút, giữ thông tin để sửa. Đây là đăng ký người tham gia; bạn chưa cần nộp bot ngay ở bước này. Với giải cho viết bot trên hệ thống, ngôn ngữ lập trình có thể đổi trong danh sách giải cho phép.
+
+Server xác nhận thành công thì form đóng và **Việc của bạn** cập nhật đúng trạng thái chờ duyệt hoặc đã duyệt. Bấm **Xem đăng ký của tôi** để xem lại thông tin chỉ đọc; hiện chưa có chức năng sửa đơn đã gửi. Hành động hủy chỉ hiện khi server còn cho phép. Tải lại trang đọc trạng thái đã lưu từ server; dữ liệu form chưa gửi chỉ giữ trong phiên trang hiện tại. Cập nhật định kỳ giữ nguyên dữ liệu nhập và các mục đang mở; nếu đọc server thất bại, trang giữ nội dung hiện tại và báo cần cập nhật lại.
 
 - **Đăng ký chưa mở (`UPCOMING`):** chờ mốc mở. Chủ giải có thể mở sớm; nếu không, server mở theo lịch khi giải đã được công bố.
 - **Đang chờ ban tổ chức xác nhận (`NEEDS_REVIEW`; dữ liệu cũ có thể là `PENDING`):** đơn đã nhận, không cần gửi lại.
@@ -22,13 +28,13 @@ Việc duyệt có thể tự động, thủ công hoặc kết hợp theo luậ
 
 ### 2. Làm và nộp bot
 
-Khi được duyệt và tới **Lập trình (`CODING_OPEN`)**, mở **Vào phòng code**. Chính sách giải quyết định có **Viết bot trên hệ thống**, **Dùng bot đã có** hay cả hai. Ngôn ngữ được phép cũng theo giải.
+Khi được duyệt và tới **Lập trình (`CODING_OPEN`)**, mở **Vào lập trình**. Chính sách giải quyết định có **Viết bot trên hệ thống**, **Dùng bot đã có** hay cả hai. Ngôn ngữ được phép cũng theo giải.
 
-Với bot viết trên web: **Lưu nháp → Build → Kiểm thử công khai → Đấu mẫu → Kiểm tra toàn bộ điều kiện giải** nếu cần. Dùng bot đã có sẽ **Chụp phiên bản và kiểm thử bot này** thành phiên bản riêng cho giải; bot gốc không tự thay đổi bài nộp.
+Với bot viết trên web: chọn ngôn ngữ, soạn code và bấm **Submit** bên dưới editor. Hệ thống chụp source, build, chạy test cases bắt buộc rồi cập nhật bản dự thi nếu đạt. Với bot có sẵn: chọn bot rồi dùng cùng nút Submit; bot gốc không tự thay đổi snapshot.
 
-Build thành công là `BUILT`, **chưa phải READY**. Bản READY phải qua kiểm thử công khai, đấu mẫu và kiểm thử ẩn nếu giải bật. Đấu mẫu kiểm tra chạy hợp lệ, không đòi thắng bot mẫu. Sửa source cần build/kiểm thử lại bản mới.
+Kết quả hiện dưới nút: **AC** khi kiểm thử và chốt bài đều thành công; **CE, WA, TLE, MLE, RE** hoặc lỗi xử lý kèm thông báo khi không đạt. Lần mới thất bại giữ bản thành công trước đó. Có thể sửa tiếp bản nháp trong lúc máy chấm; thay đổi mới không sửa snapshot đã gửi.
 
-Chọn đúng phiên bản READY, đồng ý luật và bấm **Nộp bot**. Kiểm tra trạng thái bài nộp sau khi server trả kết quả. Còn được nộp lại hay khóa ngay khi nộp tùy luật giải; đừng coi nội dung editor đang mở là bài chính thức.
+Nháp tự lưu khi luật cho phép. Không cần chọn phiên bản, bấm build/test riêng hoặc đồng ý lại bằng checkbox. Lịch sử và hướng dẫn bot được thu gọn. Xem [hướng dẫn Submit](../bot/build-test-submit.md) khi gặp lỗi hoặc mất mạng.
 
 ### 3. Hết giờ: bài bị khóa
 
@@ -52,6 +58,8 @@ Trong **Kiểm thử**, bài đã khóa được đưa qua các bước: build, 
 READY trước hạn không thay thế kiểm thử chính thức. Không tải lại source khác để lách bài đã khóa.
 
 ### 5. Check-in và chờ bắt đầu
+
+Trang lập trình/kiểm thử tự chuyển sang phần Check-in khi nhận giai đoạn mới từ server, kể cả khi bạn vẫn còn quyền xem source chỉ đọc. Không cần tải lại trang. Các chi tiết kiểm thử tải chậm không che nút check-in đã được server cho phép. Chuyển màn hình không tự xác nhận có mặt thay bạn.
 
 Nếu giải yêu cầu, bấm **Check-in** hoặc **Check-in ngay** trong cửa sổ server công bố. Chỉ bấm được khi server xác nhận bài/đăng ký đủ điều kiện. Được duyệt, có READY hoặc đã nộp bot đều không tự xác nhận bạn có mặt.
 
@@ -79,7 +87,7 @@ Với **Đồng đội / trường**, có thêm tab **Đồng đội** để t�
 
 **Giải tạm dừng (`PAUSED`)**: chờ chủ giải tiếp tục. **Chờ khôi phục (`RECOVERY_REQUIRED`)**: giải cần người quản lý xử lý sau gián đoạn; không tạo giải/phòng khác để tự nhận kết quả. **Đã hủy (`CANCELLED`)**: không tiếp tục thi đấu. **Kết thúc (`FINISHED`)**: xem kết quả và replay đã công bố.
 
-> Screenshot: các tab Đăng ký, Lập trình, bài bị khóa, Kiểm thử, Check-in, Phòng chờ và Trận của tôi trên desktop. Chưa bổ sung ảnh trong giai đoạn 1; cần phiên giải và tài khoản đúng vai trò.
+> Screenshot: nội dung Đăng ký, Lập trình, bài bị khóa, Kiểm thử, Check-in, Phòng chờ và Trận của tôi trên desktop. Ảnh minh họa cần dùng phiên giải và tài khoản đúng vai trò.
 
 Đọc từng bước: [Đăng ký](../tournament/registration.md) · [Coding](../tournament/coding-phase.md) · [Validation](../tournament/validation.md) · [Check-in](../tournament/check-in.md) · [Thể thức](../tournament/formats.md) · [Bracket/Ranking](../tournament/bracket-ranking.md). Tra [FAQ](faq.md) và [Thuật ngữ](../glossary.md).
 

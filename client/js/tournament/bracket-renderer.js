@@ -21,7 +21,7 @@ export function bracketRounds(t) {
     })),
   }));
 }
-export function renderBracket(element,t) {
+export function renderBracket(element,t,{flatCards=false}={}) {
   element.replaceChildren();
   const rounds=bracketRounds(t);
   if(!rounds.length){element.textContent="Nhánh đấu được tạo sau khi chốt người đi tiếp hoặc bắt đầu giải loại trực tiếp.";return;}
@@ -30,7 +30,7 @@ export function renderBracket(element,t) {
     const title=document.createElement("h3");title.textContent=round.label;column.append(title);
     const slots=document.createElement("div");slots.className="bracket-slots";column.append(slots);
     for(const n of round.nodes) {
-      const card=document.createElement("article");card.className="panel bracket-node";if(n.matchId)card.dataset.matchId=n.matchId;
+      const card=document.createElement("article");card.className=flatCards?"bracket-node player-bracket-node":"panel bracket-node";if(n.matchId)card.dataset.matchId=n.matchId;
       for(const [id,name] of [[n.slotA,n.a],[n.slotB,n.b]]) {
         const row=document.createElement("p");row.textContent=name;
         if(id && id===n.winnerParticipantId&&!n.reviewRequired){row.className="bracket-winner";row.prepend("✓ ");}card.append(row);

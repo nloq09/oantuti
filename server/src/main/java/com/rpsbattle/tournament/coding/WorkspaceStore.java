@@ -45,7 +45,7 @@ public class WorkspaceStore {
   db.createNativeQuery("select id from users where id=:id for update").setParameter("id",u).getSingleResult();
   var w=find(t,u,l,true);editable(w,revision);
   long active=db.createQuery("select count(w) from CodeWorkspace w where w.userId=:u and w.status in ('BUILDING','TESTING')",Long.class).setParameter("u",u).getSingleResult();
-  if(active>0)throw new AuthException("WORKSPACE_BUSY",409);
+  if(active>0||db.createQuery("select count(j) from CodingJob j,CodeWorkspace w where j.workspaceId=w.id and w.userId=:u and j.status in ('QUEUED','RUNNING')",Long.class).setParameter("u",u).getSingleResult()>0)throw new AuthException("WORKSPACE_BUSY",409);
   CodeVersion v;
   if(type.equals("BUILD")){
    long total=db.createQuery("select count(v) from CodeVersion v,CodeWorkspace w where v.workspaceId=w.id and w.tournamentId=:t and w.userId=:u",Long.class).setParameter("t",t).setParameter("u",u).getSingleResult();if(total>=maxVersions)throw new DemoRequestException("WORKSPACE_VERSION_LIMIT");

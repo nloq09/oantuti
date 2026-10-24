@@ -1,0 +1,42 @@
+/* These selectors only style the detail body. The shared header and stepper are untouched. */
+.player-phase-content{min-width:0;margin:16px 0}
+.player-phase-content[hidden],.player-detail-section[hidden]{display:none}
+.player-phase-content>.player-section-body>.panel{margin:0;max-width:none}
+.player-phase-content>.player-section-body>.panel+.panel{margin-top:16px}
+.player-content-section{min-width:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;overflow-wrap:anywhere}
+.player-content-section h2,.player-content-section h3{margin-top:0}
+.player-content-section.series-card,.player-content-section.monitor-match-card,.player-content-section.team-card,.player-content-section.team-fixture{margin:0;padding:20px 0;border-top:1px solid #62778480}
+.player-content-section.series-card:first-child,.player-content-section.monitor-match-card:first-child,.player-content-section.team-card:first-child{border-top:0}
+.player-content-section p{margin:10px 0}
+.player-detail-section .player-bracket-node{border:0;border-left:2px solid #a38a58;border-radius:0;background:none;box-shadow:none}
+.timeline-check-in{display:grid;gap:16px}
+.timeline-check-in>h2,.timeline-check-in>p,.timeline-check-in>strong{margin:0}
+.waiting-announcements{padding-top:16px;border-top:1px solid #62778480}
+.waiting-announcements h3{margin:0 0 12px}
+.waiting-announcements p:last-child{margin-bottom:0}
+.player-inline-details{padding:0;border:0;border-top:1px solid #62778480;border-radius:0;background:none;box-shadow:none;min-width:0}
+.player-inline-details>summary{padding:12px 0;min-height:44px;box-sizing:border-box;cursor:pointer;font-weight:600;color:#ffe09a}
+.player-inline-details>summary:focus-visible{outline:3px solid #ffe29a;outline-offset:3px}
+.player-inline-details[open]>summary{margin-bottom:4px}
+.player-phase-message{display:grid;gap:12px}
+.player-phase-message h2,.player-phase-message p{margin:0}
+.player-detail-section{margin:16px 0;padding:0;border:1px solid #a38a58;border-radius:10px;background:linear-gradient(125deg,#20394b,#102533);min-width:0;overflow-wrap:anywhere;scroll-margin-top:20px}
+.player-detail-section>summary{padding:18px 22px;cursor:pointer;font-size:1.05rem;font-weight:700;color:#ffe09a;min-height:52px}
+.player-detail-section>summary:focus-visible{outline:3px solid #ffe29a;outline-offset:3px}
+.player-detail-section>.player-section-body{padding:0 22px 22px;min-width:0}
+.player-detail-section>.player-section-body>h3:first-child,.player-detail-section>.player-section-body>p:first-child{margin-top:0}
+.player-detail-section .phase-timeline{margin:20px 0 0}
+.player-detail-section .phase-timeline h3{margin-top:0}
+.player-secondary-actions{margin:16px 0}
+.player-secondary-actions:empty{display:none}
+.player-secondary-actions button,.player-secondary-actions .button{font-size:.9rem;padding:8px 12px}
+.player-registration-disclosure .registration-information-link,.player-registration-disclosure .registration-rules-link{font-size:.95rem}
+.player-read-error{margin:16px 0;padding:16px;background:#142d3e;border-left:3px solid #e2bf74}
+.player-read-error p{margin:0 0 12px}
+@media(max-width:600px){
+ .player-detail-section{margin:14px 0}
+ .player-detail-section>summary{padding:16px}
+ .player-detail-section>.player-section-body{padding:0 16px 16px}
+ .player-secondary-actions{gap:8px}
+ .player-content-section.series-card,.player-content-section.monitor-match-card,.player-content-section.team-card,.player-content-section.team-fixture{padding:16px 0}
+}

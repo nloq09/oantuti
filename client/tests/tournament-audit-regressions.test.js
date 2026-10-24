@@ -7,7 +7,11 @@ import {resolveTournamentViewState} from '../js/tournament/navigation.js';
 import {attentionItems} from '../js/tournament/organizer-attention.js';
 import {renderBracket} from '../js/tournament/bracket-renderer.js';
 import {renderWithdrawalActions} from '../js/tournament/withdrawal.js';
+import {createPlayerDetailSections} from '../js/tournament/player-detail-sections.js';
+import {readSnapshotKey} from '../js/tournament/read-snapshot.js';
+import {installDocument,descendants as pageDescendants} from './helpers/organizer-dom.js';
 import {node,link} from '../js/tournament/player-dom.js';
+import {playerSurface} from '../js/tournament/player-surface.js';
 import {setup,descendants,Element} from './helpers/tournament-dom.js';
 const base={id:'cup',revision:3,status:'PAUSED',format:'ROUND_ROBIN',participants:[],registrations:[],matches:[{id:'g',status:'FINISHED'}],progress:{total:1,finished:1},rounds:[{number:1}]};
 test('organizer can reach review decisions and finish before tournament is terminal',()=>{
@@ -21,12 +25,12 @@ test('review of an earlier BO3 game suppresses bracket winner until resolved',()
  t.series[0].reviewRequired=false;renderBracket(root,t);assert.equal(descendants(root).some(n=>n.className==='bracket-winner'),true);
 });
 const source=await readFile(new URL('../js/tournament/player-detail.js',import.meta.url),'utf8');const start=source.indexOf('function render('),end=source.indexOf('\nfunction myStatus(',start);assert.ok(start>=0&&end>start);
-test('actual player shell exposes withdrawal across live tabs and removes it after withdrawal',()=>{
+test('single player page preserves withdrawal across live phases and removes it after withdrawal',()=>{
  for(const status of ['RUNNING','PAUSED','RECOVERY_REQUIRED'])for(const tab of ['overview','my-matches']){
-  const root=dom();root.querySelector=()=>null;root.contains=()=>false;
+  const root=installDocument('<main></main>').querySelector('main');
   const state={tournament:{...base,status},tab,me:{states:[{participantId:'p',status:'WAITING_MATCH',registration:{displayName:'An'}}]}};
-  const deps={root,state,account:{id:'u'},flow:null,primaryAction:null,renderPending:false,resolveTournamentViewState,tabView:{reconcile(){}},rememberTournamentFocus:()=>()=>{},renderPlayerShell:()=>({}),node,link,isLobby:true,id:'cup',load:()=>{},renderWithdrawalActions,content:()=>{}};
-  const render=new Function(...Object.keys(deps),source.slice(start,end)+';return render;')(...Object.values(deps));render();assert.equal(descendants(root).filter(n=>n.textContent==='Rút khỏi giải').length,1);
-  state.me.states[0].status='WITHDRAWN';render();assert.equal(descendants(root).some(n=>n.textContent==='Rút khỏi giải'),false);
+  const deps={pageSections:createPlayerDetailSections(),readSnapshotKey,registrationOpen:false,pendingHash:null,refreshAfterAction:()=>{},mountMatchMonitor:()=>({update(){},stop(){}}),registrationView:{attach:()=>false},root,state,account:{id:'u'},flow:null,primaryAction:null,renderPending:false,resolveTournamentViewState,tabView:{reconcile(){}},rememberTournamentFocus:()=>()=>{},renderPlayerShell:()=>({}),node,link,playerSurface,isLobby:true,id:'cup',load:()=>{},renderWithdrawalActions,content:()=>{}};
+  const render=new Function(...Object.keys(deps),source.slice(start,end)+';return render;')(...Object.values(deps));render();assert.equal(pageDescendants(root).filter(n=>n.textContent==='Rút khỏi giải').length,1);
+  state.me.states[0].status='WITHDRAWN';render();assert.equal(pageDescendants(root).some(n=>n.textContent==='Rút khỏi giải'),false);
  }
 });

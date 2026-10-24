@@ -36,7 +36,7 @@ test('signup renders the final server decision immediately without optimistic pe
   const inputs=form.querySelectorAll('input');inputs.at(-1).checked=true;
   const operation=form.onsubmit({preventDefault(){}});await form.onsubmit({preventDefault(){}});
   for(let i=0;i<10&&!finishRequest;i++)await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(calls,1);assert.match(text(host),/Đang xử lý đăng ký/);assert.doesNotMatch(text(host),/Đang chờ ban tổ chức xác nhận/);
+  assert.equal(calls,1);assert.match(text(host),/Đang đăng ký/);assert.doesNotMatch(text(host),/Đang chờ ban tổ chức xác nhận/);
   finishRequest();for(let i=0;i<10&&!finishRefresh;i++)await new Promise(resolve=>setImmediate(resolve));
   assert.match(text(host),/Đăng ký đã được chấp nhận/);assert.equal(host.querySelector('form'),null);assert.doesNotMatch(text(host),/Đang chờ ban tổ chức xác nhận/);
   finishRefresh();await operation;
