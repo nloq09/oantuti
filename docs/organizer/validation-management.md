@@ -31,6 +31,8 @@ Summary luôn phản ánh tập hiện tại của giải, kể cả khi danh s�
 
 Quyết định loại bài của chủ giải được giữ khi kết quả kiểm thử đến sau. Gia hạn lập trình toàn giải không mở lại bài đã bị loại hoặc từ chối chưa được cấp quyền nộp lại. Kiểm thử đạt không tự hủy quyết định này.
 
+Nếu loại bài trước khi giải bắt đầu, server đồng thời chuyển đăng ký bot sang REJECTED và bỏ người đó khỏi danh sách thi đấu, kể cả đã check-in. Đến giờ bắt đầu, giải tiếp tục với người hợp lệ còn lại; nếu không đủ số lượng tối thiểu theo thể thức thì hủy theo quy định hiện có. Bước bắt đầu cũng kiểm tra lại các bài bị loại để xử lý danh sách đã check-in được lưu từ phiên bản server cũ.
+
 ## Chuyển sang check-in
 
 Đối chiếu số người đủ điều kiện, lỗi còn lại và lịch check-in. Dashboard không tự bấm check-in hoặc start thay chủ giải. Đừng đưa người chỉ có Public Test PASS vào roster thi đấu khi Final Validation chưa cho phép.

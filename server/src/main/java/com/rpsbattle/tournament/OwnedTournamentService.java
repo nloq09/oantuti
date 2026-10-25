@@ -240,7 +240,9 @@ public class OwnedTournamentService {
                     else if(r.status()==TournamentRegistration.Status.CHECKED_IN){
                         var person=timelineRegistrations.mine(UUID.fromString(t.id),r.userId());
                         boolean active=timelineUsers.findById(new com.rpsbattle.account.domain.UserId(r.userId())).map(u->u.status()==com.rpsbattle.account.domain.AccountStatus.ACTIVE).orElse(false);
-                        if(person==null||!person.status().equals("APPROVED")||!active||r.userId().equals(t.ownerUserId)){t.registrations.set(i,r.withStatus(TournamentRegistration.Status.REJECTED,now));TournamentAudit.append(t,"REGISTRATION_UPDATED",null,r.id().toString(),"PARTICIPANT_NOT_ELIGIBLE","CHECKED_IN","REJECTED");}
+                        var submission=submissions.mine(t.id,r.userId());
+                        boolean rejected=submission!=null&&Set.of("REJECTED","DISQUALIFIED").contains(submission.status());
+                        if(person==null||!person.status().equals("APPROVED")||!active||r.userId().equals(t.ownerUserId)||rejected){t.registrations.set(i,r.withStatus(TournamentRegistration.Status.REJECTED,now));TournamentAudit.append(t,"REGISTRATION_UPDATED",null,r.id().toString(),rejected?"SUBMISSION_REJECTED":"PARTICIPANT_NOT_ELIGIBLE","CHECKED_IN","REJECTED");}
                     }
                 }
                 var checked=t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.CHECKED_IN).map(r->r.id().toString()).collect(java.util.stream.Collectors.toSet());

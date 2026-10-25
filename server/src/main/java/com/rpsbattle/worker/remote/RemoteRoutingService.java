@@ -37,7 +37,9 @@ public class RemoteRoutingService {
     }
     private RemoteMatchQueue.BotRef bot(TournamentMatch match,TournamentParticipant seat){
         var work=submissions.execution(match.tournamentId,seat.participantId(),seat.botId());
-        if(work==null||work.artifactId()==null||work.artifactHash()==null||!Objects.equals(seat.artifactHash(),work.artifactHash()))throw new AuthException("REMOTE_ARTIFACT_NOT_LOCKED",409);
+        // execution() validates the locked submission/version, official validation and bot identity.
+        // The seat hash identifies the legacy upload snapshot, not this version's compiled artifact.
+        if(work==null||work.artifactId()==null||work.artifactHash()==null)throw new AuthException("REMOTE_ARTIFACT_NOT_LOCKED",409);
         String language=work.language().equals("JAR")?"JAVA":work.language();return new RemoteMatchQueue.BotRef(work.artifactId(),work.artifactHash(),language,com.rpsbattle.bot.upload.BotLanguage.valueOf(work.language()).image);
     }
     @Transactional public boolean route(Tournament t,TournamentMatch match){

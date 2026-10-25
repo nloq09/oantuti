@@ -57,6 +57,8 @@ Response Batch có `jobs`, `occupiedSlots`, `effectiveFreeSlots`, `serverNow`. M
 
 Các ID/hash/spec được Central cấp và giữ bất biến. Claim lấy job từ hàng đợi chung của các giải, lọc theo scope, policy, trust, ngôn ngữ và capacity; không dùng membership nhóm worker. Agent không chọn một giải khác bằng payload. Trần đang chạy của từng giải được xét trước giới hạn danh sách ứng viên để một giải đầy slot không che các giải khác. FIFO có ưu tiên cache cho job mới; job chờ từ 30 giây bỏ ưu tiên cache.
 
+`artifactId` và `artifactHash` trong job lấy từ phiên bản bài nộp LOCKED được phép thi đấu, kể cả sau nộp lại hoặc dùng lại bản đạt kiểm thử trước đó. Hash bản upload gắn với danh tính bot trong roster không dùng để so sánh với artifact: source C++/Java khác binary/JAR đã build. Central vẫn kiểm tra khóa bài, kết quả kiểm thử chính thức, danh tính bot và hash của phiên bản; khi tải artifact còn kiểm SHA-256 của file thực tế.
+
 ### AUTO và thời điểm quyết định nơi chạy
 
 Giải chưa lưu policy riêng mặc định AUTO. Với trận BOT_ONLY có coding và artifact LOCKED hợp lệ, Central kiểm tra có worker đúng phạm vi, đã duyệt, còn heartbeat và hỗ trợ các ngôn ngữ cần dùng. Máy tương thích đang BUSY vẫn tính là có máy. AUTO không có máy phù hợp thì chạy local trước khi nhận vào queue; nếu có máy nhưng chưa có slot thì chờ.
