@@ -57,19 +57,23 @@ class TournamentOwnershipTest {
             b.request(path+"/cancel","POST",Map.of(),200);
         }
     }
-    @Test void otherAccountsCanJoinWithOwnBotsWithdrawAndOwnerCanEditDraftRoster() throws Exception {
+    @Test void otherAccountsCanJoinWithOwnBotsWithdrawAndOwnerCanManageTheRosterWithoutCompeting() throws Exception {
         // This test isolates authorization; real sandbox registration is covered by Docker tests.
         org.mockito.Mockito.doNothing().when(artifacts).validateRegistration(org.mockito.ArgumentMatchers.any());
         try(var a=new Browser();var b=new Browser();var stranger=new Browser()) {
-            a.login();b.login();stranger.login();var botA=a.upload();var botB=b.upload();var cup=a.request("/api/tournaments","POST",Map.of("name","Open Cup"),201);var path="/api/tournaments/"+cup.path("id").asText();
+            a.login();b.login();stranger.login();var botA=stranger.upload();var botB=b.upload();var ownBot=a.upload();var cup=a.request("/api/tournaments","POST",Map.of("name","Open Cup"),201);var path="/api/tournaments/"+cup.path("id").asText();
             a.request(path+"/participants","POST",Map.of("botId",botB),403);
-            a.request(path+"/participants","POST",Map.of("botId",botA),200);
+            assertThat(a.request(path+"/participants","POST",Map.of("botId",ownBot),403).path("error").asText()).isEqualTo("ORGANIZER_CANNOT_PARTICIPATE");
             b.request(path+"/participants","POST",Map.of("botId",botB,"ownerUserId",a.user.id().toString()),403);
-            assertThat(a.request(path,"GET",null,200).path("participants").size()).isEqualTo(1);
+            assertThat(a.request(path,"GET",null,200).path("participants").size()).isZero();
             a.request(path+"/open-registration","POST",Map.of(),200);
+            a.request(path+"/registrations","POST",Map.of("botId",ownBot),403);
+            var first=stranger.request(path+"/registrations","POST",Map.of("botId",botA),200);
+            a.request(path+"/registrations/"+first.path("registrations").get(0).path("id").asText()+"/approve","POST",Map.of(),200);
             var pending=b.request(path+"/participants","POST",Map.of("botId",botB),200);
             assertThat(pending.path("participants").size()).isEqualTo(1);
-            String registration="";for(var r:pending.path("registrations"))if(r.path("botId").asText().equals(botB)){registration=r.path("id").asText();assertThat(r.path("status").asText()).isEqualTo("PENDING");}
+            assertThat(pending.path("registrations").findValues("botId")).isEmpty();var privatePending=a.request(path,"GET",null,200);
+            String registration="";for(var r:privatePending.path("registrations"))if(r.path("botId").asText().equals(botB)){registration=r.path("id").asText();assertThat(r.path("status").asText()).isEqualTo("PENDING");}
             b.request(path+"/registrations/"+registration+"/approve","POST",Map.of(),403);
             var joined=a.request(path+"/registrations/"+registration+"/approve","POST",Map.of(),200);
             assertThat(joined.path("participants").size()).isEqualTo(2);

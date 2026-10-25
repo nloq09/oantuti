@@ -21,23 +21,23 @@ class TournamentLifecycleApiTest extends StageThreeWebFixture {
     }
     @Test void registrationCanOpenCloseAndLockRosterWithoutStartingAnyMatch() throws Exception {
         org.junit.jupiter.api.Assumptions.assumeTrue(uploads.available(com.rpsbattle.bot.upload.BotLanguage.PYTHON));
-        loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Lifecycle API"),201);
+        loginAccount();var created=participantTournament(Map.of("name","Lifecycle API"));
         String path="/api/tournaments/"+created.path("id").asText();
-        var opened=request(path+"/open-registration","POST",Map.of(),200);
+        var opened=managerRequest(path+"/open-registration","POST",Map.of(),200);
         assertThat(opened.path("status").asText()).isEqualTo("REGISTRATION");assertThat(opened.path("startedAt").isNull()).isTrue();
         assertThat(opened.path("statusChangedAt").asText()).isNotBlank();
-        request(path+"/open-registration","POST",Map.of(),400);request(path+"/close-registration","POST",Map.of(),400);
+        assertThat(managerRequest(path+"/open-registration","POST",Map.of(),200).path("revision").asLong()).isEqualTo(opened.path("revision").asLong());managerRequest(path+"/close-registration","POST",Map.of(),400);
         var a=upload("Lifecycle A");var b=upload("Lifecycle B");
         request(path+"/participants","POST",Map.of("botId",a.id()),200);request(path+"/participants","POST",Map.of("botId",b.id()),200);
-        for(var r:request(path,"GET",null,200).path("registrations"))request(path+"/registrations/"+r.path("id").asText()+"/approve","POST",Map.of(),200);
-        request(path+"/start","POST",Map.of(),400);
-        var ready=request(path+"/close-registration","POST",Map.of(),200);
+        for(var r:request(path,"GET",null,200).path("registrations"))managerRequest(path+"/registrations/"+r.path("id").asText()+"/approve","POST",Map.of(),200);
+        managerRequest(path+"/start","POST",Map.of(),400);
+        var ready=managerRequest(path+"/close-registration","POST",Map.of(),200);
         assertThat(ready.path("status").asText()).isEqualTo("READY");assertThat(ready.path("matches").size()).isZero();assertThat(ready.path("startedAt").isNull()).isTrue();
         request(path+"/participants","POST",Map.of("botId",upload("Locked").id()),400);
         request(path+"/participants/"+ready.path("participants").get(0).path("participantId").asText(),"DELETE",null,400);
-        request(path+"/open-registration","POST",Map.of(),400);
-        var cancelled=request(path+"/cancel","POST",Map.of(),200);assertThat(cancelled.path("status").asText()).isEqualTo("CANCELLED");
-        assertThat(cancelled.path("finishedAt").isNull()).isFalse();request(path+"/start","POST",Map.of(),400);
+        managerRequest(path+"/open-registration","POST",Map.of(),400);
+        var cancelled=managerRequest(path+"/cancel","POST",Map.of(),200);assertThat(cancelled.path("status").asText()).isEqualTo("CANCELLED");
+        assertThat(cancelled.path("finishedAt").isNull()).isFalse();managerRequest(path+"/start","POST",Map.of(),400);
     }
     @Test void strangerAndGuestCannotControlRegistrationEvenWithSpoofedCapabilities() throws Exception {
         loginAccount();var created=request("/api/tournaments","POST",Map.of("name","Lifecycle protected"),201);

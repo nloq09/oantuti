@@ -13,13 +13,15 @@ class TournamentAdministrationApiTest extends StageThreeWebFixture {
         request(path+"/participants/unknown/status","POST",Map.of("revision",configured.path("revision").asLong(),"status","DISQUALIFIED","reason","test"),403);
         assertThat(request("/api/account/tournaments?filter=created","GET",null,200).toString()).doesNotContain(cup.path("id").asText());
         request("/api/account/tournaments?filter=invalid","GET",null,400);assertThat(request(path+"/report","GET",null,200).path("totalMatches").asInt()).isZero();
+        assertThat(request(path,"GET",null,200).has("audit")).isFalse();
+        request("/api/auth/login","POST",Map.of("username",owner.username(),"password","Tournament Test Password"),200);account=owner;
         assertThat(request(path,"GET",null,200).path("audit").get(0).path("actor").asText()).isEqualTo(owner.id().value().toString());
     }
-    @Test void websocketSendsVersionedLifecycleNotificationsAlongsideAuthoritativeSnapshot() throws Exception {
+    @Test void websocketSendsVersionedLifecycleSnapshotsWithoutPrivateAudit() throws Exception {
         loginAccount();var cup=request("/api/tournaments","POST",Map.of("name","Events"),201);String id=cup.path("id").asText();
         try(var watcher=new Peer()) {watcher.send(Map.of("type","WATCH_TOURNAMENT","tournamentId",id));watcher.await(m->m.path("type").asText().equals("TOURNAMENT_STATE"));
             request("/api/tournaments/"+id+"/open-registration","POST",Map.of(),200);
-            var event=watcher.await(m->m.path("payload").path("event").path("type").asText().equals("REGISTRATION_OPENED"));assertThat(event.path("payload").path("revision").asLong()).isGreaterThan(cup.path("revision").asLong());assertThat(event.toString()).doesNotContain("password","botToken");
+            var event=watcher.await(m->m.path("type").asText().equals("TOURNAMENT_STATE")&&m.path("payload").path("tournament").path("status").asText().equals("REGISTRATION"));assertThat(event.path("payload").path("tournament").path("revision").asLong()).isGreaterThan(cup.path("revision").asLong());assertThat(event.toString()).doesNotContain("password","botToken","audit","actor");
         }
     }
 }

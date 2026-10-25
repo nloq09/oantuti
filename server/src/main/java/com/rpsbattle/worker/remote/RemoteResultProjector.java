@@ -67,6 +67,7 @@ public class RemoteResultProjector {
                     var snapshot=new OnlineSnapshot(mapper.toDto(state,List.of(),List.of()),"HUMAN_VS_HUMAN","FINISHED",null,players,Map.of(),List.of(),null,finished,started,finished,"BOT_FAILED".equals(result.reason())?"BOT_FAILED":null);
                     archives.persistRemote(history,log,snapshot);
                     m.historyMatchId=m.id;m.onlineMatchId=null;m.status=TournamentMatch.Status.FINISHED;m.winnerParticipantId=winner==null?null:winner.equals("P1")?a.participantId():b.participantId();m.result=state.result().orElseThrow().outcome().name();m.failure=snapshot.botError();m.remainingA=state.aliveCount(com.rpsbattle.online.OnlineMatch.P1);m.remainingB=state.aliveCount(com.rpsbattle.online.OnlineMatch.P2);m.startedAt=started;m.finishedAt=finished;
+                    var timing=result.moveTiming();if(timing!=null){m.moveNanosA=timing.nanosA();m.moveNanosB=timing.nanosB();m.moveCountA=timing.countA();m.moveCountB=timing.countB();}
                     TournamentAudit.append(t,"MATCH_FINISHED",null,m.id,"REMOTE_WORKER_RESULT",TournamentAudit.result(before),TournamentAudit.result(m));tournaments.changed(t);persistence.persistNow(t);
                     db.update("update worker_result_receipts set projection_status='APPLIED',projected_at=CURRENT_TIMESTAMP,projection_error=null where execution_id=?",execution);
                 });

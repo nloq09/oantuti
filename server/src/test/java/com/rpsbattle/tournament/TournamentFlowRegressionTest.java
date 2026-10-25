@@ -9,14 +9,15 @@ class TournamentFlowRegressionTest {
  private static final Instant NOW=Instant.parse("2026-10-21T00:00:00Z");
  @Test void manualReviewAfterDeadlineDoesNotReopenApplications(){
   var f=new TeamTournamentTest();f.owned.clock(Clock.fixed(NOW,ZoneOffset.UTC));
-  var t=f.registry.create("Manual deadline",TournamentFormat.ROUND_ROBIN);t.ownerUserId=f.a.id().value();t.participantPolicy=ParticipantPolicy.HUMAN_ONLY;t.status=TournamentStatus.REGISTRATION;t.timing=new TournamentTiming(NOW.plusSeconds(10),null,null);
+  var manager=f.user("Manager");var auth=com.rpsbattle.auth.AuthService.sessionAuthentication(manager);org.mockito.Mockito.when(f.accounts.requireUser(auth)).thenReturn(manager);
+  var t=f.registry.create("Manual deadline",TournamentFormat.ROUND_ROBIN);t.ownerUserId=manager.id().value();t.participantPolicy=ParticipantPolicy.HUMAN_ONLY;t.status=TournamentStatus.REGISTRATION;t.timing=new TournamentTiming(NOW.plusSeconds(10),null,null);
   f.owned.registerHuman(f.aa,t.id,true);f.owned.registerHuman(f.bb,t.id,true);
   f.owned.clock(Clock.fixed(NOW.plusSeconds(10),ZoneOffset.UTC));f.tournaments.clock(Clock.fixed(NOW.plusSeconds(10),ZoneOffset.UTC));
   assertThat(f.tournaments.view(t).get("acceptingRegistrations")).isEqualTo(false);
   assertThatThrownBy(()->f.owned.registerHuman(f.aa,t.id,true)).hasMessage("REGISTRATION_CLOSED");
-  for(var r:java.util.List.copyOf(t.registrations))f.owned.review(f.aa,t.id,r.id().toString(),true);
-  assertThat(t.participants).hasSize(2);f.owned.closeRegistration(f.aa,t.id);assertThat(t.status).isEqualTo(TournamentStatus.READY);
-  assertThatThrownBy(()->f.owned.review(f.aa,t.id,t.registrations.getFirst().id().toString(),false)).hasMessage("TOURNAMENT_LOCKED");
+  for(var r:java.util.List.copyOf(t.registrations))f.owned.review(auth,t.id,r.id().toString(),true);
+  assertThat(t.participants).hasSize(2);f.owned.closeRegistration(auth,t.id);assertThat(t.status).isEqualTo(TournamentStatus.READY);
+  assertThatThrownBy(()->f.owned.review(auth,t.id,t.registrations.getFirst().id().toString(),false)).hasMessage("TOURNAMENT_LOCKED");
  }
  @Test void humanCapacityDependsOnFormatRatherThanCodingEnrollment(){
   var f=new TeamTournamentTest();for(var format:java.util.List.of(TournamentFormat.SWISS,TournamentFormat.SINGLE_ELIMINATION)){

@@ -72,6 +72,7 @@ public class TournamentPersistenceCoordinator {
                 var match=new TournamentMatch(e.id().toString(),t.id,byId.get(e.a()),byId.get(e.b()));match.historyMatchId=e.historyId();match.onlineMatchId=e.roomId();match.status=e.status();match.winnerParticipantId=e.winner()==null?null:e.winner().toString();match.result=e.result();match.failure=e.failure();match.remainingA=e.remainingA();match.remainingB=e.remainingB();match.startedAt=e.startedAt();match.finishedAt=e.finishedAt();t.matches.add(match);
             }
             if(data.details()!=null)data.details().restore(t);
+            if(t.timeline!=null)t.checkInRequired=true;
             if(t.status==TournamentStatus.RUNNING || t.status==TournamentStatus.PAUSED || (t.status==TournamentStatus.READY && !t.matches.isEmpty())) {
                 t.readyWindows.clear();
                 TournamentStateMachine.transition(t,TournamentStatus.RECOVERY_REQUIRED,Instant.now());com.rpsbattle.tournament.TournamentAudit.append(t,"TOURNAMENT_RECOVERY_REQUIRED",null,t.id,"SERVER_RESTART",data.status().name(),t.status.name());t.revision++;

@@ -10,6 +10,8 @@ Base URL là origin của Central. Ví dụ dưới dùng đường dẫn tươn
 
 Mutation JSON gửi Content-Type application/json; upload bot dùng multipart. Response có thể là object, array, 204 không body hoặc file, không có một envelope `data` chung. View có phân trang có size/total và items theo controller; page bắt đầu 0. Timestamp Instant là ISO-8601; gửi offset rõ ràng.
 
+Tournament view có `serverNow` và `submissionWindowOpen` để đếm thời gian/khóa cửa nộp của giải thủ công. Đây là trạng thái cửa thời gian chung; quyền theo tài khoản, khóa bài và hạn mức vẫn kiểm tra tại endpoint ghi. Chủ giải đăng ký/nộp bot/check-in trong giải mình bị từ chối **403 / ORGANIZER_CANNOT_PARTICIPATE**. Gắn timeline đồng bộ `checkInRequired=true`, phù hợp luồng bắt buộc check-in của giải có lịch.
+
 | HTTP / code tiêu biểu | Xử lý |
 | --- | --- |
 | 400 / INVALID_* hoặc REASON_REQUIRED | Sửa body/filter/điều kiện; xem mã của service tương ứng. |

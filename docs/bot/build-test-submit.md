@@ -10,6 +10,8 @@ Mở trang lập trình từ [luồng tham gia giải](../player/tournament-flow
 
 Không cần bấm Lưu, Build hay Kiểm thử riêng. Source của lần nộp không thay đổi khi bạn sửa tiếp editor. Nháp tự lưu khi chính sách cho phép; trạng thái nằm cạnh ngôn ngữ. Tự lưu không phải Submit.
 
+Nếu giải tắt lưu nháp trên server, bạn vẫn đổi ngôn ngữ hoặc cách nộp được. Source được giữ riêng theo từng ngôn ngữ trong tab; chuyển lại sẽ khôi phục bản đang viết. Dữ liệu này chưa phải bài nộp và không tự xuất hiện trên máy khác.
+
 ## Kết quả chấm
 
 - **AC — Accepted:** mọi kiểm thử bắt buộc đạt và backend đã chốt bản dự thi thành công. Build thành công riêng chưa phải AC.
@@ -35,6 +37,8 @@ Worker dùng lease/token và số lần thử hữu hạn để khôi phục job
 Lần nộp phải đạt và được chốt trước khi cửa nộp đóng. Bắt đầu trước hạn nhưng xử lý xong sau hạn không được nhận; bản cũ vẫn giữ theo luật giải. Giới hạn tài nguyên và tổng phiên bản vẫn tính cả lần build thất bại.
 
 Quyền nộp lại, khóa ngay khi nộp, hạn riêng và cửa nộp khẩn cấp do backend kiểm tra. Đấu mẫu không thành điều kiện của Submit. Kiểm thử chính thức sau coding vẫn chạy theo [quy trình của giải](../tournament/validation.md).
+
+Giải thủ công cũng khóa editor và Submit theo thời gian server cung cấp; đồng hồ máy người chơi không tự mở quyền nộp. Khi mất mạng hoặc hết hạn, source đang gõ được giữ lại. Chủ giải dùng tài khoản của mình để quản lý, không đăng ký hoặc nộp bot thi đấu trong chính giải đó.
 
 Xem [giờ coding](../tournament/coding-phase.md), [giới hạn](limits.md), [xử lý lỗi](troubleshooting.md).
 

@@ -1,11 +1,12 @@
 import {competitionComplete} from './bracket-renderer.js';
+import {activeMatch,isRemoteMatch} from './match-execution.js';
 import {tournamentPhase} from './tournament-header.js';
 
 export function allowedControls(t){
  const matches=t.matches||[],reviews=Object.keys(t.reviews||{}).length;
  return {pause:t.status==='RUNNING',resume:['PAUSED','RECOVERY_REQUIRED'].includes(t.status)&&!reviews&&!matches.some(m=>m.status==='FAILED'),
   'next-round':['PAUSED','RUNNING'].includes(t.status)&&!reviews&&!t.autoAdvanceRounds&&t.releasedRound<(t.rounds?.length||0)&&matches.filter(m=>m.round<=t.releasedRound).every(m=>m.status==='FINISHED'),
-  finish:['RUNNING','PAUSED','RECOVERY_REQUIRED'].includes(t.status)&&!reviews&&!matches.some(m=>['PENDING','RUNNING'].includes(m.status))&&competitionComplete(t)};
+  finish:['RUNNING','PAUSED','RECOVERY_REQUIRED'].includes(t.status)&&!reviews&&matches.every(m=>m.status==='FINISHED')&&competitionComplete(t)};
 }
 export function organizerActionAvailability(t,data,{stale=false}={}){
  const phase=tournamentPhase(t,data),synced=!stale&&data?.revision===t.revision&&data?.tournamentId===t.id,terminal=['FINISHED','CANCELLED'].includes(t.status),minimum=t.format==='TEAM_ROUND_ROBIN'?6:t.format==='GROUP_KNOCKOUT'?4:2;
@@ -22,7 +23,7 @@ export function organizerActionAvailability(t,data,{stale=false}={}){
 }
 export function matchOperationAvailability(t,m){
  const paused=['PAUSED','RECOVERY_REQUIRED'].includes(t.status),review=Boolean(m&&t.reviews?.[m.id]);
- const lockedResult=m&&((t.groupHistory||[]).some(s=>m.round>s.startRound&&m.round<=s.rounds)||t.groupStage?.locked&&m.round<=t.groupStage.rounds||t.format==='SWISS'&&(t.matches||[]).some(other=>other.round>m.round)||(t.bestOf||1)>1&&(t.matches||[]).some(other=>other.seriesId===m.seriesId&&other.gameNumber>m.gameNumber)||['SINGLE_ELIMINATION','GROUP_KNOCKOUT'].includes(t.format)&&(t.matches||[]).some(other=>other.round>m.round&&other.status!=='PENDING'));
+ const lockedResult=m&&((t.groupHistory||[]).some(s=>m.round>s.startRound&&m.round<=s.rounds)||t.groupStage?.locked&&m.round<=t.groupStage.rounds||t.format==='SWISS'&&(t.matches||[]).some(other=>other.round>m.round)||(t.bestOf||1)>1&&(t.matches||[]).some(other=>other.seriesId===m.seriesId&&other.gameNumber>m.gameNumber)||['SINGLE_ELIMINATION','GROUP_KNOCKOUT'].includes(t.format)&&(t.matches||[]).some(other=>other.round>m.round&&(other.status!=='PENDING'||isRemoteMatch(other)&&activeMatch(other))));
  return {review:Boolean(m)&&['FINISHED','FAILED'].includes(m.status)&&t.status!=='CANCELLED'&&!review,
   keep:review&&t.status!=='CANCELLED',retry:paused&&m?.status==='FAILED'&&m.failure!=='CANCELLED',override:(paused||t.status==='FINISHED')&&review&&m?.status==='FINISHED'&&!lockedResult};
 }

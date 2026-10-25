@@ -27,7 +27,7 @@ Server dùng đồng hồ của mình để mở/đóng nhận đơn. Hết `reg
 
 **Đóng nhận đơn** là thao tác đóng sớm. **Khóa danh sách** là quyết định quản trị riêng nếu UI còn cho phép, có kiểm tra số đơn cần xử lý và điều kiện roster. Khóa sớm có thể ngăn các thay đổi tiếp theo; đọc phần xác nhận. Khi server đã hết thời gian xét duyệt, không tiếp tục duyệt đơn bằng cách gọi API cũ.
 
-Muốn thêm thời gian, dùng gia hạn đăng ký khi cửa sổ còn cho phép. Không kéo dài đăng ký sang một giai đoạn coding đã bắt đầu. Xem [cách thay lịch](create-tournament.md#thay-lịch-sau-khi-công-bố).
+Muốn thêm thời gian, dùng gia hạn đăng ký khi cửa sổ còn cho phép. Gia hạn mở lại nhận đơn nếu đã đóng và server tự đóng lại đúng hạn mới; các đơn và quyết định duyệt trước đó được giữ. Danh sách đã khóa rõ ràng không được mở khóa bằng gia hạn. Không kéo dài đăng ký sang một giai đoạn coding đã bắt đầu. Xem [cách thay lịch](create-tournament.md#thay-lịch-sau-khi-công-bố).
 
 ## Khi số liệu hoặc thao tác không cập nhật
 

@@ -47,8 +47,8 @@ class DockerTournamentPersistenceTest {
     @org.junit.jupiter.params.provider.CsvSource({"ROUND_ROBIN,5,10","SINGLE_ELIMINATION,6,5","ROUND_ROBIN,8,28","SINGLE_ELIMINATION,16,15","SINGLE_ELIMINATION,32,31"})
     void dockerScheduleCompletesRoundsAndPersistsBracketAndTiming(TournamentFormat format,int count,int expected) throws Exception {
         assumeTrue(artifacts.available(BotLanguage.PYTHON),"Docker Linux/python image unavailable");
-        int concurrency=count>=8?4:1;var auth=AuthService.sessionAuthentication(administrator());var cup=owned.create(auth,"Docker rounds "+format,format,"PUBLIC",false,32,concurrency,null);
-        for(int i=0;i<count;i++) {var bot=bots.upload(auth,"Round bot "+i,new MockMultipartFile("file","main.py","text/plain","raise SystemExit(1)\n".getBytes()));owned.add(auth,cup.id,bot.id().toString(),null,(long)i);}
+        int concurrency=count>=8?4:1;var auth=AuthService.sessionAuthentication(administrator());var entrant=AuthService.sessionAuthentication(user());var cup=owned.create(auth,"Docker rounds "+format,format,"PUBLIC",false,32,concurrency,null);
+        for(int i=0;i<count;i++) {var bot=bots.upload(entrant,"Round bot "+i,new MockMultipartFile("file","main.py","text/plain","raise SystemExit(1)\n".getBytes()));owned.add(auth,cup.id,bot.id().toString(),null,(long)i);}
         owned.start(auth,cup.id);long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(120);
         boolean finished=false;
         while(System.nanoTime()<deadline) {
@@ -73,8 +73,8 @@ class DockerTournamentPersistenceTest {
         var a=user();var b=user();var authA=AuthService.sessionAuthentication(a);var authB=AuthService.sessionAuthentication(b);
         var file=new MockMultipartFile("file","main.py","text/plain","raise SystemExit(1)\n".getBytes());
         var botA=bots.upload(authA,"Forfeit A",file);var botB=bots.upload(authB,"Forfeit B",file);
-        var cup=owned.create(authA,"Docker persistence",TournamentFormat.ROUND_ROBIN,"PUBLIC");owned.add(authA,cup.id,botA.id().toString(),null,1L);owned.openRegistration(authA,cup.id);owned.register(authB,cup.id,botB.id().toString());
-        owned.review(authA,cup.id,cup.registrations.stream().filter(r->r.userId().equals(b.id().value())).findFirst().orElseThrow().id().toString(),true);owned.closeRegistration(authA,cup.id);owned.start(authA,cup.id);
+        var manager=AuthService.sessionAuthentication(user());var cup=owned.create(manager,"Docker persistence",TournamentFormat.ROUND_ROBIN,"PUBLIC");owned.openRegistration(manager,cup.id);owned.register(authA,cup.id,botA.id().toString());owned.register(authB,cup.id,botB.id().toString());
+        for(var registration:List.copyOf(cup.registrations))owned.review(manager,cup.id,registration.id().toString(),true);owned.closeRegistration(manager,cup.id);owned.start(manager,cup.id);
         long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(30);
         boolean finished=false;
         while(System.nanoTime()<deadline) {synchronized(cup) {finished=cup.status==TournamentStatus.FINISHED;}if(finished) break;Thread.sleep(100);}

@@ -24,3 +24,16 @@ test('match operations mirror review retry and downstream locking guards',()=>{
 });
 
 test('scheduled registration can open early without requiring publication at the scheduled hour',()=>{const t=cup({timeline:{registrationOpenAt:'2026-11-01T11:00:00Z',registrationCloseAt:'2026-11-01T12:00:00Z'}}),data=metrics(t,{phase:'UPCOMING'});assert.equal(organizerNextAction(t,data).command,'open-registration');assert.match(organizerNextAction(t,data).description,/server tự mở/);});
+
+test('finish remains unavailable while any match is unresolved or failed',()=>{
+ for(const status of ['PENDING','RUNNING','FAILED']){const t=cup({status:'RECOVERY_REQUIRED',format:'ROUND_ROBIN',matches:[{status}]});assert.equal(organizerActionAvailability(t,metrics(t)).finish,false);}
+ const t=cup({status:'PAUSED',format:'ROUND_ROBIN',matches:[{status:'FINISHED'}]});assert.equal(organizerActionAvailability(t,metrics(t)).finish,true);
+});
+
+test('knockout result changes cannot remove a downstream remote assignment',()=>{
+ const m={id:'first',round:1,status:'FINISHED',seriesId:'first',gameNumber:1};
+ for(const executionState of ['QUEUED','ASSIGNED','RUNNING_REMOTE','RESULT_PENDING']){
+  const t=cup({format:'SINGLE_ELIMINATION',status:'PAUSED',reviews:{first:'Review'},matches:[m,{round:2,status:'PENDING',remote:true,executionState}]});
+  assert.equal(matchOperationAvailability(t,m).override,false);
+ }
+});

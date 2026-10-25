@@ -18,6 +18,8 @@ public final class ResultUploader {
         var assignment=journal.assignment(dir);if(!identity.workerId().toString().equals(assignment.path("workerId").asText())||!execution.toString().equals(dir.getFileName().toString())||!job.toString().equals(assignment.path("jobId").asText())||!match.toString().equals(assignment.path("match").path("matchId").asText()))throw new IOException("Invalid outbox identity");
         byte[] replay=journal.replay(dir);if(!hash(replay).equals(outcome.path("replayChecksum").asText()))throw new IOException("Outbox replay checksum mismatch");
         var result=json.createObjectNode();for(String field:FIELDS){if(!outcome.has(field))throw new IOException("Incomplete outbox");result.set(field,outcome.get(field));}
+        // Append after the legacy fields to retain the canonical receipt hash for old outboxes.
+        if(outcome.hasNonNull("moveTiming"))result.set("moveTiming",outcome.get("moveTiming"));
         String expected=hash(json.writeValueAsBytes(result));
         var response=central.post(identity,"jobs/"+job+"/complete",Map.of("result",result,"replayBase64",Base64.getEncoder().encodeToString(replay)));
         if(!execution.toString().equals(response.path("executionId").asText())||!job.toString().equals(response.path("jobId").asText())||!match.toString().equals(response.path("matchId").asText())||!expected.equals(response.path("resultHash").asText())||!"ACCEPTED".equals(response.path("status").asText()))throw new IOException("Invalid result acknowledgement");

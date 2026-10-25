@@ -9,11 +9,13 @@ Check-in xác nhận có mặt trong giải. Nó khác với đơn được duy�
 3. Khi server cấp `canCheckIn`, bấm **Check-in** hoặc **Check-in ngay** một lần.
 4. Chờ xác nhận thành công, xem trạng thái **Đã check-in** và thời điểm được ghi nhận.
 
-Nếu giải không yêu cầu check-in, không cần tự tìm nút để gửi xác nhận. Vẫn phải đáp ứng các điều kiện tham gia còn lại; không có check-in không đồng nghĩa mọi bot đều được thi.
+Giải theo timeline bắt buộc check-in; server đồng bộ cờ này khi gắn timeline, kể cả cấu hình tạo giải ban đầu bỏ qua hoặc gửi `checkInRequired=false`. Giải thủ công vẫn giữ lựa chọn có/không yêu cầu check-in. Nếu giải thủ công không yêu cầu, bạn vẫn phải đáp ứng các điều kiện tham gia còn lại.
 
 ## Hết hạn
 
 Thời gian do server quyết định. Chưa gửi thành công trước hạn có thể bị đánh dấu missed/not checked in và không có trong roster thi đấu. Đóng tab, mất mạng hoặc đồng hồ máy sai không gia hạn cửa sổ. Nếu đã bấm nhưng chưa rõ kết quả, đồng bộ lại trạng thái trước khi kết luận thất bại/thành công.
+
+Khi chủ giải gia hạn kiểm thử hoặc check-in làm tăng hạn check-in, server khôi phục người đã lỡ hạn nếu tài khoản còn hoạt động, đơn còn APPROVED, bot vẫn LOCKED/đạt kiểm thử chính thức và người chơi chưa bị loại/rút. Người đó cần check-in trong cửa sổ mới. Gia hạn không khôi phục tự động các bài không đạt hoặc tài khoản bị vô hiệu hóa.
 
 ## Phòng chờ
 

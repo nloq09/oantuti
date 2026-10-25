@@ -13,21 +13,23 @@ class TournamentRulesApiTest extends StageThreeWebFixture {
 
     @Test void createKnockoutWith32SlotsAndOwnerTieBreakRulesLockAtReady() throws Exception {
         loginAccount();var owner=account;
-        var cup=request("/api/tournaments","POST",Map.of("name","Knockout","format","SINGLE_ELIMINATION","maxParticipants",32),201);
+        var cup=participantTournament(Map.of("name","Knockout","format","SINGLE_ELIMINATION","maxParticipants",32));
         assertThat(cup.path("format").asText()).isEqualTo("SINGLE_ELIMINATION");assertThat(cup.path("maxParticipants").asInt()).isEqualTo(32);
         assertThat(cup.path("maxConcurrentMatches").asInt()).isEqualTo(4);
         String path="/api/tournaments/"+cup.path("id").asText();
         var rules=Map.of("tieBreakOrder",List.of("POINTS","AVERAGE_MOVE_TIME","HEAD_TO_HEAD"));
-        var saved=request(path+"/rules","POST",rules,200);
+        var saved=managerRequest(path+"/rules","POST",rules,200);
         assertThat(saved.path("tieBreakOrder").get(1).asText()).isEqualTo("AVERAGE_MOVE_TIME");assertThat(saved.path("maxConcurrentMatches").asInt()).isEqualTo(4);
-        request(path+"/rules","POST",Map.of("tieBreakOrder",List.of("WINS","POINTS")),400);
-        request(path+"/rules","POST",Map.of("tieBreakOrder",List.of("POINTS","WINS","WINS")),400);
+        managerRequest(path+"/rules","POST",Map.of("tieBreakOrder",List.of("WINS","POINTS")),400);
+        managerRequest(path+"/rules","POST",Map.of("tieBreakOrder",List.of("POINTS","WINS","WINS")),400);
         request("/api/tournaments","POST",Map.of("name","Invalid","maxParticipants",33),400);
         request("/api/auth/logout","POST",Map.of(),200);account=null;loginAccount();request(path+"/rules","POST",rules,403);
         account=owner;request("/api/auth/login","POST",Map.of("username",owner.username(),"password","Tournament Test Password"),200);
-        request(path+"/participants","POST",Map.of("botId",upload("Rules A").id()),200);request(path+"/participants","POST",Map.of("botId",upload("Rules B").id()),200);
-        request(path+"/open-registration","POST",Map.of(),200);request(path+"/close-registration","POST",Map.of(),200);
-        request(path+"/rules","POST",rules,400);assertThat(request(path,"GET",null,200).path("maxConcurrentMatches").asInt()).isEqualTo(4);
+        managerRequest(path+"/open-registration","POST",Map.of(),200);
+        request(path+"/participants","POST",Map.of("botId",upload("Rules A").id()),200);var pending=request(path+"/participants","POST",Map.of("botId",upload("Rules B").id()),200);
+        for(var r:pending.path("registrations"))managerRequest(path+"/registrations/"+r.path("id").asText()+"/approve","POST",Map.of(),200);
+        managerRequest(path+"/close-registration","POST",Map.of(),200);
+        managerRequest(path+"/rules","POST",rules,400);assertThat(request(path,"GET",null,200).path("maxConcurrentMatches").asInt()).isEqualTo(4);
     }
 
     @Test void userCannotSupplyRunnerCapacityEvenWhenOwningTheTournament() throws Exception {

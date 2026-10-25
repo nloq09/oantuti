@@ -24,7 +24,7 @@ class HeadlessMatchTest {
     }
     @Test void persistentBotsUseConfiguredTurnLimitAndReplayMatchesSeededOnlinePlacement() {
         var spec=spec(8);var a=new Process();var b=new Process();var result=new HeadlessMatch().run(spec,a,b,System.nanoTime()+Duration.ofSeconds(10).toNanos());
-        assertEquals("FINISHED",result.status());assertEquals(8,result.turnCount());assertEquals(1,a.starts);assertEquals(1,b.starts);assertEquals(1,a.closes);assertEquals(1,b.closes);assertTrue(a.requests>1&&b.requests>1);
+        assertEquals("FINISHED",result.status());assertEquals(8,result.turnCount());assertEquals(1,a.starts);assertEquals(1,b.starts);assertEquals(1,a.closes);assertEquals(1,b.closes);assertTrue(a.requests>1&&b.requests>1);assertEquals(a.requests,result.moveTiming().countA());assertEquals(b.requests,result.moveTiming().countB());assertTrue(result.moveTiming().nanosA()>0&&result.moveTiming().nanosB()>0);assertTrue(result.moveTiming().nanosA()+result.moveTiming().nanosB()<=(result.durationMs()+1)*1_000_000L);
         var replay=new ReplayService().replay(result.replay());assertTrue(replay.isFinished());assertEquals(result.winner(),replay.result().orElseThrow().winner().map(p->p.value()).orElse(null));assertEquals(Long.MAX_VALUE,result.replay().seed());
         var room=new OnlineMatch(spec.matchId().toString(),MatchMode.HUMAN_VS_HUMAN,spec.seed(),Clock.systemUTC(),Duration.ofSeconds(1));room.attachBot(OnlineMatch.P1,(v,l)->null,"A");room.join();room.attachBot(OnlineMatch.P2,(v,l)->null,"B");room.prepareBots();
         assertEquals(room.state().board().allPieces(),result.replay().initialState().board().allPieces());

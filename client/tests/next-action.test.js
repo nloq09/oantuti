@@ -66,3 +66,11 @@ test('queued bot actions stay scoped to the selected participant and prefer a re
  const action=tournamentNextAction({tournament:{...playing,matches:[{...remote,executionState:'QUEUED'}]},account,me:{states:[passive,waiting]}});assert.equal(action.type,'TRACK_MATCH');assert.match(action.description,/chờ máy/);
  const unrelated=tournamentNextAction({tournament:{...playing,matches:[remote]},account,me:{states:[passive]}});assert.equal(unrelated.type,'WAIT_NEXT_MATCH');
 });
+
+test('excluded submissions do not regain coding or check-in actions after an extension',()=>{
+ for(const submissionStatus of ['DISQUALIFIED','REJECTED'])for(const phase of ['CODING_OPEN','CHECK_IN_OPEN']){
+  const action=resolve({phase,submissionStatus,canModifyWorkspace:false,nextAction:phase==='CODING_OPEN'?'OPEN_CODE_WORKSPACE':'CHECK_IN',checkIn:{canCheckIn:true}});
+  assert.equal(action.type,'INELIGIBLE');assert.equal(action.enabled,false);assert.equal(action.command,undefined);
+ }
+ assert.equal(resolve({phase:'CODING_OPEN',submissionStatus:'REJECTED',canAccessWorkspace:true,canModifyWorkspace:true,nextAction:'OPEN_CODE_WORKSPACE'}).type,'OPEN_CODE');
+});

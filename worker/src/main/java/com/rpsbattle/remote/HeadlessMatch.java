@@ -11,7 +11,8 @@ import java.time.*;
 
 /** Uses the existing online placement and engine, with no server, sockets or UI loop. */
 public final class HeadlessMatch {
-    public record Result(String status,String winner,String loser,String reason,int turnCount,long durationMs,MatchLog replay) {}
+    public record MoveTiming(long nanosA,long nanosB,int countA,int countB) {}
+    public record Result(String status,String winner,String loser,String reason,int turnCount,long durationMs,MatchLog replay,MoveTiming moveTiming) {}
     public Result run(ExecutionJob.Spec spec,BotProcess a,BotProcess b,long deadline) {
         return run(spec,a,b,deadline,()->{});
     }
@@ -25,12 +26,14 @@ public final class HeadlessMatch {
             var rules=new OnlineRuleSet(OnlineMatch.P1,OnlineMatch.P2,spec.maxTurns());
             var match=new Match(room.state().withPhase(com.rpsbattle.game.state.GamePhase.READY),rules,agentA,agentB,spec.seed());match.start();onGameplay.run();check(deadline);
             var legal=new com.rpsbattle.game.engine.LegalActionGenerator(rules);
-            String fault=null;
+            String fault=null;long[] nanos=new long[2];int[] counts=new int[2];
             while(match.status()==MatchStatus.RUNNING) {
                 check(deadline);var player=match.state().currentPlayerId();var actions=legal.getLegalActions(match.state(),player);
                 if(actions.isEmpty())actions=java.util.List.of(PassAction.of(player));
                 try {
-                    var action=(player.equals(OnlineMatch.P1)?agentA:agentB).chooseAction(new PlayerView(match.state(),player),actions);
+                    int seat=player.equals(OnlineMatch.P1)?0:1;long moveStarted=System.nanoTime();Action action;
+                    try {action=(seat==0?agentA:agentB).chooseAction(new PlayerView(match.state(),player),actions);}
+                    finally {nanos[seat]+=System.nanoTime()-moveStarted;counts[seat]++;}
                     if(!actions.contains(action))throw new BotProtocolException("ILLEGAL_ACTION");
                     check(deadline);match.submitAction(player,action);
                 }catch(BotInfrastructureException infrastructure){throw infrastructure;}
@@ -41,7 +44,7 @@ public final class HeadlessMatch {
             check(deadline);var state=match.state();var result=state.result().orElseThrow();String winner=result.winner().map(p->p.value()).orElse(null);
             var log=new MatchLog(match.matchId(),rules.name(),spec.seed(),match.initialState(),match.events(),result);
             new ReplayService().replay(log); // A corrupt/incomplete event stream is never an uploadable result.
-            return new Result("FINISHED",winner,winner==null?null:winner.equals("P1")?"P2":"P1",fault==null?"ENGINE_RESULT":fault,state.turnNumber(),(System.nanoTime()-began)/1000000,log);
+            return new Result("FINISHED",winner,winner==null?null:winner.equals("P1")?"P2":"P1",fault==null?"ENGINE_RESULT":fault,state.turnNumber(),(System.nanoTime()-began)/1000000,log,new MoveTiming(nanos[0],nanos[1],counts[0],counts[1]));
         }
     }
     static void check(long deadline){if(Thread.currentThread().isInterrupted()||System.nanoTime()>=deadline)throw new IllegalStateException("MATCH_HARD_TIMEOUT");}

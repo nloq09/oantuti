@@ -16,6 +16,7 @@ public class WorkerManager {
     private final int maxConcurrent;
     private final Executor launches;
     private final Set<String> active = new HashSet<>();
+    private final Set<String> routingActive = new HashSet<>();
     private boolean draining;
     private com.rpsbattle.worker.remote.RemoteRoutingService routing;
     @Autowired public void routing(com.rpsbattle.worker.remote.RemoteRoutingService routing){this.routing=routing;}
@@ -36,6 +37,7 @@ public class WorkerManager {
     public void releaseReservations(Collection<String> ids){queue.release(ids);}
     public void offer(MatchExecutionRequest request) { queue.offer(request); }
     public void dispatch() {
+        dispatchRemoteWhileLocalFull();
         while (true) {
             MatchExecutionRequest request;
             synchronized (this) {
@@ -47,18 +49,44 @@ public class WorkerManager {
             catch (RejectedExecutionException failure) { fail(request, "SERVER_SHUTDOWN"); }
         }
     }
+    /** Remote admission uses bounded launch tasks, independently of running local matches. */
+    private void dispatchRemoteWhileLocalFull() {
+        int remaining=queue.size();
+        while(remaining-->0) {
+            MatchExecutionRequest request;
+            synchronized(this) {
+                if(draining||routing==null||active.size()<maxConcurrent||routingActive.size()>=maxConcurrent)return;
+                request=queue.pollForRouting();if(request==null)return;
+                routingActive.add(request.match().id);
+            }
+            try {launches.execute(()->routeWhileLocalFull(request));}
+            catch(RejectedExecutionException failure){synchronized(this){routingActive.remove(request.match().id);}fail(request,"SERVER_SHUTDOWN");}
+        }
+    }
+    private boolean eligible(MatchExecutionRequest request) {
+        var t=request.tournament();var m=request.match();
+        return t.status==TournamentStatus.RUNNING&&m.status==TournamentMatch.Status.PENDING&&t.matches.stream().anyMatch(entry->entry==m)&&!draining()
+            &&(readiness==null||readiness.confirmed(t,m))&&t.operations.active(m.participantA.participantId())&&t.operations.active(m.participantB.participantId())
+            &&(t.operations.autoAdvanceRounds()||m.round<=t.operations.releasedRound())&&!t.operations.reviews().containsKey(m.id);
+    }
+    private void routeWhileLocalFull(MatchExecutionRequest request) {
+        var t=request.tournament();var m=request.match();
+        try {synchronized(t) {
+            if(remote!=null&&remote.owns(m.id)||!eligible(request)){complete(m.id);return;}
+            try {if(routing.route(t,m))complete(m.id);else queue.deferRouting(request);}
+            catch(RuntimeException failure){fail(request,"MATCH_START_FAILED");}
+        }} finally {synchronized(this){routingActive.remove(m.id);}}
+    }
     private void launch(MatchExecutionRequest request) {
         var t=request.tournament(); var m=request.match();
         synchronized(t) {
             if(remote!=null&&remote.owns(m.id)){complete(m.id);return;}
-            if (t.status!=TournamentStatus.RUNNING || m.status!=TournamentMatch.Status.PENDING || t.matches.stream().noneMatch(entry->entry==m) || draining()) {
+            if (!eligible(request)) {
                 complete(m.id); return;
             }
-            if(t.matches.stream().filter(game->game.status==TournamentMatch.Status.RUNNING).count()>=t.maxConcurrentMatches) {complete(m.id);return;}
-            if(readiness!=null&&!readiness.confirmed(t,m)){complete(m.id);return;}
-            if(!t.operations.active(m.participantA.participantId())||!t.operations.active(m.participantB.participantId())||(!t.operations.autoAdvanceRounds()&&m.round>t.operations.releasedRound())||t.operations.reviews().containsKey(m.id)){complete(m.id);return;}
             try {
                 if(routing!=null&&routing.route(t,m)){complete(m.id);return;}
+                if(t.matches.stream().filter(game->game.status==TournamentMatch.Status.RUNNING).count()>=t.maxConcurrentMatches) {complete(m.id);return;}
                 var result=Objects.requireNonNull(worker.execute(request));
                 m.onlineMatchId=result.roomId();m.historyMatchId=result.historyId();
                 m.status=TournamentMatch.Status.RUNNING;if(m.startedAt==null)m.startedAt=Instant.now();

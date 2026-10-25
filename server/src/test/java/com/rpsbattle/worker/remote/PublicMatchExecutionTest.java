@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
 class PublicMatchExecutionTest extends MatchMonitorTest {
+ // These read-model fixtures contain synthetic room IDs; live execution is covered separately.
+ @org.springframework.test.context.bean.override.mockito.MockitoBean com.rpsbattle.tournament.execution.TournamentExecutionService execution;
  void safeRow(JsonNode row,String state){
   assertThat(row.path("remote").asBoolean()).isTrue();assertThat(row.path("executionState").asText()).isEqualTo(state);assertThat(row.path("onlineMatchId").isNull()).isTrue();
   for(String field:List.of("execution","executionId","jobId","workerDisplayName","workerStatus","leaseUntil","artifactToken","spec_json"))assertThat(row.has(field)).as(field).isFalse();

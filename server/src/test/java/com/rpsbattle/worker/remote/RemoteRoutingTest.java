@@ -48,8 +48,9 @@ class RemoteRoutingTest extends RemoteJobClaimTest {
         }
     }
     record Fixture(Tournament tournament,TournamentMatch match){}
-    Fixture fixture(UUID actor){
-        var base=spec(actor,"PYTHON","PYTHON","TRUSTED");var t=new Tournament(base.tournamentId().toString(),"Automatic pool",TournamentFormat.ROUND_ROBIN,Instant.now());t.ownerUserId=actor;t.deferNotifications=true;submissions.enable(t.id);
+    Fixture fixture(UUID actor){return fixture(actor,TournamentFormat.ROUND_ROBIN);}
+    Fixture fixture(UUID actor,TournamentFormat format){
+        var base=spec(actor,"PYTHON","PYTHON","TRUSTED");db.update("update tournaments set format=? where id=?",format.name(),base.tournamentId());var t=new Tournament(base.tournamentId().toString(),"Automatic pool",format,Instant.now());t.ownerUserId=actor;t.deferNotifications=true;submissions.enable(t.id);
         var row=db.queryForMap("select * from tournament_matches where id=?",base.matchId());
         for(String column:List.of("participant_a_id","participant_b_id")){
             var data=db.queryForMap("select * from tournament_participants where id=?",row.get(column));String hash=WorkerIdentityService.hash(column);var seat=new TournamentParticipant(data.get("id").toString(),data.get("bot_id").toString(),"private-token","Bot",column.equals("participant_a_id")?7L:9L,actor).withHash(hash);t.participants.add(seat);
@@ -82,4 +83,48 @@ class RemoteRoutingTest extends RemoteJobClaimTest {
         }
     }
 
+
+    @Test void assignedRunningAndUnprojectedRemoteMatchesBlockParticipantDiscipline()throws Exception{
+        try(var admin=new Browser()){
+            UUID actor=admin.account(true);var machine=machine(actor,Set.of("PYTHON"),1,"TRUSTED");var f=fixture(actor);var t=f.tournament();var m=f.match();
+            assertThat(routing.route(t,m)).isTrue();var assigned=queue.claim(machine.id(),claim(machine,1)).jobs().getFirst();
+            String base="/api/tournaments/"+t.id;
+            assertThat(admin.call(base+"/control/pause","POST",Map.of("revision",t.revision),null,true).status()).isEqualTo(200);
+            long revision=t.revision;
+            for(String state:List.of("CLAIMED","RUNNING","DONE")){
+                if(state.equals("RUNNING"))queue.gameplay(machine.id(),assigned.jobId(),new RemoteMatchQueue.Start(assigned.executionId(),machine.epoch()));
+                if(state.equals("DONE"))db.update("update match_execution_jobs set status='DONE' where id=?",assigned.jobId());
+                for(String action:List.of("DISQUALIFIED","WITHDRAWN")){
+                    var result=admin.call(base+"/participants/"+m.participantA.participantId()+"/status","POST",Map.of("revision",t.revision,"status",action,"reason","Do not rewrite an active remote match"),null,true);
+                    assertThat(result.status()).as(result.body().toString()).isEqualTo(400);assertThat(result.body().path("error").asText()).isEqualTo("PARTICIPANT_BUSY");
+                    assertThat(t.revision).isEqualTo(revision);assertThat(m.status).isEqualTo(TournamentMatch.Status.PENDING);assertThat(t.operations.active(m.participantA.participantId())).isTrue();
+                }
+            }
+        }
+    }
+    @Test void queuedUnclaimedRemoteMatchCanStillBeForfeitedAndCannotBeClaimedAfterward()throws Exception{
+        try(var admin=new Browser()){
+            UUID actor=admin.account(true);var machine=machine(actor,Set.of("PYTHON"),1,"TRUSTED");var f=fixture(actor);var t=f.tournament();var m=f.match();
+            assertThat(routing.route(t,m)).isTrue();String base="/api/tournaments/"+t.id;
+            assertThat(admin.call(base+"/control/pause","POST",Map.of("revision",t.revision),null,true).status()).isEqualTo(200);
+            var result=admin.call(base+"/participants/"+m.participantA.participantId()+"/status","POST",Map.of("revision",t.revision,"status","DISQUALIFIED","reason","Unplayed entrant is ineligible"),null,true);
+            assertThat(result.status()).as(result.body().toString()).isEqualTo(200);assertThat(m.status).isEqualTo(TournamentMatch.Status.FINISHED);assertThat(m.decisionReason).isEqualTo("FORFEIT");
+            assertThat(queue.claim(machine.id(),claim(machine,1)).jobs()).isEmpty();
+        }
+    }
+
+    @Test void knockoutOverrideCannotRemoveAlreadyRoutedDownstreamMatches()throws Exception{
+        try(var admin=new Browser()){
+            UUID actor=admin.account(true);var machine=machine(actor,Set.of("PYTHON"),1,"TRUSTED");
+            for(boolean claim:List.of(false,true)){
+                var f=fixture(actor,TournamentFormat.SINGLE_ELIMINATION);var t=f.tournament();var downstream=f.match();downstream.round=2;
+                var prior=new TournamentMatch(UUID.randomUUID().toString(),t.id,downstream.participantA,downstream.participantB);prior.round=1;prior.status=TournamentMatch.Status.FINISHED;prior.result="WIN";prior.winnerParticipantId=prior.participantA.participantId();t.matches.add(prior);t.operations=t.operations.review(prior.id,"Review prior result");
+                assertThat(routing.route(t,downstream)).isTrue();if(claim)assertThat(queue.claim(machine.id(),claim(machine,1)).jobs()).hasSize(1);
+                String base="/api/tournaments/"+t.id;assertThat(admin.call(base+"/control/pause","POST",Map.of("revision",t.revision),null,true).status()).isEqualTo(200);long revision=t.revision;
+                var result=admin.call(base+"/matches/"+prior.id+"/override","POST",Map.of("revision",revision,"winnerParticipantId",prior.participantB.participantId(),"reason","Must not replace downstream remote match"),null,true);
+                assertThat(result.status()).as(result.body().toString()).isEqualTo(400);assertThat(result.body().path("error").asText()).isEqualTo("DOWNSTREAM_MATCH_STARTED");
+                assertThat(t.revision).isEqualTo(revision);assertThat(t.matches).contains(downstream);assertThat(prior.winnerParticipantId).isEqualTo(prior.participantA.participantId());
+            }
+        }
+    }
 }

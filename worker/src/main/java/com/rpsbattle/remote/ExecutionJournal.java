@@ -48,6 +48,7 @@ public final class ExecutionJournal {
         var summary=new LinkedHashMap<String,Object>();summary.put("status","READY_FOR_UPLOAD");summary.put("executionId",job.executionId());summary.put("jobId",job.jobId());summary.put("matchId",job.match().matchId());
         summary.put("winner",result.winner());summary.put("loser",result.loser());summary.put("reason",result.reason());summary.put("turnCount",result.turnCount());summary.put("durationMs",result.durationMs());
         summary.put("artifactHashA",job.match().botA().artifactHash());summary.put("artifactHashB",job.match().botB().artifactHash());summary.put("seed",job.match().seed());
+        summary.put("moveTiming",result.moveTiming());
         try{summary.put("replayChecksum",HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(replay))));}catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}
         write(dir.resolve("outcome.json"),summary);
     }

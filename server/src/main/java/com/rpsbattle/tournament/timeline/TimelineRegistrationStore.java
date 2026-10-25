@@ -35,6 +35,8 @@ public class TimelineRegistrationStore {
     @Transactional public void enable(UUID tournament){lockCapacity(tournament);if(controlRow(tournament,true)==null){var row=new RegistrationControl();row.tournamentId=tournament;db.persist(row);db.flush();}}
     private RegistrationControl unlocked(UUID tournament){var row=controlRow(tournament,true);if(row!=null&&row.lockedAt!=null)throw new AuthException("ROSTER_LOCKED",409);return row;}
     @Transactional public void close(UUID tournament,Instant now){lockCapacity(tournament);enable(tournament);var row=unlocked(tournament);if(row.closedAt!=null)throw new AuthException("REGISTRATION_ALREADY_CLOSED",409);row.closedAt=now;db.flush();}
+    /** Explicit audited extension may reopen admission, but never unlock an already finalized roster. */
+    @Transactional public void reopenForExtension(UUID tournament){lockCapacity(tournament);enable(tournament);var row=unlocked(tournament);row.closedAt=null;db.flush();}
     @Transactional public Control lockRoster(UUID tournament,UUID actor,String name,Instant now,int minimum,Instant registrationDeadline){
         int capacity=lockCapacity(tournament);enable(tournament);var row=unlocked(tournament);
         if(row.closedAt==null&&now.isBefore(registrationDeadline))throw new AuthException("REGISTRATION_STILL_OPEN",409);

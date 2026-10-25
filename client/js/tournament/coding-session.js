@@ -13,3 +13,15 @@ export class CodingSession {
  }
 }
 export function entryOptions(mode){return mode==='PRE_UPLOADED_ONLY'?['IMPORT']:mode==='CODE_IN_PLATFORM_ONLY'?['CODE']:['IMPORT','CODE'];}
+
+/** A server snapshot can open a manual window; monotonic time can only close it. */
+export class ManualSubmissionWindow {
+ update(tournament,received=performance.now()){
+  this.tournament=tournament;this.received=received;this.serverNow=Date.parse(tournament.serverNow);
+ }
+ writable(now=performance.now()){
+  const t=this.tournament;if(!t||t.status!=='REGISTRATION'||t.submissionWindowOpen!==true||!Number.isFinite(this.serverNow))return false;
+  const stamp=this.serverNow+Math.max(0,now-this.received),open=Date.parse(t.botPolicy?.submissionOpenAt),close=Date.parse(t.botPolicy?.submissionDeadline);
+  return (!Number.isFinite(open)||stamp>=open)&&(!Number.isFinite(close)||stamp<close);
+ }
+}

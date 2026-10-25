@@ -18,12 +18,12 @@ class TimelineRegistrationApiTest extends StageThreeWebFixture {
     static final Instant START=Instant.parse("2026-10-19T00:00:00Z");
     @BeforeEach void serverTime(){when(clock.instant()).thenReturn(START.plusSeconds(30));when(clock.getZone()).thenReturn(ZoneOffset.UTC);}
     TournamentTimeline timeline(){return new TournamentTimeline(START,START.plusSeconds(60),START.plusSeconds(120),START.plusSeconds(180),START.plusSeconds(180),START.plusSeconds(210),START.plusSeconds(240),START.plusSeconds(270),START.plusSeconds(300),START.plusSeconds(360),null);}
-    String cup(String mode,int limit)throws Exception{loginAccount();var t=request("/api/tournaments","POST",Map.of("name","Scheduled applications","maxParticipants",limit,"botPolicy",Map.of("submissionMode",mode)),201);String base="/api/tournaments/"+t.path("id").asText();request(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",timeline()),200);request(base+"/open-registration","POST",Map.of(),200);return base;}
+    String cup(String mode,int limit)throws Exception{loginAccount();var t=participantTournament(Map.of("name","Scheduled applications","maxParticipants",limit,"botPolicy",Map.of("submissionMode",mode)));String base="/api/tournaments/"+t.path("id").asText();managerRequest(base+"/timeline","PUT",Map.of("revision",t.path("revision").asLong(),"timeline",timeline()),200);managerRequest(base+"/open-registration","POST",Map.of(),200);return base;}
     Map<String,Object> signup(){return Map.of("rulesAccepted",true,"intendedLanguage","CPP","affiliation","UET");}
     @Test void personCanRegisterWithoutBotInAllThreeModesAndNoExecutionRosterIsCreated()throws Exception{
         for(String mode:List.of("PRE_UPLOADED_ONLY","CODE_IN_PLATFORM_ONLY","BOTH")){
             String base=cup(mode,2);var result=request(base+"/participant-registration","POST",signup(),200);assertThat(result.path("registrationStatus").asText()).isEqualTo("NEEDS_REVIEW");assertThat(result.path("registration").path("intendedLanguage").asText()).isEqualTo("CPP");assertThat(result.path("registration").has("botId")).isFalse();
-            var t=request(base,"GET",null,200);assertThat(t.path("participants").size()).isZero();assertThat(t.path("registrations").size()).isZero();assertThat(t.path("audit").toString()).contains("PARTICIPANT_APPLICATION_SUBMITTED");
+            var t=request(base,"GET",null,200);assertThat(t.path("participants").size()).isZero();assertThat(t.path("registrations").size()).isZero();assertThat(managerRequest(base,"GET",null,200).path("audit").toString()).contains("PARTICIPANT_APPLICATION_SUBMITTED");
             assertThat(request(base+"/participant-flow","GET",null,200).path("nextAction").asText()).isEqualTo("WAIT_FOR_APPROVAL");request(base+"/participant-registration","POST",signup(),409);
         }
     }

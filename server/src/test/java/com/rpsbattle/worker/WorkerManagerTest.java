@@ -11,6 +11,27 @@ import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
 
 class WorkerManagerTest {
+    @Test void localTournamentQuotaDoesNotBlockRemoteAdmissionForTheSameTournament(){
+        var routing=mock(com.rpsbattle.worker.remote.RemoteRoutingService.class);var cup=tournament();cup.maxConcurrentMatches=1;
+        var local=request(cup,"local");var remote=request(cup,"remote");when(routing.route(cup,remote.match())).thenReturn(true);
+        var calls=new AtomicInteger();var manager=new WorkerManager(new ExecutionQueue(10),r->{calls.incrementAndGet();return new MatchExecutionResult("room","archive");},mock(TournamentService.class),2,Runnable::run);manager.routing(routing);
+        manager.offer(local);manager.offer(remote);manager.dispatch();
+        verify(routing).route(cup,remote.match());assertThat(calls.get()).isEqualTo(1);assertThat(manager.active()).isEqualTo(1);assertThat(manager.pending()).isZero();manager.drain();
+    }
+    @Test void saturatedLocalMatchesDoNotBlockRemoteAdmissionFromAnotherTournament(){
+        var routing=mock(com.rpsbattle.worker.remote.RemoteRoutingService.class);var local=request(tournament(),"local");var remote=request(tournament(),"remote");
+        when(routing.route(remote.tournament(),remote.match())).thenReturn(true);
+        var calls=new AtomicInteger();var manager=new WorkerManager(new ExecutionQueue(10),r->{calls.incrementAndGet();return new MatchExecutionResult("room","archive");},mock(TournamentService.class),1,Runnable::run);manager.routing(routing);
+        manager.offer(local);manager.dispatch();manager.offer(remote);manager.dispatch();
+        verify(routing).route(remote.tournament(),remote.match());assertThat(calls.get()).isEqualTo(1);assertThat(manager.active()).isEqualTo(1);assertThat(manager.pending()).isZero();manager.drain();
+    }
+    @Test void unavailableRemoteWorkerDefersLocalFallbackWithoutLosingItsReservationOrExceedingLocalCapacity(){
+        var routing=mock(com.rpsbattle.worker.remote.RemoteRoutingService.class);var calls=new AtomicInteger();var queue=new ExecutionQueue(2);
+        var manager=new WorkerManager(queue,r->{calls.incrementAndGet();return new MatchExecutionResult("room","archive");},mock(TournamentService.class),1,Runnable::run);manager.routing(routing);
+        var local=request(tournament(),"local");var waiting=request(tournament(),"waiting");manager.offer(local);manager.dispatch();manager.offer(waiting);manager.dispatch();manager.offer(waiting);manager.dispatch();
+        assertThat(calls.get()).isEqualTo(1);assertThat(manager.active()).isEqualTo(1);assertThat(queue.reservedIds()).containsExactly("waiting");
+        manager.complete("local");manager.dispatch();assertThat(calls.get()).isEqualTo(2);assertThat(waiting.match().status).isEqualTo(TournamentMatch.Status.RUNNING);manager.drain();
+    }
     private MatchExecutionRequest request(Tournament t,String id) {
         var a=new TournamentParticipant("a","a","secret","a",1L);
         var b=new TournamentParticipant("b","b","secret","b",2L);

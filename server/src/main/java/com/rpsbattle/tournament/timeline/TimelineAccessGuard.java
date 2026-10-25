@@ -11,13 +11,16 @@ import org.springframework.stereotype.Component;
 public class TimelineAccessGuard {
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.coding.FinalValidationStore finals;
     @org.springframework.beans.factory.annotation.Autowired com.rpsbattle.tournament.OwnedTournamentService owned;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy com.rpsbattle.tournament.coding.SubmissionStore submissions;
     private final TimelineRegistrationStore store;
     private final Clock clock;
     public TimelineAccessGuard(TimelineRegistrationStore store,Clock clock){this.store=store;this.clock=clock;}
     /** Legacy tournaments keep their existing policy; scheduled applications require approval. */
     public void coding(Tournament tournament,UUID user){
+        com.rpsbattle.tournament.TournamentAuthorizationService.requireEntrant(tournament,user);
         if(tournament.timeline==null)return;
         owned.advanceTimelineRegistration(tournament);
+        if(submissions.excludedFromReopening(tournament.id,user))throw new AuthException("SUBMISSION_DISQUALIFIED",409);
         var phase=TournamentPhaseResolver.resolve(tournament.status,tournament.timeline,clock.instant(),null,false).phase();
         if(phase!=TournamentPhase.CODING_OPEN&&!(tournament.startedAt==null&&tournament.status==TournamentStatus.REGISTRATION&&finals.emergencyOpen(tournament.id,user)))throw new AuthException("CODING_NOT_OPEN",409);
         var application=store.mine(UUID.fromString(tournament.id),user);

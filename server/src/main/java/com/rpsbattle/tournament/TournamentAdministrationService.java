@@ -27,12 +27,18 @@ public class TournamentAdministrationService {
             require(t.operations.reviews().containsKey(matchId),"MATCH_NOT_UNDER_REVIEW");var m=match(t,matchId);
             require(m.participantA.participantId().equals(participantId)||m.participantB.participantId().equals(participantId),"INVALID_PARTICIPANT_STATUS");
             require(t.operations.active(participantId),"PARTICIPANT_INACTIVE");
-            require(t.matches.stream().noneMatch(game->game.status==TournamentMatch.Status.RUNNING&&(game.participantA.participantId().equals(participantId)||game.participantB.participantId().equals(participantId))),"PARTICIPANT_BUSY");
+            requireIdleParticipant(t,participantId);
             t.operations=t.operations.participant(participantId,ParticipantStatus.DISQUALIFIED).review(matchId,null);
             TournamentAudit.append(t,"PARTICIPANT_DISQUALIFIED",owned.actor(auth),participantId,why,"ACTIVE","DISQUALIFIED");
             settleForfeits(t);if(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t))t.matches.addAll(SingleEliminationScheduler.advance(t));
             TournamentAudit.append(t,"MATCH_REVIEW_CLOSED",owned.actor(auth),matchId,why,null,"DISQUALIFIED:"+participantId);tournaments.changed(t);
         });
+    }
+    @org.springframework.beans.factory.annotation.Autowired private com.rpsbattle.worker.remote.RemoteResultService remote;
+    private void requireIdleParticipant(Tournament t,String participantId){
+        var inFlight=remote==null?Set.<String>of():remote.inFlightMatches(t.id);
+        require(t.matches.stream().noneMatch(m->(m.status==TournamentMatch.Status.RUNNING||inFlight.contains(m.id))
+            &&(m.participantA.participantId().equals(participantId)||m.participantB.participantId().equals(participantId))),"PARTICIPANT_BUSY");
     }
     private final OwnedTournamentService owned;
     private final TournamentService tournaments;
@@ -59,7 +65,7 @@ public class TournamentAdministrationService {
                 }
                 case "finish" -> {
                     reason(reason);require(t.status==TournamentStatus.RUNNING||t.status==TournamentStatus.PAUSED||t.status==TournamentStatus.RECOVERY_REQUIRED,"TOURNAMENT_LOCKED");
-                    require(t.operations.reviews().isEmpty()&&t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING),"MATCH_REVIEW_REQUIRED");
+                    require(t.operations.reviews().isEmpty()&&t.matches.stream().allMatch(m->m.status==TournamentMatch.Status.FINISHED),"MATCH_REVIEW_REQUIRED");
                     require(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.complete(t),"BRACKET_NOT_FINISHED");
                     require(t.bestOf==1||TournamentSeries.roots(t).stream().allMatch(m->TournamentSeries.decision(t,m).isPresent()),"SERIES_NOT_FINISHED");
                     TournamentStateMachine.transition(t,TournamentStatus.FINISHED,Instant.now());
@@ -82,7 +88,7 @@ public class TournamentAdministrationService {
             require(status==ParticipantStatus.WITHDRAWN||status==ParticipantStatus.DISQUALIFIED,"INVALID_PARTICIPANT_STATUS");
             require(t.participants.stream().anyMatch(p->p.participantId().equals(participantId)),"PARTICIPANT_NOT_FOUND");
             require(t.operations.active(participantId),"PARTICIPANT_INACTIVE");
-            require(t.matches.stream().noneMatch(m->m.status==TournamentMatch.Status.RUNNING&&(m.participantA.participantId().equals(participantId)||m.participantB.participantId().equals(participantId))),"PARTICIPANT_BUSY");
+            requireIdleParticipant(t,participantId);
             t.operations=t.operations.participant(participantId,status);TournamentAudit.append(t,"PARTICIPANT_"+status,owned.actor(auth),participantId,why,"ACTIVE",status.name());
             settleForfeits(t);if(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t))t.matches.addAll(SingleEliminationScheduler.advance(t));tournaments.changed(t);
         });
@@ -124,7 +130,7 @@ public class TournamentAdministrationService {
             if(t.format==TournamentFormat.SWISS)require(t.matches.stream().noneMatch(other->other.round>m.round),"DOWNSTREAM_MATCH_STARTED");
             if(t.bestOf>1)require(t.matches.stream().noneMatch(other->other.seriesId.equals(m.seriesId)&&other.gameNumber>m.gameNumber),"DOWNSTREAM_MATCH_STARTED");
             if(com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.hasKnockout(t)) {
-                require(t.matches.stream().filter(other->other.round>m.round).allMatch(other->other.status==TournamentMatch.Status.PENDING),"DOWNSTREAM_MATCH_STARTED");
+                require(t.matches.stream().filter(other->other.round>m.round).allMatch(other->other.status==TournamentMatch.Status.PENDING&&(remote==null||!remote.owns(other.id))),"DOWNSTREAM_MATCH_STARTED");
                 t.matches.removeIf(other->other.round>m.round);
                 for(int i=0;i<t.bracket.size();i++){var node=t.bracket.get(i);if(node.round()>m.round||m.seriesId.equals(node.matchId()))t.bracket.set(i,node.resolved(node.sourceA()==null?node.slotA():null,node.sourceB()==null?node.slotB():null,null,null));}
             }

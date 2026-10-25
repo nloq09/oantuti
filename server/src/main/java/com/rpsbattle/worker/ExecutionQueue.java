@@ -31,6 +31,11 @@ public class ExecutionQueue {
         if (request != null) reservations.remove(request.match().id);
         return request;
     }
+    /** Keep the pending reservation while checking remote admission without a local slot. */
+    public synchronized MatchExecutionRequest pollForRouting() { return pending.pollFirst(); }
+    public synchronized void deferRouting(MatchExecutionRequest request) {
+        if (accepting && offered.contains(request.match().id) && reservations.contains(request.match().id)) pending.addLast(request);
+    }
     public synchronized void release(Collection<String> ids) {
         reservations.removeAll(ids); offered.removeAll(ids);
         pending.removeIf(request -> ids.contains(request.match().id));

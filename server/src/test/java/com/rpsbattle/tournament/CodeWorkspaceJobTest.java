@@ -12,7 +12,7 @@ import static org.mockito.Mockito.*;
 class CodeWorkspaceJobTest extends StageThreeWebFixture {
  @MockitoBean WorkspaceSandbox sandbox;
  @MockitoBean BotTestService tests;
- String workspace(Map<String,Object> policy)throws Exception{loginAccount();var cup=request("/api/tournaments","POST",Map.of("name","Workspace pipeline","botPolicy",policy),201);String base="/api/tournaments/"+cup.path("id").asText();request(base+"/open-registration","POST",Map.of(),200);request(base+"/workspace","POST",Map.of("language","PYTHON"),200);return base+"/workspace/me";}
+ String workspace(Map<String,Object> policy)throws Exception{loginAccount();var cup=participantTournament(Map.of("name","Workspace pipeline","botPolicy",policy));String base="/api/tournaments/"+cup.path("id").asText();managerRequest(base+"/open-registration","POST",Map.of(),200);request(base+"/workspace","POST",Map.of("language","PYTHON"),200);return base+"/workspace/me";}
  com.fasterxml.jackson.databind.JsonNode done(String path)throws Exception{long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(8);while(System.nanoTime()<end){var w=request(path+"?language=PYTHON","GET",null,200);if(!Set.of("BUILDING","TESTING").contains(w.path("status").asText()))return w;Thread.sleep(20);}throw new AssertionError("Worker did not finish");}
  BotTestService.Result pass(String type){return new BotTestService.Result(true,type,List.of(),10,"COMPLETE",0,0,10,"",Map.of());}
  @Test void jobsUseImmutableSourceBlockConcurrentEditsAndEditsInvalidateReadyVersion()throws Exception{

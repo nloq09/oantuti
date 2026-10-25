@@ -37,6 +37,37 @@ class RemoteResultTest extends RemoteJobClaimTest {
         var result=new RemoteResultService.Result(job.executionId(),spec.matchId(),winner,winner==null?null:winner.equals("P1")?"P2":"P1","ENGINE_RESULT",match.state().turnNumber(),10L,spec.botA().artifactHash(),spec.botB().artifactHash(),7L,RemoteResultService.hash(bytes));
         return new Fixture(machine,job,t,new RemoteResultService.Upload(result,Base64.getEncoder().encodeToString(bytes)));
     }
+    @Test void measuredMoveTimingSurvivesUploadRetryProjectionAndRanking()throws Exception {
+        try(var admin=new Browser()){
+            var f=fixture(admin.account(true));var r=f.upload.result();
+            var timing=new RemoteResultService.MoveTiming(4_000_000L,6_000_000L,4,4);
+            var measured=new RemoteResultService.Result(r.executionId(),r.matchId(),r.winner(),r.loser(),r.reason(),r.turnCount(),r.durationMs(),r.artifactHashA(),r.artifactHashB(),r.seed(),r.replayChecksum(),timing);
+            var payload=(com.fasterxml.jackson.databind.node.ObjectNode)json.valueToTree(r);payload.set("moveTiming",json.valueToTree(timing));
+            assertThat(json.writeValueAsString(measured)).isEqualTo(json.writeValueAsString(payload));
+            var upload=new RemoteResultService.Upload(measured,f.upload.replayBase64());
+            var receipt=results.accept(f.machine.id(),f.job.jobId(),upload);
+            assertThat(receipt.resultHash()).isEqualTo(WorkerIdentityService.hash(json.writeValueAsString(payload)));
+            assertThat(results.accept(f.machine.id(),f.job.jobId(),upload)).isEqualTo(receipt);
+            projector.project(f.job.executionId());projector.project(f.job.executionId());
+            var m=f.tournament.matches.getFirst();assertThat(m.moveCountA).isEqualTo(4);assertThat(m.moveNanosB).isEqualTo(6_000_000L);
+            var ranked=tournaments.ranking(f.tournament);assertThat(ranked.stream().filter(x->x.participantId().equals(m.participantA.participantId())).findFirst().orElseThrow().averageMoveMillis()).isEqualTo(1.0);
+            assertThat(ranked.stream().filter(x->x.participantId().equals(m.participantB.participantId())).findFirst().orElseThrow().averageMoveMillis()).isEqualTo(1.5);
+            var stored=db.queryForObject("select structure_json from tournaments where id=?",String.class,UUID.fromString(f.tournament.id));assertThat(stored).contains("6000000");
+        }
+    }
+    @Test void legacyResultHashRemainsStableAndInvalidTimingCannotReleaseWorkerSlot()throws Exception {
+        try(var admin=new Browser()){
+            var f=fixture(admin.account(true));var r=f.upload.result();
+            assertThat(json.writeValueAsString(r)).doesNotContain("moveTiming");
+            for(var bad:List.of(new RemoteResultService.MoveTiming(-1L,0L,1,1),new RemoteResultService.MoveTiming(100_000_000L,0L,1,1),new RemoteResultService.MoveTiming(1L,1L,0,1),new RemoteResultService.MoveTiming(null,1L,1,1),new RemoteResultService.MoveTiming(1L,1L,10000,1))){
+                var measured=new RemoteResultService.Result(r.executionId(),r.matchId(),r.winner(),r.loser(),r.reason(),r.turnCount(),r.durationMs(),r.artifactHashA(),r.artifactHashB(),r.seed(),r.replayChecksum(),bad);
+                assertThatThrownBy(()->results.accept(f.machine.id(),f.job.jobId(),new RemoteResultService.Upload(measured,f.upload.replayBase64()))).hasMessage("INVALID_REMOTE_TIMING");
+            }
+            assertThat(telemetry.view(f.machine.id()).reservedSlots()).isEqualTo(1);
+            var receipt=results.accept(f.machine.id(),f.job.jobId(),f.upload);assertThat(receipt.resultHash()).isEqualTo(WorkerIdentityService.hash(json.writeValueAsString(r)));
+            projector.project(f.job.executionId());assertThat(tournaments.ranking(f.tournament)).allMatch(row->row.averageMoveMillis()==null);
+        }
+    }
     @Test void concurrentRetriesCommitOnceReleaseSlotAndProjectHistoryReplayAndAuditExactlyOnce()throws Exception {
         try(var admin=new Browser();var client=new Browser();var pool=Executors.newFixedThreadPool(4)){
             var f=fixture(admin.account(true));var tasks=new ArrayList<Future<RemoteResultService.Receipt>>();for(int i=0;i<4;i++)tasks.add(pool.submit(()->results.accept(f.machine.id(),f.job.jobId(),f.upload)));for(var task:tasks)assertThat(task.get(20,TimeUnit.SECONDS).status()).isEqualTo("ACCEPTED");

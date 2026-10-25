@@ -32,7 +32,8 @@ public class TimelineRegistrationService {
         var now=clock.instant();var phase=resolve(t,now);var registration=store.mine(UUID.fromString(t.id),user);String status=registration==null?"NOT_REGISTERED":registration.status();
         var emergency=status.equals("APPROVED")?finals.emergencyCutoff(t.id,user):null;
         var cutoff=emergency==null?t.timeline.codingCloseAt():emergency;
-        boolean emergencyOpen=emergency!=null&&now.isBefore(emergency)&&t.status==TournamentStatus.REGISTRATION&&t.startedAt==null;
+        boolean excluded=submissions.excludedFromReopening(t.id,user);
+        boolean emergencyOpen=!excluded&&emergency!=null&&now.isBefore(emergency)&&t.status==TournamentStatus.REGISTRATION&&t.startedAt==null;
         if(emergencyOpen)phase=new TournamentPhaseResolver.Resolution(TournamentPhase.CODING_OPEN,emergency);
         boolean approved=status.equals("APPROVED"),closed=!now.isBefore(cutoff);
         var frozen=approved&&closed?submissions.frozenMine(t.id,user,cutoff):null;
@@ -44,12 +45,13 @@ public class TimelineRegistrationService {
         if(validation!=null)action="VIEW_FINAL_VALIDATION";
         var entry=t.registrations.stream().filter(r->r.userId().equals(user)&&(r.active()||r.status()==TournamentRegistration.Status.NOT_CHECKED_IN)).findFirst().orElse(null);
         boolean checked=entry!=null&&entry.status()==TournamentRegistration.Status.CHECKED_IN;
-        boolean eligible=approved&&submissionStatus.equals("BOT_READY")&&entry!=null&&Set.of(TournamentRegistration.Status.APPROVED,TournamentRegistration.Status.CHECKED_IN).contains(entry.status());
+        if(excluded&&submissionStatus.equals("BOT_READY"))submissionStatus="DISQUALIFIED";
+        boolean eligible=!excluded&&approved&&submissionStatus.equals("BOT_READY")&&entry!=null&&Set.of(TournamentRegistration.Status.APPROVED,TournamentRegistration.Status.CHECKED_IN).contains(entry.status());
         boolean open=Set.of(TournamentStatus.REGISTRATION,TournamentStatus.CHECK_IN).contains(t.status)&&t.startedAt==null&&!now.isBefore(t.timeline.checkInOpenAt())&&now.isBefore(t.timeline.checkInCloseAt());
         String checkStatus=checked?"CHECKED_IN":approved&&submissionStatus.equals("BOT_READY")&&entry!=null&&!now.isBefore(t.timeline.checkInCloseAt())?"MISSED":eligible?"BOT_READY":"NOT_ELIGIBLE";
         var checkIn=new CheckIn(checkStatus,entry==null?null:entry.id(),entry==null?null:entry.checkedInAt(),eligible&&open&&!checked,t.timeline.checkInOpenAt(),t.timeline.checkInCloseAt(),t.timeline.tournamentStartAt(),t.registrations.stream().filter(r->r.status()==TournamentRegistration.Status.CHECKED_IN).count());
         if(checked)action="OPEN_WAITING_ROOM";else if(checkIn.canCheckIn())action="CHECK_IN";else if(approved&&checkStatus.equals("MISSED"))action="CHECK_IN_MISSED";
-        return new Flow(phase.phase(),status,registration,action,now,phase.phaseEndsAt(),t.timeline.codingOpenAt(),t.botPolicy.allowedLanguages(),t.revision,cutoff,approved&&t.status!=TournamentStatus.DRAFT&&!now.isBefore(t.timeline.codingOpenAt()),approved&&phase.phase()==TournamentPhase.CODING_OPEN,submissionStatus,frozen,validation,checkIn,participantStatus(t,user,phase.phase(),status,submissionStatus,checkIn),emergencyOpen,store.control(UUID.fromString(t.id)),Set.of("NEEDS_REVIEW","PENDING","APPROVED","WAITLISTED").contains(status)&&(store.control(UUID.fromString(t.id)).enabled()?reviewOpen(t):phase.phase()==TournamentPhase.REGISTRATION_OPEN));
+        return new Flow(phase.phase(),status,registration,action,now,phase.phaseEndsAt(),t.timeline.codingOpenAt(),t.botPolicy.allowedLanguages(),t.revision,cutoff,approved&&t.status!=TournamentStatus.DRAFT&&!now.isBefore(t.timeline.codingOpenAt()),approved&&!excluded&&phase.phase()==TournamentPhase.CODING_OPEN,submissionStatus,frozen,validation,checkIn,participantStatus(t,user,phase.phase(),status,submissionStatus,checkIn),emergencyOpen,store.control(UUID.fromString(t.id)),Set.of("NEEDS_REVIEW","PENDING","APPROVED","WAITLISTED").contains(status)&&(store.control(UUID.fromString(t.id)).enabled()?reviewOpen(t):phase.phase()==TournamentPhase.REGISTRATION_OPEN));
     }
     private String participantStatus(Tournament t,UUID user,TournamentPhase phase,String registration,String submission,CheckIn check){
         if(phase==TournamentPhase.DRAFT||phase==TournamentPhase.UPCOMING)return "REGISTER_NOT_OPEN";
@@ -142,6 +144,8 @@ public class TimelineRegistrationService {
         owned.submissionMutation(t,auth,()->{
             if(request.decision().equals("APPROVED")){
                 var facts=store.details(UUID.fromString(id),application);
+                var organizerApplication=store.mine(UUID.fromString(id),t.ownerUserId);
+                if(organizerApplication!=null&&organizerApplication.id().equals(application))throw new AuthException("ORGANIZER_CANNOT_PARTICIPATE",403);
                 if(!facts.accountActive())throw new AuthException("ACCOUNT_NOT_ELIGIBLE",409);
                 if(!t.botPolicy.allowedLanguages().contains(facts.application().intendedLanguage()))throw new AuthException("LANGUAGE_NOT_ALLOWED",409);
             }
@@ -158,7 +162,7 @@ public class TimelineRegistrationService {
             owned.submissionMutation(t,auth,()->{var before=t.registrationPolicy;t.registrationPolicy=request.policy();store.enable(UUID.fromString(id));TournamentAudit.append(t,"REGISTRATION_POLICY_UPDATED",actor.id().value(),id,reason,before.toString(),request.policy().toString());tournaments.changed(t);});
         }
     }
-    public Flow register(Authentication auth,String id,Signup request){var actor=accounts.requireUser(auth);var t=tournaments.find(id);synchronized(t){registrationOpen(t);
+    public Flow register(Authentication auth,String id,Signup request){var actor=accounts.requireUser(auth);var t=tournaments.find(id);synchronized(t){TournamentAuthorizationService.requireEntrant(t,actor.id().value());registrationOpen(t);
         if(!Boolean.TRUE.equals(request.rulesAccepted()))throw new AuthException("RULES_ACCEPTANCE_REQUIRED",400);
         if(request.botId()!=null||request.sourceCode()!=null||request.versionId()!=null)throw new AuthException("REGISTRATION_PARTICIPANT_ONLY",400);
         if(request.intendedLanguage()==null||!t.botPolicy.allowedLanguages().contains(request.intendedLanguage()))throw new AuthException("BOT_LANGUAGE_NOT_ALLOWED",400);

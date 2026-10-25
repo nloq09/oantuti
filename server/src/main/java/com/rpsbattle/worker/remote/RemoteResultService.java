@@ -15,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RemoteResultService {
     public static final int REPLAY_LIMIT=15*1024*1024, REQUEST_LIMIT=22*1024*1024;
-    public record Result(UUID executionId,UUID matchId,String winner,String loser,String reason,Integer turnCount,Long durationMs,String artifactHashA,String artifactHashB,Long seed,String replayChecksum) {}
+    public record MoveTiming(Long nanosA,Long nanosB,Integer countA,Integer countB) {}
+    public record Result(UUID executionId,UUID matchId,String winner,String loser,String reason,Integer turnCount,Long durationMs,String artifactHashA,String artifactHashB,Long seed,String replayChecksum,@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) MoveTiming moveTiming) {
+        public Result(UUID executionId,UUID matchId,String winner,String loser,String reason,Integer turnCount,Long durationMs,String artifactHashA,String artifactHashB,Long seed,String replayChecksum){this(executionId,matchId,winner,loser,reason,turnCount,durationMs,artifactHashA,artifactHashB,seed,replayChecksum,null);}
+    }
     public record Upload(Result result,String replayBase64) {}
     public record Receipt(UUID executionId,UUID jobId,UUID matchId,String resultHash,String status) {}
     private final JdbcTemplate db;private final ObjectMapper json;private final Clock clock;private final GameStateMapper mapper;
@@ -27,6 +30,7 @@ public class RemoteResultService {
         if(upload==null||upload.result()==null||upload.replayBase64()==null||upload.replayBase64().length()>(REPLAY_LIMIT+2)/3*4)throw new AuthException("INVALID_REMOTE_RESULT",400);
         var r=upload.result();
         if(r.executionId()==null||r.matchId()==null||r.turnCount()==null||r.turnCount()<1||r.turnCount()>10000||r.durationMs()==null||r.durationMs()<0||r.durationMs()>3600000||r.seed()==null||!Set.of("ENGINE_RESULT","BOT_FAILED").contains(Objects.toString(r.reason(),""))||!digest(r.artifactHashA())||!digest(r.artifactHashB())||!digest(r.replayChecksum())||!(r.winner()==null&&r.loser()==null||"P1".equals(r.winner())&&"P2".equals(r.loser())||"P2".equals(r.winner())&&"P1".equals(r.loser())))throw new AuthException("INVALID_REMOTE_RESULT",400);
+        validateTiming(r);
         // Fence duplicate completion and claims in the same order as the queue service.
         db.queryForObject("select id from remote_match_queue_guard where id=1 for update",Integer.class);
         var rows=db.queryForList("select a.*,j.spec_json,j.spec_hash,j.status as job_status,w.approval_status,w.trust_level,w.status as worker_status from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id join workers w on w.id=a.worker_id where a.id=? and a.job_id=? and a.worker_id=?",r.executionId(),job,worker);
@@ -54,6 +58,14 @@ public class RemoteResultService {
         return new Receipt(r.executionId(),job,r.matchId(),resultHash,"ACCEPTED");
     }
     private static boolean digest(String value){return value!=null&&value.matches("[a-f0-9]{64}");}
+    private static void validateTiming(Result r){
+        var m=r.moveTiming();if(m==null)return; // Old workers do not have measured timing; never fabricate zero-duration moves.
+        long budget=(r.durationMs()+1)*1_000_000L;
+        if(m.nanosA()==null||m.nanosB()==null||m.countA()==null||m.countB()==null
+            ||m.nanosA()<0||m.nanosB()<0||m.nanosA()>budget||m.nanosB()>budget||m.nanosA()+m.nanosB()>budget
+            ||m.countA()<0||m.countB()<0||m.countA()>r.turnCount()||m.countB()>r.turnCount()||m.countA()+m.countB()==0
+            ||m.countA()==0&&m.nanosA()!=0||m.countB()==0&&m.nanosB()!=0)throw new AuthException("INVALID_REMOTE_TIMING",422);
+    }
     private void validate(RemoteMatchQueue.Spec spec,Result r,byte[] bytes) {
         try {
             var payload=json.readTree(bytes);var initialNode=payload.path("initialState");
@@ -65,6 +77,11 @@ public class RemoteResultService {
             initial.attachBot(OnlineMatch.P1,(v,a)->null,"Bot A");initial.join();initial.attachBot(OnlineMatch.P2,(v,a)->null,"Bot B");initial.prepareBots();
             if(!mapper.toDto(initial.state().withPhase(com.rpsbattle.game.state.GamePhase.READY),List.of(),List.of()).equals(mapper.toDto(log.initialState(),List.of(),List.of())))throw new IllegalArgumentException();
         }catch(Exception e){throw new AuthException("INVALID_REMOTE_REPLAY",422);}
+    }
+    /** Called with the tournament paused and its monitor held. Fence claims that began before pause committed. */
+    @Transactional public Set<String> inFlightMatches(String tournament){
+        db.queryForObject("select id from remote_match_queue_guard where id=1 for update",Integer.class);
+        return new HashSet<>(db.query("select j.match_id from match_execution_jobs j join tournament_matches m on m.id=j.match_id where j.tournament_id=? and j.status in ('LEASED','DONE') and m.status='PENDING'",(r,n)->r.getObject(1,UUID.class).toString(),UUID.fromString(tournament)));
     }
     public boolean owns(String match){return db.queryForObject("select count(*) from match_execution_jobs where match_id=? and status in ('QUEUED','LEASED','DONE')",Integer.class,UUID.fromString(match))>0;}
     public Set<String> pendingOwnership(){return new HashSet<>(db.query("select j.match_id from match_execution_jobs j join tournament_matches m on m.id=j.match_id where j.status in ('QUEUED','LEASED','DONE') and m.status='PENDING'",(r,n)->r.getObject(1,UUID.class).toString()));}

@@ -2,3 +2,11 @@ import test from 'node:test';import assert from 'node:assert/strict';import {fin
 test('validation only retries explicit infrastructure permission in an open server window',()=>{assert.deepEqual(finalValidationActions({status:'INFRA_ERROR',canRetry:true},{retryWindowOpen:true}),['retry']);for(const status of ['FAILED','PASSED','QUEUED','RUNNING'])assert.deepEqual(finalValidationActions({status,canRetry:true},{retryWindowOpen:true}),[]);for(const retryWindowOpen of [false,undefined])assert.deepEqual(finalValidationActions({status:'INFRA_ERROR',canRetry:true},{retryWindowOpen}),[]);assert.deepEqual(finalValidationActions({status:'INFRA_ERROR',canRetry:false},{retryWindowOpen:true}),[]);});
 test('emergency submission is separate from retry and requires explicit server capability',()=>{assert.deepEqual(finalValidationActions({status:'FAILED',canRetry:true,canGrantEmergency:true},{retryWindowOpen:true}),['emergency']);assert.deepEqual(finalValidationActions({status:'FAILED',canGrantEmergency:false},{retryWindowOpen:true}),[]);});
 test('participant handling excludes active games and inactive roster entries',()=>{const t=cup({status:'PAUSED',participants:[{participantId:'a'},{participantId:'b'},{participantId:'c'}],participantStatuses:{c:'DISQUALIFIED'},matches:[{status:'RUNNING',participantA:{participantId:'a'},participantB:{participantId:'other'}}]});assert.deepEqual(disciplinaryParticipants(t).map(p=>p.participantId),['b']);assert.deepEqual(disciplinaryParticipants({...t,status:'RUNNING'}),[]);});
+
+test('participant discipline excludes assigned remote games and results awaiting projection',()=>{
+ for(const executionState of ['ASSIGNED','STARTING','RUNNING_REMOTE','RESULT_PENDING','RECOVERING']){
+  const t=cup({status:'PAUSED',participants:[{participantId:'a'},{participantId:'b'}],matches:[{status:'PENDING',executionState,participantA:{participantId:'a'},participantB:{participantId:'other'}}]});
+  assert.deepEqual(disciplinaryParticipants(t).map(p=>p.participantId),['b']);
+  t.matches[0].executionState='QUEUED';assert.deepEqual(disciplinaryParticipants(t).map(p=>p.participantId),['a','b']);
+ }
+});

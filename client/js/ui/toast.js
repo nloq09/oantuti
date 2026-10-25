@@ -90,6 +90,7 @@ const errors = {
   INVALID_TIMELINE_OVERRIDE: "Mốc giờ điều chỉnh không hợp lệ.",
   TIMELINE_OVERRIDE_CLOSED: "Không thể điều chỉnh lịch ở trạng thái này hoặc chính sách không cho mở lại coding.",
   CHECK_IN_NOT_OPEN: "Giải chưa mở check-in hoặc đã khóa check-in.",
+  ORGANIZER_CANNOT_PARTICIPATE: "Chủ giải chỉ quản lý giải này, không đăng ký hoặc nộp bot để thi đấu.",
   CHECK_IN_REQUIRED: "Cần mở đăng ký và hoàn tất check-in trước khi bắt đầu giải.",
   NO_APPROVED_REGISTRATION: "Bạn chưa có bot được duyệt để check-in.",
   NOT_ENOUGH_CHECKED_IN_BOTS: "Cần ít nhất hai bot đã check-in để hoàn tất.",

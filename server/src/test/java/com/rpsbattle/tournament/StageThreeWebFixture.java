@@ -28,17 +28,35 @@ abstract class StageThreeWebFixture {
         return request(path,method,body,expected,Map.of());
     }
     JsonNode request(String path,String method,Object body,int expected,Map<String,String> headers) throws Exception {
+        return send(accountHttp,path,method,body,expected,headers);
+    }
+    JsonNode send(HttpClient http,String path,String method,Object body,int expected,Map<String,String> headers)throws Exception {
         {
-            var http=accountHttp;
             var builder=HttpRequest.newBuilder(URI.create("http://localhost:"+port+path)).header("Content-Type","application/json");
             headers.forEach(builder::header);
             if(!method.equals("GET")) {
-                var csrf=request("/api/auth/csrf","GET",null,200);
+                var csrf=send(http,"/api/auth/csrf","GET",null,200,Map.of());
                 builder.header(csrf.path("headerName").asText(),csrf.path("token").asText());
             }
             builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
             var response=http.send(builder.build(),HttpResponse.BodyHandlers.ofString());assertThat(response.statusCode()).as(response.body()).isEqualTo(expected);return json.readTree(response.body());
         }
+    }
+    record Organizer(com.rpsbattle.account.domain.User user,HttpClient http){}
+    final Map<String,Organizer> cupOrganizers=new HashMap<>();
+    JsonNode participantTournament(Map<String,Object> configuration)throws Exception {
+        loginAccount();String username="manager_"+UUID.randomUUID().toString().substring(0,8);
+        var manager=registration.register(username,username+"@example.com","Tournament Manager Password","Organizer");
+        var client=HttpClient.newBuilder().cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL)).build();
+        send(client,"/api/auth/login","POST",Map.of("username",username,"password","Tournament Manager Password"),200,Map.of());
+        var cup=send(client,"/api/tournaments","POST",configuration,201,Map.of());
+        cupOrganizers.put(cup.path("id").asText(),new Organizer(manager,client));return cup;
+    }
+    Organizer organizer(String base){return cupOrganizers.get(base.substring(base.lastIndexOf('/')+1));}
+    JsonNode managerRequest(String path,String method,Object body,int expected)throws Exception {
+        var parts=path.split("/");var manager=parts.length>3?cupOrganizers.get(parts[3]):null;
+        if(manager==null)throw new AssertionError("No organizer session for "+path);
+        return send(manager.http(),path,method,body,expected,Map.of());
     }
     BotUploadService.Upload upload(String name) {
         try {
@@ -55,7 +73,7 @@ abstract class StageThreeWebFixture {
                 request("/api/auth/login","POST",Map.of("username",username,"password","Tournament Test Password"),200);
             }
     }
-    @org.junit.jupiter.api.AfterEach void closeAccountClient() {accountHttp.close();}
+    @org.junit.jupiter.api.AfterEach void closeAccountClient() {accountHttp.close();for(var manager:cupOrganizers.values())manager.http().close();}
     OnlineMatch playing(){var room=online.create(MatchMode.HUMAN_VS_HUMAN,42L);room.join();for(var id:List.of(OnlineMatch.P1,OnlineMatch.P2)){room.randomize(id);room.markReady(id);}return room;}
     class Peer implements WebSocket.Listener,AutoCloseable {
         final LinkedBlockingQueue<JsonNode> messages=new LinkedBlockingQueue<>();

@@ -29,6 +29,8 @@ Summary luôn phản ánh tập hiện tại của giải, kể cả khi danh s�
 
 `retry` và `emergency` là hai hành động riêng, cùng kiểm tra manager/revision/deadline. Không có bulk retry trên dashboard hiện tại. Nếu cửa sổ đã đóng, nút không xuất hiện hoặc API từ chối; không sửa trực tiếp DB để bỏ kiểm tra.
 
+Quyết định loại bài của chủ giải được giữ khi kết quả kiểm thử đến sau. Gia hạn lập trình toàn giải không mở lại bài đã bị loại hoặc từ chối chưa được cấp quyền nộp lại. Kiểm thử đạt không tự hủy quyết định này.
+
 ## Chuyển sang check-in
 
 Đối chiếu số người đủ điều kiện, lỗi còn lại và lịch check-in. Dashboard không tự bấm check-in hoặc start thay chủ giải. Đừng đưa người chỉ có Public Test PASS vào roster thi đấu khi Final Validation chưa cho phép.

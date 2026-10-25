@@ -101,3 +101,9 @@ Disable/revoke fence việc cũ qua cùng queue lock; attempt cũ không đượ
 - [Queue/records](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteMatchQueue.java), [artifact service](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteArtifactService.java), [result](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteResultService.java), [lease/recovery](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteLeaseService.java).
 - [Scope](../../server/src/main/java/com/rpsbattle/worker/remote/WorkerScope.java), [policy/định tuyến](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteRoutingService.java), [quản lý worker của giải](../../server/src/main/java/com/rpsbattle/worker/remote/TournamentWorkerService.java).
 - [Agent sources](../../worker/src/main/java/com/rpsbattle/remote/), [build version](../../worker/build.gradle).
+
+### Thống kê thời gian tính nước
+
+Kết quả từ JAR mới có thêm `moveTiming` gồm `nanosA`, `nanosB` (tổng nano giây chờ bot chọn nước) và `countA`, `countB` (số lần gọi bot, kể cả lần lỗi giao thức). Outbox giữ nguyên các số liệu khi gửi lại; Central kiểm tra giới hạn và lưu cùng kết quả trận để tính `AVERAGE_MOVE_TIME`. Thời gian phản ánh máy thực thi, không phải điểm benchmark CPU.
+
+Cập nhật Central trước, sau đó dừng worker, tải JAR đi kèm Central và chạy lại với state-dir cũ. Kết quả từ worker/outbox cũ không có trường này vẫn được nhận với hash xác nhận cũ; thời gian là chưa có dữ liệu, không quy thành 0. Các trận cũ không thể bổ sung số đo chính xác từ replay.

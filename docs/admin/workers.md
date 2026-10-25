@@ -104,6 +104,8 @@ Registration token chỉ dùng khi đăng ký lần đầu. Sau đó agent dùng
 
 AUTO chỉ quyết định nơi chạy trước khi giao việc: chưa có worker tương thích thì trận chạy local. Khi đã vào hàng đợi remote, trận giữ quyền sở hữu remote kể cả lúc máy mất kết nối; recovery/thử lại xử lý theo lease, không chạy thêm bản local. Build, public/hidden tests và final validation vẫn chạy trên Central.
 
+Central chạy đủ giới hạn trận local vẫn tiếp tục xét gửi trận cho worker remote bằng số tác vụ điều phối có giới hạn. Nếu trận cần chạy local mà chưa có slot, nó tiếp tục chờ trong queue; không tăng trần local hoặc chạy thêm một bản trận để né giới hạn.
+
 ### Chế độ điều phối của giải
 
 - **AUTO** là mặc định khi giải chưa lưu policy riêng. Với trận bot coding hợp lệ, Central ưu tiên hàng đợi remote khi có máy được duyệt, còn kết nối, đúng phạm vi, đạt mức tin cậy và hỗ trợ cả hai ngôn ngữ. Không có máy tương thích tại lúc quyết định thì chạy local. Máy tương thích đang bận vẫn được tính là có máy; trận sẽ chờ slot.
