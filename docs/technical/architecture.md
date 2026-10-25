@@ -32,6 +32,8 @@ Mũi tên worker là kết nối outbound; Central không SSH vào worker. Remot
 - **Remote execution:** job giữ spec/hash cố định; attempt cấp worker/slot/epoch/lease. Receipt bền vững tách khỏi projection vào giải, giúp retry upload không nhân đôi kết quả.
 - **Persistence:** metadata, audit, freezes, jobs và receipts ở DB; source/artifact/replay còn có file. Backup chỉ DB không đủ.
 
+Remote dùng hàng đợi chung, không dùng nhóm worker. Worker do Admin đăng ký có thể phục vụ nhiều giải; worker từ token chủ giải có scope cố định và chỉ phục vụ đúng giải đó. Server lọc scope cùng trust/runtime/capacity khi giao việc và kiểm tra quyền tại các bước thực thi. Giải mặc định AUTO khi chưa có policy riêng; chỉ quyết định chạy local trước lúc nhận job vào remote queue nếu không có máy phù hợp. Job đã nhận dùng lease/recovery để tránh chạy trùng. Xem [worker protocol](worker-protocol.md) và [schema V43/V44](database.md#điều-phối-worker-và-phạm-vi-theo-giải).
+
 ## Vòng đời dữ liệu
 
 Save source → build version → kiểm thử theo policy → READY → submit/chọn tại deadline → freeze/hash → Final Validation → bài đủ điều kiện LOCKED → lịch trận → execution → result/replay → standings/bracket. Bước READY khác check-in người chơi và ready trước từng trận human.

@@ -20,7 +20,6 @@ export function workerControls(row){
 }
 export const workerOperations=params=>adminRequest('workers/operations?'+new URLSearchParams(params));
 export const workerOperationDetail=id=>adminRequest('workers/operations/'+encodeURIComponent(id));
-export const workerGroupCapacity=()=>adminRequest('worker-groups/capacity');
 export const workerCapacity=(id,params)=>adminRequest('tournaments/'+encodeURIComponent(id)+'/worker-capacity?'+new URLSearchParams(params));
 
 export const workerMetrics=(tournamentId)=>adminRequest('workers/metrics'+(tournamentId?'?tournamentId='+encodeURIComponent(tournamentId):''));

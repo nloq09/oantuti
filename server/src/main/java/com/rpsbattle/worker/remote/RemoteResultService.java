@@ -41,6 +41,7 @@ public class RemoteResultService {
         }
         String raw=row.get("spec_json").toString();if(!WorkerIdentityService.hash(raw).equals(row.get("spec_hash")))throw new AuthException("REMOTE_JOB_CORRUPT",409);
         RemoteMatchQueue.Spec spec;try{spec=json.readValue(raw,RemoteMatchQueue.Spec.class);}catch(Exception e){throw new AuthException("REMOTE_JOB_CORRUPT",409);}
+        WorkerScope.require(db,worker,spec.tournamentId());
         if(!r.matchId().equals(spec.matchId())||!r.artifactHashA().equals(spec.botA().artifactHash())||!r.artifactHashB().equals(spec.botB().artifactHash())||r.seed()!=spec.seed()||r.turnCount()>spec.maxTurns()||r.durationMs()>spec.matchHardTimeoutMs())throw new AuthException("RESULT_JOB_MISMATCH",422);
         Object expiry=row.get("lease_until");Instant lease=expiry instanceof java.sql.Timestamp t?t.toInstant():((OffsetDateTime)expiry).toInstant();
         if(!"RUNNING".equals(row.get("status"))||!"LEASED".equals(row.get("job_status"))||!clock.instant().isBefore(lease))throw new AuthException("EXECUTION_NOT_COMPLETABLE",409);

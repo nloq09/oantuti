@@ -132,18 +132,38 @@ Contract cụ thể: [AuthController](../../server/src/main/java/com/rpsbattle/a
 | GET `/api/admin/workers/download` | Session/ADMIN | Không body | Binary rps-worker.jar hoặc 503 distribution unavailable. |
 | POST `/api/admin/workers/{id}/review` | Session/ADMIN + CSRF | revision, decision=APPROVE/REJECT, trustLevel, reason | Worker view; trust hợp lệ. |
 | POST `/api/admin/workers/{id}/control` | Session/ADMIN + CSRF | revision, action=DRAIN/RESUME/DISABLE/REVOKE, reason | Worker view; stale/control guard. |
-| POST `/api/admin/tournaments/{id}/worker-policy` | Session/ADMIN + CSRF | Configure record của RemoteRoutingService | Policy; LOCAL/REMOTE_REQUIRED và khóa sau tạo lịch. |
+| POST `/api/admin/tournaments/{id}/worker-policy` | Session/ADMIN + CSRF | Configure record của RemoteRoutingService | Policy; AUTO mặc định, LOCAL/REMOTE_REQUIRED tùy chọn nâng cao, không cần groupId; khóa sau tạo lịch. |
 
-Nhóm/team, tranh chấp, replay moderation, cleanup, notifications, group membership/capacity và các legacy routes nằm trong danh mục nguồn dưới đây. Body/filter/response của chúng nằm ngay trong record/method/service được liên kết; quyền service vẫn là chuẩn. Internal worker request/response được mô tả riêng ở [Worker protocol](worker-protocol.md).
+Nhóm/team, tranh chấp, replay moderation, cleanup, notifications, giới hạn worker/pool và các legacy routes nằm trong danh mục nguồn dưới đây. Body/filter/response của chúng nằm ngay trong record/method/service được liên kết; quyền service vẫn là chuẩn. Internal worker request/response được mô tả riêng ở [Worker protocol](worker-protocol.md).
+
+Thay đổi `maxConcurrentMatches` khi tạo giải hoặc qua `POST /api/tournaments/{id}/rules` yêu cầu ADMIN, kể cả người gửi là chủ giải. Chủ giải vẫn sửa `tieBreakOrder` theo quyền/giai đoạn hiện có bằng cách bỏ `maxConcurrentMatches`; server giữ nguyên mức đang áp dụng.
+
+## Quản lý worker riêng theo giải
+
+Đặt `W = /api/tournaments/{id}/workers`. Tất cả endpoint dưới đây yêu cầu session của **chủ giải đó hoặc ADMIN**. Mutation yêu cầu CSRF; response có `Cache-Control: no-store`. Người tham gia và chủ giải khác không có quyền này.
+
+- **GET `W`:** trả `workers`, `tokens`, `canAdd`, `reason`, `executionMode`, `serverNow`. Máy gồm `id,name,status,revision,freeSlots,activeMatches,languages,lastHeartbeatAt,revoked`; token chỉ có `id,expiresAt,remainingUses,revoked`, không trả lại raw secret. Danh sách giới hạn 100 máy, ưu tiên máy chưa thu hồi, và 20 token gần nhất của đúng giải. `canAdd=false` kèm lý do nếu mode/trạng thái không hỗ trợ hoặc đạt hạn mức; vẫn có thể đọc danh sách để quản lý quyền theo authorization.
+- **POST `W/registration-tokens`:** body `{"trusted":true}`. Response **201** gồm `id,registrationToken,expiresAt,remainingUses`; raw token chỉ có trong lần tạo này. Server cố định một lượt, 30 phút và scope bằng `{id}`. Từ chối nếu giải kết thúc/hủy/lưu trữ, không phải BOT_ONLY có coding, đã có 20 máy chưa thu hồi hoặc 5 token còn hiệu lực/còn lượt. Không có trường client tự cấp scope, trust, số lượt hoặc thời hạn.
+- **POST `W/registration-tokens/{token}/revoke`:** không cần body; trả `{"revoked":true}`. Chỉ tác động token thuộc đúng giải, không chặn credential máy đã đăng ký từ token đó.
+- **POST `W/{worker}/control`:** body gồm `revision`, `action`, `reason`; dùng command DRAIN/RESUME/DISABLE/REVOKE và guard của `WorkerControlService`. Trả Machine như trong danh sách. UI chủ giải cung cấp Ngừng nhận trận/Bật lại/Thu hồi quyền; không cung cấp quyền duyệt máy khác, đổi capacity hoặc policy. Sai revision trả 409; token/máy thuộc giải khác hoặc pool chung không điều khiển được qua đường này.
+- **GET `W/download`:** trả binary `rps-worker.jar`, `Content-Disposition: attachment`; thiếu distribution trả **503 / WORKER_DOWNLOAD_UNAVAILABLE**. Dùng đúng JAR đóng gói cùng server.
+
+Lỗi riêng: **400 / WORKER_TRUST_CONSENT_REQUIRED** khi chưa xác nhận tin cậy; **409 / TOURNAMENT_WORKERS_UNAVAILABLE** khi giải không cho cấp token; **409 / TOURNAMENT_WORKER_LIMIT** khi đạt hạn mức; **404 / WORKER_NOT_FOUND hoặc WORKER_TOKEN_NOT_FOUND** khi mục không thuộc giải; **409 / STALE_WORKER_CONTROL** khi cần đọc lại revision. Đăng ký máy từ token riêng còn kiểm tra trạng thái giải/trash, tài khoản chủ giải ACTIVE và hạn mức tại thời điểm dùng token. Lỗi enrollment thuộc [internal worker protocol](worker-protocol.md).
+
+Endpoint ADMIN tiếp tục quản lý worker dùng chung và can thiệp máy riêng theo quyền hệ thống. `GET /api/admin/workers/operations` trả scope trong mỗi item; `GET /api/admin/workers/operations/{id}` có scope trong detail; `GET /api/admin/workers/registration-tokens` thêm `tournamentId` nullable để phân biệt token riêng và dùng chung. Không có API tạo nhóm hoặc sửa scope máy đã đăng ký.
+
+## Policy và sức chứa worker
+
+`GET/POST /api/admin/tournaments/{id}/worker-policy` dành cho ADMIN; POST dùng session + CSRF, body `revision,mode,minimumTrust,maxMatches,reason`. Mode là AUTO/LOCAL/REMOTE_REQUIRED; minimumTrust là TRUSTED/COMMUNITY; maxMatches trong 1–256. Policy chỉ đổi khi DRAFT/REGISTRATION, chưa có match/job. AUTO là mặc định cho giải không có bản ghi policy; policy cũ được giữ nguyên khi migrate.
+
+`GET /api/admin/tournaments/{id}/worker-capacity` tính máy dùng chung và máy riêng đúng giải, không tính máy riêng của giải khác. Đây là preview, không đặt trước slot. `POST /api/admin/workers/{id}/capacity` vẫn chỉ dành cho ADMIN. Worker agent nhận việc bằng credential và scope, không gọi các endpoint quản trị này.
 
 ## Danh mục mapping trong source
 
 Phần này kiểm tra tự động với controller, bao gồm alias/redirect; **không** tự suy luận auth từ tên URL. Khi đổi route chạy `node tools/documentation-routes.mjs --write`, cập nhật contract phía trên nếu hành vi đổi, rồi `node tools/check-documentation.mjs`.
 
-Thay đổi `maxConcurrentMatches` khi tạo giải hoặc qua `POST /api/tournaments/{id}/rules` yêu cầu ADMIN, kể cả người gửi là chủ giải. Chủ giải vẫn sửa `tieBreakOrder` theo quyền/giai đoạn hiện có bằng cách bỏ `maxConcurrentMatches`; server giữ nguyên mức đang áp dụng.
-
 <!-- ROUTES:START -->
-176 mappings khai báo trong các API controller (bao gồm redirect UI; không bao gồm Actuator và WebSocket). Auth/guard không được suy ra từ annotation.
+177 mappings khai báo trong các API controller (bao gồm redirect UI; không bao gồm Actuator và WebSocket). Auth/guard không được suy ra từ annotation.
 
 | Method | Path | Nguồn contract |
 | --- | --- | --- |
@@ -183,28 +203,24 @@ Thay đổi `maxConcurrentMatches` khi tạo giải hoặc qua `POST /api/tourna
 | GET | `/api/admin/tournaments` | [AdminTournamentsController:11](../../server/src/main/java/com/rpsbattle/api/controller/AdminTournamentsController.java#L11) |
 | GET | `/api/admin/tournaments/{id}` | [AdminTournamentsController:12](../../server/src/main/java/com/rpsbattle/api/controller/AdminTournamentsController.java#L12) |
 | POST | `/api/admin/tournaments/{id}/actions/{action}` | [AdminTournamentsController:13](../../server/src/main/java/com/rpsbattle/api/controller/AdminTournamentsController.java#L13) |
-| GET | `/api/admin/tournaments/{id}/worker-capacity` | [WorkerGroupController:15](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L15) |
-| GET | `/api/admin/tournaments/{id}/worker-policy` | [WorkerGroupController:26](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L26) |
-| POST | `/api/admin/tournaments/{id}/worker-policy` | [WorkerGroupController:27](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L27) |
+| GET | `/api/admin/tournaments/{id}/worker-capacity` | [WorkerOperationsController:14](../../server/src/main/java/com/rpsbattle/api/controller/WorkerOperationsController.java#L14) |
+| GET | `/api/admin/tournaments/{id}/worker-policy` | [WorkerOperationsController:21](../../server/src/main/java/com/rpsbattle/api/controller/WorkerOperationsController.java#L21) |
+| POST | `/api/admin/tournaments/{id}/worker-policy` | [WorkerOperationsController:22](../../server/src/main/java/com/rpsbattle/api/controller/WorkerOperationsController.java#L22) |
 | GET | `/api/admin/users` | [AdminController:17](../../server/src/main/java/com/rpsbattle/api/controller/AdminController.java#L17) |
 | GET | `/api/admin/users/{id}` | [AdminConsoleController:12](../../server/src/main/java/com/rpsbattle/api/controller/AdminConsoleController.java#L12) |
 | POST | `/api/admin/users/{id}/disable` | [AdminController:23](../../server/src/main/java/com/rpsbattle/api/controller/AdminController.java#L23) |
 | POST | `/api/admin/users/{id}/enable` | [AdminController:26](../../server/src/main/java/com/rpsbattle/api/controller/AdminController.java#L26) |
-| GET | `/api/admin/worker-assignments/tournaments` | [WorkerGroupController:13](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L13) |
-| GET | `/api/admin/worker-groups` | [WorkerGroupController:22](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L22) |
-| POST | `/api/admin/worker-groups` | [WorkerGroupController:23](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L23) |
-| POST | `/api/admin/worker-groups/{id}` | [WorkerGroupController:24](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L24) |
-| GET | `/api/admin/worker-groups/capacity` | [WorkerGroupController:14](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L14) |
+| GET | `/api/admin/worker-assignments/tournaments` | [WorkerOperationsController:13](../../server/src/main/java/com/rpsbattle/api/controller/WorkerOperationsController.java#L13) |
 | GET | `/api/admin/workers` | [RemoteWorkerController:37](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L37) |
 | GET | `/api/admin/workers/{id}` | [RemoteWorkerController:39](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L39) |
-| POST | `/api/admin/workers/{id}/capacity` | [WorkerGroupController:25](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L25) |
+| POST | `/api/admin/workers/{id}/capacity` | [WorkerOperationsController:20](../../server/src/main/java/com/rpsbattle/api/controller/WorkerOperationsController.java#L20) |
 | POST | `/api/admin/workers/{id}/control` | [RemoteWorkerController:43](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L43) |
 | GET | `/api/admin/workers/{id}/events` | [RemoteWorkerController:45](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L45) |
 | POST | `/api/admin/workers/{id}/review` | [RemoteWorkerController:41](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L41) |
 | GET | `/api/admin/workers/download` | [RemoteWorkerController:47](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L47) |
-| GET | `/api/admin/workers/metrics` | [WorkerGroupController:17](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L17) |
-| GET | `/api/admin/workers/operations` | [WorkerGroupController:11](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L11) |
-| GET | `/api/admin/workers/operations/{id}` | [WorkerGroupController:12](../../server/src/main/java/com/rpsbattle/api/controller/WorkerGroupController.java#L12) |
+| GET | `/api/admin/workers/metrics` | [WorkerOperationsController:16](../../server/src/main/java/com/rpsbattle/api/controller/WorkerOperationsController.java#L16) |
+| GET | `/api/admin/workers/operations` | [WorkerOperationsController:11](../../server/src/main/java/com/rpsbattle/api/controller/WorkerOperationsController.java#L11) |
+| GET | `/api/admin/workers/operations/{id}` | [WorkerOperationsController:12](../../server/src/main/java/com/rpsbattle/api/controller/WorkerOperationsController.java#L12) |
 | GET | `/api/admin/workers/registration-tokens` | [RemoteWorkerController:25](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L25) |
 | POST | `/api/admin/workers/registration-tokens` | [RemoteWorkerController:23](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L23) |
 | POST | `/api/admin/workers/registration-tokens/{id}/revoke` | [RemoteWorkerController:27](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L27) |
@@ -298,6 +314,11 @@ Thay đổi `maxConcurrentMatches` khi tạo giải hoặc qua `POST /api/tourna
 | POST | `/api/tournaments/{id}/timeline/override` | [TournamentTimelineController:28](../../server/src/main/java/com/rpsbattle/api/controller/TournamentTimelineController.java#L28) |
 | POST | `/api/tournaments/{id}/timing` | [TournamentPlayerController:26](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L26) |
 | POST | `/api/tournaments/{id}/withdraw` | [TournamentPlayerController:12](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L12) |
+| GET | `/api/tournaments/{id}/workers` | [TournamentWorkerController:14](../../server/src/main/java/com/rpsbattle/api/controller/TournamentWorkerController.java#L14) |
+| POST | `/api/tournaments/{id}/workers/{worker}/control` | [TournamentWorkerController:17](../../server/src/main/java/com/rpsbattle/api/controller/TournamentWorkerController.java#L17) |
+| GET | `/api/tournaments/{id}/workers/download` | [TournamentWorkerController:18](../../server/src/main/java/com/rpsbattle/api/controller/TournamentWorkerController.java#L18) |
+| POST | `/api/tournaments/{id}/workers/registration-tokens` | [TournamentWorkerController:15](../../server/src/main/java/com/rpsbattle/api/controller/TournamentWorkerController.java#L15) |
+| POST | `/api/tournaments/{id}/workers/registration-tokens/{token}/revoke` | [TournamentWorkerController:16](../../server/src/main/java/com/rpsbattle/api/controller/TournamentWorkerController.java#L16) |
 | POST | `/api/tournaments/{id}/workspace` | [TournamentCodeController:15](../../server/src/main/java/com/rpsbattle/api/controller/TournamentCodeController.java#L15) |
 | GET | `/api/tournaments/{id}/workspace/me` | [TournamentCodeController:16](../../server/src/main/java/com/rpsbattle/api/controller/TournamentCodeController.java#L16) |
 | PUT | `/api/tournaments/{id}/workspace/me` | [TournamentCodeController:18](../../server/src/main/java/com/rpsbattle/api/controller/TournamentCodeController.java#L18) |

@@ -27,6 +27,7 @@ public class RemoteArtifactService {
         if(!clock.instant().isBefore(lease))throw new AuthException("EXECUTION_LEASE_EXPIRED",409);
         String raw=row.get("spec_json").toString();if(!WorkerIdentityService.hash(raw).equals(row.get("spec_hash")))throw new AuthException("REMOTE_JOB_CORRUPT",409);
         RemoteMatchQueue.Spec spec;try{spec=json.readValue(raw,RemoteMatchQueue.Spec.class);}catch(Exception e){throw new AuthException("REMOTE_JOB_CORRUPT",409);}
+        WorkerScope.require(db,worker,spec.tournamentId());
         if(!Set.of("TRUSTED","COMMUNITY").contains(row.get("trust_level"))||spec.minimumTrust().equals("TRUSTED")&&!row.get("trust_level").equals("TRUSTED"))throw new AuthException("ARTIFACT_NOT_ASSIGNED",404);
         var ref=artifact.equals(spec.botA().artifactId())?spec.botA():artifact.equals(spec.botB().artifactId())?spec.botB():null;
         if(ref==null)throw new AuthException("ARTIFACT_NOT_ASSIGNED",404);

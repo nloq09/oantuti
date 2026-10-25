@@ -29,7 +29,6 @@ class RemoteDistributedLoadTest extends RemoteJobClaimTest {
     @Container static final PostgreSQLContainer<?> POSTGRES=new PostgreSQLContainer<>("postgres:16-alpine");
     @DynamicPropertySource static void database(DynamicPropertyRegistry r){r.add("spring.datasource.url",POSTGRES::getJdbcUrl);r.add("spring.datasource.username",POSTGRES::getUsername);r.add("spring.datasource.password",POSTGRES::getPassword);r.add("spring.datasource.driver-class-name",()->"org.postgresql.Driver");}
     @Autowired RemoteResultService results;
-    @Autowired WorkerGroupService groups;
     final List<Long> waits=Collections.synchronizedList(new ArrayList<>());
     final Map<UUID,Long> enqueued=new ConcurrentHashMap<>();
     final Map<UUID,Integer> distribution=new ConcurrentHashMap<>();
@@ -50,8 +49,8 @@ class RemoteDistributedLoadTest extends RemoteJobClaimTest {
             var bots=new ArrayList<Object[]>();var participants=new ArrayList<Object[]>();for(int i=0;i<4000;i++){UUID bot=UUID.randomUUID(),p=UUID.randomUUID();bots.add(new Object[]{bot,actor});participants.add(new Object[]{p,cup,bot,actor,(long)i});t.participants.add(new TournamentParticipant(p.toString(),bot.toString(),"","Synthetic "+i,i,actor).withSeeding(i+1,null));}
             db.batchUpdate("insert into bots(id,owner_user_id,name,language,source_path,status) values(?,?,'Synthetic','PYTHON','not-executed','READY')",bots);
             db.batchUpdate("insert into tournament_participants(id,tournament_id,bot_id,owner_user_id,display_name,seed) values(?,?,?,?,'Synthetic',?)",participants);
-            var workers=new ArrayList<Machine>();var group=groups.create("LOAD_"+cup.toString().substring(0,8),actor,"Synthetic load only");for(int i=0;i<10;i++){var m=machine(actor,Set.of("PYTHON"),8,"TRUSTED");workers.add(m);group=groups.change(group.id(),actor,new WorkerGroupService.Change(group.revision(),null,m.id(),true,"Synthetic capacity"));distribution.put(m.id(),0);}
-            db.update("insert into tournament_worker_policies values(?,'REMOTE_REQUIRED',?,'TRUSTED',80,1)",cup,group.id());
+            var workers=new ArrayList<Machine>();for(int i=0;i<10;i++){var m=machine(actor,Set.of("PYTHON"),8,"TRUSTED");workers.add(m);distribution.put(m.id(),0);}
+            db.update("insert into worker_pool_policies values(?,'REMOTE_REQUIRED','TRUSTED',80,1)",cup);
             t.matches.addAll(new SingleEliminationScheduler().schedule(t));assertThat(t.matches).hasSize(1952);assertThat(t.bracket).hasSize(4095);int completed=0,peak=0,rounds=0;
             var ref=new RemoteMatchQueue.BotRef(UUID.randomUUID(),"a".repeat(64),"PYTHON","python:3.12-slim");
             while(!SingleEliminationScheduler.complete(t)){
@@ -59,7 +58,7 @@ class RemoteDistributedLoadTest extends RemoteJobClaimTest {
                 var rows=new ArrayList<Object[]>();for(var m:round)rows.add(new Object[]{UUID.fromString(m.id),cup,UUID.fromString(m.participantA.participantId()),UUID.fromString(m.participantB.participantId())});db.batchUpdate("insert into tournament_matches(id,tournament_id,participant_a_id,participant_b_id,status) values(?,?,?,?,'PENDING')",rows);
                 // Allow a slow development host to validate all eight reserved replays per agent.
                 // This harness measures queue/receipt throughput, not the bot execution deadline.
-                for(var m:round){UUID job=queue.enqueue(new RemoteMatchQueue.Spec(UUID.fromString(m.id),cup,ref,ref,"1","classic-online-v1",m.participantA.seed()^m.participantB.seed(),1000,300000,1,"TRUSTED"));db.update("insert into remote_job_routes(job_id,group_id) values(?,?)",job,group.id());enqueued.put(job,System.nanoTime());}
+                for(var m:round){UUID job=queue.enqueue(new RemoteMatchQueue.Spec(UUID.fromString(m.id),cup,ref,ref,"1","classic-online-v1",m.participantA.seed()^m.participantB.seed(),1000,300000,1,"TRUSTED"));db.update("insert into worker_pool_routes(job_id) values(?)",job);enqueued.put(job,System.nanoTime());}
                 var byId=new HashMap<String,TournamentMatch>();round.forEach(m->byId.put(m.id,m));
                 while(round.stream().anyMatch(m->m.status==TournamentMatch.Status.PENDING)){
                     var gate=new CountDownLatch(1);var claims=new ArrayList<Future<RemoteMatchQueue.Batch>>();for(var m:workers)claims.add(pool.submit(()->{gate.await();db.update("update workers set last_heartbeat_at=CURRENT_TIMESTAMP where id=?",m.id());return queue.claim(m.id(),claim(m,8));}));gate.countDown();var assignments=new ArrayList<RemoteMatchQueue.Assignment>();for(var f:claims)assignments.addAll(f.get(60,TimeUnit.SECONDS).jobs());assertThat(assignments).isNotEmpty();assertThat(assignments.stream().map(RemoteMatchQueue.Assignment::executionId).distinct().count()).isEqualTo(assignments.size());int active=db.queryForObject("select count(*) from match_execution_attempts where active_marker=1",Integer.class);peak=Math.max(peak,active);assertThat(active).isLessThanOrEqualTo(80);

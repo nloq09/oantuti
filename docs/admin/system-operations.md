@@ -2,14 +2,14 @@
 
 [Mục lục](../README.md) · [Monitoring](../technical/monitoring.md) · [Deployment](../technical/deployment.md) · [Backup/Recovery](../technical/backup-recovery.md)
 
-Admin mở **Tổng quan**, **Hệ thống** (`/admin/system.html`) và **Worker**. Trang hệ thống đọc `/api/admin/system`: ứng dụng, PostgreSQL, Docker, local workers/queue, users/socket, JVM memory, storage và alerts. Một health UP không khẳng định runtime bot, worker group và mọi giải đều khỏe.
+Admin mở **Tổng quan**, **Hệ thống** (`/admin/system.html`) và **Worker**. Trang hệ thống đọc `/api/admin/system`: ứng dụng, PostgreSQL, Docker, local workers/queue, users/socket, JVM memory, storage và alerts. Một health UP không khẳng định runtime bot, pool worker và mọi giải đều khỏe.
 
 ## Kiểm tra trước một buổi thi
 
 1. Health DB/app UP; kiểm tra cả readiness, dung lượng và volume bot/replay.
 2. Docker Linux và image đúng ngôn ngữ trên Central. Thực hiện một build/public test bằng tài khoản thử trên môi trường thử; không chỉ nhìn Docker daemon UP.
 3. Local execution queue và coding queue còn chỗ. Hai queue có giới hạn khác nhau; thêm worker remote không giải quyết queue build/test Central.
-4. Với REMOTE GROUP: worker đã duyệt, nhóm bật, trust/runtime phù hợp, capacity và heartbeat còn mới. Giao giải trước khi tạo lịch.
+4. Với remote: kiểm tra máy đã duyệt, mức tin cậy, runtime, slot và heartbeat. Server tự phân trận, không cần nhóm hoặc gán giải. Máy riêng chỉ được tính cho đúng giải; kiểm tra policy AUTO/LOCAL/REMOTE_REQUIRED nếu giải chưa nhận trận như mong đợi. Xem [hướng dẫn worker](workers.md).
 5. Bản backup gần nhất đã verify; biết chỗ lưu và cách restore. Không kiểm tra restore bằng cách ghi vào DB đang phục vụ.
 
 ## Đọc cảnh báo

@@ -1,6 +1,6 @@
 # RPS Battle Documentation
 
-Hướng dẫn chính thức cho RPS Battle — Oẳn Tù Tì chiến thuật 9×9. Bộ **Markdown đọc trực tiếp trên GitHub**, không cần chạy game hoặc build website. Nội dung theo source hiện tại, cập nhật ngày **24/10/2026**.
+Hướng dẫn chính thức cho RPS Battle — Oẳn Tù Tì chiến thuật 9×9. Bộ **Markdown đọc trực tiếp trên GitHub**, không cần chạy game hoặc build website. Nội dung theo source hiện tại, cập nhật ngày **25/10/2026**.
 
 ## Bạn là ai?
 
@@ -19,6 +19,8 @@ Hướng dẫn chính thức cho RPS Battle — Oẳn Tù Tì chiến thuật 9�
 ### Organizer — Chủ giải
 
 [Tạo giải](organizer/create-tournament.md) → [Quản lý đăng ký](organizer/registration-management.md) → [Bài nộp](organizer/submission-management.md) → [Kiểm thử chính thức](organizer/validation-management.md) → [Điều hành giải](organizer/tournament-operation.md). Khi thi đấu dùng [Match Monitor/Replay](organizer/match-monitor.md) và [Audit](organizer/audit.md).
+
+Có máy hỗ trợ chạy bot cho giải của mình: [Thêm và chạy worker riêng](organizer/tournament-operation.md#worker-riêng-do-chủ-giải-thêm). Máy chỉ nhận trận của đúng giải; người chơi không cần cài worker để tham gia.
 
 ### Admin
 

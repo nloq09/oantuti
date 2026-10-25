@@ -23,7 +23,7 @@ public class RemoteLeaseService {
     private void guard(){db.queryForObject("select id from remote_match_queue_guard where id=1 for update",Integer.class);}
     private static java.sql.Timestamp at(Instant value){return java.sql.Timestamp.from(value);}
     private static Instant instant(Object value){return value instanceof java.sql.Timestamp s?s.toInstant():((OffsetDateTime)value).toInstant();}
-    private Map<String,Object> row(UUID worker,UUID execution){var rows=db.queryForList("select a.*,j.status as job_status,j.spec_json,j.spec_hash,j.minimum_trust,j.tournament_id from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id where a.id=? and a.worker_id=?",execution,worker);if(rows.isEmpty())throw new AuthException("EXECUTION_NOT_ASSIGNED",404);return rows.getFirst();}
+    private Map<String,Object> row(UUID worker,UUID execution){var rows=db.queryForList("select a.*,j.status as job_status,j.spec_json,j.spec_hash,j.minimum_trust,j.tournament_id from match_execution_attempts a join match_execution_jobs j on j.id=a.job_id where a.id=? and a.worker_id=?",execution,worker);if(rows.isEmpty())throw new AuthException("EXECUTION_NOT_ASSIGNED",404);WorkerScope.require(db,worker,(UUID)rows.getFirst().get("tournament_id"));return rows.getFirst();}
     private RemoteMatchQueue.Spec spec(Map<String,Object> row){String raw=row.get("spec_json").toString();if(!WorkerIdentityService.hash(raw).equals(row.get("spec_hash")))throw new AuthException("REMOTE_JOB_CORRUPT",409);try{return json.readValue(raw,RemoteMatchQueue.Spec.class);}catch(Exception e){throw new AuthException("REMOTE_JOB_CORRUPT",409);}}
     private boolean trusted(UUID worker,Map<String,Object> row){return db.queryForObject("select count(*) from workers where id=? and approval_status='APPROVED' and status<>'DISABLED' and trust_level in ('TRUSTED','COMMUNITY') and (?='COMMUNITY' or trust_level='TRUSTED')",Integer.class,worker,row.get("minimum_trust"))==1;}
     private boolean pending(Map<String,Object> row){return db.queryForObject("select count(*) from tournament_matches m join tournaments t on t.id=m.tournament_id where m.id=? and m.status='PENDING' and t.status not in ('CANCELLED','FINISHED')",Integer.class,row.get("match_id"))==1;}
@@ -59,7 +59,7 @@ public class RemoteLeaseService {
     private void expire(Map<String,Object> row,String reason){
         UUID execution=(UUID)row.get("id"),job=(UUID)row.get("job_id");boolean pending=pending(row);
         int count=db.queryForObject("select count(*) from match_execution_attempts where job_id=?",Integer.class,job);
-        var routes=db.queryForList("select retry_floor from remote_job_routes where job_id=?",job);int floor=routes.isEmpty()?0:((Number)routes.getFirst().get("retry_floor")).intValue();
+        var routes=db.queryForList("select retry_floor from worker_pool_routes where job_id=?",job);int floor=routes.isEmpty()?0:((Number)routes.getFirst().get("retry_floor")).intValue();
         boolean terminal=pending&&count-floor>=attempts;
         db.update("update match_execution_attempts set status='EXPIRED',active_marker=null,active_slot=null where id=? and active_marker=1",execution);
         db.update("update match_execution_jobs set status=? where id=? and status='LEASED'",pending&&!terminal?"QUEUED":"CANCELLED",job);

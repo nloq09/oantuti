@@ -17,7 +17,7 @@ public class WorkerIdentityService {
     private static final SecureRandom RANDOM = new SecureRandom();
     public WorkerIdentityService(JdbcTemplate db, Clock clock) { this.db=db; this.clock=clock; }
     public record Token(UUID id, String registrationToken, Instant expiresAt, int remainingUses) {}
-    public record TokenView(UUID id, Instant expiresAt, int remainingUses, boolean revoked,Instant createdAt,String createdBy,String status,List<Map<String,Object>> usedBy,Instant lastUsed) {}
+    public record TokenView(UUID id, Instant expiresAt, int remainingUses, boolean revoked,Instant createdAt,String createdBy,String status,List<Map<String,Object>> usedBy,Instant lastUsed,UUID tournamentId) {}
     public record Registration(String registrationToken, String name, String workerVersion, Integer protocolVersion) {}
     public record Identity(UUID workerId, String name, String workerVersion, int protocolVersion, String status, String approvalStatus, String trustLevel) {}
     public record Enrolled(Identity worker, String workerCredential) {}
@@ -41,7 +41,7 @@ public class WorkerIdentityService {
     public List<TokenView> tokens() {
         var usage=db.queryForList("select e.resource_id,w.id,w.name,e.occurred_at from worker_identity_events e join workers w on w.id=case when e.event_type='REGISTRATION_TOKEN_USED' then cast(e.after_value as uuid) else null end where e.event_type='REGISTRATION_TOKEN_USED' and e.resource_id in (select id from worker_registration_tokens order by created_at desc limit 100) order by e.occurred_at desc");
 
-        return db.query("select t.id,t.expires_at,t.remaining_uses,t.revoked_at,t.created_at,u.username from worker_registration_tokens t left join users u on u.id=t.created_by order by t.created_at desc limit 100",(r,n)->{UUID tokenId=r.getObject("id",UUID.class);boolean revoked=r.getTimestamp("revoked_at")!=null;Instant end=r.getTimestamp("expires_at").toInstant();int uses=r.getInt("remaining_uses");return new TokenView(r.getObject("id",UUID.class),end,uses,revoked,r.getTimestamp("created_at").toInstant(),r.getString("username"),revoked?"REVOKED":!clock.instant().isBefore(end)?"EXPIRED":uses==0?"USED":"ACTIVE",usage.stream().filter(v->tokenId.equals(v.get("resource_id"))).map(v->Map.<String,Object>of("id",v.get("id"),"name",v.get("name"))).toList(),usage.stream().filter(v->tokenId.equals(v.get("resource_id"))).map(v->eventInstant(v.get("occurred_at"))).findFirst().orElse(null));});
+        return db.query("select t.id,t.expires_at,t.remaining_uses,t.revoked_at,t.created_at,u.username,s.tournament_id from worker_registration_tokens t left join users u on u.id=t.created_by left join worker_token_scopes s on s.token_id=t.id order by t.created_at desc limit 100",(r,n)->{UUID tokenId=r.getObject("id",UUID.class);boolean revoked=r.getTimestamp("revoked_at")!=null;Instant end=r.getTimestamp("expires_at").toInstant();int uses=r.getInt("remaining_uses");return new TokenView(r.getObject("id",UUID.class),end,uses,revoked,r.getTimestamp("created_at").toInstant(),r.getString("username"),revoked?"REVOKED":!clock.instant().isBefore(end)?"EXPIRED":uses==0?"USED":"ACTIVE",usage.stream().filter(v->tokenId.equals(v.get("resource_id"))).map(v->Map.<String,Object>of("id",v.get("id"),"name",v.get("name"))).toList(),usage.stream().filter(v->tokenId.equals(v.get("resource_id"))).map(v->eventInstant(v.get("occurred_at"))).findFirst().orElse(null),r.getObject("tournament_id",UUID.class));});
     }
     @Transactional
     public void revokeToken(UUID id, UUID actor) {
@@ -60,10 +60,23 @@ public class WorkerIdentityService {
         var now=clock.instant();
         // Atomic conditional consumption prevents concurrent reuse, including across Central instances.
         if(db.update("update worker_registration_tokens set remaining_uses=remaining_uses-1 where token_hash=? and remaining_uses>0 and revoked_at is null and expires_at>?",hash(body.registrationToken()),at(now))!=1) throw new AuthException("WORKER_REGISTRATION_TOKEN_INVALID",401);
+        UUID registrationId=db.queryForObject("select id from worker_registration_tokens where token_hash=?",UUID.class,hash(body.registrationToken()));
+        var scopes=db.queryForList("select s.tournament_id,t.status,t.trashed_at,u.status owner_status from worker_token_scopes s join tournaments t on t.id=s.tournament_id join users u on u.id=t.owner_user_id where s.token_id=?",registrationId);
+        if(!scopes.isEmpty()){
+            var scope=scopes.getFirst();if(Set.of("CANCELLED","FINISHED").contains(scope.get("status"))||scope.get("trashed_at")!=null||!"ACTIVE".equals(scope.get("owner_status")))throw new AuthException("WORKER_REGISTRATION_TOKEN_INVALID",401);
+            db.queryForObject("select id from remote_match_queue_guard where id=1 for update",Integer.class);
+            if(db.queryForObject("select count(*) from worker_tournament_scopes s join worker_credentials c on c.worker_id=s.worker_id where s.tournament_id=? and c.revoked_at is null",Integer.class,scope.get("tournament_id"))>=20)throw new AuthException("TOURNAMENT_WORKER_LIMIT",409);
+        }
         var id=UUID.randomUUID(); var credential=secret("wrc_");
         db.update("insert into workers(id,name,worker_version,protocol_version,status,approval_status,trust_level,registered_at) values(?,?,?,1,'STARTING','PENDING_APPROVAL','UNTRUSTED',?)",id,body.name().strip(),body.workerVersion(),at(now));
         db.update("insert into worker_credentials(worker_id,credential_hash,created_at) values(?,?,?)",id,hash(credential),at(now));
-        UUID registrationId=db.queryForObject("select id from worker_registration_tokens where token_hash=?",UUID.class,hash(body.registrationToken()));
+        if(!scopes.isEmpty()){
+            UUID tournament=(UUID)scopes.getFirst().get("tournament_id");
+            db.update("insert into worker_tournament_scopes(worker_id,tournament_id) values(?,?)",id,tournament);
+            // Trust is valid only inside this immutable scope; global queue eligibility still checks it.
+            db.update("update workers set approval_status='APPROVED',trust_level='TRUSTED' where id=?",id);
+            db.update("insert into worker_identity_events(id,event_type,resource_id,occurred_at,after_value) values(?,?,?,?,?)",UUID.randomUUID(),"WORKER_TOURNAMENT_BOUND",id,at(now),tournament.toString());
+        }
         db.update("insert into worker_identity_events(id,event_type,resource_id,occurred_at,after_value) values(?,?,?,?,?)",UUID.randomUUID(),"REGISTRATION_TOKEN_USED",registrationId,at(now),id.toString());
         event("WORKER_REGISTERED",id,null); return new Enrolled(identity(id),credential);
     }

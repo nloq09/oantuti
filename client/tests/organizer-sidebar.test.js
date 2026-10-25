@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs';import {cup} from './helpers/organizer-fixt
 const html=readFileSync(new URL('../tournament.html',import.meta.url),'utf8');
 test('sidebar separates overview players competition and governance without losing routes',()=>{
  const doc=installDocument('<body><nav></nav></body>'),root=doc.querySelector('nav'),t=cup({timeline:{},format:'SINGLE_ELIMINATION'});renderOrganizerSidebar(root,t,()=>{},{phase:'VALIDATING'});
- assert.deepEqual(root.children.map(n=>n.dataset.group),organizerGroups.map(g=>g.key));assert.equal(descendants(root).filter(n=>n.tag==='a').length,7);
+ assert.deepEqual(root.children.map(n=>n.dataset.group),organizerGroups.map(g=>g.key));assert.equal(descendants(root).filter(n=>n.tag==='a').length,8);
  for(const group of root.children){assert.ok(group.querySelector('h2'));assert.ok(group.querySelector('a'));}
  assert.equal(root.querySelector('[data-section=validation]').href,'/tournament-final-validation.html?id=cup%2Fa');assert.doesNotMatch(text(root),/worker credential|registration token/);
  assert.equal(organizerNavigation(cup({participantPolicy:'HUMAN_ONLY'})).find(n=>n.key==='bracket').label,'Hạt giống');

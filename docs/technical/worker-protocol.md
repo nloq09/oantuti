@@ -6,7 +6,12 @@
 
 ## Bootstrap và credential
 
-Admin dùng session/CSRF tạo registration token, raw trả một lần. Agent lấy token từ biến môi trường WORKER_REGISTRATION_TOKEN và gọi POST `/internal/workers/register` với:
+Registration token được cấp qua session + CSRF, raw secret chỉ trả trong response tạo token:
+
+- Admin cấp token dùng chung tại `POST /api/admin/workers/registration-tokens`. Máy đăng ký ban đầu là PENDING_APPROVAL/UNTRUSTED và cần Admin duyệt trước khi nhận việc.
+- Chủ giải hoặc Admin cấp token riêng tại `POST /api/tournaments/{id}/workers/registration-tokens`, body `{"trusted":true}`. Token gắn đúng tournament trên Central, một lần dùng, hạn 30 phút. Máy đăng ký là APPROVED/TRUSTED với phạm vi cố định của giải.
+
+Agent dùng cùng protocol cho cả hai loại token. Nó lấy token từ biến môi trường `WORKER_REGISTRATION_TOKEN` và gọi POST `/internal/workers/register` với:
 
 ```json
 {"registrationToken":"<TOKEN_NHAP_RIENG>","name":"LAB-PC-01","workerVersion":"0.11.0","protocolVersion":1}
@@ -14,7 +19,17 @@ Admin dùng session/CSRF tạo registration token, raw trả một lần. Agent 
 
 Response 201 gồm `worker` Identity (workerId/name/workerVersion/protocolVersion/status/approvalStatus/trustLevel) và `workerCredential`. Agent lưu credential riêng trong state-dir bằng cơ chế quyền owner-only. Token không được lưu lại làm credential dài hạn. Database giữ SHA-256 của token/credential; không dùng hash ở DB như Bearer secret.
 
-Các request sau dùng `Authorization: Bearer <workerCredential>`. Internal chain stateless, không CSRF và không nhận session ADMIN thay credential. Principal phải trùng `{id}` trên đường dẫn. Ban đầu PENDING_APPROVAL/UNTRUSTED; phải được Admin duyệt trước khi claim việc. Không tự enroll lại nhiều lần khi response ban đầu thất lạc.
+Các request sau dùng `Authorization: Bearer <workerCredential>`. Internal chain stateless, không CSRF và không nhận session ADMIN thay credential. Principal phải trùng `{id}` trên đường dẫn. Thu hồi registration token chỉ chặn enrollment mới; thu hồi máy mới chặn credential đã cấp. Không tự enroll lại nhiều lần khi response ban đầu thất lạc.
+
+### Phạm vi của worker
+
+Scope được server ghi khi tiêu thụ token trong cùng giao dịch tạo worker/credential. Không có scope nghĩa là worker dùng chung; có scope nghĩa là chỉ một tournament. Body register, capabilities, heartbeat hoặc claim không đặt/đổi được scope. Đổi `--name`, `--central` hoặc `--state-dir` không mở rộng quyền của credential hiện tại.
+
+Máy riêng chỉ được claim, start, tải artifact, renew/recover lease và gửi kết quả cho đúng giải. Central lọc scope ngay khi chọn job và kiểm tra lại tại các đường thực thi; scope không thay thế guard assignment, epoch, lease, hash hoặc trust. Vi phạm phạm vi có thể trả `WORKER_TOURNAMENT_FORBIDDEN` (403); đoán execution không được giao vẫn bị chặn theo guard tương ứng.
+
+Mỗi giải tối đa 20 worker chưa thu hồi và 5 token còn hiệu lực/còn lượt. Tạo token riêng yêu cầu giải chưa kết thúc/hủy/lưu trữ và dùng BOT_ONLY có coding. Khi enroll, backend còn kiểm tra trạng thái giải, trash, tài khoản chủ giải ACTIVE và hạn mức máy. Thu hồi không xóa scope, không tự chuyển worker riêng thành worker dùng chung. Worker dùng chung vẫn có thể nhận trận phù hợp của giải có máy riêng.
+
+JAR/protocol không đổi để hỗ trợ scope. Trang chủ giải tạo lệnh với state-dir `./worker-state-tournament-<id-giai>`; mỗi máy giữ thư mục riêng và dùng lại khi restart. Không dùng credential của worker chung hoặc của giải khác để chạy lệnh riêng cho giải mới.
 
 ## Capabilities và heartbeat
 
@@ -28,7 +43,7 @@ Các request sau dùng `Authorization: Bearer <workerCredential>`. Internal chai
 
 Capabilities tạo epoch startup mới và xóa mẫu heartbeat cũ. supportedLanguages gồm PYTHON/CPP/JAVA, JAR dùng runtime JAVA; số bot processes phải ít nhất hai lần max matches. Heartbeat sequence tăng trong cùng epoch; packet lặp/cũ không làm mới thời gian sống. Sai epoch trả STALE_WORKER_SESSION.
 
-CPU/RAM là phần trăm finite trong 0–100; thông số tài nguyên là số hợp lệ theo record validation. Central còn giới hạn budget, reservation, approval/trust/group. Worker tự báo freeSlots không được ghi đè slot đã đặt ở Central.
+CPU/RAM là phần trăm finite trong 0–100; thông số tài nguyên là số hợp lệ theo record validation. Central còn giới hạn budget, reservation, approval/trust/ngôn ngữ. Worker tự báo freeSlots không được ghi đè slot đã đặt ở Central.
 
 ## Claim và artifact
 
@@ -40,7 +55,13 @@ Response Batch có `jobs`, `occupiedSlots`, `effectiveFreeSlots`, `serverNow`. M
 - gameCoreVersion, ruleSetVersion, seed;
 - turnTimeoutMs, matchHardTimeoutMs, maxTurns, minimumTrust.
 
-Các ID/hash/spec được Central cấp và giữ bất biến. Claim chỉ lấy job tương thích policy, group, trust, ngôn ngữ và capacity; không có API để agent tùy chọn giải riêng ngoài assignment.
+Các ID/hash/spec được Central cấp và giữ bất biến. Claim lấy job từ hàng đợi chung của các giải, lọc theo scope, policy, trust, ngôn ngữ và capacity; không dùng membership nhóm worker. Agent không chọn một giải khác bằng payload. Trần đang chạy của từng giải được xét trước giới hạn danh sách ứng viên để một giải đầy slot không che các giải khác. FIFO có ưu tiên cache cho job mới; job chờ từ 30 giây bỏ ưu tiên cache.
+
+### AUTO và thời điểm quyết định nơi chạy
+
+Giải chưa lưu policy riêng mặc định AUTO. Với trận BOT_ONLY có coding và artifact LOCKED hợp lệ, Central kiểm tra có worker đúng phạm vi, đã duyệt, còn heartbeat và hỗ trợ các ngôn ngữ cần dùng. Máy tương thích đang BUSY vẫn tính là có máy. AUTO không có máy phù hợp thì chạy local trước khi nhận vào queue; nếu có máy nhưng chưa có slot thì chờ.
+
+Khi job đã được nhận vào remote queue, mất kết nối worker không làm phát sinh thêm execution local. Job dùng lease/retry/recovery hiện có. LOCAL luôn chạy Central; REMOTE_REQUIRED chờ worker phù hợp. Chỉ Admin thay policy khi giải ở DRAFT/REGISTRATION, chưa có match và chưa có execution job. Thêm máy riêng không đổi policy. Xem [điều phối trong hướng dẫn Admin](../admin/workers.md#chế-độ-điều-phối-của-giải).
 
 GET `I/jobs/assigned` đọc các assignment active của máy. GET `I/artifacts/{artifact}?executionId=…` trả byte artifact kèm `X-Artifact-SHA256`, `X-Artifact-Language`, `X-Artifact-Format`. Service kiểm đúng execution/worker/lease/quyền; không tải source bất kỳ bằng artifact ID đoán được. Cache chỉ dùng khi SHA-256 hợp lệ; Python cần runtime file khóa, C++/Java dùng binary/JAR đã build.
 
@@ -78,4 +99,5 @@ Disable/revoke fence việc cũ qua cùng queue lock; attempt cũ không đượ
 
 - [Worker security](../../server/src/main/java/com/rpsbattle/worker/remote/WorkerSecurityConfig.java), [identity](../../server/src/main/java/com/rpsbattle/worker/remote/WorkerIdentityService.java), [telemetry records](../../server/src/main/java/com/rpsbattle/worker/remote/WorkerTelemetryService.java).
 - [Queue/records](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteMatchQueue.java), [artifact service](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteArtifactService.java), [result](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteResultService.java), [lease/recovery](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteLeaseService.java).
+- [Scope](../../server/src/main/java/com/rpsbattle/worker/remote/WorkerScope.java), [policy/định tuyến](../../server/src/main/java/com/rpsbattle/worker/remote/RemoteRoutingService.java), [quản lý worker của giải](../../server/src/main/java/com/rpsbattle/worker/remote/TournamentWorkerService.java).
 - [Agent sources](../../worker/src/main/java/com/rpsbattle/remote/), [build version](../../worker/build.gradle).

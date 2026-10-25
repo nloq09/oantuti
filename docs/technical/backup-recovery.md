@@ -42,16 +42,25 @@ Giải đã có thi đấu nhưng chưa xong có thể chuyển RECOVERY_REQUIRE
 
 ## Remote worker mất mạng hoặc restart
 
-Giữ nguyên `worker-state` riêng của máy. Dừng agent trước khi chạy chế độ xử lý một lần, dùng cùng Central và state-dir:
+Giữ nguyên thư mục state riêng của từng danh tính. Máy dùng chung thường dùng `./worker-state`; máy riêng dùng `./worker-state-tournament-<id-giai>` do trang **Worker riêng** tạo. Dừng agent trước khi chạy chế độ xử lý một lần, dùng cùng Central và state-dir đã đăng ký. Ví dụ cho máy dùng chung:
 
 ```sh
 java -jar rps-worker.jar --central=https://game.example.com --state-dir=./worker-state --upload-pending
 java -jar rps-worker.jar --central=https://game.example.com --state-dir=./worker-state --recover
 ```
 
+Với máy riêng, thay đúng state-dir; `ID_GIAI` dưới đây là ID trong URL giải, và đường dẫn phải trỏ tới thư mục đã dùng trên máy này:
+
+```sh
+java -jar rps-worker.jar --central=https://game.example.com --state-dir=./worker-state-tournament-ID_GIAI --upload-pending
+java -jar rps-worker.jar --central=https://game.example.com --state-dir=./worker-state-tournament-ID_GIAI --recover
+```
+
 Chỉ chạy chế độ cần thiết: `--upload-pending` gửi lại kết quả đã hoàn tất; `--recover` đối chiếu journal, gửi kết quả hợp lệ và abandon execution bị gián đoạn để Central cấp attempt mới. Không chạy lại bot của execution cũ để giả lập kết quả. `--serve` cũng có recovery định kỳ; không chạy hai agent hoặc lệnh recovery đồng thời cùng state.
 
-Central chỉ nhận kết quả đúng assignment/hash/seed/lease, retry completion giống nhau là idempotent. Kết quả khác hoặc attempt cũ bị fence không được ghi đè. Hết retry hạ tầng chuyển lỗi để review, không xử người chơi thua. Credential bị revoke phải đăng ký mới/duyệt lại; mất response đăng ký ban đầu cần Admin cấp token mới, không lặp đăng ký tự động mù.
+Central chỉ nhận kết quả đúng scope/assignment/hash/seed/lease, retry completion giống nhau là idempotent. Kết quả khác hoặc attempt cũ bị fence không được ghi đè. Hết retry hạ tầng chuyển lỗi để review, không xử người chơi thua. Job đã vào queue remote không được chạy thêm local chỉ vì worker mất kết nối.
+
+Credential bị thu hồi không khôi phục bằng token cũ hoặc đổi tên thư mục. Cần đăng ký danh tính mới với token mới và state-dir riêng: token dùng chung do Admin cấp rồi duyệt; token riêng do chủ giải/Admin cấp trên đúng giải và tự có quyền trong phạm vi đó. Mất response enrollment ban đầu cũng cần đối chiếu danh sách với người cấp token trước khi đăng ký lại. Không sao chép credential của giải khác hoặc xóa journal đang chờ xác nhận. Xem [hướng dẫn chủ giải](../organizer/tournament-operation.md#worker-riêng-do-chủ-giải-thêm).
 
 ## Dọn sandbox sau crash
 

@@ -17,8 +17,8 @@ test('onboarding keeps preparation download runtime registration and approval in
   assert.match(text(steps[0]),/Java 21/);assert.ok(descendants(steps[1]).some(n=>n.href==='/api/admin/workers/download'));
   assert.match(text(steps[2]),/docker pull python:3.12-slim.*docker pull gcc:14.*docker pull eclipse-temurin:21-jdk/s);
   assert.equal(descendants(root).filter(n=>n.tag==='button'&&n.textContent==='Tạo token đăng ký').length,1);
-  assert.ok(descendants(steps[4]).some(n=>n.href==='/admin/workers.html#groups'));
-  assert.ok(descendants(steps[4]).some(n=>n.href==='/admin/workers.html#assignment'));
+  assert.ok(!descendants(steps[4]).some(n=>n.href==='/admin/workers.html#groups'));
+  assert.match(text(steps[4]),/Server tự giao trận/);
   assert.match(text(steps[4]),/BOT_ONLY.*LOCKED/);assert.match(text(root.querySelector('#restart')),/không tạo token mới/i);
  }finally{view.dispose();}
 });

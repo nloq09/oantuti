@@ -2,6 +2,8 @@
 
 Bộ Markdown cho GitHub, đối chiếu source ngày **24/10/2026**. Giai đoạn 1–2 đã có trước; lần này hoàn thành nội dung giai đoạn 3–5 theo yêu cầu làm hết phần còn lại của người dùng. Không dừng chờ review giữa ba giai đoạn này.
 
+Bổ sung ngày **25/10/2026**: cập nhật tài liệu theo hàng đợi worker tự động và worker riêng của chủ giải, đối chiếu controller/service, lệnh chạy và giao diện hiện tại. Các kết quả kiểm tra của lần hoàn thiện ban đầu bên dưới được giữ nguyên theo thời điểm chạy.
+
 ## Created
 
 - **Giai đoạn 1 — nền tảng:** 5 hướng dẫn [Player](player/getting-started.md), Bot Guide và Protocol.
@@ -75,3 +77,14 @@ Lượt hoàn thiện giai đoạn 3–5:
 - Ảnh Khám phá giải chụp thật full page ở viewport 1440×900; không tạo giải/token/worker hoặc nhập credential để có ảnh. Các ảnh flow đăng nhập còn thiếu nêu ở Missing.
 
 Backend dùng môi trường test local, một số runner được mock. Việc kiểm chứng không deploy hay thay dữ liệu production; không lấy các kết quả này làm benchmark Docker/khả năng phục vụ thực tế.
+
+## Cập nhật tài liệu worker — 25/10/2026
+
+Đã viết lại hướng dẫn worker dùng chung và worker riêng: nơi cấp token theo vai trò, các bước tải JAR/runtime, lệnh PowerShell/Bash, chạy lại bằng đúng state-dir, thu hồi token so với credential, giới hạn 20 máy/5 token và phạm vi một giải. Bỏ chỉ dẫn vận hành theo nhóm; mô tả AUTO/LOCAL/REMOTE_REQUIRED cùng thời điểm quyết định chạy local. API, kiến trúc, schema V43/V44, cập nhật server và recovery được đồng bộ với source.
+
+Kiểm chứng trong lượt sửa tài liệu:
+
+- `node tools/check-documentation.mjs`: đạt; 37 hướng dẫn, 41 Markdown, 781 liên kết/ảnh nội bộ và 177 API mappings khớp source. Ví dụ bot nhúng và JSON Lines giữ nguyên, checker đạt.
+- Tám đối chiếu lệnh lần đầu/chạy lại cho PowerShell/Bash, ở hướng dẫn Admin và chủ giải, khớp hàm tạo lệnh hiện tại.
+- 12 liên kết tới mục trong Markdown được đối chiếu với heading đích; đạt.
+- `git diff --check`: đạt. Lượt này chỉ chỉnh Markdown, không thay đổi hoặc triển khai ứng dụng lên VPS.

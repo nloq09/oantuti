@@ -8,7 +8,9 @@
 - **Roster — danh sách thi đấu:** các suất đủ điều kiện được giải sử dụng khi ghép trận. Đơn đăng ký, phiên bản bot và suất thi đấu là những dữ liệu khác nhau.
 - **Waitlist — danh sách chờ:** đơn chưa có suất chính thức. Có thể được chuyển vào khi chính sách/công tác xét duyệt cho phép và còn thời gian.
 - **Bracket — nhánh đấu:** sơ đồ các cặp đấu và đường đi tiếp của giải loại trực tiếp hoặc giai đoạn loại trực tiếp. Round Robin và Swiss dùng bảng điểm/ghép cặp thay cho một bracket loại trực tiếp chung.
-- **Worker:** máy hoặc tiến trình nhận công việc từ server trung tâm. Remote worker chạy trận bot được phân công; người chơi không cần cài worker để chơi bằng trình duyệt.
+- **Worker:** máy hoặc tiến trình nhận công việc từ server trung tâm. Remote worker chạy trận bot trong Docker; server tự chọn máy phù hợp. Người chơi không cần cài worker để chơi bằng trình duyệt.
+- **Pool worker dùng chung:** các danh tính worker do Admin cấp token và duyệt, có thể nhận trận phù hợp từ nhiều giải. Không cần tạo nhóm worker.
+- **Worker riêng của giải:** danh tính được tạo từ token của đúng giải, chỉ nhận trận và artifact trong phạm vi đó. Giải vẫn có thể dùng máy từ pool chung; phạm vi máy riêng không đổi bằng tên máy hay tham số dòng lệnh.
 - **Artifact:** sản phẩm được runner dùng để chạy bot, ví dụ source Python đã chụp phiên bản, binary C++ hoặc JAR Java. Artifact được nhận diện/kiểm tra bằng hash, khác với nội dung chưa lưu trong editor.
 - **Replay:** bản phát lại từ dữ liệu trận đã ghi nhận. Replay không phải video và cũng không phải một lần chạy lại bot.
 - **Controller:** bên điều khiển một ghế, là người tự chơi hoặc bot. Chọn **Đấu với bot** quyết định đối thủ dựng sẵn; chọn **Người chơi của bạn** quyết định ai điều khiển ghế của bạn.

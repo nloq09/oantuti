@@ -22,7 +22,8 @@ Sau khi tạo, mở giải của mình sẽ vào **Quản lý giải**. Các ph�
 - Dùng một tài khoản người chơi riêng để kiểm tra giải xuất hiện trong Khám phá và đăng ký được. PRIVATE không nằm trong danh sách khám phá công khai; việc có liên kết không cấp quyền đọc source hoặc quản lý.
 - Đảm bảo người chơi hiểu đăng ký trước, nộp bot sau. Duyệt đơn không có nghĩa đã có bài READY hoặc đã vượt Final Validation.
 - Kiểm tra Docker trên Central trước khi mở coding. Worker từ xa chỉ chạy trận BOT_ONLY với bài LOCKED; không thay Central build/test/validation.
-- Nếu cần REMOTE GROUP, nhờ Admin gán nhóm và xem capacity **trước khi tạo lịch đấu**. Không có chế độ AUTO tự rơi về local.
+- Giải bot coding mặc định tự dùng pool worker phù hợp. Admin quản lý quyền duyệt, mức tin cậy và tài nguyên máy; chủ giải không cần tạo nhóm hay gán worker.
+- Nếu có máy đáng tin cậy để hỗ trợ riêng cho giải, mở **Quản lý giải → Worker riêng → Thêm worker cho giải**. Xem [cách tải, đăng ký và chạy máy riêng](tournament-operation.md#worker-riêng-do-chủ-giải-thêm). Máy này chỉ nhận trận của giải đã gắn; việc thêm máy không thay đổi policy hoặc giới hạn do Admin đặt.
 
 Không sửa URL/ID để nhận quyền chủ giải. Server kiểm tra chủ sở hữu hoặc ADMIN cho từng mutation.
 

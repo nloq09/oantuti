@@ -143,7 +143,7 @@ sudo docker compose --env-file .env.production -f infra/docker-compose.yml -f in
 1. Health HTTPS UP và đăng ký/login bằng tài khoản USER. Bootstrap ADMIN theo [Users](../admin/users.md); không có password admin mặc định.
 2. Hai trình duyệt tạo/join phòng và chơi đến kết quả; WSS `/ws/game` upgrade được, thường HTTP 101.
 3. Bot nhỏ build/test/READY, giải thử với **chủ giải và người thi đấu khác nhau**, check-in/match/result/replay.
-4. Kiểm tra cả Central Docker và nhóm worker nếu remote. UI ONLINE không chứng minh job đã được giao.
+4. Kiểm tra cả Central Docker và worker remote nếu dùng: Admin duyệt máy dùng chung hoặc chủ giải đăng ký máy riêng đúng giải. Server tự phân trận, không cần nhóm. Kiểm tra bài LOCKED, policy và scope; UI ONLINE không chứng minh job đã được giao. Xem [worker dùng chung](../admin/workers.md) và [worker riêng](../organizer/tournament-operation.md#worker-riêng-do-chủ-giải-thêm).
 5. Verify backup và thử restore ở deployment trống riêng.
 
 Proxy mẫu Nginx/Caddy hiện giới hạn body **6 MiB**, trong khi backend remote completion cho phép request đến **22 MiB** và replay 15 MiB. Replay nhỏ hoạt động trong giới hạn proxy; muốn hỗ trợ trọn giới hạn backend phải cấu hình body limit riêng cho route complete trên proxy và thử upload lớn. Không tuyên bố mẫu hiện tại đã hỗ trợ replay 15 MiB qua Internet.
@@ -159,6 +159,17 @@ sudo docker compose --env-file .env.production -f infra/docker-compose.yml -f in
 ```
 
 Nếu pull/build lỗi, giữ volume và xử lý; không xóa dữ liệu. Với Caddy bỏ overlay nginx, dùng cùng bộ Compose như lúc tạo deployment. Login lại sau restart; kiểm tra giải RECOVERY_REQUIRED. Rollback schema không chỉ là chạy JAR cũ: restore backup tương thích vào deployment riêng rồi kiểm tra trước khi chuyển traffic.
+
+### Nâng cấp bản điều phối worker tự động và worker riêng
+
+Flyway chạy V43/V44 khi Central mới khởi động, không cần chạy SQL thủ công hoặc xóa database:
+
+- V43 thêm policy/route cho pool chung, sao chép policy và hàng rào retry cũ. Giải đã đặt LOCAL/REMOTE_REQUIRED giữ nguyên; giải chưa có policy riêng mặc định AUTO. Dữ liệu nhóm cũ còn để tra lịch sử và không dùng để điều phối.
+- V44 thêm scope token/máy theo giải. Worker/credential dùng chung đã có vẫn dùng được, không tự biến thành máy riêng. Máy riêng phải đăng ký từ token của đúng giải và dùng state-dir riêng.
+- Kiểm tra **Admin → Worker** có ba tab **Máy worker / Token đăng ký / Điều phối**; chủ giải mở **Quản lý giải → Worker riêng → Thêm worker cho giải**. Thêm worker không đổi policy hoặc các giới hạn do Admin đặt.
+- Worker dùng cùng protocol 1. Khi cập nhật binary agent, dừng agent cũ, thay JAR bằng bản tải từ Central mới và chạy lại với cùng state-dir; không tạo token mới cho danh tính còn hợp lệ. Dùng ngừng nhận trận và chờ hết việc trước khi dừng nếu muốn tránh gián đoạn.
+
+Central vẫn cần Docker/image/quyền để build và kiểm thử bot, kể cả khi mọi trận được chạy từ xa. Xem [schema worker](database.md#điều-phối-worker-và-phạm-vi-theo-giải) và [runbook khôi phục](backup-recovery.md#remote-worker-mất-mạng-hoặc-restart) trước khi thao tác với job đang dở.
 
 ## Database ngoài VPS và chạy JAR native
 
