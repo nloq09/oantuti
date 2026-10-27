@@ -88,7 +88,9 @@ Contract cụ thể: [AuthController](../../server/src/main/java/com/rpsbattle/a
 | POST `T/ready` | Session/ghế dự thi + CSRF | matchId, windowId | State người chơi; window hết hạn bị từ chối. |
 | POST `T/entry` | Session/ghế dự thi + CSRF | matchId | Quyền vào trận hiện tại. |
 | GET `T/matches` | Viewer, mine cần Self | page,size,round,stage,status,mine,order,replay,groupBySeries | Trang trận được phép đọc. |
-| GET `T/ranking`, `T/bracket`, `T/summary` | View được phép đọc | Không body | Ranking/bracket/summary, không có source. |
+| GET `T/ranking`, `T/bracket`, `T/summary` | View được phép đọc | Summary nhận `light=true` | Light summary giữ metadata/counts, tối đa 20 trận active và podium khi kết thúc; không gửi toàn bộ roster/bảng điểm. Bỏ light giữ response cũ. |
+| GET `T/player-pages/{section}` | Public | section=participants hoặc ranking; page,size (1–50) | Trang dữ liệu công khai có revision, total và items; không có credential, source hoặc email. |
+| GET `T/player-extras/{section}` | Public | section=groups hoặc teams | Nội dung mở khi cần; teams chỉ hợp lệ cho giải đồng đội. Không trả đội hình cá nhân chưa công khai. |
 
 Đăng ký legacy `/registrations` vẫn tồn tại cho mode tương ứng; không thay cho `/participant-registration` của timeline. Đọc [controller đăng ký](../../server/src/main/java/com/rpsbattle/api/controller/TimelineRegistrationController.java) để có records Signup/Review/BulkReview đầy đủ; đừng tự thêm field UI không hỗ trợ.
 
@@ -165,7 +167,7 @@ Endpoint ADMIN tiếp tục quản lý worker dùng chung và can thiệp máy r
 Phần này kiểm tra tự động với controller, bao gồm alias/redirect; **không** tự suy luận auth từ tên URL. Khi đổi route chạy `node tools/documentation-routes.mjs --write`, cập nhật contract phía trên nếu hành vi đổi, rồi `node tools/check-documentation.mjs`.
 
 <!-- ROUTES:START -->
-177 mappings khai báo trong các API controller (bao gồm redirect UI; không bao gồm Actuator và WebSocket). Auth/guard không được suy ra từ annotation.
+179 mappings khai báo trong các API controller (bao gồm redirect UI; không bao gồm Actuator và WebSocket). Auth/guard không được suy ra từ annotation.
 
 | Method | Path | Nguồn contract |
 | --- | --- | --- |
@@ -244,7 +246,7 @@ Phần này kiểm tra tự động với controller, bao gồm alias/redirect; 
 | GET | `/api/tournaments/{id}/audit` | [TournamentAuditController:13](../../server/src/main/java/com/rpsbattle/api/controller/TournamentAuditController.java#L13) |
 | GET | `/api/tournaments/{id}/bot-policy` | [TournamentBotPolicyController:12](../../server/src/main/java/com/rpsbattle/api/controller/TournamentBotPolicyController.java#L12) |
 | PUT | `/api/tournaments/{id}/bot-policy` | [TournamentBotPolicyController:13](../../server/src/main/java/com/rpsbattle/api/controller/TournamentBotPolicyController.java#L13) |
-| GET | `/api/tournaments/{id}/bracket` | [TournamentPlayerController:19](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L19) |
+| GET | `/api/tournaments/{id}/bracket` | [TournamentPlayerController:23](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L23) |
 | POST | `/api/tournaments/{id}/cancel` | [TournamentController:21](../../server/src/main/java/com/rpsbattle/api/controller/TournamentController.java#L21) |
 | POST | `/api/tournaments/{id}/check-in` | [TournamentController:31](../../server/src/main/java/com/rpsbattle/api/controller/TournamentController.java#L31) |
 | POST | `/api/tournaments/{id}/close-check-in` | [TournamentController:32](../../server/src/main/java/com/rpsbattle/api/controller/TournamentController.java#L32) |
@@ -253,20 +255,20 @@ Phần này kiểm tra tự động với controller, bao gồm alias/redirect; 
 | POST | `/api/tournaments/{id}/control/{action}` | [TournamentAdministrationController:11](../../server/src/main/java/com/rpsbattle/api/controller/TournamentAdministrationController.java#L11) |
 | GET | `/api/tournaments/{id}/disputes` | [ParticipantDisputeController:9](../../server/src/main/java/com/rpsbattle/api/controller/ParticipantDisputeController.java#L9) |
 | POST | `/api/tournaments/{id}/disputes` | [ParticipantDisputeController:10](../../server/src/main/java/com/rpsbattle/api/controller/ParticipantDisputeController.java#L10) |
-| POST | `/api/tournaments/{id}/entry` | [TournamentPlayerController:24](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L24) |
+| POST | `/api/tournaments/{id}/entry` | [TournamentPlayerController:28](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L28) |
 | GET | `/api/tournaments/{id}/export` | [TournamentController:39](../../server/src/main/java/com/rpsbattle/api/controller/TournamentController.java#L39) |
 | GET | `/api/tournaments/{id}/final-validations` | [FinalValidationController:11](../../server/src/main/java/com/rpsbattle/api/controller/FinalValidationController.java#L11) |
 | POST | `/api/tournaments/{id}/final-validations/{validation}/{action}` | [FinalValidationController:12](../../server/src/main/java/com/rpsbattle/api/controller/FinalValidationController.java#L12) |
-| GET | `/api/tournaments/{id}/fixtures/{fixtureId}/matches` | [TournamentPlayerController:20](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L20) |
+| GET | `/api/tournaments/{id}/fixtures/{fixtureId}/matches` | [TournamentPlayerController:24](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L24) |
 | POST | `/api/tournaments/{id}/keep` | [TournamentCleanupController:13](../../server/src/main/java/com/rpsbattle/api/controller/TournamentCleanupController.java#L13) |
-| GET | `/api/tournaments/{id}/match-context` | [TournamentPlayerController:22](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L22) |
+| GET | `/api/tournaments/{id}/match-context` | [TournamentPlayerController:26](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L26) |
 | GET | `/api/tournaments/{id}/match-monitor` | [MatchMonitorController:11](../../server/src/main/java/com/rpsbattle/api/controller/MatchMonitorController.java#L11) |
 | GET | `/api/tournaments/{id}/match-monitor/{match}/attempts` | [MatchMonitorController:10](../../server/src/main/java/com/rpsbattle/api/controller/MatchMonitorController.java#L10) |
-| GET | `/api/tournaments/{id}/matches` | [TournamentPlayerController:21](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L21) |
+| GET | `/api/tournaments/{id}/matches` | [TournamentPlayerController:25](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L25) |
 | POST | `/api/tournaments/{id}/matches/{matchId}/override` | [TournamentAdministrationController:16](../../server/src/main/java/com/rpsbattle/api/controller/TournamentAdministrationController.java#L16) |
 | POST | `/api/tournaments/{id}/matches/{matchId}/retry` | [TournamentAdministrationController:15](../../server/src/main/java/com/rpsbattle/api/controller/TournamentAdministrationController.java#L15) |
 | POST | `/api/tournaments/{id}/matches/{matchId}/review` | [TournamentAdministrationController:14](../../server/src/main/java/com/rpsbattle/api/controller/TournamentAdministrationController.java#L14) |
-| GET | `/api/tournaments/{id}/me` | [TournamentPlayerController:28](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L28) |
+| GET | `/api/tournaments/{id}/me` | [TournamentPlayerController:32](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L32) |
 | GET | `/api/tournaments/{id}/my-matches` | [MatchMonitorController:11](../../server/src/main/java/com/rpsbattle/api/controller/MatchMonitorController.java#L11) |
 | GET | `/api/tournaments/{id}/notifications` | [TournamentNotificationController:9](../../server/src/main/java/com/rpsbattle/api/controller/TournamentNotificationController.java#L9) |
 | POST | `/api/tournaments/{id}/notifications/read` | [TournamentNotificationController:10](../../server/src/main/java/com/rpsbattle/api/controller/TournamentNotificationController.java#L10) |
@@ -282,8 +284,10 @@ Phần này kiểm tra tự động với controller, bao gồm alias/redirect; 
 | POST | `/api/tournaments/{id}/participants` | [TournamentController:18](../../server/src/main/java/com/rpsbattle/api/controller/TournamentController.java#L18) |
 | DELETE | `/api/tournaments/{id}/participants/{participantId}` | [TournamentController:19](../../server/src/main/java/com/rpsbattle/api/controller/TournamentController.java#L19) |
 | POST | `/api/tournaments/{id}/participants/{participantId}/status` | [TournamentAdministrationController:13](../../server/src/main/java/com/rpsbattle/api/controller/TournamentAdministrationController.java#L13) |
+| GET | `/api/tournaments/{id}/player-extras/{section}` | [TournamentPlayerController:20](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L20) |
+| GET | `/api/tournaments/{id}/player-pages/{section}` | [TournamentPlayerController:19](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L19) |
 | GET | `/api/tournaments/{id}/ranking` | [TournamentController:38](../../server/src/main/java/com/rpsbattle/api/controller/TournamentController.java#L38) |
-| POST | `/api/tournaments/{id}/ready` | [TournamentPlayerController:23](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L23) |
+| POST | `/api/tournaments/{id}/ready` | [TournamentPlayerController:27](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L27) |
 | PUT | `/api/tournaments/{id}/registration-policy` | [TimelineRegistrationController:16](../../server/src/main/java/com/rpsbattle/api/controller/TimelineRegistrationController.java#L16) |
 | GET | `/api/tournaments/{id}/registration-summary` | [TimelineRegistrationController:13](../../server/src/main/java/com/rpsbattle/api/controller/TimelineRegistrationController.java#L13) |
 | POST | `/api/tournaments/{id}/registration/close` | [TimelineRegistrationController:14](../../server/src/main/java/com/rpsbattle/api/controller/TimelineRegistrationController.java#L14) |
@@ -307,14 +311,14 @@ Phần này kiểm tra tự động với controller, bao gồm alias/redirect; 
 | POST | `/api/tournaments/{id}/submission/preuploaded` | [TournamentSubmissionController:23](../../server/src/main/java/com/rpsbattle/api/controller/TournamentSubmissionController.java#L23) |
 | GET | `/api/tournaments/{id}/submissions` | [TournamentSubmissionController:24](../../server/src/main/java/com/rpsbattle/api/controller/TournamentSubmissionController.java#L24) |
 | POST | `/api/tournaments/{id}/submissions/{submissionId}/action` | [TournamentSubmissionController:25](../../server/src/main/java/com/rpsbattle/api/controller/TournamentSubmissionController.java#L25) |
-| GET | `/api/tournaments/{id}/summary` | [TournamentPlayerController:18](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L18) |
+| GET | `/api/tournaments/{id}/summary` | [TournamentPlayerController:22](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L22) |
 | POST | `/api/tournaments/{id}/teams` | [TournamentTeamController:10](../../server/src/main/java/com/rpsbattle/api/controller/TournamentTeamController.java#L10) |
 | POST | `/api/tournaments/{id}/teams/{team}/lineup` | [TournamentTeamController:12](../../server/src/main/java/com/rpsbattle/api/controller/TournamentTeamController.java#L12) |
 | POST | `/api/tournaments/{id}/teams/{team}/members` | [TournamentTeamController:11](../../server/src/main/java/com/rpsbattle/api/controller/TournamentTeamController.java#L11) |
 | GET | `/api/tournaments/{id}/timeline` | [TournamentTimelineController:21](../../server/src/main/java/com/rpsbattle/api/controller/TournamentTimelineController.java#L21) |
 | PUT | `/api/tournaments/{id}/timeline` | [TournamentTimelineController:27](../../server/src/main/java/com/rpsbattle/api/controller/TournamentTimelineController.java#L27) |
 | POST | `/api/tournaments/{id}/timeline/override` | [TournamentTimelineController:28](../../server/src/main/java/com/rpsbattle/api/controller/TournamentTimelineController.java#L28) |
-| POST | `/api/tournaments/{id}/timing` | [TournamentPlayerController:26](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L26) |
+| POST | `/api/tournaments/{id}/timing` | [TournamentPlayerController:30](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L30) |
 | POST | `/api/tournaments/{id}/withdraw` | [TournamentPlayerController:12](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L12) |
 | GET | `/api/tournaments/{id}/workers` | [TournamentWorkerController:14](../../server/src/main/java/com/rpsbattle/api/controller/TournamentWorkerController.java#L14) |
 | POST | `/api/tournaments/{id}/workers/{worker}/control` | [TournamentWorkerController:17](../../server/src/main/java/com/rpsbattle/api/controller/TournamentWorkerController.java#L17) |
@@ -331,7 +335,7 @@ Phần này kiểm tra tự động với controller, bao gồm alias/redirect; 
 | POST | `/api/tournaments/{id}/workspace/me/validate` | [TournamentCodeController:22](../../server/src/main/java/com/rpsbattle/api/controller/TournamentCodeController.java#L22) |
 | GET | `/api/tournaments/{id}/workspace/public-tests` | [TournamentCodeController:23](../../server/src/main/java/com/rpsbattle/api/controller/TournamentCodeController.java#L23) |
 | GET | `/api/tournaments/{id}/workspace/versions/{version}/source` | [TournamentCodeController:17](../../server/src/main/java/com/rpsbattle/api/controller/TournamentCodeController.java#L17) |
-| GET | `/api/tournaments/discover` | [TournamentPlayerController:29](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L29) |
+| GET | `/api/tournaments/discover` | [TournamentPlayerController:33](../../server/src/main/java/com/rpsbattle/api/controller/TournamentPlayerController.java#L33) |
 | GET | `/api/v1/health` | [HealthController:10](../../server/src/main/java/com/rpsbattle/api/controller/HealthController.java#L10) |
 | GET | `/internal/workers/{id}/artifacts/{artifact}` | [RemoteWorkerController:54](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L54) |
 | POST | `/internal/workers/{id}/capabilities` | [RemoteWorkerController:33](../../server/src/main/java/com/rpsbattle/api/controller/RemoteWorkerController.java#L33) |

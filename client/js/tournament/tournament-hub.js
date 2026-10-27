@@ -1,8 +1,8 @@
-import {friendlyName} from './presentation.js';
+import {friendlyName} from './player-labels.js';
 import {createTournamentRefresh} from './refresh-controller.js';
 import {tournamentRequest} from './tournament-api.js';
-import {hubTabs,tournamentCta,tournamentHref} from './hub-model.js';
-import {formatLabel} from './bracket-renderer.js';
+import {hubTabs,tournamentCta,tournamentHref} from './discovery-model.js';
+import {formatLabel} from './format-labels.js';
 import {statusLabels} from './ranking-renderer.js';
 import {readSnapshotKey} from './read-snapshot.js';
 import {node as element} from './player-dom.js';

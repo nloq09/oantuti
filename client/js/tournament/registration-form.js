@@ -1,4 +1,4 @@
-import {mapRegistrationStatus} from './presentation.js';
+import {mapRegistrationStatus} from './player-labels.js';
 import {allowsPreuploaded,allowedPolicyBot,renderBotPolicy} from "./bot-policy.js";
 import{node,link}from "./player-dom.js";import{refreshBots}from "../api/bot-api.js";import{sessionRequest}from "../api/auth-api.js";import{tournamentRequest,withdrawRegistration}from "./tournament-api.js";import{controllerChoices,selectableBot,registrationPayload}from "./registration-model.js";import{errorText}from "../ui/toast.js";
 export async function registrationForm(root,t,me,refresh,options={}){

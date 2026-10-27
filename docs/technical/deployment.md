@@ -164,6 +164,8 @@ Build tạo URL JS/CSS dạng `/ui/<mã-nội-dung>/…` và cập nhật tham c
 
 Trang Admin chỉ tải module của mục đang mở, tải trước module khi rê chuột hoặc focus sidebar. Cảnh báo dùng chung kết quả với Tổng quan/Hệ thống thay vì gọi hệ thống hai lần mỗi chu kỳ. Docker được kiểm tra bằng một luồng nền riêng mỗi 15 giây; trạng thái ban đầu là UNKNOWN/đang kiểm tra, không suy ra Docker hỏng khi mẫu đầu tiên chưa hoàn tất.
 
+Bản tối ưu người chơi tự chạy migration V45 khi khởi động. Frontend và backend cần cập nhật cùng bản vì trang chi tiết dùng `summary?light=true` cùng API phân trang người tham gia/bảng điểm. Header, thanh giai đoạn và quyền đăng ký/nộp bot/check-in giữ nguyên. Không cache public API cá nhân; cache thông báo được giới hạn theo từng tài khoản và trạng thái giải. Tab Tạo giải và các mục mở rộng chỉ tải code/dữ liệu khi mở; chuyển mục vẫn giữ form và dữ liệu chưa gửi.
+
 ### Nâng cấp bản điều phối worker tự động và worker riêng
 
 Flyway chạy V43/V44 khi Central mới khởi động, không cần chạy SQL thủ công hoặc xóa database:

@@ -1,4 +1,4 @@
-import {friendlyName,statusText} from './presentation.js';
+import {friendlyName,statusText} from './player-labels.js';
 import {node,link,date} from './player-dom.js';
 export const executionLabels={WAITING_OPPONENT:'○ Chờ xếp trận / đối thủ',QUEUED:'○ Đang chờ máy thi đấu',ASSIGNED:'● Đã cấp máy chạy',STARTING:'● Đang khởi động bot',RUNNING_LOCAL:'● Trận đang chạy',RUNNING_REMOTE:'● Trận đang chạy trên máy thi đấu',RESULT_PENDING:'● Đã chạy xong · Đang xác nhận kết quả',FINISHED:'✓ Hoàn tất',RETRYING:'↻ Đang chờ chạy lại',RECOVERING:'! Đang chờ khôi phục execution',ERROR:'! Lỗi trận',CANCELLED:'○ Đã hủy',UNKNOWN:'○ Chưa xác định trạng thái'};
 export function executionBadge(state){const badge=node('span',executionLabels[state]||executionLabels.UNKNOWN,'status-badge execution-badge');badge.dataset.executionState=state;return badge;}

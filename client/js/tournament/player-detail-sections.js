@@ -2,7 +2,7 @@ import {node,date} from './player-dom.js';
 import {renderPhaseTimeline} from './phase-view.js';
 import {renderBotPolicy} from './bot-policy.js';
 import {registrationPolicyLabels} from './registration-policy.js';
-import {friendlyName} from './presentation.js';
+import {friendlyName} from './player-labels.js';
 import {stagePlanText} from './stage-plan.js';
 
 const aliases={overview:'tournament-info',rules:'tournament-rules','tournament-rules':'tournament-rules',registration:'player-registration-panel','tournament-registration-form':'player-registration-panel',coding:'tournament-phase-content',validation:'tournament-phase-content','check-in':'tournament-phase-content','my-match':'my-matches',results:'tournament-phase-content'};
@@ -13,7 +13,7 @@ export const playerSectionTarget=hash=>aliases[hash]||hash;
 export function createPlayerDetailSections(){
  let scope,context;
  const entries=new Map(),active=new Set();
- function stop(entry){entry.view?.stop?.();entry.view=null;entry.snapshot=null;}
+ function stop(entry){entry.generation=(entry.generation||0)+1;entry.view?.stop?.();entry.view=null;entry.snapshot=null;entry.loading=false;}
  function clear(){for(const entry of entries.values())stop(entry);entries.clear();active.clear();scope=null;}
  function paint(entry){
   if(entry.details&&!entry.element.open)return;
@@ -24,9 +24,11 @@ export function createPlayerDetailSections(){
   if(entry.snapshot&&(entry.dirty||activeInside&&(entry.details||document.activeElement.matches('input,select,textarea'))||entry.body.querySelector('[data-submitting=true]')||entry.details&&entry.body.querySelector('details[open]')))return;
   const openDetails=new Set([...entry.body.querySelectorAll('details')].filter(el=>el.open).map(el=>el.id||el.querySelector('summary')?.textContent));
   entry.body.replaceChildren();entry.snapshot=context.snapshot;
-  const view=entry.render(entry.body,context);
+  const generation=entry.generation=(entry.generation||0)+1;
+  const isCurrent=()=>entries.get(entry.element.id)===entry&&entry.generation===generation&&entry.element.isConnected&&(!entry.details||entry.element.open);
+  const view=entry.render(entry.body,{...context,isCurrent});
   for(const el of entry.body.querySelectorAll('details'))if(openDetails.has(el.id||el.querySelector('summary')?.textContent))el.open=true;
-  if(view?.then){entry.loading=true;Promise.resolve(view).then(()=>entry.loading=false,()=>{entry.loading=false;entry.body.append(node('p','Không tải được nội dung. Hãy thử mở lại mục này.'));});}
+  if(view?.then){entry.loading=true;Promise.resolve(view).then(result=>{if(!isCurrent()){result?.stop?.();return;}entry.loading=false;if(result?.update||result?.stop){entry.view=result;result.update?.(context.tournament,context.me);}else if(entry.snapshot!==context.snapshot)paint(entry);},()=>{if(isCurrent()){entry.loading=false;entry.body.append(node('p','Không tải được nội dung. Hãy thử mở lại mục này.'));}});}
   else if(view?.update||view?.stop)entry.view=view;
  }
  function attach(root,{id,title,render,details=true,identity=id}){

@@ -1,4 +1,4 @@
-import {mapSubmissionStatus,languageText} from './presentation.js';
+import {mapSubmissionStatus,languageText} from './player-labels.js';
 import {resolvePlayerTournamentViewState} from './player-view-state.js';
 import {createTournamentRefresh} from './refresh-controller.js';
 import {workspacePhaseDestination} from './tournament-routes.js';
@@ -123,10 +123,10 @@ window.addEventListener('beforeunload',event=>{temporary();if(draft?.dirty&&!pha
 window.addEventListener('pageshow',event=>{if(!event.persisted)return;stopped=false;phaseLeaving=false;needsSync=true;startWorkspacePolling();recoverConnection();});
 async function initialize(){try{
  account=await getAccount();if(!account){location.replace(loginLink());}else{
-  const received=performance.now();tournament=await sessionRequest(base);manualWindow.update(tournament,received);if(tournament.timeline){session.update(await sessionRequest(base+'/participant-flow'));if(followTournamentPhase(session.flow))return;if(!session.flow.canAccessWorkspace){location.replace('/tournament-detail.html?id='+encodeURIComponent(id));return;}}
+  const received=performance.now();tournament=await sessionRequest(base+'/summary?light=true');manualWindow.update(tournament,received);if(tournament.timeline){session.update(await sessionRequest(base+'/participant-flow'));if(followTournamentPhase(session.flow))return;if(!session.flow.canAccessWorkspace){location.replace('/tournament-detail.html?id='+encodeURIComponent(id));return;}}
   renderFreeze();policy=tournament.botPolicy;try{pendingRequest=JSON.parse(sessionStorage.getItem(attemptKey())||'null');}catch{}$('title').textContent=tournament.name+' · Bot dự thi';$('back').textContent='← Chi tiết giải';$('back').href='/tournament-detail.html?id='+encodeURIComponent(id);$('policy').textContent='Hạn nộp: '+((tournament.timeline?.codingCloseAt||policy.submissionDeadline)?new Date(tournament.timeline?.codingCloseAt||policy.submissionDeadline).toLocaleString('vi-VN'):'Chủ giải đóng đăng ký')+' · Source tối đa '+policy.maxSourceBytes+' byte · Tối đa '+policy.maxSubmissionVersions+' bản build';
   for(const language of policy.allowedLanguages)$('language').append(new Option(languageText(language),language));const parameters=new URLSearchParams(location.search),requested=parameters.get('language');if(policy.allowedLanguages.includes(requested))$('language').value=requested;
-  const options=entryOptions(policy.submissionMode);$('entry-choice').hidden=options.length===1;await setupImport();await refreshSubmission();await refreshAttempt();if(!requested){const preferred=ownVersions[0]?.language||session.flow?.registration?.intendedLanguage;if(policy.allowedLanguages.includes(preferred))$('language').value=preferred;}const entry=parameters.get('entry')?.toUpperCase();await choose(options.includes(entry)?entry:options.includes('CODE')?'CODE':'IMPORT');
+  const options=entryOptions(policy.submissionMode);$('entry-choice').hidden=options.length===1;await Promise.all([setupImport(),refreshSubmission(),refreshAttempt()]);if(!requested){const preferred=ownVersions[0]?.language||session.flow?.registration?.intendedLanguage;if(policy.allowedLanguages.includes(preferred))$('language').value=preferred;}const entry=parameters.get('entry')?.toUpperCase();await choose(options.includes(entry)?entry:options.includes('CODE')?'CODE':'IMPORT');
   startWorkspacePolling();
  }
 }catch(error){status(errorText(error.message));}}

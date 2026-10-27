@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface UserRepository {
     Optional<User> findById(UserId id);
+    java.util.Map<java.util.UUID,String> displayNames(java.util.Collection<java.util.UUID> ids);
     Optional<User> findByIdForUpdate(UserId id);
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);

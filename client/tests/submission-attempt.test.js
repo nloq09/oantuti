@@ -42,7 +42,7 @@ function fixture({storage=new Map(),restoredAttempt=null,policyOverrides={}}={})
  globalThis.fetch=async(url,options={})=>{let data;
   if(url==='/api/auth/me')data={authenticated:true,user:{id:'player',role:'USER'}};
   else if(url==='/api/auth/csrf')data={headerName:'X-CSRF-TOKEN',token:'test'};
-  else if(url==='/api/tournaments/submit-cup')data=t;
+  else if((url==='/api/tournaments/submit-cup'||url==='/api/tournaments/submit-cup/summary?light=true'))data=t;
   else if(url.endsWith('/submission/me/attempts')&&options.method==='POST'){
    const body=JSON.parse(options.body);posts.push(body);if(attempt?.id!==body.requestId)attempt={id:body.requestId,status:'QUEUED',version:posts.length,versionId:'v'+posts.length,language:'PYTHON'};data=attempt;if(uncertain){uncertain=false;throw new TypeError('Network disconnected');}
   }else if(url.endsWith('/submission/me/attempts/latest'))data=attempt||{status:'NO_SUBMISSION'};

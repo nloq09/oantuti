@@ -8,6 +8,9 @@ import jakarta.persistence.LockModeType;
 import java.util.*;
 
 interface JpaUserRepository extends JpaRepository<UserEntity, UUID> {
+    interface PublicName { UUID getId(); String getDisplayName(); }
+    @Query("select u.id as id, u.displayName as displayName from UserEntity u where u.id in :ids")
+    List<PublicName> displayNames(@Param("ids") Collection<UUID> ids);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from UserEntity u where u.id = :id")
     Optional<UserEntity> findByIdForUpdate(@Param("id") UUID id);

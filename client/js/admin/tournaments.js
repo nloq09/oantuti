@@ -1,5 +1,5 @@
 import {seriesViewModels,renderSeriesCards} from '../tournament/series-view.js';
-import {statusText} from '../tournament/presentation.js';
+import {statusText} from '../tournament/player-labels.js';
 import {formatLabel} from '../tournament/bracket-renderer.js';
 import {presentTournamentAudit} from '../tournament/audit-presentation.js';
 import {renderTeams} from "../tournament/team-view.js";

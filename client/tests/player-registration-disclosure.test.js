@@ -17,12 +17,12 @@ test('single detail page preserves registration, disclosures and server-authorit
  globalThis.setTimeout=(fn,delay)=>{const id=++timerId;timers.set(id,{fn,delay});return id;};globalThis.clearTimeout=id=>timers.delete(id);
  globalThis.setInterval=()=>++timerId;globalThis.clearInterval=()=>{};
  globalThis.fetch=async(url,options={})=>{
-  let data,status=200;if(readFailure&&url.endsWith('/summary'))throw Error('NETWORK');
+  let data,status=200;if(readFailure&&url.endsWith('/summary?light=true'))throw Error('NETWORK');
   if(url==='/api/auth/me')data={authenticated:true,user:{id:'player',username:'tester',displayName:'Player',role:'USER'}};
   else if(url==='/api/auth/csrf')data={headerName:'X-CSRF-TOKEN',token:'fixture'};
-  else if(url.endsWith('/summary'))data={...cup,revision:flow.revision,status:flow.tournamentStatus||cup.status,progress:{total:flow.matchCount||0},rounds:[],stages:[],matches:[],bracket:flow.matchCount?[{id:'node'}]:[],ranking:[],replayCount:flow.matchCount||0,participantOwners:{},participantStatuses:{}};
+  else if(url.endsWith('/summary?light=true'))data={...cup,revision:flow.revision,status:flow.tournamentStatus||cup.status,progress:{total:flow.matchCount||0},rounds:[],stages:[],matches:[],bracket:flow.matchCount?[{id:'node'}]:[],ranking:[],replayCount:flow.matchCount||0,participantOwners:{},participantStatuses:{}};
   else if(url.endsWith('/me'))data={tournamentId:cup.id,revision:flow.revision,states:flow.ownStates||[]};
-  else if(url.includes('/my-matches?')||url.includes('/matches?'))data={tournamentId:cup.id,revision:flow.revision,items:[],series:[],total:0,serverNow:flow.serverNow};
+  else if(url.includes('/player-pages/')||url.includes('/my-matches?')||url.includes('/matches?'))data={tournamentId:cup.id,revision:flow.revision,items:[],series:[],total:0,serverNow:flow.serverNow};
   else if(url.endsWith('/participant-flow'))data=structuredClone(flow);
   else if(url.endsWith('/participant-registration')){
    posts++;const body=JSON.parse(options.body);await new Promise(done=>release=done);
@@ -49,7 +49,7 @@ test('single detail page preserves registration, disclosures and server-authorit
   await t.test('default page keeps the original shell and task card; only the action opens a single form',async()=>{
    await boot();assert.equal(form(),null);assert.equal(panel().hidden,true);
    const shellText=text(root.querySelector('.tournament-header')),stepsText=text(root.querySelector('.tournament-progress'));
-   const cta=root.querySelector('#player-primary-action-REGISTER');cta.onclick(event);
+   const cta=root.querySelector('#player-primary-action-REGISTER');cta.onclick(event);await settle();
    assert.equal(panel().hidden,false);assert.equal(root.querySelectorAll('form').length,1);assert.equal(doc.activeElement,inputs().language);
    assert.equal(root.querySelector('[role=tab]'),null);assert.equal(root.querySelector('.tournament-tabs'),null);assert.equal(location.hash,'#registration');
    assert.equal(panel().previousElementSibling,root.querySelector('.player-next-action'),'form sits immediately after the unchanged task card');
@@ -83,7 +83,7 @@ test('single detail page preserves registration, disclosures and server-authorit
   await t.test('registration information toggles without losing its content or reopening on polling',async()=>{
    const toggle=()=>root.querySelector('#player-registration-toggle');
    assert.equal(toggle().tag,'button');assert.equal(toggle().getAttribute('aria-controls'),panel().id);assert.equal(toggle().getAttribute('aria-expanded'),'false');
-   toggle().onclick();const original=panel(),facts=panel().querySelector('.phase-facts');assert.equal(panel().hidden,false);assert.equal(toggle().getAttribute('aria-expanded'),'true');assert.equal(location.hash,'#registration');
+   toggle().onclick();await settle();const original=panel(),facts=panel().querySelector('.phase-facts');assert.equal(panel().hidden,false);assert.equal(toggle().getAttribute('aria-expanded'),'true');assert.equal(location.hash,'#registration');
    toggle().onclick();assert.equal(panel().hidden,true);assert.equal(toggle().getAttribute('aria-expanded'),'false');assert.equal(location.hash,'');assert.equal(doc.activeElement,toggle());
    await refresh();assert.equal(panel().hidden,true);assert.equal(toggle().getAttribute('aria-expanded'),'false');
    toggle().onclick();assert.equal(panel(),original);assert.equal(panel().querySelector('.phase-facts'),facts);assert.match(text(panel()),/UET Team/);assert.equal(root.querySelectorAll('#player-registration-panel').length,1);

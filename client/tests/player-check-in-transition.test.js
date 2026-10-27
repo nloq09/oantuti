@@ -55,7 +55,7 @@ test('real workspace follows polled server phase to check-in despite persistent 
  let flow={...readyFlow,phase:'CODING_OPEN',nextAction:'OPEN_CODE_WORKSPACE',canModifyWorkspace:true,serverNow:'2026-10-24T09:00:00Z',submissionStatus:'NO_SUBMISSION',finalValidation:null,checkIn:{...checkIn,canCheckIn:false}};
  globalThis.fetch=async(url,options={})=>{requests.push({url,options});let data;
   if(url==='/api/auth/me')data={authenticated:true,user:{id:'player',role:'USER'}};
-  else if(url==='/api/tournaments/phase-cup'||url.endsWith('/summary'))data=cup;
+  else if(url==='/api/tournaments/phase-cup'||url.endsWith('/summary?light=true'))data=cup;
   else if(url.endsWith('/participant-flow'))data=structuredClone(flow);
   else if(url==='/api/tournaments/phase-cup/me')data={tournamentId:cup.id,revision:8,states:[]};
   else if(url.endsWith('/submission/me/versions')||url==='/api/account/bots')data=[];

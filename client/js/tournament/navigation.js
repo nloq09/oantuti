@@ -21,7 +21,7 @@ export function resolveTournamentNavigation({tournamentFormat,tournamentPhase:ph
 }
 export function resolveTournamentViewState(t,flow,me,activeTab='overview',viewerRole='PLAYER'){
  const phase=tournamentPhase(t,flow),hasMatches=(t.progress?.total??t.matches?.length??0)>0;
- const navigation=resolveTournamentNavigation({tournamentFormat:t.format,tournamentPhase:phase,viewerRole,participantState:me?.states?.length?me.states[0]:flow?.registration,checkInRequired:t.checkInRequired,matchAvailability:{hasMatches,hasBracket:(t.bracket?.length||0)>0,hasReplays:hasTournamentReplays(t)},activeTab});
+ const navigation=resolveTournamentNavigation({tournamentFormat:t.format,tournamentPhase:phase,viewerRole,participantState:me?.states?.length?me.states[0]:flow?.registration,checkInRequired:t.checkInRequired,matchAvailability:{hasMatches,hasBracket:(t.bracketCount??t.bracket?.length??0)>0,hasReplays:hasTournamentReplays(t)},activeTab});
  return {phase,phaseLabel:mapTournamentPhase(phase),compact:phase==='FINISHED',navigation,activeTab:navigation.find(x=>x.active)?.id||'overview',loadState:'loaded'};
 }
 export const resolveMatchViewState=m=>({status:!m?'loading':m.reviewRequired?'review':m.status==='FINISHED'?'finished':m.status==='FAILED'?'error':'active',hasReplay:Boolean(m?.historyMatchId)});

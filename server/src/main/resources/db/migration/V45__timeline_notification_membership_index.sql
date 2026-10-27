@@ -1,0 +1,1 @@
+CREATE INDEX timeline_registration_user_tournament ON tournament_timeline_registrations(user_id,tournament_id);

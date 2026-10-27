@@ -1,4 +1,4 @@
-import {languageText} from './presentation.js';
+import {languageText} from './player-labels.js';
 import {tournamentRoute} from './tournament-routes.js';
 import {requireAccount} from '../account/account-session.js';
 import {sessionRequest} from '../api/auth-api.js';

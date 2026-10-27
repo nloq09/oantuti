@@ -1,2 +1,6 @@
-import{getAccount}from "../account/account-session.js";import{sessionRequest}from "../api/auth-api.js";import{node,link}from "./player-dom.js";
-try{const account=await getAccount();if(account?.role==="USER"){const feed=await sessionRequest('/api/account/tournament-notifications');const cup=feed.active?.find(t=>t.status==="RUNNING")||feed.active?.[0];if(cup){const banner=node("aside",undefined,"panel home-tournament-banner");banner.append(node("strong",cup.name),link("Vào giải",'/tournament-lobby.html?id='+encodeURIComponent(cup.id)));document.querySelector(".hero .actions")?.after(banner);}}}catch{}
+import {getAccount} from '../account/account-session.js';
+import {readNotificationFeed,subscribeNotificationFeed} from './notification-feed.js';
+import {node,link} from './player-dom.js';
+let banner;
+function render(feed){const cup=feed.active?.find(t=>t.status==='RUNNING')||feed.active?.[0];if(!cup){banner?.remove();banner=null;return;}if(!banner){banner=node('aside',undefined,'panel home-tournament-banner');document.querySelector('.hero .actions')?.after(banner);}banner.replaceChildren(node('strong',cup.name),link('Vào giải','/tournament-lobby.html?id='+encodeURIComponent(cup.id)));}
+try{const account=await getAccount();if(account?.role==='USER'){const unsubscribe=subscribeNotificationFeed(render);addEventListener('pagehide',()=>unsubscribe(),{once:true});render(await readNotificationFeed());}}catch{}

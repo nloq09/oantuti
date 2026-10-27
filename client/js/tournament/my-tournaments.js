@@ -1,4 +1,4 @@
-import {statusText} from './presentation.js';
+import {statusText} from './player-labels.js';
 import {playerTournamentRoute,ownerTournamentRoute} from './tournament-routes.js';
 import {sessionRequest} from "../api/auth-api.js";
 import {getAccount} from "../account/account-session.js";

@@ -8,8 +8,8 @@ function fail(error, target) {
   else target.textContent = errorText(error.message);
 }
 try {
-  if (await requireAccount()) {
-    const profile = await accountProfile();
+  const [account,profile]=await Promise.all([requireAccount(),accountProfile()]);
+  if (account) {
     for (const field of ["username", "email", "role"]) document.querySelector("#profile-" + field).textContent = field === "role" ? (profile.role === "ADMIN" ? "Quản trị viên" : "Người chơi") : profile[field];
     for (const field of ["createdAt", "lastLoginAt"]) document.querySelector("#profile-" + field).textContent = dateLabel(profile[field]);
     document.querySelector('[name="displayName"]').value = profile.displayName;

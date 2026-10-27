@@ -1,6 +1,6 @@
 import {node} from './player-dom.js';
 import {playerSurface} from './player-surface.js';
-import {statusText,friendlyName} from './presentation.js';
+import {statusText,friendlyName} from './player-labels.js';
 import {matchStatusText} from './match-execution.js';
 const sideId=p=>p?.participantId;
 /** Series score is server-owned. Paginated games never invent a complete series score. */

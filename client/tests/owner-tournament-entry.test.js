@@ -12,7 +12,7 @@ test('owner opening a direct player detail or lobby URL redirects before renderi
   const calls=[];
   globalThis.fetch=async(url,options={})=>{calls.push({url,options});let data;
    if(url==='/api/auth/me')data={authenticated:true,user:{id:'owner',role:'USER'}};
-   else if(url.endsWith('/summary'))data={id:'cup',ownerUserId:'owner',status:'RUNNING',timeline:{},revision:3};
+   else if(url.endsWith('/summary?light=true'))data={id:'cup',ownerUserId:'owner',status:'RUNNING',timeline:{},revision:3};
    else if(url.endsWith('/me'))data={tournamentId:'cup',revision:3,states:[]};
    else throw Error('Unexpected participant request '+url);
    return {ok:true,status:200,json:async()=>data};

@@ -1,0 +1,1 @@
+export const formatLabel = format => format==="SWISS"?"Swiss":format==="TEAM_ROUND_ROBIN"?"Đồng đội / Trường học": format === "GROUP_KNOCKOUT" ? "Vòng bảng → Loại trực tiếp" : format === "SINGLE_ELIMINATION" ? "Loại trực tiếp" : "Vòng tròn";

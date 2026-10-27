@@ -1,4 +1,4 @@
-import {languageText} from './presentation.js';
+import {languageText} from './player-labels.js';
 import {phaseFacts,statusBadge} from './phase-view.js';
 import {node,link,date} from './player-dom.js';
 import {resolvePlayerTournamentViewState} from './player-view-state.js';

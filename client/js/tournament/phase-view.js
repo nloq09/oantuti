@@ -1,4 +1,4 @@
-import {ruleSummary,languageText} from './presentation.js';
+import {ruleSummary,languageText} from './player-labels.js';
 import {node,date} from './player-dom.js';
 import {formatLabel} from './bracket-renderer.js';
 import {countdownText} from './tournament-header.js';

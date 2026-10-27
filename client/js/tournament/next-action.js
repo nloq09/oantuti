@@ -1,3 +1,4 @@
+import {discoveryNavigation} from './discovery-navigation.js';
 import {resolvePlayerTournamentViewState,playerAction as action} from './player-view-state.js';
 import {activeMatch,isRemoteMatch,matchExecutionState} from './match-execution.js';
 import {tournamentRoute,playerTournamentRoute,actionDestination,ownerTournamentRoute} from './tournament-routes.js';
@@ -62,16 +63,10 @@ function progressDescription(item,t){
 }
 // Discovery lacks personal capabilities. Only a fresh participant flow can enable coding/check-in.
 export function tournamentNavigation(t,context={}){
- if(t.owned===true||ownerTournamentRoute(t,context.account))return action('MANAGE_TOURNAMENT','Quản lý giải','Mở trang quản lý giải của bạn.',tournamentRoute(t.id,'organizer'));
+ if(t.owned===true||ownerTournamentRoute(t,context.account))return discoveryNavigation(t,context);
  if(context.flow||context.me){const resolved=tournamentNextAction({tournament:t,...context});return{...resolved,enabled:true,command:undefined,payload:undefined,href:actionDestination(resolved,t)};}
- if(t.status==='FINISHED')return action('VIEW_RESULT','Xem kết quả','Xem kết quả do server công bố.',tournamentRoute(t.id,'detail',{tab:'ranking'}));
- if(t.status==='CANCELLED')return action('TOURNAMENT_CANCELLED','Giải đã hủy','Xem thông tin giải đã hủy.',tournamentRoute(t.id));
- if(t.registered&&t.applicationStatus==='APPROVED'&&t.phase==='CODING_OPEN')return action('OPEN_CODE','Tiếp tục lập trình','Mở giải để xác nhận quyền lập trình hiện tại.',tournamentRoute(t.id));
- if(t.registered&&t.phase==='CHECK_IN_OPEN')return action('CHECK_IN','Check-in','Xác nhận tham gia theo trạng thái server.',tournamentRoute(t.id));
- if(!t.registered&&(t.phase==='REGISTRATION_OPEN'||t.acceptingRegistrations===true))return action('REGISTER','Đăng ký','Xem điều kiện và đăng ký tham gia.',tournamentRoute(t.id));
- return action('VIEW_STATUS',t.registered?'Xem trạng thái':'Xem giải','Mở giải để lấy giai đoạn và quyền hiện tại từ server.',playerTournamentRoute(t));
+ return discoveryNavigation(t,context);
 }
-
 // Prefer the selected registration's current assignment. Never let another owned bot hijack a human seat.
 function assignedMatch(rows,item){
  if(!item)return null;

@@ -1,4 +1,4 @@
-import {statusText} from './presentation.js';
+import {statusText} from './player-labels.js';
 import {playerSurface} from './player-surface.js';
 import {matchOpen,matchStatusText} from './match-execution.js';
 import{sessionRequest}from "../api/auth-api.js";

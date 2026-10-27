@@ -27,6 +27,13 @@ public class TimelineRegistrationStore {
     private TimelineRegistration find(UUID tournament,UUID user){return db.createQuery("select r from TimelineRegistration r where r.tournamentId=:t and r.userId=:u",TimelineRegistration.class).setParameter("t",tournament).setParameter("u",user).getResultStream().findFirst().orElse(null);}
     private View view(TimelineRegistration r){return r==null?null:new View(r.id,r.displayName,r.intendedLanguage,r.affiliation,publicStatus(r.status),r.registeredAt,r.publicReviewMessage,r.reviewedAt,position(r));}
     @Transactional(readOnly=true) public View mine(UUID tournament,UUID user){return view(find(tournament,user));}
+    public record NotificationMembership(UUID id,String status) {}
+    @Transactional(readOnly=true) public Map<UUID,NotificationMembership> notificationMemberships(UUID user){
+        var result=new HashMap<UUID,NotificationMembership>();
+        for(var row:db.createQuery("select r.tournamentId,r.id,r.status from TimelineRegistration r where r.userId=:u",Object[].class).setParameter("u",user).getResultList())result.put((UUID)row[0],new NotificationMembership((UUID)row[1],publicStatus((String)row[2])));
+        return result;
+    }
+    @Transactional(readOnly=true) public NotificationMembership notificationMembership(UUID tournament,UUID user){var row=find(tournament,user);return row==null?null:new NotificationMembership(row.id,publicStatus(row.status));}
     @Transactional(readOnly=true) public boolean reviewComplete(UUID tournament){return db.createQuery("select count(r) from TimelineRegistration r where r.tournamentId=:t and r.status='PENDING'",Long.class).setParameter("t",tournament).getSingleResult()==0;}
 
     public record Control(boolean enabled,Instant closedAt,Instant lockedAt,String lockedByName,Integer lockedCount) {}

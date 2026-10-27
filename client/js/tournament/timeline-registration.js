@@ -1,4 +1,4 @@
-import {languageText} from './presentation.js';
+import {languageText} from './player-labels.js';
 import {resolvePlayerTournamentViewState} from './player-view-state.js';
 import {statusBadge,phaseFacts,phaseCountdown,renderPhaseRules,renderPhaseTimeline} from './phase-view.js';
 import {checkInScreen,renderTimelineCheckIn} from './timeline-check-in.js';

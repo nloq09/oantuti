@@ -105,7 +105,7 @@ public class TournamentService {
     } }
     public void listen(Consumer<Tournament> listener){listeners.add(listener);}
     public void changed(Tournament t){rankingCache.remove(t);t.revision++;if(!t.deferNotifications) notifyChanged(t);}
-    public void notifyChanged(Tournament t){for(var listener:listeners) {try {listener.accept(t);} catch(RuntimeException ignored){}}}
+    public void notifyChanged(Tournament t){if(registry!=null)registry.updateMemberships(t);for(var listener:listeners) {try {listener.accept(t);} catch(RuntimeException ignored){}}}
     public List<Map<String,Object>> list(){ return registry.findAll().stream().sorted(Comparator.comparing((Tournament t)->t.createdAt).reversed()).map(this::view).toList(); }
     public Map<String,Object> report(Tournament t){synchronized(t){
         var view=view(t);var report=new LinkedHashMap<String,Object>();report.put("champion",view.get("champion"));var rows=ranking(t);report.put("runnerUp",rows.size()>1&&t.status==TournamentStatus.FINISHED?rows.get(1):null);
@@ -123,24 +123,38 @@ public class TournamentService {
         var active=publicExecutions==null?t.matches.stream().filter(m->m.status==TournamentMatch.Status.RUNNING).limit(21).toList():publicExecutions.active(t,21);
         var result=publicView(t,active.stream().limit(20).toList(),true);result.put("activeMatchesTruncated",active.size()>20);return result;
     } }
+    public Map<String,Object> playerSummary(Tournament t) { synchronized(t){
+        var active=publicExecutions==null?t.matches.stream().filter(m->m.status==TournamentMatch.Status.RUNNING).limit(21).toList():publicExecutions.active(t,21);
+        var result=publicView(t,active.stream().limit(20).toList(),true,true);result.put("activeMatchesTruncated",active.size()>20);return result;
+    } }
     public List<Map<String,Object>> publicList(){return registry.findAll().stream().sorted(Comparator.comparing((Tournament t)->t.createdAt).reversed()).map(this::summary).toList();}
     public Map<String,Object> publicView(Tournament t){synchronized(t){return publicView(t,t.matches,false);}}
     /** Shared projection for all unauthenticated reads and participant responses. */
-    public Map<String,Object> publicView(Tournament t,List<TournamentMatch> selected,boolean compact){synchronized(t){
-        var result=view(t,selected,compact);result.remove("audit");result.remove("seedingSeed");
+    public Map<String,Object> publicView(Tournament t,List<TournamentMatch> selected,boolean compact){return publicView(t,selected,compact,false);}
+    private Map<String,Object> publicView(Tournament t,List<TournamentMatch> selected,boolean compact,boolean light){synchronized(t){
+        var result=view(t,selected,compact,light);result.remove("audit");result.remove("seedingSeed");
         var reviews=new LinkedHashMap<String,Boolean>();t.operations.reviews().keySet().forEach(id->reviews.put(id,true));result.put("reviews",reviews);
-        result.put("registrations",t.registrations.stream().map(r->{var safe=new LinkedHashMap<String,Object>();safe.put("id",r.id());safe.put("displayName",r.displayName());safe.put("status",r.status());safe.put("controllerType",r.controllerType());return safe;}).toList());
-        result.put("participants",t.participants.stream().map(this::playerIdentity).toList());
+        result.put("registrations",(light?java.util.stream.Stream.<TournamentRegistration>empty():t.registrations.stream()).map(r->{var safe=new LinkedHashMap<String,Object>();safe.put("id",r.id());safe.put("displayName",r.displayName());safe.put("status",r.status());safe.put("controllerType",r.controllerType());return safe;}).toList());
+        result.put("participants",((List<TournamentParticipant>)result.get("participants")).stream().map(this::playerIdentity).toList());
         for(String key:List.of("matches","series"))for(var row:(List<Map<String,Object>>)result.get(key))for(String side:List.of("participantA","participantB"))row.put(side,playerIdentity((TournamentParticipant)row.get(side)));
         return result;
     }}
 
-    public Map<String,Object> view(Tournament t,List<TournamentMatch> selected,boolean compact) { synchronized(t) {
+    public Map<String,Object> view(Tournament t,List<TournamentMatch> selected,boolean compact) {return view(t,selected,compact,false);}
+    private Map<String,Object> view(Tournament t,List<TournamentMatch> selected,boolean compact,boolean light) { synchronized(t) {
         var data=new LinkedHashMap<String,Object>();
+        var ranked=light?(t.status==TournamentStatus.FINISHED?ranking(t):List.<com.rpsbattle.tournament.ranking.RankingEntry>of()):ranking(t);
+        var champion=champion(t,ranked);
+        var podiumIds=new LinkedHashSet<String>();
+        if(champion!=null){podiumIds.add(champion.participantId());if(Set.of(TournamentFormat.SINGLE_ELIMINATION,TournamentFormat.GROUP_KNOCKOUT).contains(t.format))t.bracket.stream().max(Comparator.comparingInt(BracketNode::round)).ifPresent(finalNode->{if(finalNode.slotA()!=null&&!finalNode.slotA().equals(champion.participantId()))podiumIds.add(finalNode.slotA());if(finalNode.slotB()!=null&&!finalNode.slotB().equals(champion.participantId()))podiumIds.add(finalNode.slotB());});else ranked.stream().filter(row->row.played()>0&&t.operations.active(row.participantId())).map(com.rpsbattle.tournament.ranking.RankingEntry::participantId).filter(id->!id.equals(champion.participantId())).limit(2).forEach(podiumIds::add);}
+        var visibleParticipants=light?t.participants.stream().filter(p->podiumIds.contains(p.participantId())).toList():List.copyOf(t.participants);
+        var ownerIds=new HashSet<UUID>();if(t.ownerUserId!=null)ownerIds.add(t.ownerUserId);visibleParticipants.stream().map(TournamentParticipant::ownerUserId).filter(Objects::nonNull).forEach(ownerIds::add);
+        var ownerNames=new HashMap<UUID,String>();if(users!=null&&!ownerIds.isEmpty())ownerNames.putAll(users.displayNames(ownerIds));
+        data.put("lightSummary",light);data.put("participantCount",t.participants.size());data.put("bracketCount",t.bracket.size());data.put("roundCount",t.rounds.size());data.put("rankingCount",t.participants.size());data.put("hasGroups",t.groupStage!=null||!t.groupHistory.isEmpty());
         data.put("id",t.id);data.put("name",t.name);data.put("format",t.format);data.put("status",t.status);
         data.put("timeline",t.timeline);
         data.put("timelineStartIssue",TimelineStartService.issue(t));
-        data.put("ownerUserId",t.ownerUserId);data.put("ownerName",displayName(t.ownerUserId));data.put("visibility","PUBLIC");
+        data.put("ownerUserId",t.ownerUserId);data.put("ownerName",ownerNames.getOrDefault(t.ownerUserId,"Người chơi"));data.put("visibility","PUBLIC");
         data.put("createdAt",t.createdAt);data.put("startedAt",t.startedAt);data.put("finishedAt",t.finishedAt);data.put("revision",t.revision);
         data.put("statusChangedAt",t.statusChangedAt);
         data.put("seedingStrategy",t.seedingStrategy);data.put("seedingSeed",Long.toString(t.seedingSeed));
@@ -149,18 +163,18 @@ public class TournamentService {
         data.put("registrationPolicy",t.registrationPolicy);data.put("timing",t.timing);data.put("participantPolicy",t.participantPolicy);data.put("botPolicy",t.botPolicy);data.put("submissionValidationRequired",submissions!=null&&submissions.enabled(t.id));data.put("checkInRequired",t.timeline!=null||t.checkInRequired);data.put("maxParticipants",t.maxParticipants);
         data.put("acceptingRegistrations",t.status==TournamentStatus.REGISTRATION&&(t.timeline!=null?!clock.instant().isBefore(t.timeline.registrationOpenAt())&&clock.instant().isBefore(t.timeline.registrationCloseAt()):t.timing.registrationDeadline()==null||clock.instant().isBefore(t.timing.registrationDeadline())));
         if(t.timeline!=null&&registrationApplications!=null){var control=registrationApplications.control(UUID.fromString(t.id));data.put("registrationControl",control);data.put("approvedParticipantCount",registrationApplications.approvedCount(UUID.fromString(t.id)));if(control.closedAt()!=null||control.lockedAt()!=null)data.put("acceptingRegistrations",false);}
-        data.put("groups",com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.view(t));data.put("groupStage",t.groupStage);data.put("groupPlans",t.groupPlans);data.put("groupHistory",List.copyOf(t.groupHistory));
-        data.put("swiss",t.swiss);data.put("teamCompetition",t.format==TournamentFormat.TEAM_ROUND_ROBIN?com.rpsbattle.tournament.scheduler.TeamScheduler.view(t):null);
+        data.put("groups",light?List.of():com.rpsbattle.tournament.scheduler.GroupKnockoutScheduler.view(t));data.put("groupStage",light?null:t.groupStage);data.put("groupPlans",t.groupPlans);data.put("groupHistory",light?List.of():List.copyOf(t.groupHistory));
+        data.put("swiss",t.swiss);data.put("teamCompetition",t.format==TournamentFormat.TEAM_ROUND_ROBIN&&(!light||t.status==TournamentStatus.FINISHED)?com.rpsbattle.tournament.scheduler.TeamScheduler.view(t):null);
         data.put("bestOf",t.bestOf);data.put("series",TournamentSeries.roots(t).stream().filter(m->!compact||selected.stream().anyMatch(game->game.seriesId.equals(m.id))).map(m->TournamentSeries.view(t,m)).toList());
         data.put("maxConcurrentMatches",t.maxConcurrentMatches);data.put("tieBreakOrder",t.tieBreakOrder);
-        data.put("rounds",List.copyOf(t.rounds));data.put("bracket",List.copyOf(t.bracket));data.put("stages",List.copyOf(t.stages));
+        data.put("rounds",light?List.of():List.copyOf(t.rounds));data.put("bracket",light?t.status==TournamentStatus.FINISHED?t.bracket.stream().max(Comparator.comparingInt(BracketNode::round)).stream().toList():List.of():List.copyOf(t.bracket));data.put("stages",light?List.of():List.copyOf(t.stages));
         data.put("currentRound",t.matches.stream().filter(m->m.status==TournamentMatch.Status.PENDING||m.status==TournamentMatch.Status.RUNNING).mapToInt(m->m.round).min().orElse(t.rounds.size()));
         data.put("drawPolicy",Set.of(TournamentFormat.GROUP_KNOCKOUT,TournamentFormat.SINGLE_ELIMINATION).contains(t.format)?"REMAINING_PIECES_THEN_SEED":null);
         data.put("autoAdvanceRounds",t.operations.autoAdvanceRounds());data.put("releasedRound",t.operations.releasedRound());data.put("participantStatuses",t.operations.participants());
         data.put("reviews",t.operations.reviews());data.put("rulesSnapshot",t.operations.rulesSnapshot());data.put("audit",(compact?t.operations.audit().stream().skip(Math.max(0,t.operations.audit().size()-20)):t.operations.audit().stream()).map(e->e.type().equals("PARTICIPANT_APPLICATION_MESSAGE_UPDATED")?new TournamentAuditEvent(e.id(),e.sequence(),e.type(),e.actor(),e.target(),null,null,null,e.at()):Set.of("PARTICIPANT_APPLICATION_REVIEWED","PARTICIPANT_APPLICATION_SUBMITTED","REGISTRATION_POLICY_UPDATED","WAITLIST_PROMOTED","WAITLIST_REJECTED","REGISTRATION_ROSTER_LOCKED","REGISTRATION_APPLICATIONS_CLOSED").contains(e.type())?new TournamentAuditEvent(e.id(),e.sequence(),e.type(),e.actor(),e.target(),null,e.beforeValue(),e.afterValue(),e.at()):e).map(this::redactAudit).toList());data.put("paged",compact);
-        var names=new LinkedHashMap<String,String>();for(var participant:t.participants)names.put(participant.participantId(),displayName(participant.ownerUserId()));data.put("participantOwners",names);
-        data.put("registrations",List.copyOf(t.registrations));
-        data.put("participants",List.copyOf(t.participants));
+        var names=new LinkedHashMap<String,String>();for(var participant:visibleParticipants)names.put(participant.participantId(),ownerNames.getOrDefault(participant.ownerUserId(),"Người chơi"));data.put("participantOwners",names);
+        data.put("registrations",light?List.of():List.copyOf(t.registrations));
+        data.put("participants",visibleParticipants);
         // Copy mutable matches while holding the monitor; never expose internal tokens or mutable objects.
         var matchRows=selected.stream().map(m->{Map<String,Object> row=new LinkedHashMap<>();
             row.put("id",m.id);row.put("participantA",m.participantA);row.put("participantB",m.participantB);row.put("onlineMatchId",m.onlineMatchId);row.put("historyMatchId",m.historyMatchId);
@@ -174,9 +188,13 @@ public class TournamentService {
         int total=t.format==TournamentFormat.GROUP_KNOCKOUT?t.matches.size():t.bestOf>1?t.matches.size():(t.format!=TournamentFormat.ROUND_ROBIN)&&!t.bracket.isEmpty()?(int)t.bracket.stream().filter(node->node.matchId()!=null&&(node.resolution()==null||t.matches.stream().anyMatch(m->m.id.equals(node.matchId())))).count():t.matches.size();
         data.put("progress",Map.of("total",total,"pending",pending+total-t.matches.size(),"running",running,"finished",finished,"failed",failed,"completed",finished+failed));
         data.put("replayCount",t.matches.stream().filter(m->m.historyMatchId!=null&&!m.historyMatchId.isBlank()).count());
-        var ranked=ranking(t); data.put("ranking",ranked);data.put("swissStandings",com.rpsbattle.tournament.scheduler.SwissScheduler.standings(t,ranked));
-        String championId=(t.format!=TournamentFormat.ROUND_ROBIN)&&!t.bracket.isEmpty()?t.bracket.getLast().winnerParticipantId():null;
-        data.put("champion",t.status!=TournamentStatus.FINISHED||!t.operations.reviews().isEmpty()||t.format==TournamentFormat.TEAM_ROUND_ROBIN?null:Set.of(TournamentFormat.GROUP_KNOCKOUT,TournamentFormat.SINGLE_ELIMINATION).contains(t.format)?ranked.stream().filter(r->r.participantId().equals(championId)&&t.operations.active(r.participantId())).findFirst().orElse(null):finished>0&&!ranked.isEmpty()?ranked.stream().filter(r->t.operations.active(r.participantId())&&(r.wins()>0||r.draws()>0)).findFirst().orElse(null):null);
+        data.put("ranking",light?ranked.stream().filter(row->podiumIds.contains(row.participantId())).toList():ranked);data.put("swissStandings",light?List.of():com.rpsbattle.tournament.scheduler.SwissScheduler.standings(t,ranked));
+        data.put("champion",champion);
         return data;
     } }
+    public com.rpsbattle.tournament.ranking.RankingEntry champion(Tournament t){synchronized(t){return t.status==TournamentStatus.FINISHED?champion(t,ranking(t)):null;}}
+    private com.rpsbattle.tournament.ranking.RankingEntry champion(Tournament t,List<com.rpsbattle.tournament.ranking.RankingEntry> ranked){
+        String championId=(t.format!=TournamentFormat.ROUND_ROBIN)&&!t.bracket.isEmpty()?t.bracket.getLast().winnerParticipantId():null;
+        return t.status!=TournamentStatus.FINISHED||!t.operations.reviews().isEmpty()||t.format==TournamentFormat.TEAM_ROUND_ROBIN?null:Set.of(TournamentFormat.GROUP_KNOCKOUT,TournamentFormat.SINGLE_ELIMINATION).contains(t.format)?ranked.stream().filter(r->r.participantId().equals(championId)&&t.operations.active(r.participantId())).findFirst().orElse(null):t.matches.stream().anyMatch(m->m.status==TournamentMatch.Status.FINISHED)&&!ranked.isEmpty()?ranked.stream().filter(r->t.operations.active(r.participantId())&&(r.wins()>0||r.draws()>0)).findFirst().orElse(null):null;
+    }
 }

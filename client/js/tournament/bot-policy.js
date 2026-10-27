@@ -1,4 +1,4 @@
-import {languageText} from './presentation.js';
+import {languageText} from './player-labels.js';
 import {node} from './player-dom.js';
 export const submissionModes={PRE_UPLOADED_ONLY:'Chỉ dùng bot đã có',CODE_IN_PLATFORM_ONLY:'Bắt buộc code trên hệ thống',BOTH:'Cho phép cả hai cách'};
 export const effectiveBotPolicy=t=>t.botPolicy||{submissionMode:'PRE_UPLOADED_ONLY',allowedLanguages:['PYTHON','CPP','JAVA']};

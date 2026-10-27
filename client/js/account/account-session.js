@@ -3,7 +3,7 @@ import { safeNext, accountLinks, adminDestination } from "./account-ui.js";
 import { seatKey } from "../config.js";
 import { toast } from "../ui/toast.js";
 let accountRequest;
-export const getAccount = () => accountRequest ||= currentUser().then(result => result.authenticated ? result.user : null);
+export const getAccount = () => accountRequest ||= currentUser().then(result => result.authenticated ? result.user : null).catch(error=>{accountRequest=undefined;throw error;});
 function returnDestination() {
   return ["/login.html", "/register.html"].includes(location.pathname)
     ? safeNext(new URLSearchParams(location.search).get("next"), location.origin)

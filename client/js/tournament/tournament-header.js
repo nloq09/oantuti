@@ -1,5 +1,5 @@
 import {node} from './player-dom.js';
-import {formatLabel} from './bracket-renderer.js';
+import {formatLabel} from './format-labels.js';
 
 export const phaseLabels={SYNCING:'Đang đồng bộ giai đoạn',DRAFT:'Bản nháp',UPCOMING:'Sắp mở đăng ký',REGISTRATION_OPEN:'Đang đăng ký',REGISTRATION_REVIEW:'Xét duyệt đăng ký',WAITING_FOR_CODING:'Chờ lập trình',CODING_OPEN:'Lập trình',SUBMISSION_FROZEN:'Đã khóa bài',VALIDATING:'Kiểm thử chính thức',CHECK_IN_OPEN:'Check-in',READY_TO_START:'Chờ bắt đầu',RUNNING:'Đang thi đấu',PAUSED:'Tạm dừng',RECOVERY_REQUIRED:'Chờ khôi phục',FINISHED:'Đã kết thúc',CANCELLED:'Đã hủy'};
 export function tournamentPhase(t,flow){
@@ -10,7 +10,7 @@ export function tournamentPhase(t,flow){
 export function headerModel(t,flow,options={}){
  const phase=options.phase??tournamentPhase(t,flow),player=options.audience==='player';
  const approved=player?t.approvedParticipantCount:flow?.registration?.approved;
- const count=Number.isSafeInteger(approved)&&approved>=0?approved:t.timeline?(player?null:'—'):t.participants?.length??0;
+ const count=Number.isSafeInteger(approved)&&approved>=0?approved:t.timeline?(player?null:'—'):t.participantCount??t.participants?.length??0;
  return {name:t.name,format:formatLabel(t.format),phase,phaseLabel:options.phaseLabel||phaseLabels[phase]||'Đang cập nhật',status:t.status,count,countLabel:flow?.registration||t.timeline?'người được duyệt':'người tham gia',capacity:t.maxParticipants,deadline:flow?.phaseEndsAt??null,serverNow:flow?.serverNow??null};
 }
 export function countdownText(deadline,serverNow,elapsedMs=0){

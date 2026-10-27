@@ -1,4 +1,4 @@
-import {ruleSummary,friendlyName} from './presentation.js';
+import {ruleSummary,friendlyName} from './player-labels.js';
 import {matchOpen,matchStatusText} from './match-execution.js';
 import {isKnockout} from "./bracket-renderer.js";
 import{podium}from "./progression.js";

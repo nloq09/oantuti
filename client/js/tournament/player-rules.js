@@ -1,0 +1,3 @@
+import {ruleSummary} from './player-labels.js';
+import {node,table} from './player-dom.js';
+export function renderRules(root,t){root.append(node('h2','Luật giải'),node('p',t.rulesSnapshot&&Object.keys(t.rulesSnapshot).length?'Luật đã chốt cho giải.':'Luật sẽ được chốt khi chuẩn bị thi đấu.'),table([['Thông số',r=>r[0]],['Giá trị',r=>r[1]]],ruleSummary(t)),node('p','Đi một ô theo 8 hướng. Búa thắng Kéo, Kéo thắng Bao, Bao thắng Búa. Cùng loại giữ nguyên vị trí. Mất hết quân hoặc bị chiếm cứ điểm là thua.'),node('p',t.checkInRequired?'Cần check-in trước hạn do server công bố.':'Không yêu cầu check-in.'));}

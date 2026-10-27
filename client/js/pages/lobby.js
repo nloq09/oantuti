@@ -3,20 +3,17 @@ import { seatKey } from "../config.js";
 import { toast } from "../ui/toast.js";
 import { refreshBots, savedBots, botCapabilities } from "../api/bot-api.js";
 import { getAccount, loginLink } from "../account/account-session.js";
-const account = await getAccount().catch(error => { toast(error.message, true); return undefined; });
-if (account === null) {
-  const notice = document.querySelector("#guest-notice"), link = document.createElement("a");
-  notice.textContent = "Bạn đang chơi với tư cách khách. "; link.href = loginLink(); link.textContent = "Đăng nhập để dùng bot riêng và lưu lịch sử của bạn."; notice.append(link);
-}
-await refreshBots().catch(error => toast(error.message, true));
-
 const controller = document.querySelector("#player-controller");
-for (const bot of savedBots())
-  controller.append(new Option(`${bot.name} · ${bot.language}`, bot.id));
-const preferred = sessionStorage.getItem("rps-preferred-bot");
-if (savedBots().some((bot) => bot.id === preferred))
-  controller.value = preferred;
+controller.disabled=true;controller.title="Đang tải danh sách bot…";
+let controllerChanged=false;controller.addEventListener('change',()=>{controllerChanged=true;});
+// Bind match controls immediately. Loading private bot choices must not freeze human play.
+const botChoicesReady=Promise.all([getAccount().catch(error=>{toast(error.message,true);return undefined;}),refreshBots().catch(error=>{toast(error.message,true);return []})]).then(([account])=>{
+ if(account===null){const notice=document.querySelector('#guest-notice'),link=document.createElement('a');notice.textContent='Bạn đang chơi với tư cách khách. ';link.href=loginLink();link.textContent='Đăng nhập để dùng bot riêng và lưu lịch sử của bạn.';notice.append(link);}
+ for(const bot of savedBots())controller.append(new Option(`${bot.name} · ${bot.language}`,bot.id));
+ const preferred=sessionStorage.getItem('rps-preferred-bot');if(!controllerChanged&&savedBots().some(bot=>bot.id===preferred))controller.value=preferred;
+}).finally(()=>{controller.disabled=false;controller.removeAttribute('title');});
 async function selectedBot() {
+  await botChoicesReady;
   const bot = savedBots().find((item) => item.id === controller.value);
   if (bot && !(await botCapabilities()).languages[bot.language])
     throw new Error("BOT_SANDBOX_UNAVAILABLE");

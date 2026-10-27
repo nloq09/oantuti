@@ -12,6 +12,11 @@ public class JpaUserRepositoryAdapter implements UserRepository {
     private final JpaUserRepository repository;
     public JpaUserRepositoryAdapter(JpaUserRepository repository) { this.repository=repository; }
     public Optional<User> findById(UserId id) { return repository.findById(id.value()).map(UserEntity::toDomain); }
+    public Map<UUID,String> displayNames(Collection<UUID> ids) {
+        if(ids.isEmpty())return Map.of();var result=new LinkedHashMap<UUID,String>();
+        for(var value:repository.displayNames(new HashSet<>(ids)))result.put(value.getId(),value.getDisplayName());
+        return result;
+    }
     public Optional<User> findByIdForUpdate(UserId id) { return repository.findByIdForUpdate(id.value()).map(UserEntity::toDomain); }
     public Optional<User> findByUsername(String name) { return repository.findByUsername(normalize(name)).map(UserEntity::toDomain); }
     public Optional<User> findByEmail(String email) { return repository.findByEmail(normalize(email)).map(UserEntity::toDomain); }
