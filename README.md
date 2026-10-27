@@ -81,8 +81,4 @@ Lệnh Python biên dịch/chạy mẫu tin cậy của repo, cần Python, g++ 
 - `docs/`: hướng dẫn Markdown theo nhóm người dùng và vận hành.
 - `infra/`, `scripts/`, `tools/`: cấu hình triển khai, vận hành và công cụ kiểm chứng.
 
-## Giới hạn vận hành
 
-Phòng đang chơi và session còn ở RAM; restart không tiếp tục ván thường hoặc giữ phiên đăng nhập. Metadata đã commit, bot và replay cần database cùng ổ lưu trữ bền vững. Giải đang dở có thể cần khôi phục do người quản lý thực hiện; không tạo kết quả thắng/thua giả cho lỗi hạ tầng.
-
-Vẫn vận hành một Central cho trạng thái phòng/registry; thêm remote worker không đồng nghĩa có thể scale nhiều Central độc lập. Bản chạy chỉ có một container ứng dụng không tự cung cấp Docker cho bot. Đọc hướng dẫn deployment, backup và worker trước khi mở cho người ngoài mạng.
