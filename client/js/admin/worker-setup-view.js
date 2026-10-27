@@ -1,4 +1,4 @@
-import {node,link} from './admin-shell.js';
+import {node,link} from './admin-ui.js';
 import {field,input,select,copy} from './worker-ops-controls.js';
 import {mountWorkerRegistration} from './worker-registration.js';
 import {workerRunCommand,workerFirstRunCommand} from './worker-setup-commands.js';

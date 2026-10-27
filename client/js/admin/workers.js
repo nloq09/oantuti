@@ -1,4 +1,4 @@
-import {node,link,date,errorMessage} from './admin-shell.js';
+import {node,link,date,errorMessage} from './admin-ui.js';
 import {table,confirmAction} from './components.js';
 import {workerOperations,workerOperationDetail,workerEvents,controlWorker,reviewWorker} from './worker-api.js';
 import {capacityLimit} from './worker-policy-api.js';

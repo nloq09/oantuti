@@ -1,4 +1,4 @@
-import { node, link } from "./admin-shell.js";
+import { node, link } from "./admin-ui.js";
 export async function mountViewer(page,root) {
   const replay=page==="replay.html",query=new URLSearchParams(location.search),id=query.get(replay?"match":"spectate");
   if(!id)throw new Error("Thiếu mã trận cần xem.");
@@ -6,7 +6,7 @@ export async function mountViewer(page,root) {
   // Reuse the existing static board markup and read-only controllers; never construct a player controller.
   for(const path of ["/css/global.css","/css/game.css",...(replay?["/css/replay.css"]:[])]){
     const style=document.createElement("link");style.rel="stylesheet";style.href=path;
-    await new Promise((resolve,reject)=>{style.onload=resolve;style.onerror=()=>reject(new Error("Không tải được giao diện bàn cờ."));document.head.insertBefore(style,document.querySelector('link[href="/css/admin.css"]'));});
+    await new Promise((resolve,reject)=>{style.onload=resolve;style.onerror=()=>reject(new Error("Không tải được giao diện bàn cờ."));document.head.insertBefore(style,document.querySelector('link[href$="/css/admin.css"]'));});
   }
   const response=await fetch(replay?"/replay.html":"/game.html",{cache:"no-store"});if(!response.ok)throw new Error("Không tải được bố cục bàn cờ.");
   const template=new DOMParser().parseFromString(await response.text(),"text/html").querySelector("main"),section=node("section",undefined,template.className);

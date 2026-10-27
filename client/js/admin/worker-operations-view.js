@@ -1,4 +1,4 @@
-import {node,date} from './admin-shell.js';
+import {node,date} from './admin-ui.js';
 import {workerControls,canReviewWorker,workerPercent} from './worker-api.js';
 export const warningLabels={OFFLINE:'Worker offline',STALE:'Heartbeat cũ / chưa có',CPU_HIGH:'CPU cao',RAM_HIGH:'RAM cao',DISK_LOW:'Đĩa sắp đầy',DEGRADED:'Runtime chưa sẵn sàng',PENDING_APPROVAL:'Chờ duyệt'};
 export const statusLabels={ONLINE:'● ONLINE',BUSY:'● BUSY',OFFLINE:'○ OFFLINE',DISABLED:'DISABLED',DRAINING:'DRAINING',DRAINED:'DRAINED',DEGRADED:'DEGRADED',STARTING:'STARTING'};

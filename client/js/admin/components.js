@@ -1,4 +1,4 @@
-import { node, link, errorMessage } from "./admin-shell.js";
+import { node, link, errorMessage } from "./admin-ui.js";
 export function badge(value) {const element=node("span",value??"—","badge");element.dataset.status=value??"UNKNOWN";return element;}
 export function table(columns,rows,actions) {
   const wrap=node("div",undefined,"table-scroll"), element=node("table"), head=node("thead"), heading=node("tr"), body=node("tbody");

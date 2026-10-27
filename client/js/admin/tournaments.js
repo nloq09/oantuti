@@ -6,7 +6,7 @@ import {renderTeams} from "../tournament/team-view.js";
 import {renderDeadlinePolicy} from '../tournament/deadline-policy-editor.js';
 import {renderSwiss} from "../tournament/swiss-view.js";
 import {isKnockout} from "../tournament/bracket-renderer.js";
-import {node,link,date,message} from "./admin-shell.js";
+import {node,link,date,message} from "./admin-ui.js";
 import {adminRequest} from "./admin-api.js";
 import {sessionRequest} from "../api/auth-api.js";
 import {table,badge,details,confirmAction} from "./components.js";

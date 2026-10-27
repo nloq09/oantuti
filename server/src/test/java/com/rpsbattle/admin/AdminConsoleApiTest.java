@@ -28,7 +28,7 @@ class AdminConsoleApiTest {
             var events=admin.call("/api/admin/audit?result=FAILURE",null,false,200);assertThat(events.path("total").asLong()).isPositive();assertThat(events.toString()).doesNotContain("private-payload-must-not-be-recorded","password","token","sessionId");
             admin.call("/api/admin/audit?result=UNKNOWN",null,false,400);
             var system=admin.call("/api/admin/system",null,false,200);assertThat(system.path("application").asText()).isEqualTo("UP");assertThat(system.path("postgresql").asText()).isEqualTo("UP");
-            assertThat(system.path("docker").path("status").asText()).isIn("UP","DOWN");assertThat(system.path("workers").path("maxConcurrentMatches").asInt()).isBetween(1,4);assertThat(system.has("alerts")).isTrue();
+            assertThat(system.path("docker").path("status").asText()).isIn("UP","DOWN","UNKNOWN");assertThat(system.path("workers").path("maxConcurrentMatches").asInt()).isBetween(1,4);assertThat(system.has("alerts")).isTrue();
             assertThat(system.toString()).doesNotContain("password","source_path","docker.sock","JSESSIONID");
         }
     }

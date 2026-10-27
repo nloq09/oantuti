@@ -13,6 +13,9 @@ public class StaticResourceConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations("classpath:/static/assets/")
                 .setCacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePublic());
+        registry.addResourceHandler("/ui/**")
+                .addResourceLocations("classpath:/static/ui/")
+                .setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable());
         // Unversioned modules and styles must revalidate so deployments cannot leave stale code.
         registry.addResourceHandler("/css/**")
                 .addResourceLocations("classpath:/static/css/")

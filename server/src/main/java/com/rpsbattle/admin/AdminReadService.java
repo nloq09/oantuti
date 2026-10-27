@@ -26,13 +26,14 @@ public class AdminReadService {
     public Map<String,Object> dashboard(Authentication auth) {
         accounts.requireAdmin(auth);
         var result=new LinkedHashMap<String,Object>();
-        result.put("totalUsers",count("select count(*) from users"));
+        var users=db.queryForMap("select count(*) as total, count(case when status='ACTIVE' then 1 end) as enabled from users");
+        result.put("totalUsers",users.get("total"));
         result.put("activeUsers",gauge("active_users"));
-        result.put("enabledAccounts",count("select count(*) from users where status='ACTIVE'"));
+        result.put("enabledAccounts",users.get("enabled"));
         result.put("uploadedBots",count("select count(*) from bots where status<>'DELETED'"));
         result.put("activeMatches",rooms.getActiveMatches().stream().filter(m->!m.state().isFinished()&&m.infrastructureError()==null).count());
-        result.put("runningTournaments",count("select count(*) from tournaments where status='RUNNING'"));
         var health=operations.system(auth);result.put("openDisputes",health.get("openDisputes"));result.put("disputesSupported",true);result.put("alerts",health.get("alerts"));
+        result.put("runningTournaments",health.get("runningTournaments"));
         result.put("queuedMatches",workers.pending());result.put("workers",workers.status());
         result.put("systemErrors",count("select count(*) from tournament_matches where status='FAILED'"));
         result.put("webSocketSessions",gauge("websocket_sessions"));

@@ -1,4 +1,4 @@
-import {node,date} from './admin-shell.js';
+import {node,date} from './admin-ui.js';
 import {workerTokens,revokeWorkerToken} from './worker-api.js';
 import {table,confirmAction} from './components.js';
 

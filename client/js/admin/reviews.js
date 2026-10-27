@@ -1,4 +1,4 @@
-import {node,link,date}from "./admin-shell.js";import{adminRequest}from "./admin-api.js";import{table,badge,details,confirmAction}from "./components.js";import{listPage,periodFields}from "./catalog.js";import{disputeDecisions}from "./dispute-model.js";
+import {node,link,date}from "./admin-ui.js";import{adminRequest}from "./admin-api.js";import{table,badge,details,confirmAction}from "./components.js";import{listPage,periodFields}from "./catalog.js";import{disputeDecisions}from "./dispute-model.js";
 async function dispute(root){
  const id=new URLSearchParams(location.search).get("id"),data=await adminRequest("disputes/"+encodeURIComponent(id)),m=data.match;
  root.replaceChildren(node("h1","Yêu cầu xem xét trận đấu"),link("← Danh sách","/admin/disputes.html"),details("Yêu cầu",data,[["ID","id"],["Giải đấu","tournament_name"],["Người gửi","created_by"],["Lý do","reason"],["Trạng thái","status",badge],["Nhận xử lý","assigned_referee"],["Ngày gửi","created_at",date]]),details("Kết quả trận",m,[["ID","id"],["Trạng thái","status",badge],["Kết quả","result"],["Bên thắng","winnerParticipantId"],["Mã lỗi","failure"],["Quyết định","decisionReason"]]));

@@ -1,4 +1,4 @@
-import {node,errorMessage} from './admin-shell.js';
+import {node,errorMessage} from './admin-ui.js';
 export function field(title,input){const label=node('label',title,'worker-field');label.append(input);return label;}
 export function select(items,value){const input=node('select');for(const [key,title]of items){const option=node('option',title);option.value=key;input.append(option);}if(value!==undefined)input.value=value;return input;}
 export function input(type,value=''){const el=node('input');el.type=type;el.value=String(value);return el;}

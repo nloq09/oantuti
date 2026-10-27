@@ -1,4 +1,4 @@
-import {node,date} from './admin-shell.js';
+import {node,date} from './admin-ui.js';
 import {issueWorkerToken} from './worker-api.js';
 import {field,input,copy,showError} from './worker-ops-controls.js';
 

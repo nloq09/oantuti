@@ -1,13 +1,8 @@
-import {mountAudit} from './audit-view.js';
-import{node,link,date,message}from "./admin-shell.js";import{adminRequest}from "./admin-api.js";import{table,badge,details}from "./components.js";import{listPage,periodFields}from "./catalog.js";
-export function watchNotifications(target){
- const summary=node("summary","Cảnh báo"),content=node("div",undefined,"admin-notification-list");content.setAttribute("role","status");target.append(summary,content);let busy=false;
- async function refresh(){if(busy||document.hidden)return;busy=true;try{const data=await adminRequest("system");summary.textContent="Cảnh báo · "+data.alerts.length;content.replaceChildren();for(const alert of data.alerts)content.append(node("p",alert.severity+" · "+alert.message));if(!data.alerts.length)content.append(node("p","Không có cảnh báo."));content.append(link("Xem hệ thống","/admin/system.html"));}catch(error){summary.textContent="Cảnh báo · Chưa cập nhật";message(error,content);}finally{busy=false;}}
- refresh();const timer=setInterval(refresh,10000);addEventListener("pagehide",()=>clearInterval(timer),{once:true});
-}
+import {readSystem} from './system-status.js';
+import{node,link,date,message}from "./admin-ui.js";import{table,badge}from "./components.js";
 async function system(root){
  root.replaceChildren(node("h1","Hệ thống"));const status=node("p","Đang kiểm tra…","muted"),body=node("div");status.setAttribute("role","status");root.append(status,body);let busy=false;
- async function refresh(){if(busy||document.hidden)return;busy=true;try{const data=await adminRequest("system");status.textContent="Cập nhật "+date(data.checkedAt)+" · Tự làm mới 10 giây";body.replaceChildren();
+ async function refresh(){if(busy||document.hidden)return;busy=true;try{const data=await readSystem();status.textContent="Cập nhật "+date(data.checkedAt)+" · Tự làm mới 10 giây";body.replaceChildren();
  const cards=node("div",undefined,"stats");for(const [title,state]of [["Ứng dụng",data.application],["PostgreSQL",data.postgresql],["Docker Linux",data.docker.status],["Worker",data.workers.state],["Queue",data.queueCount+" / "+data.queueCapacity],["WebSocket",data.webSocketSessions??"—"],["Bot storage",data.storage.bots.status],["Replay storage",data.storage.replays.status]]){const card=node("div",undefined,"stat-card");card.append(node("span",title),node("strong",state));cards.append(card);}body.append(cards);
  const runtime=node("section",undefined,"panel");runtime.append(node("h2","Runtime"),node("p",`Phòng hoạt động: ${data.activeMatches} · Giải đang chạy: ${data.runningTournaments??"—"} · Người đăng nhập: ${data.onlineUsers??"—"}`),node("p",`Container do ứng dụng quản lý: ${data.docker.managedContainers??"Chưa xác định"} · Kiểm tra Docker: ${date(data.docker.checkedAt)}`),node("p",`JVM đang dùng: ${Math.round(data.jvmMemoryUsedBytes/1024/1024)} MiB · Audit chờ ghi: ${data.pendingAudit}`));body.append(runtime);
  const workers=node("section",undefined,"panel");workers.append(node("h2","Worker pool"),table([["Pool","id"],["Trạng thái","state",badge],["Đang chạy","active"],["Sức chứa","maxConcurrentMatches"]],[{id:"local-pool",...data.workers}]));body.append(workers);
@@ -16,4 +11,4 @@ async function system(root){
  }catch(error){message(error,status);}finally{busy=false;}}
  await refresh();const timer=setInterval(refresh,10000);addEventListener("pagehide",()=>clearInterval(timer),{once:true});
 }
-export async function mountOperations(page,root){if(page==="system.html")return system(root);return mountAudit(root);}
+export async function mountOperations(page,root){if(page==="system.html")return system(root);const {mountAudit}=await import('./audit-view.js');return mountAudit(root);}

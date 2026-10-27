@@ -1,4 +1,4 @@
-import {node} from './admin-shell.js';
+import {node} from './admin-ui.js';
 import {adminRequest} from './admin-api.js';
 import {workerCapacity} from './worker-api.js';
 import {workerPolicy,saveWorkerPolicy} from './worker-policy-api.js';

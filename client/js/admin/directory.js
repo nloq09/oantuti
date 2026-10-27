@@ -1,4 +1,4 @@
-import { node, link, date, message } from "./admin-shell.js";
+import { node, link, date, message } from "./admin-ui.js";
 import { adminRequest } from "./admin-api.js";
 import { table, badge, details, confirmAction } from "./components.js";
 const userColumns=[["Người dùng","display_name"],["Username","username"],["Email","email"],["Role","role",badge],["Trạng thái","status",badge],["Trận","matches"],["Bot","bots"],["Ngày tạo","created_at",date],["Đăng nhập gần nhất","last_login_at",date]];

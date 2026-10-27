@@ -160,6 +160,10 @@ sudo docker compose --env-file .env.production -f infra/docker-compose.yml -f in
 
 Nếu pull/build lỗi, giữ volume và xử lý; không xóa dữ liệu. Với Caddy bỏ overlay nginx, dùng cùng bộ Compose như lúc tạo deployment. Login lại sau restart; kiểm tra giải RECOVERY_REQUIRED. Rollback schema không chỉ là chạy JAR cũ: restore backup tương thích vào deployment riêng rồi kiểm tra trước khi chuyển traffic.
 
+Build tạo URL JS/CSS dạng `/ui/<mã-nội-dung>/…` và cập nhật tham chiếu trong HTML/module/style. Các file này cache public một năm; mã thay đổi khi frontend thay đổi nên trình duyệt nhận URL mới sau deploy. URL `/js/` và `/css/` cũ vẫn revalidate; HTML và API vẫn không lưu cache. Backend nén JS/CSS khi client gửi `Accept-Encoding` phù hợp, kể cả qua Nginx. Không áp dụng cache public cho `/api/admin/` hoặc cookie/session.
+
+Trang Admin chỉ tải module của mục đang mở, tải trước module khi rê chuột hoặc focus sidebar. Cảnh báo dùng chung kết quả với Tổng quan/Hệ thống thay vì gọi hệ thống hai lần mỗi chu kỳ. Docker được kiểm tra bằng một luồng nền riêng mỗi 15 giây; trạng thái ban đầu là UNKNOWN/đang kiểm tra, không suy ra Docker hỏng khi mẫu đầu tiên chưa hoàn tất.
+
 ### Nâng cấp bản điều phối worker tự động và worker riêng
 
 Flyway chạy V43/V44 khi Central mới khởi động, không cần chạy SQL thủ công hoặc xóa database:

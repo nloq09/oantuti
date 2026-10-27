@@ -1,4 +1,4 @@
-import {node,link,date,message} from "./admin-shell.js";
+import {node,link,date,message} from "./admin-ui.js";
 import {adminRequest} from "./admin-api.js";
 import {table} from "./components.js";
 export async function listPage(root,{title,path,fields=[],columns,actions}){

@@ -17,19 +17,22 @@ public class AdminOperationsService {
     public Map<String,Object> system(Authentication auth){
         accounts.requireAdmin(auth);var data=new LinkedHashMap<String,Object>();var alerts=new ArrayList<Map<String,Object>>();Instant now=Instant.now();
         data.put("checkedAt",now);data.put("application","UP");String database="UP";try{db.queryForObject("select 1",Integer.class);}catch(RuntimeException failure){database="DOWN";alerts.add(alert("DATABASE_UNAVAILABLE","CRITICAL","PostgreSQL chưa phản hồi."));}data.put("postgresql",database);
-        var dockerState=docker.status();data.put("docker",dockerState);if(!dockerState.get("status").equals("UP"))alerts.add(alert("DOCKER_UNAVAILABLE","WARNING","Docker Linux chưa sẵn sàng; bot tải lên có thể không chạy được."));
+        var dockerState=docker.status();data.put("docker",dockerState);if(dockerState.get("status").equals("DOWN"))alerts.add(alert("DOCKER_UNAVAILABLE","WARNING","Docker Linux chưa sẵn sàng; bot tải lên có thể không chạy được."));
+        else if(dockerState.get("status").equals("UNKNOWN"))alerts.add(alert("DOCKER_CHECK_PENDING","INFO","Đang kiểm tra Docker ở nền."));
         data.put("workers",workers.status());data.put("queue",queue.snapshot());data.put("queueCount",queue.size());data.put("queueCapacity",queue.capacity());
         if(workers.draining())alerts.add(alert("WORKER_DRAINING","WARNING","Worker đang dừng nhận trận mới."));if(queue.size()>=Math.max(1,queue.capacity()*8/10))alerts.add(alert("QUEUE_PRESSURE","WARNING","Queue đã dùng ít nhất 80% sức chứa."));
         data.put("activeMatches",matches.getActiveMatches().stream().filter(m->!m.state().isFinished()&&m.infrastructureError()==null).count());data.put("onlineUsers",gauge("active_users"));data.put("webSocketSessions",gauge("websocket_sessions"));
         data.put("jvmMemoryUsedBytes",metrics.find("jvm.memory.used").gauges().stream().mapToDouble(g->Math.max(0,g.value())).sum());
         var storage=Map.of("bots",storage(botDirectory),"replays",storage(replayDirectory));data.put("storage",storage);if(storage.values().stream().anyMatch(value->!"UP".equals(value.get("status"))))alerts.add(alert("STORAGE_DEGRADED","WARNING","Một thư mục bot/replay chưa sẵn sàng hoặc thiếu dung lượng."));
         if(database.equals("UP")){
-            long recovery=count("select count(*) from tournaments where status='RECOVERY_REQUIRED'");if(recovery>0)alerts.add(alert("TOURNAMENT_RECOVERY","CRITICAL",recovery+" giải cần kiểm tra sau lỗi hoặc restart."));
+            var tournaments=db.queryForMap("select count(case when status='RECOVERY_REQUIRED' then 1 end) as recovery, count(case when status='RUNNING' then 1 end) as running from tournaments");
+            long recovery=((Number)tournaments.get("recovery")).longValue();if(recovery>0)alerts.add(alert("TOURNAMENT_RECOVERY","CRITICAL",recovery+" giải cần kiểm tra sau lỗi hoặc restart."));
             long invalid=count("select count(*) from replays where valid=false");if(invalid>0)alerts.add(alert("INVALID_REPLAY","WARNING",invalid+" replay đang được đánh dấu không hợp lệ."));
-            var cutoff=java.sql.Timestamp.from(now.minusSeconds(900));long recent=count("select count(*) from tournament_matches where finished_at>=?",cutoff),failed=count("select count(*) from tournament_matches where failure='BOT_FAILED' and finished_at>=?",cutoff);
+            var cutoff=java.sql.Timestamp.from(now.minusSeconds(900));var matchStats=db.queryForMap("select count(case when finished_at>=? then 1 end) as recent, count(case when failure='BOT_FAILED' and finished_at>=? then 1 end) as failed, count(case when status='RUNNING' and started_at<? then 1 end) as long_running from tournament_matches where finished_at>=? or (status='RUNNING' and started_at<?)",cutoff,cutoff,cutoff,cutoff,cutoff);
+            long recent=((Number)matchStats.get("recent")).longValue(),failed=((Number)matchStats.get("failed")).longValue();
             if(recent>=5&&failed*2>=recent)alerts.add(alert("BOT_FAILURE_SPIKE","WARNING","Ít nhất 50% trận trong 15 phút gần đây có lỗi bot."));
-            long longRunning=count("select count(*) from tournament_matches where status='RUNNING' and started_at<?",cutoff);if(longRunning>0)alerts.add(alert("LONG_RUNNING_MATCH","WARNING",longRunning+" trận đã chạy quá 15 phút; cần kiểm tra."));
-            data.put("runningTournaments",count("select count(*) from tournaments where status='RUNNING'"));
+            long longRunning=((Number)matchStats.get("long_running")).longValue();if(longRunning>0)alerts.add(alert("LONG_RUNNING_MATCH","WARNING",longRunning+" trận đã chạy quá 15 phút; cần kiểm tra."));
+            data.put("runningTournaments",((Number)tournaments.get("running")).longValue());
             data.put("openDisputes",count("select count(*) from tournament_audit_events e where e.event_type='MATCH_REVIEW_REQUESTED' and not exists(select 1 from tournament_audit_events a where a.tournament_id=e.tournament_id and a.target_id=e.target_id and a.sequence_number>e.sequence_number and a.event_type in ('MATCH_REVIEW_REQUESTED','MATCH_REVIEW_CLOSED','MATCH_REVIEW_REJECTED','MATCH_RETRIED','RESULT_OVERRIDDEN'))"));
         }
         data.put("pendingAudit",journal.pending());if(journal.pending()>0)alerts.add(alert("AUDIT_WRITE_PENDING","CRITICAL","Audit HTTP đang chờ ghi lại vào DB."));data.put("alerts",alerts);data.put("status",database.equals("DOWN")?"DOWN":alerts.isEmpty()?"UP":"DEGRADED");return data;

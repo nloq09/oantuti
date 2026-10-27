@@ -1,4 +1,4 @@
-import {node,date,errorMessage} from './admin-shell.js';
+import {node,date,errorMessage} from './admin-ui.js';
 import {adminRequest} from './admin-api.js';
 import {presentAudit,auditCategories,auditResources} from './audit-presentation.js';
 

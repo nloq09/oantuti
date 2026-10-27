@@ -1,4 +1,4 @@
-import {node,date,message,errorMessage} from "./admin-shell.js";
+import {node,date,message,errorMessage} from "./admin-ui.js";
 import {details} from "./components.js";
 import {accountProfile,updateProfile,changePassword} from "../api/account-api.js";
 import {validatePassword} from "../account/account-ui.js";
